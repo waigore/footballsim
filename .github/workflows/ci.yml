@@ -1,0 +1,379 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-lint:
+    name: docs-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Lint docs word limit (≤500)
+        run: python tools/lint_docs_words.py
+
+  arch-lint:
+    name: arch-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Lint modular architecture (P3 / RUB-P3-*)
+        env:
+          ARCH_LINT_RULES_DIFF: "1"
+        run: python tools/lint_arch.py --require-rules-tests
+
+  # Ban code ∩ skills in one PR so agents cannot rewrite their own workflows
+  # while shipping game/test changes. Docs-only and skills-only PRs are fine.
+  skills-isolation:
+    name: skills-isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect code vs skills changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - 'scenes/**'
+              - 'scripts/**'
+              - 'ui/**'
+              - 'autoload/**'
+              - 'tests/**'
+              - 'addons/**'
+              - 'project.godot'
+              - 'icon.svg'
+              - 'gd-tools.toml'
+              - 'tools/select_impacted_tests.py'
+            skills:
+              - '.agents/skills/**'
+              - '.cursor/skills/**'
+              - '.opencode/skill/**'
+              - '.grok/skills/**'
+
+      - name: Fail if code and skills both changed
+        if: steps.filter.outputs.code == 'true' && steps.filter.outputs.skills == 'true'
+        run: |
+          echo "PR changes both test-triggering code paths and skill trees." >&2
+          echo "Split into separate PRs: code-only or skills-only (docs+skills OK)." >&2
+          exit 1
+
+      - name: Skills isolation OK
+        if: steps.filter.outputs.code != 'true' || steps.filter.outputs.skills != 'true'
+        run: echo "code∩skills empty — OK."
+
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Skip on push to main (tier 2 owns full suite)
+        id: skip_main_push
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: echo 'Push to main — full suite is the 8-hourly tier-2 job.'
+
+      - name: Detect project ready
+        id: project
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: |
+          if [ -f project.godot ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "No project.godot — tests no-op until Godot project is scaffolded."
+          fi
+
+      - name: Detect code/test changes
+        id: filter
+        if: github.event_name == 'pull_request' && steps.project.outputs.ready == 'true'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - 'scenes/**'
+              - 'scripts/**'
+              - 'ui/**'
+              - 'autoload/**'
+              - 'tests/**'
+              - 'addons/**'
+              - 'project.godot'
+              - 'icon.svg'
+              - 'gd-tools.toml'
+              - 'tools/select_impacted_tests.py'
+
+      - name: Skip suite (no project or no code/test changes)
+        if: >-
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'pull_request' && steps.project.outputs.ready != 'true') ||
+          (github.event_name == 'pull_request' && steps.project.outputs.ready == 'true' && steps.filter.outputs.code != 'true') ||
+          (github.event_name == 'workflow_dispatch' && steps.project.outputs.ready != 'true')
+        run: echo 'tests no-op (required check passes).'
+
+      - name: Setup Python
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'pull_request' && steps.filter.outputs.code == 'true'))
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: .github/gd-tools-requirements.txt
+
+      - name: Install gd-tools
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'pull_request' && steps.filter.outputs.code == 'true'))
+        run: pip install -r .github/gd-tools-requirements.txt
+
+      - name: Setup Godot
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'pull_request' && steps.filter.outputs.code == 'true'))
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: false
+
+      - name: Verify tooling
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'pull_request' && steps.filter.outputs.code == 'true'))
+        run: |
+          godot --version
+          gd-tools version
+
+      - name: Import project
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'pull_request' && steps.filter.outputs.code == 'true'))
+        run: godot --headless --path . --import --quit
+
+      - name: Run tests (coverage collect)
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'pull_request' && steps.filter.outputs.code == 'true'))
+        run: |
+          set -euo pipefail
+          if [ -f tools/select_impacted_tests.py ] && [ -f tests/impact_map.toml ]; then
+            git fetch --no-tags origin "${{ github.base_ref || 'main' }}"
+            BASE="origin/${{ github.base_ref || 'main' }}"
+            python tools/select_impacted_tests.py --check-complete
+            python tools/select_impacted_tests.py --base "$BASE" --github-output
+            LIST=".gd-tools/impact-suites.txt"
+            if [ ! -f "$LIST" ] || [ ! -s "$LIST" ]; then
+              echo "Strict impact map: code paths changed but no suites selected." >&2
+              exit 1
+            fi
+            if grep -qx ALL "$LIST"; then
+              gd-tools test --coverage --parallel 4 --timeout 240 --junit-xml .gd-tools/results.xml
+            else
+              mapfile -t SUITES < <(sed '/^$/d' "$LIST")
+              gd-tools test --coverage --parallel 4 --timeout 240 --junit-xml .gd-tools/results.xml \
+                "${SUITES[@]}"
+            fi
+            gd-tools coverage diff --patch --base "$BASE" \
+              --patch-fail-under 80 --patch-annotations true
+          else
+            echo "Impact map / select_impacted_tests missing — run full suite."
+            gd-tools test --coverage --parallel 4 --timeout 240 --junit-xml .gd-tools/results.xml
+          fi
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect project ready
+        id: project
+        run: |
+          if [ -f project.godot ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "No project.godot — build no-op."
+          fi
+
+      - name: Detect code/test changes
+        id: filter
+        if: github.event_name != 'workflow_dispatch' && steps.project.outputs.ready == 'true'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - 'scenes/**'
+              - 'scripts/**'
+              - 'ui/**'
+              - 'autoload/**'
+              - 'tests/**'
+              - 'addons/**'
+              - 'project.godot'
+              - 'icon.svg'
+              - 'tools/e2e_smoke.gd'
+              - 'tools/smoke/**'
+
+      - name: Skip suite (no project or no code/test changes)
+        if: >-
+          steps.project.outputs.ready != 'true' ||
+          (github.event_name != 'workflow_dispatch' && steps.filter.outputs.code != 'true')
+        run: echo 'build no-op (required check passes).'
+
+      - name: Setup Godot
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' || steps.filter.outputs.code == 'true')
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import / compile project
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' || steps.filter.outputs.code == 'true')
+        run: godot --headless --path . --import --quit
+
+  ai-bench-report:
+    name: ai-bench-report
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect AI-surface changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            ai:
+              - 'scripts/ai/**'
+              - 'scripts/sim/**/*ai*.gd'
+
+      - name: Skip (no AI-surface changes)
+        if: steps.filter.outputs.ai != 'true'
+        run: echo 'No AI-surface path changes — ai-bench-report no-op.'
+
+      - name: Setup Python
+        if: steps.filter.outputs.ai == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check committed ai-bench report ≥ baseline
+        if: steps.filter.outputs.ai == 'true'
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          python tools/check_ai_bench_report.py --base "origin/${{ github.base_ref }}"
+
+  e2e-smoke:
+    name: e2e-smoke
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect project ready
+        id: project
+        run: |
+          if [ -f project.godot ] && [ -f tools/e2e_smoke.gd ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "No project.godot or e2e_smoke.gd — e2e-smoke no-op."
+          fi
+
+      - name: Detect code/test changes
+        id: filter
+        if: github.event_name != 'workflow_dispatch' && steps.project.outputs.ready == 'true'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - 'scenes/**'
+              - 'scripts/**'
+              - 'ui/**'
+              - 'autoload/**'
+              - 'tests/**'
+              - 'addons/**'
+              - 'project.godot'
+              - 'icon.svg'
+              - 'tools/e2e_smoke.gd'
+              - 'tools/smoke/**'
+
+      - name: Skip suite (no project or no code/test changes)
+        if: >-
+          steps.project.outputs.ready != 'true' ||
+          (github.event_name != 'workflow_dispatch' && steps.filter.outputs.code != 'true')
+        run: echo 'e2e-smoke no-op (required check passes).'
+
+      - name: Setup Godot
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' || steps.filter.outputs.code == 'true')
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' || steps.filter.outputs.code == 'true')
+        run: godot --headless --path . --import --quit
+
+      - name: Run headless e2e smoke
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' || steps.filter.outputs.code == 'true')
+        run: godot --headless --path . --script res://tools/e2e_smoke.gd

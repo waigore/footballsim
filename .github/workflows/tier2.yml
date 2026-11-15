@@ -1,0 +1,71 @@
+name: CI tier 2
+
+# Full unit suite + overall 80% coverage. Does not block PR merge.
+# Sticky GitHub issue (label ci-tier2) for the fix-tests agent.
+# Until project.godot exists, the job no-ops successfully.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */8 * * *"
+
+concurrency:
+  group: ci-tier2
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+jobs:
+  tests-full:
+    name: tests-full
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect project ready
+        id: project
+        run: |
+          if [ -f project.godot ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "No project.godot — tier 2 no-op until Godot project is scaffolded."
+          fi
+
+      - name: Setup Python
+        if: steps.project.outputs.ready == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install gd-tools
+        if: steps.project.outputs.ready == 'true'
+        run: pip install -r .github/gd-tools-requirements.txt
+
+      - name: Setup Godot
+        if: steps.project.outputs.ready == 'true'
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        if: steps.project.outputs.ready == 'true'
+        run: godot --headless --path . --import --quit
+
+      - name: Full suite with coverage gate
+        if: steps.project.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          gd-tools test --coverage --parallel 4 --timeout 600 --junit-xml .gd-tools/results.xml
+          gd-tools coverage show --min 80
+
+      - name: Skip complete
+        if: steps.project.outputs.ready != 'true'
+        run: echo 'tier 2 skipped (no project).'
