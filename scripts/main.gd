@@ -394,14 +394,14 @@ func _on_engine_event(e: Dictionary) -> void:
 		return
 	if shown_triggers.has(key):
 		return
-	var important: bool = kind in ["shot", "goal", "penalty", "penalty_taken", "card"]
+	var important: bool = kind in ["shot", "goal", "penalty", "penalty_taken", "card", "corner"]
 	if not important:
 		return
 	if in_highlight:
 		# extend the live window around goals and late chances
 		highlight_until = maxf(highlight_until, engine.clock + (5.0 if kind == "goal" else 3.0))
 		return
-	if kind == "shot" or kind == "penalty":
+	if kind in ["shot", "penalty", "corner"]:
 		shown_triggers[key] = true
 		if _rewind_for(engine.clock):
 			in_highlight = true
