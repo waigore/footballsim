@@ -153,6 +153,12 @@ func _draw_top(vp: Vector2) -> void:
 	var split: float = bar.size.x * pos.x / 100.0
 	draw_rect(Rect2(bar.position, Vector2(split, bar.size.y)), engine.teams[0]["data"]["color"])
 	draw_rect(Rect2(bar.position + Vector2(split, 0), Vector2(bar.size.x - split, bar.size.y)), engine.teams[1]["data"]["color"])
+	if game.mode == "highlights" and game.fast_mode and not game.paused and game.match_time > 9.0:
+		var sw := 226.0
+		var sx := vp.x * 0.5 - sw * 0.5
+		var pulse := 0.55 + 0.25 * sin(Time.get_ticks_msec() * 0.006)
+		rect(Color(0.03, 0.05, 0.06, 0.82), Rect2(sx, vp.y - 120, sw, 26), 6, Color(1, 1, 1, 0.10))
+		text_c(vp.x * 0.5, vp.y - 102, "SIMULATING  ·  NEXT CHANCE", 11, Color(0.62, 0.82, 0.86, pulse), f_bold)
 	if game.replay_banner > 0.0:
 		var rw := 126.0
 		var rxp := vp.x * 0.5 - rw * 0.5
