@@ -58,7 +58,7 @@ godot --path . -- --focus=8                    # open with a player pinned
 
 * **Full** – 90 minutes plus stoppage, played at 1× pace (speed controls available).
 * **Highlights** – the controller keeps a rolling 18-second snapshot buffer. When
-  the engine reports a shot, goal, penalty or red card it rewinds ~7 seconds,
+  the engine reports a shot, goal, penalty, corner or red card it rewinds ~7 seconds,
   replays the build-up live, then fast-simulates again. Skip ends the clip.
 
 ## Data

@@ -985,9 +985,9 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 		# Finishing model: keepers stop most efforts; only the best chances beat them.
 	var gkk = _gk_of(1 - p.team)
 	var xg_est: float = expected_goals(p.pos, aim_y, p.team)
-	var p_goal: float = clampf(0.05 + xg_est * 0.80, 0.035, 0.42)
+	var p_goal: float = clampf(0.006 + xg_est * 0.18, 0.006, 0.16)
 	if gkk != null and rng.randf() > p_goal and kind != "penalty":
-		aim_y = clampf(gkk.pos.y - goal.y + rng.randf_range(-0.85, 0.85), -3.25, 3.25)
+		aim_y = clampf(gkk.pos.y - goal.y + rng.randf_range(-0.55, 0.55), -3.25, 3.25)
 	var aim = Vector2(goal.x, goal.y + aim_y)
 	var ang = atan2(aim.y - p.pos.y, aim.x - p.pos.x) + deg_to_rad(rng.randf_range(-sigma, sigma))
 	var speed = Attrs.shot_speed(p, power) * rng.randf_range(0.94, 1.06)
@@ -1099,9 +1099,9 @@ func _check_rules() -> void:
 				var gd: float = gk.pos.distance_to(gpos)
 				var reach: float = Attrs.gk_dive_reach(gk) + 1.05
 				gk_debug.append("GOALCHECK gkdist=%.1f reach=%.1f z=%.1f speed=%.1f" % [gd, reach, ball.z, ball.vel.length()])
-				if gd < reach + 1.5:
-					var save_p: float = 0.86 + (reach - gd) * 0.10 + (Attrs.gk_handling(gk) - 0.8) * 0.30 - ball.vel.length() * 0.004
-					save_p = clampf(save_p, 0.08, 0.95)
+				if gd < reach + 3.2:
+					var save_p: float = 0.90 + (reach - gd) * 0.06 + (Attrs.gk_handling(gk) - 0.8) * 0.25 - ball.vel.length() * 0.003
+					save_p = clampf(save_p, 0.18, 0.985)
 					if rng.randf() < save_p:
 						# A goal-line save.
 						var push: Vector2 = Vector2(teams[goal_team]["dir"], rng.randf_range(-1.0, 1.0)).normalized()
