@@ -1,0 +1,160 @@
+class_name TeamData
+extends RefCounted
+
+## Squad data — EA SPORTS FC 26 club ratings (OVR / PAC / SHO / PAS / DRI / DEF / PHY).
+## Source: OVRBase FC 26 club pages for Manchester United and Manchester City (retrieved Nov 2026).
+## Goalkeeper DIV/HAN/KIC/REF/SPD are assigned from OVR/role (not published in that table).
+
+const FIXTURE := {
+	"home": "MUN",
+	"away": "MCI",
+	"stadium": "OLD TRAFFORD",
+	"city": "MANCHESTER",
+	"competition": "PREMIER LEAGUE",
+	"attendance": 74197,
+	"referee": "M. OLIVER",
+	"kickoff": "20:00",
+}
+
+const TEAMS := {
+	"MUN": {
+		"name": "Manchester United",
+		"short": "MUN",
+		"abbr": "MUN",
+		"nickname": "The Red Devils",
+		"manager": "R. Amorim",
+		"formation": "4-2-3-1",
+		"color": Color("#da291c"),
+		"color_dark": Color("#8f1a11"),
+		"color_light": Color("#ff6a55"),
+		"shorts": Color("#ffffff"),
+		"gk_color": Color("#e08a2e"),
+		"text": Color("#ffffff"),
+		"style": {
+			"possession": 0.46,      # preference for keeping the ball vs. going direct
+			"tempo": 0.58,           # speed of ball circulation
+			"press": 0.55,           # pressing height
+			"line": 0.52,            # defensive line height
+			"width": 0.55,           # attacking width
+			"directness": 0.62,      # forward pass bias
+			"crossing": 0.55,
+			"aggression": 0.60,
+		},
+		"starters": [
+			{"name": "S. Lammens", "number": 31, "role": "GK", "pos": "GK", "ovr": 80, "pac": 62, "sho": 30, "pas": 58, "dri": 52, "def": 24, "phy": 72, "height": 193, "gk": {"div": 80, "han": 78, "kic": 74, "ref": 79, "spd": 62}},
+			{"name": "D. Dalot", "number": 20, "role": "RB", "pos": "RB", "ovr": 78, "pac": 82, "sho": 62, "pas": 73, "dri": 75, "def": 74, "phy": 78, "height": 183},
+			{"name": "L. Yoro", "number": 15, "role": "RCB", "pos": "CB", "ovr": 78, "pac": 70, "sho": 41, "pas": 60, "dri": 64, "def": 79, "phy": 73, "height": 190},
+			{"name": "M. de Ligt", "number": 4, "role": "LCB", "pos": "CB", "ovr": 82, "pac": 62, "sho": 61, "pas": 62, "dri": 67, "def": 82, "phy": 83, "height": 189},
+			{"name": "L. Shaw", "number": 23, "role": "LB", "pos": "LB", "ovr": 79, "pac": 67, "sho": 57, "pas": 78, "dri": 75, "def": 79, "phy": 76, "height": 185},
+			{"name": "Casemiro", "number": 18, "role": "RDM", "pos": "CDM", "ovr": 82, "pac": 36, "sho": 74, "pas": 78, "dri": 69, "def": 81, "phy": 79, "height": 185},
+			{"name": "K. Mainoo", "number": 37, "role": "LDM", "pos": "CDM", "ovr": 78, "pac": 68, "sho": 69, "pas": 75, "dri": 81, "def": 74, "phy": 74, "height": 175},
+			{"name": "Amad", "number": 16, "role": "RW", "pos": "RM", "ovr": 80, "pac": 85, "sho": 74, "pas": 75, "dri": 84, "def": 54, "phy": 53, "height": 173},
+			{"name": "B. Fernandes", "number": 8, "role": "CAM", "pos": "CAM", "ovr": 88, "pac": 67, "sho": 84, "pas": 90, "dri": 84, "def": 67, "phy": 75, "height": 179},
+			{"name": "B. Mbeumo", "number": 19, "role": "LW", "pos": "RW", "ovr": 85, "pac": 90, "sho": 84, "pas": 79, "dri": 85, "def": 49, "phy": 77, "height": 171},
+			{"name": "B. Šeško", "number": 30, "role": "ST", "pos": "ST", "ovr": 80, "pac": 86, "sho": 80, "pas": 65, "dri": 78, "def": 46, "phy": 80, "height": 195},
+		],
+		"bench": [
+			{"name": "A. Bayındır", "number": 1, "role": "GK", "pos": "GK", "ovr": 75, "pac": 60, "sho": 30, "pas": 55, "dri": 50, "def": 22, "phy": 70, "height": 198, "gk": {"div": 76, "han": 75, "kic": 70, "ref": 75, "spd": 66}},
+			{"name": "H. Maguire", "number": 5, "role": "CB", "pos": "CB", "ovr": 81, "pac": 35, "sho": 57, "pas": 70, "dri": 65, "def": 82, "phy": 82, "height": 194},
+			{"name": "N. Mazraoui", "number": 3, "role": "RB", "pos": "RB", "ovr": 80, "pac": 75, "sho": 66, "pas": 76, "dri": 80, "def": 77, "phy": 72, "height": 183},
+			{"name": "L. Martínez", "number": 6, "role": "CB", "pos": "CB", "ovr": 81, "pac": 67, "sho": 59, "pas": 75, "dri": 75, "def": 81, "phy": 80, "height": 175},
+			{"name": "M. Ugarte", "number": 25, "role": "CDM", "pos": "CDM", "ovr": 78, "pac": 62, "sho": 65, "pas": 71, "dri": 73, "def": 76, "phy": 75, "height": 182},
+			{"name": "M. Mount", "number": 7, "role": "CAM", "pos": "CAM", "ovr": 78, "pac": 67, "sho": 76, "pas": 80, "dri": 79, "def": 62, "phy": 61, "height": 178},
+			{"name": "M. Cunha", "number": 10, "role": "ST", "pos": "CAM", "ovr": 83, "pac": 78, "sho": 85, "pas": 79, "dri": 84, "def": 44, "phy": 75, "height": 184},
+			{"name": "J. Zirkzee", "number": 11, "role": "ST", "pos": "ST", "ovr": 77, "pac": 70, "sho": 76, "pas": 73, "dri": 82, "def": 42, "phy": 76, "height": 193},
+			{"name": "P. Dorgu", "number": 13, "role": "LB", "pos": "LM", "ovr": 77, "pac": 86, "sho": 69, "pas": 71, "dri": 77, "def": 72, "phy": 73, "height": 175},
+		],
+	},
+	"MCI": {
+		"name": "Manchester City",
+		"short": "MCI",
+		"abbr": "MCI",
+		"nickname": "The Citizens",
+		"manager": "P. Guardiola",
+		"formation": "4-2-3-1",
+		"color": Color("#6cabdd"),
+		"color_dark": Color("#2a6d96"),
+		"color_light": Color("#a8d8f2"),
+		"shorts": Color("#1c2c5b"),
+		"gk_color": Color("#b6e21f"),
+		"text": Color("#0d1b2a"),
+		"style": {
+			"possession": 0.66,
+			"tempo": 0.54,
+			"press": 0.70,
+			"line": 0.64,
+			"width": 0.64,
+			"directness": 0.42,
+			"crossing": 0.48,
+			"aggression": 0.48,
+		},
+		"starters": [
+			{"name": "G. Donnarumma", "number": 25, "role": "GK", "pos": "GK", "ovr": 89, "pac": 51, "sho": 30, "pas": 60, "dri": 55, "def": 26, "phy": 76, "height": 196, "gk": {"div": 87, "han": 86, "kic": 74, "ref": 88, "spd": 51}},
+			{"name": "M. Nunes", "number": 27, "role": "RB", "pos": "RB", "ovr": 81, "pac": 86, "sho": 70, "pas": 78, "dri": 79, "def": 77, "phy": 76, "height": 183},
+			{"name": "R. Dias", "number": 3, "role": "RCB", "pos": "CB", "ovr": 87, "pac": 59, "sho": 39, "pas": 69, "dri": 69, "def": 87, "phy": 84, "height": 187},
+			{"name": "M. Guéhi", "number": 15, "role": "LCB", "pos": "CB", "ovr": 84, "pac": 71, "sho": 39, "pas": 69, "dri": 73, "def": 85, "phy": 80, "height": 182},
+			{"name": "N. O'Reilly", "number": 33, "role": "LB", "pos": "LB", "ovr": 80, "pac": 83, "sho": 70, "pas": 77, "dri": 77, "def": 77, "phy": 77, "height": 188},
+			{"name": "Rodri", "number": 16, "role": "RDM", "pos": "CDM", "ovr": 89, "pac": 65, "sho": 79, "pas": 85, "dri": 82, "def": 86, "phy": 84, "height": 191},
+			{"name": "T. Reijnders", "number": 4, "role": "LDM", "pos": "CM", "ovr": 85, "pac": 78, "sho": 79, "pas": 82, "dri": 84, "def": 74, "phy": 77, "height": 185},
+			{"name": "R. Cherki", "number": 10, "role": "RW", "pos": "RW", "ovr": 83, "pac": 75, "sho": 77, "pas": 82, "dri": 88, "def": 34, "phy": 65, "height": 181},
+			{"name": "P. Foden", "number": 47, "role": "CAM", "pos": "CAM", "ovr": 85, "pac": 81, "sho": 81, "pas": 82, "dri": 89, "def": 57, "phy": 57, "height": 171},
+			{"name": "J. Doku", "number": 11, "role": "LW", "pos": "LW", "ovr": 83, "pac": 92, "sho": 72, "pas": 77, "dri": 88, "def": 32, "phy": 71, "height": 173},
+			{"name": "E. Haaland", "number": 9, "role": "ST", "pos": "ST", "ovr": 91, "pac": 88, "sho": 92, "pas": 71, "dri": 80, "def": 47, "phy": 88, "height": 195},
+		],
+		"bench": [
+			{"name": "J. Trafford", "number": 1, "role": "GK", "pos": "GK", "ovr": 76, "pac": 58, "sho": 30, "pas": 56, "dri": 52, "def": 22, "phy": 72, "height": 192, "gk": {"div": 77, "han": 76, "kic": 72, "ref": 75, "spd": 63}},
+			{"name": "J. Stones", "number": 5, "role": "CB", "pos": "CB", "ovr": 82, "pac": 64, "sho": 58, "pas": 74, "dri": 75, "def": 84, "phy": 72, "height": 188},
+			{"name": "N. Aké", "number": 6, "role": "CB", "pos": "CB", "ovr": 82, "pac": 73, "sho": 53, "pas": 71, "dri": 74, "def": 83, "phy": 74, "height": 180},
+			{"name": "A. Khusanov", "number": 45, "role": "CB", "pos": "CB", "ovr": 79, "pac": 86, "sho": 39, "pas": 61, "dri": 65, "def": 78, "phy": 78, "height": 186},
+			{"name": "R. Aït-Nouri", "number": 21, "role": "LB", "pos": "LB", "ovr": 81, "pac": 84, "sho": 53, "pas": 76, "dri": 84, "def": 77, "phy": 70, "height": 180},
+			{"name": "N. González", "number": 14, "role": "CDM", "pos": "CDM", "ovr": 81, "pac": 67, "sho": 70, "pas": 79, "dri": 77, "def": 78, "phy": 80, "height": 185},
+			{"name": "M. Kovačić", "number": 8, "role": "CM", "pos": "CM", "ovr": 82, "pac": 66, "sho": 74, "pas": 80, "dri": 82, "def": 73, "phy": 71, "height": 177},
+			{"name": "B. Silva", "number": 20, "role": "CM", "pos": "CM", "ovr": 83, "pac": 56, "sho": 77, "pas": 83, "dri": 88, "def": 70, "phy": 64, "height": 173},
+			{"name": "Savinho", "number": 26, "role": "RW", "pos": "RW", "ovr": 81, "pac": 87, "sho": 71, "pas": 77, "dri": 85, "def": 30, "phy": 53, "height": 176},
+			{"name": "O. Marmoush", "number": 7, "role": "LW", "pos": "LW", "ovr": 83, "pac": 89, "sho": 84, "pas": 76, "dri": 85, "def": 34, "phy": 71, "height": 183},
+			{"name": "A. Semenyo", "number": 19, "role": "RW", "pos": "RW", "ovr": 84, "pac": 82, "sho": 84, "pas": 78, "dri": 83, "def": 40, "phy": 79, "height": 181},
+		],
+	},
+}
+
+## Formation slots in normalized attacking coordinates (x: 0 own goal -> 1 opponent goal, y: 0 right touchline -> 1 left).
+const FORMATIONS := {
+	"4-2-3-1": {
+		"GK": Vector2(0.035, 0.50),
+		"RB": Vector2(0.24, 0.86),
+		"RCB": Vector2(0.155, 0.61),
+		"LCB": Vector2(0.155, 0.39),
+		"LB": Vector2(0.24, 0.14),
+		"RDM": Vector2(0.33, 0.58),
+		"LDM": Vector2(0.33, 0.42),
+		"RW": Vector2(0.60, 0.87),
+		"CAM": Vector2(0.545, 0.50),
+		"LW": Vector2(0.60, 0.13),
+		"ST": Vector2(0.715, 0.50),
+	},
+}
+
+static func team_ids() -> Array:
+	return TEAMS.keys()
+
+static func get_team(id: String) -> Dictionary:
+	return TEAMS[id]
+
+static func other(id: String) -> String:
+	return "MCI" if id == "MUN" else "MUN"
+
+static func formation_slot(team: Dictionary, role: String) -> Vector2:
+	var f: Dictionary = FORMATIONS[team["formation"]]
+	if f.has(role):
+		return f[role]
+	# Fallbacks for bench players brought on out of position.
+	match role:
+		"CB": return Vector2(0.155, 0.5)
+		"CDM": return Vector2(0.33, 0.5)
+		"CM": return Vector2(0.36, 0.5)
+		"LM", "RM": return Vector2(0.6, 0.5)
+		"LW", "RW": return Vector2(0.6, 0.2)
+		"CAM": return Vector2(0.55, 0.5)
+		"ST": return Vector2(0.715, 0.5)
+		"GK": return Vector2(0.035, 0.5)
+	return Vector2(0.3, 0.5)
