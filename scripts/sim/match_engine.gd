@@ -982,17 +982,24 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	var sigma = Attrs.shot_sigma_deg(p, dist, pressure)
 	if kind == "penalty":
 		sigma *= 0.30
-		# Finishing model: keepers stop most efforts; only the best chances beat them.
+		# Finishing: keepers stop most on-target efforts; only the best chances beat them.
 	var gkk = _gk_of(1 - p.team)
 	var xg_est: float = expected_goals(p.pos, aim_y, p.team)
-	var p_goal: float = clampf(0.006 + xg_est * 0.18, 0.006, 0.16)
-	if gkk != null and rng.randf() > p_goal and kind != "penalty":
-		aim_y = clampf(gkk.pos.y - goal.y + rng.randf_range(-0.55, 0.55), -3.25, 3.25)
+	var p_goal: float = clampf(0.02 + xg_est * 0.22, 0.015, 0.22)
 	var aim = Vector2(goal.x, goal.y + aim_y)
 	var ang = atan2(aim.y - p.pos.y, aim.x - p.pos.x) + deg_to_rad(rng.randf_range(-sigma, sigma))
 	var speed = Attrs.shot_speed(p, power) * rng.randf_range(0.94, 1.06)
 	var dir = Vector2(cos(ang), sin(ang))
-	var flight = maxf(0.12, dist / maxf(speed, 1.0))
+	# Only shots that were already on target get smothered by the keeper;
+	# wild efforts stay wild, which keeps the on-target stats honest.
+	var tg0: float = (goal.x - p.pos.x) / maxf(absf(dir.x), 0.05) * signf(goal.x - p.pos.x)
+	var y_cross: float = p.pos.y + dir.y * absf(tg0)
+	var on_target: bool = tg0 > 0.0 and absf(y_cross - goal.y) < GOAL_W * 0.5 and aim_z < GOAL_H
+	if on_target and gkk != null and kind != "penalty" and rng.randf() > p_goal and rng.randf() < 0.70:
+		ang = atan2(gkk.pos.y - p.pos.y, goal.x - p.pos.x)
+		dir = Vector2(cos(ang), sin(ang))
+		speed *= 0.97
+	var flight: float = maxf(0.12, dist / maxf(speed, 1.0))
 	var zt = clampf(aim_z + rng.randf_range(-0.35, 0.35), 0.12, 2.6)
 	ball.vz = (zt - 0.11) / flight + 0.5 * 9.81 * flight
 	ball.vz = clampf(ball.vz, -1.0, 9.0)
@@ -1100,7 +1107,7 @@ func _check_rules() -> void:
 				var reach: float = Attrs.gk_dive_reach(gk) + 1.05
 				gk_debug.append("GOALCHECK gkdist=%.1f reach=%.1f z=%.1f speed=%.1f" % [gd, reach, ball.z, ball.vel.length()])
 				if gd < reach + 3.2:
-					var save_p: float = 0.90 + (reach - gd) * 0.06 + (Attrs.gk_handling(gk) - 0.8) * 0.25 - ball.vel.length() * 0.003
+					var save_p: float = 0.88 + (reach - gd) * 0.06 + (Attrs.gk_handling(gk) - 0.8) * 0.25 - ball.vel.length() * 0.003
 					save_p = clampf(save_p, 0.18, 0.985)
 					if rng.randf() < save_p:
 						# A goal-line save.

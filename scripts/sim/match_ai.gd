@@ -13,6 +13,7 @@ var run_cd = {}
 var kickoff_lock = 0.0
 var pass_chain = [[], []]
 var chain_team = -1
+var last_shot := [-10.0, -10.0]
 
 func _init(engine) -> void:
 	e = engine
@@ -20,6 +21,7 @@ func _init(engine) -> void:
 func on_kickoff() -> void:
 	pass_chain = [[], []]
 	chain_team = -1
+	last_shot = [-10.0, -10.0]
 	decide_cd.clear()
 	run_cd.clear()
 	gk_react_at = [-1.0, -1.0]
@@ -28,6 +30,7 @@ func on_kickoff() -> void:
 func on_restore() -> void:
 	pass_chain = [[], []]
 	chain_team = -1
+	last_shot = [-10.0, -10.0]
 	decide_cd.clear()
 	run_cd.clear()
 
@@ -432,7 +435,9 @@ func _carrier_decide(p) -> void:
 	if e.clock < cd:
 		return
 	var pressure: float = e.pressure_on(p)
-	decide_cd[id] = e.clock + (0.55 + pressure * 0.16 + e.rng.randf_range(0.0, 0.18))
+	var _deep_attack: bool = e.attacking_x(p.team, p.pos) > e.L * 0.62
+	var _base_cd: float = 0.30 if _deep_attack else 0.55
+	decide_cd[id] = e.clock + (_base_cd + pressure * 0.12 + e.rng.randf_range(0.0, 0.12))
 	var goal: Vector2 = e.target_goal_pos(p.team)
 	var dist: float = p.pos.distance_to(goal)
 	var angle: float = e.opponent_goal_angle(p)
@@ -441,7 +446,7 @@ func _carrier_decide(p) -> void:
 	var final_third: bool = e.attacking_x(p.team, p.pos) > e.L * 0.66
 
 	# --- shoot -------------------------------------------------------------
-	if dist < 27.0 and angle > 0.05 and p.cooldown <= 0.0:
+	if dist < 27.0 and angle > 0.04 and p.cooldown <= 0.0 and p.attr["sho"] >= 40.0 and e.clock - last_shot[p.team] > 3.0:
 		var blocked: float = 0.0
 		var to_goal: Vector2 = (goal - p.pos).normalized()
 		for q in e.players:
@@ -453,32 +458,23 @@ func _carrier_decide(p) -> void:
 				var perp: float = absf(rel.cross(to_goal))
 				if perp < 1.6:
 					blocked += (1.0 - perp / 1.6) * (1.0 - along / 20.0)
-		var shoot_score: float = (p.attr["sho"] / 100.0) * 0.90 + angle * 1.15 - dist * 0.045 - pressure * 0.35 - blocked * 0.70
+		var shoot_score: float = (p.attr["sho"] / 100.0) * 1.05 + angle * 1.55 - dist * 0.048 - pressure * 0.32 - blocked * 0.80
 		if dist < 17.0:
 			shoot_score += 0.45
 		if dist < 11.0:
 			shoot_score += 0.55
-		if angle < 0.10:
-			shoot_score -= 2.0
 		if p.attr["sho"] < 55.0:
 			shoot_score -= 0.30
-		if final_third and e.rng.randf() < 0.04:
+		if final_third and e.rng.randf() < 0.05:
 			shoot_score += 0.35
-		if shoot_score > 2.05 + pressure * 0.22:
-			var gk = e._gk_of(1 - p.team)
-			var gk_y: float = 34.0 if gk == null else gk.pos.y
-			var side: float = 1.0 if gk_y >= 34.0 else -1.0
-			var aim_y: float = 0.0
-			var roll: float = e.rng.randf()
-			if roll < 0.45:
-				aim_y = side * e.rng.randf_range(2.4, 3.3)
-			elif roll < 0.70:
-				aim_y = -side * e.rng.randf_range(2.2, 3.2)
-			else:
-				aim_y = e.rng.randf_range(-1.2, 1.2)
-			var aim_z: float = e.rng.randf_range(0.25, 1.5) if dist > 12.0 else e.rng.randf_range(0.2, 1.1)
-			var power: float = clampf(0.88 + dist * 0.005, 0.85, 1.06)
-			e.shoot_ball(p, aim_y, aim_z, power)
+		# A clear sight of goal: shoot. Strikers do not dribble this.
+		var facing_goal: float = p.facing.dot(to_goal)
+		var clear_chance: bool = dist < 15.0 and blocked < 0.10 and facing_goal > 0.25
+		if clear_chance and e.rng.randf() < 0.85:
+			_finish(p, dist)
+			return
+		if shoot_score > 1.75 + pressure * 0.18:
+			_finish(p, dist)
 			return
 
 	# Long shot from space (low xG, but it keeps defences honest).
@@ -553,6 +549,8 @@ func _carrier_decide(p) -> void:
 	var space: float = _space_ahead(p)
 	var drib_score: float = (p.attr["dri"] / 100.0) * 1.18 + minf(space, 14.0) * 0.085 - pressure * 0.58
 	drib_score += _urgency(p.team) * 0.55
+	if dist < 16.0:
+		drib_score -= 0.45
 	drib_score += (1.0 - style["directness"]) * 0.10
 	if own_third and pressure > 1.0:
 		drib_score -= 0.55
@@ -629,6 +627,23 @@ func _urgency(t: int) -> float:
 		return 0.0
 	var stale: float = e.clock - last_progress_clock[t]
 	return clampf((stale - 5.0) / 8.0, 0.0, 1.0)
+
+func _finish(p, dist: float) -> void:
+	last_shot[p.team] = e.clock
+	var gk = e._gk_of(1 - p.team)
+	var gk_y: float = 34.0 if gk == null else gk.pos.y
+	var side: float = 1.0 if gk_y >= 34.0 else -1.0
+	var aim_y: float = 0.0
+	var roll: float = e.rng.randf()
+	if roll < 0.45:
+		aim_y = side * e.rng.randf_range(2.4, 3.3)
+	elif roll < 0.70:
+		aim_y = -side * e.rng.randf_range(2.2, 3.2)
+	else:
+		aim_y = e.rng.randf_range(-1.2, 1.2)
+	var aim_z: float = e.rng.randf_range(0.25, 1.5) if dist > 12.0 else e.rng.randf_range(0.2, 1.1)
+	var power: float = clampf(0.88 + dist * 0.005, 0.85, 1.06)
+	e.shoot_ball(p, aim_y, aim_z, power)
 
 func _lane_risk(from: Vector2, to: Vector2, team: int) -> float:
 	var seg = to - from
