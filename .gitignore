@@ -1,5 +1,46 @@
+# Godot
 .godot/
-shots/
-dist/
-*.log
+*.translation
+export.cfg
+.import/
+
+# Android signing — never commit keystores or credentials
+*.keystore
+*.jks
+keystore/
+# Stable CI debug key (package com.waigore.footballsim.debug)
+!export/android/debug.keystore
+
+# gd-tools
+.gd-tools/
+*.gd.bak
+
+# OS / editors
 .DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+*.tmp
+*.log
+
+# Debug captures
+shots/
+
+# Exports / builds
+build/
+dist/
+*.apk
+*.aab
+*.ipa
+*.exe
+*.x86_64
+*.app/
+*.dmg
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
