@@ -82,6 +82,8 @@ class Ball:
 	var loose_t = 0.0
 
 var rng = RandomNumberGenerator.new()
+var home_team := 0
+var home_advantage := 0.05   # +5% composure/duels for the home side
 var seed_value = 4242
 
 var teams: Array = []
@@ -122,6 +124,13 @@ func _vlog(msg: String) -> void:
 	if verbose:
 		print("[%6.2f] %s" % [clock, msg])
 
+## Home advantage, expressed as a multiplier on technical execution.
+## >1 means less error for the home side; <1 slightly more for the visitors.
+func home_factor(p) -> float:
+	if p.team == home_team:
+		return 1.0 + home_advantage
+	return 1.0 - home_advantage * 0.5
+
 func _init(seed_in: int = 4242) -> void:
 	seed_value = seed_in
 	rng.seed = seed_in
@@ -136,9 +145,10 @@ func _init(seed_in: int = 4242) -> void:
 		},
 	]
 	stats = [_blank_stats(), _blank_stats()]
+	home_team = 0 if TeamData.FIXTURE["home"] == teams[0]["id"] else 1
 	_build_squads()
 	brain = MatchAI.new(self)
-	setup_kickoff(0, false)
+	setup_kickoff(0 if rng.randf() < 0.5 else 1, false)
 
 func _blank_stats() -> Dictionary:
 	return {
@@ -488,7 +498,8 @@ func _move_players(dt: float) -> void:
 		p.stats["distance"] += moved
 		if p.vel.length() > 0.3:
 			p.facing = p.vel.normalized()
-		p.stamina = maxf(0.25, p.stamina - Attrs.stamina_drain(p, p.vel.length(), dt))
+		var drain: float = Attrs.stamina_drain(p, p.vel.length(), dt) * (0.96 if p.team == home_team else 1.02)
+		p.stamina = maxf(0.25, p.stamina - drain)
 		# keep bodies loosely on the field
 		p.pos.x = clampf(p.pos.x, -3.0, L + 3.0)
 		p.pos.y = clampf(p.pos.y, -3.0, W + 3.0)
@@ -669,6 +680,7 @@ func _attempt_tackle(d, carrier) -> void:
 	var align: float = clampf(d.facing.dot(rel.normalized()) if rel.length() > 0.01 else 0.0, -1.0, 1.0)
 	var speed_adv: float = clampf((carrier.vel.length() - d.vel.length()) / 8.0, -1.0, 1.0)
 	var chance: float = 0.10 + def * 0.50 - dri * 0.30 + (1.0 - dist / 1.9) * 0.22 + align * 0.10 - maxf(0.0, speed_adv) * 0.14
+	chance += 0.020 if d.team == home_team else -0.015
 	chance = clampf(chance, 0.04, 0.60)
 	if rng.randf() < chance:
 		d.stats["tackles"] += 1
@@ -923,7 +935,7 @@ func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, 
 		return
 	var dist: float = p.pos.distance_to(target_point)
 	var pressure = pressure_on(p)
-	var sigma = Attrs.pass_sigma_deg(p, dist, pressure)
+	var sigma = Attrs.pass_sigma_deg(p, dist, pressure) / home_factor(p)
 	var aim = target_point
 	if lofted:
 		var land_sigma: float = dist * tan(deg_to_rad(sigma)) * 0.8
@@ -979,7 +991,7 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	var goal: Vector2 = target_goal_pos(p.team)
 	var dist: float = p.pos.distance_to(goal)
 	var pressure = pressure_on(p)
-	var sigma = Attrs.shot_sigma_deg(p, dist, pressure)
+	var sigma = Attrs.shot_sigma_deg(p, dist, pressure) / home_factor(p)
 	if kind == "penalty":
 		sigma *= 0.30
 		# Finishing: keepers stop most on-target efforts; only the best chances beat them.

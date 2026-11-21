@@ -51,6 +51,10 @@ godot --path . -- --focus=8                    # open with a player pinned
   distribution by style.
 * **Team shape** – formations, zonal defending, man-marking, pressing triggers,
   offside-line discipline, through-balls, crosses, switches, dribble carries.
+* **Home advantage** – the home side gets a small, tunable edge (5% by default):
+  tighter passing and shooting (error divided by the home factor), +0.02 on tackle
+  duels (visitors -0.015), a 4% slower stamina drain and a slightly higher pressing
+  line. Set `home_advantage` on the engine to 0.0 for a neutral match.
 * **Match story** – commentary ticker, xG, shots/on target, possession, corners,
   fouls, cards, a live player card and a full-time summary.
 

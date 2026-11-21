@@ -239,6 +239,8 @@ func _apply_pressing() -> void:
 			continue
 		var style = e.teams[t]["data"]["style"]
 		var max_press: float = 20.0 + style["press"] * 26.0
+		if t == e.home_team:
+			max_press += 2.5
 		var owner = e.ball_owner()
 		if best_t < 9.0 and (e.ball.owner_id < 0 or e.ball.pos.distance_to(presser.pos) < max_press):
 			var target: Vector2
