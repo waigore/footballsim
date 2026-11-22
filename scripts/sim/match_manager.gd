@@ -273,11 +273,11 @@ func _do_sub(t: int, off, at_half_time: bool, reason: String) -> bool:
 
 ## Capture/showcase: force one tactics change or one change from the bench so
 ## a screenshot run can prove the overlay without waiting for a real trigger.
-## `--managerstactics` switches the showcase to the tactics card.
-func demo() -> void:
+## The flag comes from the caller (view), never from the sim reading the OS.
+func demo(only_tactics: bool = false) -> void:
 	if e == null:
 		return
-	if OS.get_cmdline_user_args().has("--managerstactics"):
+	if only_tactics:
 		_apply(0, {"mentality": "attacking", "line_delta": 0.06, "corner": "near_post"}, "demo")
 		return
 	var off = _sub_candidate(0)

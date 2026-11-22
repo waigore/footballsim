@@ -570,7 +570,7 @@ func _parse_capture_args() -> void:
 			engine.goal_timer = 8.0
 			engine.last_goal = {"team": 0, "conceded_by": 1, "scorer": "B. Šeško", "minute": 63, "own_goal": false}
 		elif a == "--managers":
-			engine.manager.demo()
+			engine.manager.demo(OS.get_cmdline_user_args().has("--managerstactics"))
 		elif a == "--full":
 			mode = "full"
 			fast_mode = false
