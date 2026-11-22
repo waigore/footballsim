@@ -1,6 +1,10 @@
 # Design record + changelog shapes
 
+Used by [`resolve-issue-agent`](../../resolve-issue-agent/SKILL.md) when an accepted design issue requires records. Elucidate only **requires** this work on the issue; it does not allocate IDs or write wiki pages.
+
 Wiki SoT: [Design Records](https://github.com/waigore/footballsim/wiki/design-records), [Design Changelog](https://github.com/waigore/footballsim/wiki/design-changelog).
+
+Human-facing wiki text: plain English ([`../../_shared/plain-english.md`](../../_shared/plain-english.md)). Keep requirement IDs in a short agents note on the record if needed.
 
 ## Allocate an ID
 
@@ -20,12 +24,13 @@ IDs sort chronologically as plain text. Never reuse or renumber.
 |-------|-------|
 | **Status** | accepted |
 | **Date** | YYYY-MM-DD (UTC) |
-| **Theme** | <one theme for this run's batch> |
+| **Theme** | <one theme> |
 | **Supersedes** | none |
+| **Issue** | #<N> |
 
 ## Sources
 
-- Unclear: <page#section> …
+- Unclear: <page / section in plain words> …
 - Checked, already clear / not resolving this: <page> …
 
 ## Ambiguity
@@ -34,17 +39,22 @@ IDs sort chronologically as plain text. Never reuse or renumber.
 
 ## Change
 
-<precise elucidated rule or AI behavior>
+<precise rule or AI behavior>
 
 ## Reasoning
 
-P5-first: <which REQ-P5-* / RUB-P5-*>. Other pillars: <brief or N/A>.
+Why this reading helps the player (agency / clarity). Other product pillars: <brief or none>.
 
 ## Impact
 
 - Wiki: <pages edited>
 - Code: <systems / none>
 - Player-visible: <one sentence>
+
+## For agents
+
+- REQ / RUB (if any): …
+- GitHub issue: #N
 ```
 
 ## Index + changelog
@@ -55,7 +65,7 @@ On `design-changelog.md`, **prepend**:
 
 ```markdown
 ## DR-YYYYMMDD-NN — Short title
-- **Change:** one sentence
+- **Change:** one sentence (plain English)
 - **Impact:** wiki pages + systems touched
 - **Record:** [DR-YYYYMMDD-NN](dr-YYYYMMDD-NN)
 ```

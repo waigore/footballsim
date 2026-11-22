@@ -1,6 +1,8 @@
 # Wiki update (GitHub wiki)
 
-Mechanics SoT lives in the GitHub wiki, not the game repo.
+Used by agents that **write** the wiki (chiefly [`resolve-issue-agent`](../../resolve-issue-agent/SKILL.md)). Elucidate does not push wiki pages.
+
+Mechanics SoT lives in the GitHub wiki, not the game repo. Write pages in plain English ([`../../_shared/plain-english.md`](../../_shared/plain-english.md)).
 
 ## Preferred: wiki git via `gh` / git
 
