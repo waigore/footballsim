@@ -97,15 +97,15 @@ func draw(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, engine) -> void
 	var minute: int = int(card.get("minute", 0))
 	var kind: String = "TACTICS" if str(card.get("type", "")) == "tactics" else "CHANGE"
 	_label(c, Vector2(box.position.x + 16, box.position.y + 20), "%s  ·  %d'  ·  %s" % [short, minute, kind], 10, gold, f_bold)
-	_label(c, Vector2(box.position.x + 16, box.position.y + 38), str(card.get("manager", "")).to_upper(), 14, ink, f_bold)
+	_label(c, Vector2(box.position.x + 16, box.position.y + 38), str(card.get("manager", "")).to_upper(), 15, ink, f_bold)
 	var y := box.position.y + 56.0
 	for i in range(lines.size()):
 		var txt := str(lines[i])
 		if txt.length() > 44:
 			txt = txt.substr(0, 43) + "…"
-		_label(c, Vector2(box.position.x + 16, y), txt, 11, ink if i < lines.size() - 1 else dim, f_med)
+		_label(c, Vector2(box.position.x + 16, y), txt, 12, ink if i < lines.size() - 1 else dim, f_med)
 		y += 16.0
-	_label(c, Vector2(box.position.x + 16, box.position.y + h - 8), "TAP TO DISMISS", 8, dim, f_med)
+	_label(c, Vector2(box.position.x + 16, box.position.y + h - 8), "TAP TO DISMISS", 9, dim, f_med)
 
 func _label(c: CanvasItem, pos: Vector2, s: String, size: int, color: Color, font: Font) -> void:
 	c.draw_string(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
