@@ -87,6 +87,7 @@ func tick() -> void:
 	sim_tick += 1
 	clock += DT
 	flash = maxf(0.0, flash - DT * 2.0)
+	_update_referee(DT)
 
 	if phase != "goal":
 		_tick_clock_end()
@@ -106,6 +107,7 @@ func tick() -> void:
 		_move_players(DT)
 		_ball_physics(DT)
 		_update_trails(DT)
+		_tick_injuries(DT)
 		return
 
 	# Open play.
@@ -117,10 +119,16 @@ func tick() -> void:
 	_update_possession(DT)
 	_update_trails(DT)
 	_tick_substitutions()
+	_tick_injuries(DT)
 
 func _tick_clock_end() -> void:
-	if half == 1 and clock >= 2700.0 + added[0]:
-		_end_first_half()
+	if half == 1:
+		# The fourth official's board goes up when 45:00 is reached; the half
+		# then plays the added time it earned (cards, fouls, restarts).
+		if added[0] <= 0.0 and clock >= 2700.0:
+			added[0] = 20.0 + rng.randf_range(0.0, 50.0) + minf(100.0, stoppage_events * 4.0)
+		if clock >= 2700.0 + added[0]:
+			_end_first_half()
 	elif half == 2 and clock >= 5400.0 + added[1]:
 		_end_match()
 
@@ -137,6 +145,9 @@ func begin_second_half() -> void:
 	if phase != "half_time":
 		return
 	added[1] = 90.0 + rng.randf_range(0.0, 90.0) + minf(120.0, stoppage_events * 8.0)
+	# Each half earns its own added time: no carrying first-half stoppages over.
+	stoppage_events = 0
+	injury_timer = 45.0
 	for t in range(2):
 		for p in players:
 			if p.team == t:
@@ -160,6 +171,7 @@ func to_dict() -> Dictionary:
 			"pos": p.pos, "vel": p.vel, "facing": p.facing, "target": p.target,
 			"stamina": p.stamina, "state": p.state, "has_ball": p.has_ball,
 			"yellow": p.yellow, "red": p.red, "sent_off": p.sent_off, "is_gk": p.is_gk,
+			"injured": p.injured,
 			"stats": p.stats.duplicate(true), "offside_flag": p.offside_flag,
 			"mark_id": p.mark_id, "cooldown": p.cooldown, "speed_scale": p.speed_scale,
 			"celebrate": p.celebrate,
@@ -176,11 +188,14 @@ func to_dict() -> Dictionary:
 			"shot_team": ball.shot_team, "shot_time": ball.shot_time, "shot_saved": ball.shot_saved, "loose_t": ball.loose_t,
 			"shot_xg": ball.shot_xg},
 		"players": ps, "stats": stats.duplicate(true), "events": events.duplicate(true),
+		"referee": {"pos": referee.pos, "vel": referee.vel, "whistle": referee.whistle,
+			"focus": referee.focus, "focus_t": referee.focus_t},
 		"ev_seq": ev_seq, "sim_tick": sim_tick, "goal_timer": goal_timer,
 		"last_goal": last_goal.duplicate(true), "rng": rng.state, "dirs": [teams[0]["dir"], teams[1]["dir"]],
 		"subs": [teams[0]["subs_made"], teams[1]["subs_made"]],
 		"subs_left": [teams[0]["subs_left"], teams[1]["subs_left"]], "finished": finished,
 		"stoppage_events": stoppage_events, "kickoff_team": kickoff_team,
+		"injury_timer": injury_timer,
 	}
 
 func from_dict(d: Dictionary) -> void:
@@ -212,6 +227,13 @@ func from_dict(d: Dictionary) -> void:
 	ball.shot_saved = b.get("shot_saved", false)
 	ball.shot_xg = b.get("shot_xg", 0.0)
 	ball.loose_t = b.get("loose_t", 0.0)
+	var r: Dictionary = d.get("referee", {})
+	if not r.is_empty():
+		referee.pos = r["pos"]
+		referee.vel = r["vel"]
+		referee.whistle = r["whistle"]
+		referee.focus = r["focus"]
+		referee.focus_t = r["focus_t"]
 	var old_trails := {}
 	for q in players:
 		old_trails[q.id] = q.trail
@@ -239,6 +261,7 @@ func from_dict(d: Dictionary) -> void:
 		p.red = pd["red"]
 		p.sent_off = pd["sent_off"]
 		p.is_gk = pd["is_gk"]
+		p.injured = bool(pd.get("injured", false))
 		p.stats = pd["stats"].duplicate(true)
 		p.offside_flag = pd["offside_flag"]
 		p.mark_id = pd["mark_id"]
@@ -269,6 +292,7 @@ func from_dict(d: Dictionary) -> void:
 	teams[1]["subs_left"] = sl[1]
 	finished = d["finished"]
 	stoppage_events = d["stoppage_events"]
+	injury_timer = float(d.get("injury_timer", 45.0))
 	kickoff_team = d["kickoff_team"]
 	if brain != null:
 		brain.on_restore()

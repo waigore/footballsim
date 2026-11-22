@@ -233,30 +233,79 @@ func _make_substitution(t: int, for_gk: bool = false) -> bool:
 		if not for_gk:
 			teams[t]["subs_made"] += 1
 		return false
-	var candidate: Dictionary = _pick_bench(t, worst.role, for_gk)
-	if candidate.is_empty():
+	return _bring_on(t, worst, for_gk)
+
+## Replace one player with the best available bench body. Used by the scheduled
+## changes and by injuries, which cannot wait for the substitution window.
+func _bring_on(t: int, off, for_gk: bool = false) -> bool:
+	var candidate: Dictionary = _pick_bench(t, off.role, for_gk or off.is_gk)
+	if candidate.is_empty() or teams[t]["subs_left"] <= 0:
 		if not for_gk:
 			teams[t]["subs_made"] += 1
 		return false
 	var np = _make_player(candidate, t, 200 + t * 40 + teams[t]["subs_made"])
 	# The substitute fills the slot of the player he replaces, not his own.
-	np.role = worst.role
-	np.is_gk = worst.is_gk
-	np.base = worst.base
-	np.pos = worst.pos
-	np.target = worst.target
+	np.role = off.role
+	np.is_gk = off.is_gk
+	np.base = off.base
+	np.pos = off.pos
+	np.target = off.target
 	np.stamina = 1.0
-	var idx = players.find(worst)
+	var idx = players.find(off)
 	players[idx] = np
-	by_id.erase(worst.id)
+	by_id.erase(off.id)
 	by_id[np.id] = np
-	if ball.owner_id == worst.id:
+	if ball.owner_id == off.id:
 		ball.owner_id = np.id
 		ball.last_touch_id = np.id
 	teams[t]["subs_made"] += 1
 	teams[t]["subs_left"] -= 1
-	_emit("substitution", Commentary.substitution(rng, teams[t]["data"]["short"], np.name, worst.name), t, np)
-	_add_involvement(np, "sub", "On for %s" % worst.name, np.pos)
+	_emit("substitution", Commentary.substitution(rng, teams[t]["data"]["short"], np.name, off.name), t, np)
+	_add_involvement(np, "sub", "On for %s" % off.name, np.pos)
 	return true
+
+# --------------------------------------------------------------- injuries ---
+
+## Tired bodies break down: one roll every 45s of play picks a side, and that
+## side's most fatigued outfield player may pull up. A knock costs a change; a
+## side with no changes left plays on a man short.
+func _tick_injuries(dt: float) -> void:
+	injury_timer -= dt
+	if injury_timer > 0.0:
+		return
+	injury_timer = 45.0
+	for t in range(2):
+		if rng.randf() >= 0.006:
+			continue
+		var cand = _most_tired_outfield(t)
+		if cand == null:
+			continue
+		# Cramp or a knock: the same tired legs make the serious ones likelier.
+		if rng.randf() < 0.25 + (1.0 - cand.stamina) * 0.55:
+			_injure(cand)
+
+func _injure(p) -> void:
+	if p == null or p.sent_off or p.injured:
+		return
+	p.injured = true
+	var t: int = p.team
+	stats[t]["injuries"] += 1
+	p.stats["injuries"] = int(p.stats.get("injuries", 0)) + 1
+	_flash(0.5)
+	if teams[t]["subs_left"] > 0 and not _pick_bench(t, p.role, p.is_gk).is_empty():
+		_emit("injury", Commentary.injury(rng, p.name, true), t, p)
+		_bring_on(t, p)
+		return
+	_emit("injury", Commentary.injury(rng, p.name, false), t, p)
+	_send_off_injured(p)
+
+func _send_off_injured(p) -> void:
+	p.sent_off = true
+	p.vel = Vector2.ZERO
+	p.has_ball = false
+	if ball.owner_id == p.id:
+		ball.owner_id = -1
+	p.mark_id = -1
+	_add_involvement(p, "injury", "Injured — off", p.pos)
 
 # --------------------------------------------------------------- snapshots --

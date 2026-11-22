@@ -13,6 +13,10 @@ const _SHARDS := [
 	preload("res://scripts/data/teams_pl3.gd"),
 ]
 
+## Named match official. One source for the broadcast chrome and the pitch
+## official: a referee name change belongs here, not in the HUD.
+const REFEREE := "M. OLIVER"
+
 const FIXTURE := {
 	"home": "MUN",
 	"away": "MCI",
@@ -20,7 +24,6 @@ const FIXTURE := {
 	"city": "MANCHESTER",
 	"competition": "PREMIER LEAGUE",
 	"attendance": 74197,
-	"referee": "M. OLIVER",
 	"kickoff": "20:00",
 }
 
