@@ -17,6 +17,7 @@ class FakeGame:
 	var names_visible := true
 	var camera_follow := false
 	var speed := 1.0
+	var token_scale := 1.0
 
 func _hud(eng) -> Control:
 	var game := FakeGame.new()
@@ -124,3 +125,51 @@ func test_referee_is_drawn_on_the_pitch() -> void:
 	await get_tree().process_frame
 	assert_between(eng.referee.pos.x, 0.0, eng.L, "the official is off the pitch")
 	layer.queue_free()
+
+func test_phone_bar_carries_one_tappable_teams_door() -> void:
+	var eng := MatchEngine.new(31)
+	var hud := _hud(eng)
+	hud.touch = true
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 411.0
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var vp: Vector2 = hud.design_vp()
+	assert_true(HudLayout.is_compact(vp), "phone design space did not read as compact: %s" % vp)
+	var ids := []
+	for b in hud.buttons:
+		ids.append(str(b["id"]))
+	assert_eq(ids.count("teams"), 1, "expected exactly one teams door, got %s" % str(ids))
+	assert_eq(ids.size(), HudLayout.CONTROL_COUNT_TOUCH, "the phone bar should hold seven doors: %s" % str(ids))
+	for b in hud.buttons:
+		var r: Rect2 = b["rect"]
+		var mid: Vector2 = r.position + r.size * 0.5
+		assert_eq(hud.button_at(mid), str(b["id"]), "%s is not tappable at its centre" % str(b["id"]))
+		assert_lte(r.end.x, vp.x, "%s runs off the right edge" % str(b["id"]))
+	hud.queue_free()
+
+func test_desktop_bar_keeps_the_fixture_panel_door() -> void:
+	var eng := MatchEngine.new(32)
+	var hud := _hud(eng)
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 900.0
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_false(HudLayout.is_compact(hud.design_vp()), "desktop design space read as compact")
+	var ids := []
+	for b in hud.buttons:
+		ids.append(str(b["id"]))
+	assert_eq(ids.count("teams"), 1, "expected the fixture panel's teams door only, got %s" % str(ids))
+	assert_eq(ids.size(), HudLayout.CONTROL_COUNT + 1, "desktop bar should hold six controls plus the door")
+	hud.queue_free()
+
+func test_phone_player_card_stays_clear_of_the_other_panels() -> void:
+	var card := HudPlayerCard.new(Color.BLACK, Color.GOLD, Color.WHITE, Color.GRAY)
+	for vp in [Vector2(913, 411), Vector2(800, 360), Vector2(1000, 450)]:
+		var box: Rect2 = card.rect_for(vp)
+		var ticker: Rect2 = HudLayout.commentary_rect(vp)
+		var stats: Rect2 = HudLayout.stats_rect(vp)
+		assert_false(box.intersects(ticker), "the card covers the ticker at %s" % vp)
+		assert_false(box.intersects(stats), "the card covers the stats card at %s" % vp)
+		assert_gte(box.position.x, 0.0, "the card starts off-screen at %s" % vp)
+		assert_lte(box.end.x, vp.x, "the card runs off the right edge at %s" % vp)
+		assert_gte(box.position.y, stats.end.y, "the card rises into the top bar at %s" % vp)
+		assert_gte(box.size.y, 96.0, "the card is too short to hold its rows at %s" % vp)

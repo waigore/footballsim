@@ -8,6 +8,10 @@ var engine = null
 var ball_trail: Array = []
 var ball_trail_t := 0.0
 var last_ball_pos := Vector2.ZERO
+## Tokens are drawn at their real scale on desktop. On a phone the pitch is a
+## fraction of the screen, so the bodies grow relative to it — the geometry
+## stays honest, the players stay findable.
+var token_scale := 1.0
 var hover_id := -1
 var focus_id := -1
 var names_visible := true
@@ -48,8 +52,8 @@ func _draw() -> void:
 		if p.celebrate > 0.0:
 			pass
 		var off := Vector2(0.26, 0.48)
-		draw_circle(p.pos + off, 0.94, Color(0, 0, 0, 0.26))
-		draw_circle(p.pos + off * 1.6, 0.86, Color(0, 0, 0, 0.14))
+		draw_circle(p.pos + off, 0.94 * token_scale, Color(0, 0, 0, 0.26))
+		draw_circle(p.pos + off * 1.6, 0.86 * token_scale, Color(0, 0, 0, 0.14))
 	# bodies, sorted by y so lower players overlap correctly
 	var order := []
 	for p in engine.players:
@@ -60,7 +64,7 @@ func _draw() -> void:
 	for p in order:
 		var own_ball: bool = owner != null and owner.id == p.id
 		if own_ball:
-			draw_arc(p.pos, 1.42, 0, TAU, 44, Color(1, 1, 1, 0.34), 0.12, true)
+			draw_arc(p.pos, 1.42 * token_scale, 0, TAU, 44, Color(1, 1, 1, 0.34), 0.12, true)
 		_draw_player(p, own_ball)
 	# ball (drawn above the players, with its shadow tied to the ground)
 	_draw_referee()
@@ -74,15 +78,16 @@ func _draw_player(p, own_ball: bool) -> void:
 	if p.is_gk:
 		base = team["gk_color"]
 		shorts = base.darkened(0.45)
+	var ts: float = token_scale
 	var pos: Vector2 = p.pos - Vector2(0, p.z * 0.55)
-	var r := 0.86
+	var r := 0.86 * ts
 	# selected ring
 	if p.id == focus_id:
-		var pulse := 0.16 + 0.05 * sin(time * 5.0)
-		draw_arc(p.pos, 1.30 + pulse, 0, TAU, 44, Color(1.0, 0.86, 0.35, 0.95), 0.14, true)
-		draw_arc(p.pos, 1.60 + pulse, 0, TAU, 44, Color(1.0, 0.86, 0.35, 0.22), 0.34, true)
+		var pulse := (0.16 + 0.05 * sin(time * 5.0)) * ts
+		draw_arc(p.pos, 1.30 * ts + pulse, 0, TAU, 44, Color(1.0, 0.86, 0.35, 0.95), 0.14, true)
+		draw_arc(p.pos, 1.60 * ts + pulse, 0, TAU, 44, Color(1.0, 0.86, 0.35, 0.22), 0.34, true)
 	elif p.id == hover_id:
-		draw_arc(p.pos, 1.24, 0, TAU, 40, Color(1, 1, 1, 0.78), 0.10, true)
+		draw_arc(p.pos, 1.24 * ts, 0, TAU, 40, Color(1, 1, 1, 0.78), 0.10, true)
 	# body
 	draw_circle(pos, r, base.darkened(0.12))
 	draw_circle(pos + Vector2(-0.16, -0.20), r * 0.74, base.lightened(0.18))
@@ -98,20 +103,21 @@ func _draw_player(p, own_ball: bool) -> void:
 		draw_circle(p.pos - p.vel.normalized() * 0.7, 0.20, Color(1, 1, 1, 0.06))
 	# card marker
 	if p.yellow > 0:
-		draw_rect(Rect2(p.pos + Vector2(0.45, -1.05), Vector2(0.22, 0.32)), Color("#f4d03f"))
+		draw_rect(Rect2(p.pos + Vector2(0.45, -1.05) * ts, Vector2(0.22, 0.32) * ts), Color("#f4d03f"))
 	if p.red:
-		draw_rect(Rect2(p.pos + Vector2(0.15, -1.05), Vector2(0.22, 0.32)), Color("#d0342c"))
+		draw_rect(Rect2(p.pos + Vector2(0.15, -1.05) * ts, Vector2(0.22, 0.32) * ts), Color("#d0342c"))
 
 func _draw_referee() -> void:
 	var r = engine.referee
 	# shadow, then the black shirt with its hi-vis trim so the official reads
 	# as its own entity against both kits
-	draw_circle(r.pos + Vector2(0.24, 0.44), 0.76, Color(0, 0, 0, 0.26))
+	draw_circle(r.pos + Vector2(0.24, 0.44), 0.76 * token_scale, Color(0, 0, 0, 0.26))
+	var ts: float = token_scale
 	var p: Vector2 = r.pos - Vector2(0, 0.10)
-	draw_circle(p, 0.72, Color(0.09, 0.10, 0.12))
-	draw_circle(p + Vector2(-0.12, -0.14), 0.50, Color(0.20, 0.22, 0.25))
-	draw_arc(p, 0.72, PI * 0.10, PI * 0.90, 22, Color(0.97, 0.83, 0.25, 0.95), 0.13, true)
-	draw_arc(p, 0.72, 0, TAU, 40, Color(0.03, 0.04, 0.05, 0.9), 0.05, true)
+	draw_circle(p, 0.72 * ts, Color(0.09, 0.10, 0.12))
+	draw_circle(p + Vector2(-0.12, -0.14) * ts, 0.50 * ts, Color(0.20, 0.22, 0.25))
+	draw_arc(p, 0.72 * ts, PI * 0.10, PI * 0.90, 22, Color(0.97, 0.83, 0.25, 0.95), 0.13, true)
+	draw_arc(p, 0.72 * ts, 0, TAU, 40, Color(0.03, 0.04, 0.05, 0.9), 0.05, true)
 	var d: Vector2 = r.facing
 	if d.length() > 0.1:
 		draw_line(p + d * 0.30, p + d * 0.92, Color(1.0, 0.92, 0.55, 0.5), 0.07, true)
