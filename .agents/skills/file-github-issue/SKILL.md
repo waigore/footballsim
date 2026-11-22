@@ -10,6 +10,8 @@ description: |-
   the user before noting a wiki follow-up when rules conflict or are silent.
   Use when the user reports a bug, defect, issue, broken behavior, or asks
   for a feature / enhancement, or when they ask to file/log a GitHub issue.
+  For large, multi-system, or ambiguous features, hand off to
+  capture-requirements instead.
 
   Examples:
     - "fleet move ignores range on Android" → bug interview → analysis → issue
@@ -32,7 +34,9 @@ Repo: `waigore/footballsim` (or current `gh` remote). Use `gh`.
 | [`references/bug-template.md`](references/bug-template.md) | Bug issue body |
 | [`references/feature-template.md`](references/feature-template.md) | Feature issue body |
 
-**Not this skill:** implementing a filed `todo` → [`resolve-issue-agent`](../resolve-issue-agent/SKILL.md); verifying `resolved` → [`review-issue-agent`](../review-issue-agent/SKILL.md); hunting defects → hunt-defects; new features from gaps → implement-feature; clarifying wiki design → elucidate-design.
+**Not this skill:** large / multi-system / ambiguous **feature** capture → [`capture-requirements`](../capture-requirements/SKILL.md) (hands back here to file); implementing a filed `todo` → [`resolve-issue-agent`](../resolve-issue-agent/SKILL.md); verifying `resolved` → [`review-issue-agent`](../review-issue-agent/SKILL.md); hunting defects → hunt-defects; new features from gaps → implement-feature; unclear wiki design → [`elucidate-design-agent`](../elucidate-design-agent/SKILL.md) (files a `question` issue); product review of a `question` → [`clarify-github-issue`](../clarify-github-issue/SKILL.md).
+
+Human-facing issue text: plain English ([`../_shared/plain-english.md`](../_shared/plain-english.md)).
 
 ## Labels
 
@@ -65,7 +69,9 @@ Do not invent other labels. Leave assignee and milestone unset.
 ### 1. Classify
 
 - **Bug / defect:** wrong or broken behavior vs expected / wiki.
-- **Feature:** new or expanded capability.
+- **Feature:** new or expanded capability. If the feature is large, multi-system,
+  or ambiguous (UX + sim + schema/budgets), **hand off** to
+  [`capture-requirements`](../capture-requirements/SKILL.md) and stop.
 
 If unclear, ask once: bug or feature? Then continue.
 
@@ -116,8 +122,8 @@ Skim code only enough to ground “likely locus” / impact — no deep refactor
 
 If the report **conflicts** with written Simulation rules, or needs rules the wiki does **not** cover:
 
-- Ask: whether to note a wiki update on the issue.
-- Only if the user says yes: add `## Wiki follow-up` (pages + why).
+- Ask: whether to note a wiki update on the issue, and/or run [`elucidate-design-agent`](../elucidate-design-agent/SKILL.md) later to file a `question` proposal.
+- Only if the user says yes to a note: add `## Wiki follow-up` (pages + why).
 - If no: omit that section; still file the issue.
 - If rules already match: no wiki section, no ask.
 
@@ -143,3 +149,4 @@ Reply with the issue URL. Stop.
 - No final “approve this draft?” step after analysis (duplicate + wiki confirms only).
 - One issue per report; do not batch unrelated items.
 - Prefer `gh`; do not leave issues unlabelled.
+- Plain English in titles, bodies, and comments ([`../_shared/plain-english.md`](../_shared/plain-english.md)).

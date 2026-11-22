@@ -32,7 +32,9 @@ Largest change that stays **desktop + mobile** playable; reuse existing patterns
 | [`references/impact-map.md`](references/impact-map.md) | Domain map + ≤5 min gate |
 | [`references/e2e-smoke.md`](references/e2e-smoke.md) | Smoke ≤2 min |
 
-Unclear wiki → [`elucidate-design-agent`](../elucidate-design-agent/SKILL.md). Small data choices: wiki Design Record (`dr-YYYYMMDD-NN` + index + changelog) with the code.
+Unclear wiki → [`elucidate-design-agent`](../elucidate-design-agent/SKILL.md) (files a `question` issue; product review via [`clarify-github-issue`](../clarify-github-issue/SKILL.md); implement via [`resolve-issue-agent`](../resolve-issue-agent/SKILL.md)). Small data choices on an otherwise clear feature: wiki Design Record (`dr-YYYYMMDD-NN` + index + changelog) with the code.
+
+Human-facing PR/wiki text: plain English ([`../_shared/plain-english.md`](../_shared/plain-english.md)).
 
 Wiki: full clone `footballsim.wiki.git` (not `--depth 1`); push `master`. **DR ids are shared** — fetch before picking `dr-YYYYMMDD-NN`; renumber on reject, never force-push.
 

@@ -1,20 +1,100 @@
-# Footballsim
+# The Manchester Derby
 
-A detailed football (soccer) world simulation in the spirit of Football Manager — focused on simulation depth, not managing a single club.
+A broadcast-style, top-down 2D football simulator in Godot 4.7. Every player is an
+individual agent driven by EA SPORTS FC 26 attributes; the ball is simulated in 3D
+(x, y, height, spin), so lofted passes and shots carry real depth. The default fixture is Manchester United v Manchester City; any of
+the 20 Premier League clubs can play.
 
-You act as a god-like force: nudge careers, institutions, and history rather than picking the XI on Saturday. Outcomes emerge from engines for matches, seasons, and the wider football ecosystem. The player experience is mostly UI-driven; Godot hosts the interface and orchestrates the simulation.
+## Run
 
-## Pillars
+```bash
+godot --path .            # or open project.godot in Godot 4.7 and press F5
+godot --path . -- --home=ARS --away=LIV   # start a specific fixture
+```
 
-- **Simulation-first** — match engines, calendars, leagues, transfers, and career arcs drive the world
-- **God-like agency** — shape outcomes through interventions, not day-to-day team control
-- **UI-led Godot client** — inspect the world, issue interventions, and watch results unfold
+The match starts in **Highlights** mode: the engine fast-simulates between dangers,
+rewinds seven seconds, and plays the build-up live.
 
-## Stack
+```bash
+godot --path . -- --shots=5,20,45 --quit=50   # capture PNGs to shots/ (debug)
+godot --path . -- --focus=8                    # open with a player pinned
+```
 
-- **Godot** — UI, scene flow, and simulation orchestration
-- Simulation logic lives alongside the client (match engine and supporting systems)
+## Controls
 
-## Status
+| Key | Action |
+| --- | --- |
+| Space | Pause / resume |
+| 1 / 2 / 3 / 4 | Speed ×1 / ×2 / ×4 / ×8 |
+| H | Toggle Highlights / Full match |
+| S | Skip the current highlight (or jump 10s in Full) |
+| R | Restart with a new seed |
+| T | Change teams (fixture picker) |
+| N | Toggle player names |
+| C | Toggle Wide / Follow camera |
+| Mouse wheel | Zoom |
+| Hover player | Tooltip: name, club, position, number, FC 26 attributes |
+| Click player | Pin: full-match trail, involvements, live stat line |
 
-Early groundwork. Architecture and engines will land incrementally.
+## What is simulated
+
+* **22 agents** with pace, acceleration, stamina, dribbling, passing, shooting,
+  tackling, physicality and aerial ability mapped from FC 26 ratings.
+* **Ball physics** – friction, air drag, gravity, bounce, swerve, height.
+* **Full Laws of the Game** – kick-off, throw-ins, goal kicks, corners, free
+  kicks, penalties, offside at the moment of the pass, fouls, yellow/red cards
+  (second yellow and DOGSO), substitutions, half-time with ends swapped,
+  stoppage time, full time.
+* **Goalkeepers** – arc positioning, sweeping, dives, catch/parry, distribution.
+* **Team shape** – formations, zonal defending, man-marking, pressing, offside
+  line, through-balls, crosses, switches, dribble carries.
+* **Home advantage** – a tunable 5% edge: tighter passing/shooting, +0.02 on
+  tackle duels, slower stamina drain. Set
+  `home_advantage` to 0.0 for a neutral match.
+* **Match story** – commentary, xG, shots, possession, corners, fouls, cards,
+  live player card and full-time summary.
+
+## Playing modes
+
+* **Full** – 90 minutes plus stoppage at 1× (speed controls available).
+* **Highlights** – an 18-second rolling snapshot buffer; shots, goals, penalties,
+  corners and red cards rewind ~7 seconds, replay live, then fast-simulate again.
+
+## Data
+
+Squad ratings are EA SPORTS FC 26 (OVR / PAC / SHO / PAS / DRI / DEF / PHY) for
+all 20 Premier League clubs. Manchester United and City use OVRBase's FC 26 club
+pages; the other 18 use real 2025-26 squads with
+estimated ratings. Goalkeeper DIV/HAN/KIC/REF/SPD derive
+from OVR and role. Line-ups are the strongest XI in a 4-2-3-1; benches
+are real squad members for second-half subs.
+
+## Project layout
+
+```
+scripts/data/teams*.gd       squads, formations, styles, club colours
+scripts/sim/attributes.gd    FC 26 attribute -> simulation mapping
+scripts/sim/match_engine.gd  physics, rules, restarts, events, snapshots
+scripts/sim/match_ai.gd      team shape, pressing, marking, on-ball decisions
+scripts/view/pitch_view.gd   Old Trafford: stands, crowd, pitch, goals
+scripts/view/actor_layer.gd  players, ball, shadows, trails
+scripts/ui/hud.gd            broadcast overlay, tooltips, player card
+scripts/main.gd              playback controller, highlight rewind, camera, audio
+tools/sim_test.gd            headless 90-minute match harness
+tools/sim_round.gd           full 20-club Premier League round simulator
+```
+
+Headless checks:
+
+```bash
+godot --headless --path . --script tools/sim_test.gd -- 5 1000
+godot --headless --path . --script tools/sim_round.gd -- 1 5000
+```
+
+`sim_test` prints per-match stats and averages; `sim_round` prints a 10-match round
+table plus goals, shots, xG, offsides, corners, fouls and saves.
+
+## Audio
+
+`audio/` ships procedurally generated crowd ambience, whistle, kick, goal roar
+and a near-miss "ooh" (`tools/make_audio.py` regenerates them).

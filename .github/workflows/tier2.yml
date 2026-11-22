@@ -59,6 +59,10 @@ jobs:
         if: steps.project.outputs.ready == 'true'
         run: godot --headless --path . --import --quit
 
+      - name: Impact map complete
+        if: steps.project.outputs.ready == 'true'
+        run: python tools/select_impacted_tests.py --check-complete
+
       - name: Full suite with coverage gate
         if: steps.project.outputs.ready == 'true'
         run: |

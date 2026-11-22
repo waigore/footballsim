@@ -126,6 +126,8 @@ Do not ask for mid-run approval of which failing assert to fix first.
 `gh`/credentials broken; failure needs secrets, force-push, or check
 bypass; no open `ci-tier2` issue (gate should have skipped).
 
+PR/issue text: plain English ([`../_shared/plain-english.md`](../_shared/plain-english.md)).
+
 ## Report
 
 Lead with the PR URL (or “no open ci-tier2”). State whether the sticky

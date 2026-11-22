@@ -43,3 +43,5 @@ Read that file and its `references/` as needed, then run the workflow there. Do 
 ## Catalog
 
 Listed in [`.agents/skills/README.md`](../.agents/skills/README.md).
+
+Shared wording: [`.agents/skills/_shared/plain-english.md`](../.agents/skills/_shared/plain-english.md).

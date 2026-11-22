@@ -1,0 +1,270 @@
+# Domain → suite mapping for tier-1 PR CI (docs/testing.md).
+# Convention: path globs → domain; domains expand to suites. `full = true`
+# runs every suite. Unmapped in-scope paths fail strict selection.
+
+[domains.commentary]
+suites = [
+  "test_commentary.gd",
+]
+
+[domains.kits]
+suites = [
+  "test_kits.gd",
+]
+
+[domains.poisson]
+suites = [
+  "test_poisson_model.gd",
+]
+
+[domains.finishing]
+suites = [
+  "test_finishing.gd",
+]
+
+[domains.match_laws]
+suites = [
+  "test_match_laws.gd",
+]
+
+[domains.restart]
+suites = [
+  "test_restart_judgement.gd",
+]
+
+[domains.hud_layout]
+suites = [
+  "test_hud_layout.gd",
+]
+
+[domains.hud_chrome]
+suites = [
+  "test_hud_chrome.gd",
+  "test_touch_flow.gd",
+]
+
+[domains.tactics]
+suites = [
+  "test_tactics.gd",
+  "test_tactics_ai.gd",
+]
+
+[domains.managers]
+suites = [
+  "test_managers.gd",
+  "test_manager_subs.gd",
+]
+
+# Shared engine spine: laws + finishing + restart + managers when a core file moves.
+[domains.match_engine]
+suites = [
+  "test_match_laws.gd",
+  "test_finishing.gd",
+  "test_restart_judgement.gd",
+  "test_tactics.gd",
+  "test_tactics_ai.gd",
+  "test_managers.gd",
+  "test_manager_subs.gd",
+]
+
+[domains.teams]
+suites = [
+  "test_poisson_model.gd",
+  "test_kits.gd",
+  "test_tactics.gd",
+  "test_tactics_ai.gd",
+]
+
+# Lightest suite for tooling / project / addons / map edits.
+[domains.misc]
+suites = [
+  "test_hud_layout.gd",
+]
+
+# ----------------------------------------------------------------- sim ---
+
+[[rules]]
+match = "scripts/sim/commentary.gd*"
+domain = "commentary"
+
+[[rules]]
+match = "scripts/sim/kits.gd*"
+domain = "kits"
+
+[[rules]]
+match = "scripts/sim/poisson_model.gd*"
+domain = "poisson"
+
+[[rules]]
+match = "scripts/sim/match_engine_actions.gd*"
+domain = "finishing"
+
+[[rules]]
+match = "scripts/sim/match_engine_rules.gd*"
+domain = "match_laws"
+
+[[rules]]
+match = "scripts/sim/match_engine_clock.gd*"
+domain = "match_laws"
+
+[[rules]]
+match = "scripts/sim/match_engine_play.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "scripts/sim/match_engine.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "scripts/sim/match_engine_core.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "scripts/sim/match_engine_presentation.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "scripts/sim/match_ai.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "scripts/sim/tactics.gd*"
+domain = "tactics"
+
+[[rules]]
+match = "scripts/sim/match_manager.gd*"
+domain = "managers"
+
+[[rules]]
+match = "scripts/sim/attributes.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "scripts/sim/pitch_queries.gd*"
+domain = "match_engine"
+
+# ---------------------------------------------------------------- data ---
+
+[[rules]]
+match = "scripts/data/managers.gd*"
+domain = "managers"
+
+[[rules]]
+match = "scripts/data/teams.gd*"
+domain = "teams"
+
+[[rules]]
+match = "scripts/data/teams_core.gd*"
+domain = "teams"
+
+[[rules]]
+match = "scripts/data/teams_pl1.gd*"
+domain = "teams"
+
+[[rules]]
+match = "scripts/data/teams_pl2.gd*"
+domain = "teams"
+
+[[rules]]
+match = "scripts/data/teams_pl3.gd*"
+domain = "teams"
+
+# ------------------------------------------------------------------ ui ---
+
+[[rules]]
+match = "scripts/ui/hud_layout.gd*"
+domain = "hud_layout"
+
+[[rules]]
+match = "scripts/ui/hud.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/ui/hud_commentary.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/ui/hud_managers.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/ui/team_select.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/ui/hud_player_card.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/view/actor_layer.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/view/pitch_view.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/view/dev_capture.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/platform/**"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/main.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scenes/**"
+domain = "hud_chrome"
+
+# ---------------------------------------------------------------- tests ---
+
+# SceneTree helper (not a GdTools suite); keep on poisson.
+[[rules]]
+match = "tests/check_poisson_agreement.gd*"
+domain = "poisson"
+
+[[rules]]
+match = "tests/impact_map.toml"
+domain = "misc"
+
+# ------------------------------------------------------------- project ---
+
+[[rules]]
+match = "project.godot"
+domain = "misc"
+
+# Android export plumbing: no GDScript surface, so the lightest suite gates it.
+[[rules]]
+match = "export_presets.cfg"
+domain = "misc"
+
+[[rules]]
+match = "export/android/**"
+domain = "misc"
+
+[[rules]]
+match = "gd-tools.toml"
+domain = "misc"
+
+[[rules]]
+match = "icon.svg"
+domain = "misc"
+
+[[rules]]
+match = "icon.png"
+domain = "misc"
+
+[[rules]]
+match = "addons/**"
+domain = "misc"
+
+[[rules]]
+match = "tools/select_impacted_tests.py"
+domain = "misc"
+
+[[rules]]
+match = "tools/lint_arch.py"
+domain = "misc"
