@@ -115,6 +115,8 @@ func _score_goal(conceding_team: int) -> void:
 		if p.team == scoring_team:
 			p.celebrate = 2.6
 	_flash(1.0)
+	# Both benches react: the side that conceded is the one under pressure.
+	manager.on_event("goal", {"team": scoring_team})
 	if scorer != null:
 		_add_involvement(scorer, "goal", "Goal", scorer.pos)
 	ball.assist_id = -1
@@ -163,19 +165,33 @@ func _update_trails(dt: float) -> void:
 				p.trail.pop_front()
 
 func _tick_substitutions() -> void:
-	if half < 2:
-		return
+	# Managers choose changes at stoppages and half-time (MatchManager). The
+	# only automatic change left is the emergency goalkeeper: a side must
+	# always have a keeper.
 	for t in range(2):
-		if teams[t]["subs_left"] <= 0:
+		if int(teams[t]["subs_left"]) <= 0:
 			continue
-		# A team must always have a keeper: replace a sent-off one first.
 		if _gk_of(t) == null and not _bench_keeper(t).is_empty():
 			_make_substitution(t, true)
-			continue
-		var mins: Array = teams[t]["sub_minutes"]
-		var made: int = teams[t]["subs_made"]
-		if made < mins.size() and clock / 60.0 >= float(mins[made]):
-			_make_substitution(t, false)
+
+## Is a change legal right now? Five changes in three windows; half-time is a
+## free window, and a second change in the same stoppage shares its window.
+func sub_window_available(t: int, at_half_time: bool = false) -> bool:
+	if int(teams[t]["subs_left"]) <= 0:
+		return false
+	if at_half_time or phase == "half_time":
+		return true
+	return int(teams[t]["windows_used"]) < SUB_WINDOWS
+
+func _use_sub_window(t: int, at_half_time: bool) -> bool:
+	if at_half_time or phase == "half_time":
+		return true
+	if not sub_window_available(t, false):
+		return false
+	if int(teams[t]["window_token"]) != stoppage_seq:
+		teams[t]["windows_used"] = int(teams[t]["windows_used"]) + 1
+		teams[t]["window_token"] = stoppage_seq
+	return true
 
 func _bench_keeper(t: int) -> Dictionary:
 	var on_field := {}
@@ -235,24 +251,23 @@ func _make_substitution(t: int, for_gk: bool = false) -> bool:
 			if p.team == t and p.is_gk and p.sent_off:
 				worst = p
 				break
-	else:
-		worst = _most_tired_outfield(t)
 	if worst == null:
-		# No eligible body: bank the scheduled sub so we don't retry every tick.
-		if not for_gk:
-			teams[t]["subs_made"] += 1
 		return false
-	return _bring_on(t, worst, for_gk)
+	return _bring_on(t, worst, true, false, {"reason": "emergency_keeper"})
 
-## Replace one player with the best available bench body. Used by the scheduled
-## changes and by injuries, which cannot wait for the substitution window.
-func _bring_on(t: int, off, for_gk: bool = false) -> bool:
-	var candidate: Dictionary = _pick_bench(t, off.role, for_gk or off.is_gk)
-	if candidate.is_empty() or teams[t]["subs_left"] <= 0:
-		if not for_gk:
-			teams[t]["subs_made"] += 1
+## Replace one player with the best available bench body. Charges one of the
+## five changes and, outside half-time, one of the three windows. The
+## emergency-keeper change is exempt from the window count so a side is never
+## left without a keeper.
+func _bring_on(t: int, off, for_gk: bool = false, at_half_time: bool = false, meta: Dictionary = {}) -> bool:
+	if off == null or int(teams[t]["subs_left"]) <= 0:
 		return false
-	var np = _make_player(candidate, t, 200 + t * 40 + teams[t]["subs_made"])
+	if not for_gk and not _use_sub_window(t, at_half_time):
+		return false
+	var candidate: Dictionary = _pick_bench(t, off.role, for_gk or off.is_gk)
+	if candidate.is_empty():
+		return false
+	var np = _make_player(candidate, t, 200 + t * 40 + int(teams[t]["subs_made"]))
 	# The substitute fills the slot of the player he replaces, not his own.
 	np.role = off.role
 	np.is_gk = off.is_gk
@@ -267,9 +282,13 @@ func _bring_on(t: int, off, for_gk: bool = false) -> bool:
 	if ball.owner_id == off.id:
 		ball.owner_id = np.id
 		ball.last_touch_id = np.id
-	teams[t]["subs_made"] += 1
-	teams[t]["subs_left"] -= 1
-	_emit("substitution", Commentary.substitution(rng, teams[t]["data"]["short"], np.name, off.name), t, np)
+	teams[t]["subs_made"] = int(teams[t]["subs_made"]) + 1
+	teams[t]["subs_left"] = int(teams[t]["subs_left"]) - 1
+	var info := {"window": int(teams[t]["windows_used"]), "at_half_time": at_half_time}
+	for k in meta.keys():
+		info[k] = meta[k]
+	_emit("substitution", Commentary.substitution(rng, teams[t]["data"]["short"], np.name, off.name,
+		str(meta.get("manager", ""))), t, np, info)
 	_add_involvement(np, "sub", "On for %s" % off.name, np.pos)
 	return true
 
@@ -301,9 +320,9 @@ func _injure(p) -> void:
 	stats[t]["injuries"] += 1
 	p.stats["injuries"] = int(p.stats.get("injuries", 0)) + 1
 	_flash(0.5)
-	if teams[t]["subs_left"] > 0 and not _pick_bench(t, p.role, p.is_gk).is_empty():
-		_emit("injury", Commentary.injury(rng, p.name, true), t, p)
-		_bring_on(t, p)
+	# The manager picks the replacement; without a legal change the side plays
+	# on a man short.
+	if manager != null and manager.replace_injured(p):
 		return
 	_emit("injury", Commentary.injury(rng, p.name, false), t, p)
 	_send_off_injured(p)

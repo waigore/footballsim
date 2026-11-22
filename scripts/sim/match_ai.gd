@@ -86,7 +86,7 @@ func _update_shapes() -> void:
 			p.speed_scale = 1.0
 			p.state = "run"
 			continue
-		var style: Dictionary = e.teams[p.team]["data"]["style"]
+		var style: Dictionary = e.style_of(p.team)
 		var b: Vector2 = p.base
 		var bn: Vector2 = e.to_norm(p.team, ball.pos)
 		var attacking: bool = (p.team == bt)
@@ -95,7 +95,7 @@ func _update_shapes() -> void:
 		if attacking:
 			tx = b.x * 0.90 + 0.115 + (bn.x - 0.5) * 0.16
 			ty = 0.5 + (b.y - 0.5) * (0.82 + style["width"] * 0.42)
-			tx += Attrs.role_push(p.role) * 0.055
+			tx += e.push_of(p) * 0.055
 			tx += style["possession"] * 0.03
 		else:
 			var line: float = style["line"]
@@ -118,10 +118,10 @@ func _attack_shape(p, fallback: Vector2) -> Vector2:
 	var ball = e.ball
 	var ax = e.attacking_x(p.team, ball.pos)
 	var my_ax = e.attacking_x(p.team, p.pos)
-	var style: Dictionary = e.teams[p.team]["data"]["style"]
+	var style: Dictionary = e.style_of(p.team)
 	var target = fallback
 	# Strikers and wingers attack the space behind once the ball is advanced.
-	if Attrs.role_push(p.role) >= 0.7 and ax > e.L * 0.48:
+	if e.push_of(p) >= 0.7 and ax > e.L * 0.48:
 		var line = pq.offside_line(p.team)
 		var run_x = line - e.rng.randf_range(0.4, 2.4)
 		if my_ax < run_x:
@@ -136,7 +136,7 @@ func _attack_shape(p, fallback: Vector2) -> Vector2:
 	var owner = e.ball_owner()
 	if owner != null and owner.team == p.team and owner.id != p.id:
 		var d = p.pos.distance_to(owner.pos)
-		if d < 16.0 and Attrs.role_push(p.role) > 0.2:
+		if d < 16.0 and e.push_of(p) > 0.2:
 			var ahead: Vector2 = target
 			ahead.x += e.teams[p.team]["dir"] * 2.0
 			target = target.lerp(ahead, 0.25)
@@ -144,7 +144,7 @@ func _attack_shape(p, fallback: Vector2) -> Vector2:
 	if p.role in ["RW", "LW"] and absf(ball.pos.y - 34.0) < 12.0:
 		target.y = lerpf(target.y, 8.0 if p.role == "RW" else 60.0, 0.35)
 	# Respect the offside line unless the ball is already beyond it.
-	if Attrs.role_push(p.role) >= 0.6:
+	if e.push_of(p) >= 0.6:
 		var line = pq.offside_line(p.team)
 		var cap = line - 0.35
 		var tx_att = e.attacking_x(p.team, target)
@@ -239,8 +239,8 @@ func _apply_pressing() -> void:
 				second = p
 		if presser == null:
 			continue
-		var style = e.teams[t]["data"]["style"]
-		var max_press: float = 20.0 + style["press"] * 26.0
+		var style: Dictionary = e.style_of(t)
+		var max_press: float = 20.0 + style["press"] * 26.0 + (7.0 if style["press_trigger"] == "high" else 0.0)
 		if t == e.home_team:
 			max_press += 2.5
 		var owner = e.ball_owner()
@@ -307,7 +307,7 @@ func _assign_marks() -> void:
 				if dist < bd:
 					bd = dist
 					best = d
-			if best != null and bd < 26.0:
+			if best != null and bd < (30.0 if e.style_of(t)["marking"] == "man" else 26.0):
 				best.mark_id = a.id
 
 func _gk_shape(gk) -> void:
@@ -359,7 +359,7 @@ func _gk_distribute(gk) -> void:
 	if gk.action_t > 0.0:
 		return
 	gk.action_t = 0.5
-	var style: Dictionary = e.teams[gk.team]["data"]["style"]
+	var style: Dictionary = e.style_of(gk.team)
 	var press: float = e.pressure_on(gk)
 	if style["possession"] > 0.58 and press < 0.9 and e.rng.randf() < 0.62:
 		var mate = e._best_short_outlet(gk.team, gk)
@@ -385,7 +385,7 @@ func _carrier_decide(p) -> void:
 	var goal: Vector2 = e.target_goal_pos(p.team)
 	var dist: float = p.pos.distance_to(goal)
 	var angle: float = e.opponent_goal_angle(p)
-	var style: Dictionary = e.teams[p.team]["data"]["style"]
+	var style: Dictionary = e.style_of(p.team)
 	var own_third: bool = e.attacking_x(p.team, p.pos) < e.L * 0.34
 	var final_third: bool = e.attacking_x(p.team, p.pos) > e.L * 0.66
 
@@ -454,7 +454,7 @@ func _carrier_decide(p) -> void:
 		var s: float = -lane * 2.40 + open * 0.26 + prog * (0.55 + style["directness"] * 0.35) - dpen
 		if d < 16.0:
 			s += 0.20
-		s += Attrs.role_push(q.role) * 0.18
+		s += e.push_of(q) * 0.18
 		if prog < -0.25:
 			s -= 0.35
 		if d > 34.0:
@@ -462,7 +462,7 @@ func _carrier_decide(p) -> void:
 		if absf(q.pos.y - p.pos.y) > 26.0 and open > 7.0 and d < 42.0:
 			s += 0.38
 		# Through ball into space behind the defence (short and sharp, not a punt).
-		if prog > 0.18 and Attrs.role_push(q.role) > 0.6 and d < 24.0:
+		if prog > 0.18 and e.push_of(q) > 0.6 and d < 24.0:
 			var space_behind: float = pq.space_behind(p.team, q)
 			if space_behind > 4.0:
 				var thru: Vector2 = q.pos + Vector2(e.teams[p.team]["dir"] * clampf(space_behind * 0.5, 4.0, 9.0), q.vel.y * 0.15)

@@ -209,11 +209,33 @@ static func injury(rng, name: String, continues: bool) -> String:
 		"%s hobbles off. No substitutions remaining." % name,
 	])
 
-static func substitution(rng, team_short: String, on_name: String, off_name: String) -> String:
+static func substitution(rng, team_short: String, on_name: String, off_name: String, manager: String = "") -> String:
+	if manager != "":
+		return _pick(rng, [
+			"%s sends on %s for %s." % [manager, on_name, off_name],
+			"%s makes his move — %s replaces %s." % [manager, on_name, off_name],
+			"%s turns to the bench: %s on for %s." % [manager, on_name, off_name],
+		])
 	return _pick(rng, [
 		"Change for %s: %s on for %s." % [team_short, on_name, off_name],
 		"%s make a change — %s replaces %s." % [team_short, on_name, off_name],
 	])
+
+## Manager tinkering: one short line naming the manager and what moved.
+static func tactics(rng, manager: String, _team_short: String, changes: Array) -> String:
+	var what := _brief(changes)
+	return _pick(rng, [
+		"%s signals a change — %s." % [manager, what],
+		"%s adjusts it: %s." % [manager, what],
+		"%s has seen enough — %s." % [manager, what],
+		"%s tweaks it from the touchline: %s." % [manager, what],
+	])
+
+static func _brief(changes: Array) -> String:
+	var out := ""
+	for i in range(mini(3, changes.size())):
+		out += ("" if out == "" else ", ") + str(changes[i])
+	return "a shape change" if out == "" else out
 
 ## Set-piece / restart line. `waiting` marks the taker holding play up for
 ## team-mates to arrive.

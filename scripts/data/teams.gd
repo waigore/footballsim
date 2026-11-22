@@ -27,6 +27,11 @@ const FIXTURE := {
 	"kickoff": "20:00",
 }
 
+## Live formations for the FM-style tactics board. Every shape lists all eleven
+## canonical squad roles so a mid-match change re-slots the same XI instead of
+## inventing players; bench roles fall back in `formation_slot`.
+const CANONICAL_ROLES := ["GK", "RB", "RCB", "LCB", "LB", "RDM", "LDM", "RW", "CAM", "LW", "ST"]
+
 const FORMATIONS := {
 	"4-2-3-1": {
 		"GK": Vector2(0.035, 0.50),
@@ -40,6 +45,71 @@ const FORMATIONS := {
 		"CAM": Vector2(0.545, 0.50),
 		"LW": Vector2(0.60, 0.13),
 		"ST": Vector2(0.715, 0.50),
+	},
+	"4-4-2": {
+		"GK": Vector2(0.035, 0.50),
+		"RB": Vector2(0.24, 0.86),
+		"RCB": Vector2(0.155, 0.61),
+		"LCB": Vector2(0.155, 0.39),
+		"LB": Vector2(0.24, 0.14),
+		"RW": Vector2(0.52, 0.88),
+		"RDM": Vector2(0.38, 0.58),
+		"LDM": Vector2(0.38, 0.42),
+		"LW": Vector2(0.52, 0.12),
+		"CAM": Vector2(0.70, 0.36),
+		"ST": Vector2(0.70, 0.64),
+	},
+	"4-3-3": {
+		"GK": Vector2(0.035, 0.50),
+		"RB": Vector2(0.24, 0.86),
+		"RCB": Vector2(0.155, 0.61),
+		"LCB": Vector2(0.155, 0.39),
+		"LB": Vector2(0.24, 0.14),
+		"RDM": Vector2(0.33, 0.58),
+		"LDM": Vector2(0.33, 0.42),
+		"CAM": Vector2(0.52, 0.50),
+		"RW": Vector2(0.66, 0.87),
+		"LW": Vector2(0.66, 0.13),
+		"ST": Vector2(0.73, 0.50),
+	},
+	"3-5-2": {
+		"GK": Vector2(0.035, 0.50),
+		"RCB": Vector2(0.16, 0.64),
+		"LCB": Vector2(0.16, 0.36),
+		"RB": Vector2(0.38, 0.90),
+		"LB": Vector2(0.38, 0.10),
+		"RDM": Vector2(0.34, 0.55),
+		"LDM": Vector2(0.34, 0.45),
+		"CAM": Vector2(0.54, 0.50),
+		"RW": Vector2(0.64, 0.80),
+		"LW": Vector2(0.64, 0.20),
+		"ST": Vector2(0.75, 0.50),
+	},
+	"5-3-2": {
+		"GK": Vector2(0.035, 0.50),
+		"RB": Vector2(0.22, 0.88),
+		"RCB": Vector2(0.15, 0.66),
+		"RDM": Vector2(0.17, 0.50),
+		"LCB": Vector2(0.15, 0.34),
+		"LB": Vector2(0.22, 0.12),
+		"LDM": Vector2(0.38, 0.50),
+		"CAM": Vector2(0.55, 0.50),
+		"RW": Vector2(0.62, 0.85),
+		"LW": Vector2(0.62, 0.15),
+		"ST": Vector2(0.75, 0.50),
+	},
+	"4-1-4-1": {
+		"GK": Vector2(0.035, 0.50),
+		"RB": Vector2(0.24, 0.86),
+		"RCB": Vector2(0.155, 0.61),
+		"LCB": Vector2(0.155, 0.39),
+		"LB": Vector2(0.24, 0.14),
+		"RDM": Vector2(0.30, 0.50),
+		"LDM": Vector2(0.45, 0.58),
+		"CAM": Vector2(0.45, 0.42),
+		"RW": Vector2(0.62, 0.86),
+		"LW": Vector2(0.62, 0.14),
+		"ST": Vector2(0.74, 0.50),
 	},
 }
 
@@ -60,11 +130,18 @@ static func get_team(id: String) -> Dictionary:
 static func other(id: String) -> String:
 	return "MCI" if id == "MUN" else "MUN"
 
+static func slots(formation: String) -> Dictionary:
+	return FORMATIONS.get(formation, FORMATIONS["4-2-3-1"])
+
 static func formation_slot(team: Dictionary, role: String) -> Vector2:
-	var f: Dictionary = FORMATIONS[team["formation"]]
+	return formation_slot_for(str(team.get("formation", "4-2-3-1")), role)
+
+## Slot for a role in a named formation. Bench players brought on out of
+## position fall back to a sensible line.
+static func formation_slot_for(formation: String, role: String) -> Vector2:
+	var f: Dictionary = slots(formation)
 	if f.has(role):
 		return f[role]
-	# Fallbacks for bench players brought on out of position.
 	match role:
 		"CB": return Vector2(0.155, 0.5)
 		"CDM": return Vector2(0.33, 0.5)

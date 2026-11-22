@@ -36,6 +36,10 @@ const REF_SPRINT := 8.8
 ## Share of shot blocks that are really an arm in the flight path.
 const HANDBALL_P := 0.055
 
+## IFAB substitution limits: five changes, three windows, half-time free.
+const SUB_WINDOWS := 3
+const SUB_LIMIT := 5
+
 ## Finishing calibration against the Poisson model: a shot converts with
 ## p = FINISH_EFFICIENCY · xG, so a match's goals track its expected goals (the
 ## model's λ) instead of the old keeper-steer hack.
@@ -130,7 +134,10 @@ var by_id: Dictionary = {}
 var ball = Ball.new()
 var referee = Official.new()
 var referee_name: String = TeamData.REFEREE
-var brain = null  # MatchAI
+var brain = null  # MatchAI: the pitch
+var manager = null  # MatchManager: the dugout
+var live_style: Array = [{}, {}]  # effective tactics style per side, refreshed on change
+var stoppage_seq := 0  # dead-ball counter; subs in the same stoppage share a window
 
 var clock = 0.0
 var half = 1
@@ -175,6 +182,20 @@ func kit_color(t: int) -> Color:
 	if kit.has("shirt"):
 		return kit["shirt"]
 	return teams[t]["data"]["color"]
+
+# ------------------------------------------------------------- tactics bridge --
+
+## MatchAI reads the side's effective FM style from here instead of the static
+## club style, so a manager change moves the whole pitch.
+func style_of(t: int) -> Dictionary:
+	return live_style[t]
+
+## Role push after the manager's duty instruction (attack runs higher, defend
+## holds deeper) is applied on top of the squad role.
+func push_of(p) -> float:
+	if manager == null:
+		return Attrs.role_push(p.role)
+	return Attrs.role_push(p.role) + manager.tactics_for(p.team).duty_offset(p.role)
 
 func _blank_stats() -> Dictionary:
 	return {
@@ -246,9 +267,6 @@ func in_penalty_box(pos: Vector2, defending_team: int) -> bool:
 func is_attacking_third(t: int, pos: Vector2) -> bool:
 	var ax = attacking_x(t, pos)
 	return ax > L * 0.66
-
-func get_player(id_in: int):
-	return by_id.get(id_in, null)
 
 func ball_owner():
 	if ball.owner_id < 0:

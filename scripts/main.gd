@@ -305,6 +305,7 @@ func _click(p: Vector2) -> void:
 			"skip": _skip()
 			"camera": camera_follow = not camera_follow
 			"teams": open_select()
+			"manager_card": hud.manager_card.dismiss()
 			"restart": new_match(seeded + randi_range(0, 9999))
 		return
 	if hover_id >= 0:
@@ -330,7 +331,8 @@ func _toggle_mode() -> void:
 	else:
 		fast_mode = not in_highlight
 		if not in_highlight:
-			_begin_fast()
+			in_highlight = false
+			highlight_until = -1.0
 
 func _skip() -> void:
 	if mode == "highlights":
@@ -433,11 +435,6 @@ func _post_tick() -> void:
 		fast_mode = true
 	_update_camera_target()
 	_apply_camera(false)
-
-func _begin_fast() -> void:
-	fast_mode = true
-	in_highlight = false
-	highlight_until = -1.0
 
 func _end_highlight() -> void:
 	in_highlight = false
@@ -572,6 +569,8 @@ func _parse_capture_args() -> void:
 			engine.phase = "goal"
 			engine.goal_timer = 8.0
 			engine.last_goal = {"team": 0, "conceded_by": 1, "scorer": "B. Šeško", "minute": 63, "own_goal": false}
+		elif a == "--managers":
+			engine.manager.demo()
 		elif a == "--full":
 			mode = "full"
 			fast_mode = false

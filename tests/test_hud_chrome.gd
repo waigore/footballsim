@@ -67,6 +67,23 @@ func test_ticker_follows_events_then_live_play() -> void:
 	await get_tree().process_frame
 	hud.queue_free()
 
+func test_manager_card_shows_without_blocking_the_match() -> void:
+	var eng := MatchEngine.new(26)
+	var hud := _hud(eng)
+	eng.manager.demo()
+	hud.manager_card.tick(0.1, eng, hud.game)
+	assert_true(hud.manager_card.visible(), "the manager card did not show for a manager act")
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	assert_false(HudLayout.controls_rect(vp).intersects(hud.manager_card.box), "the manager card covers the control bar")
+	assert_false(Rect2(0, 0, 300, 120).intersects(hud.manager_card.box), "the manager card covers the fixture panel")
+	var mid: Vector2 = hud.manager_card.box.position + hud.manager_card.box.size * 0.5
+	assert_eq(hud.button_at(mid), "manager_card", "the card is not tappable")
+	hud.manager_card.dismiss()
+	assert_false(hud.manager_card.visible(), "the manager card did not dismiss")
+	hud.queue_free()
+
 func test_referee_is_drawn_on_the_pitch() -> void:
 	var eng := MatchEngine.new(25)
 	for i in range(30):

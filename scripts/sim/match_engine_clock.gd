@@ -8,17 +8,18 @@ func _init(seed_in: int = 4242, home_id: String = "MUN", away_id: String = "MCI"
 	teams = [
 		{
 			"id": home_id, "data": TeamData.get_team(home_id), "dir": 1, "score": 0,
-			"subs_left": 5, "sub_minutes": [62, 71, 80], "subs_made": 0,
+			"subs_left": SUB_LIMIT, "subs_made": 0, "windows_used": 0, "window_token": -1,
 		},
 		{
 			"id": away_id, "data": TeamData.get_team(away_id), "dir": -1, "score": 0,
-			"subs_left": 5, "sub_minutes": [58, 68, 78], "subs_made": 0,
+			"subs_left": SUB_LIMIT, "subs_made": 0, "windows_used": 0, "window_token": -1,
 		},
 	]
 	Kits.assign(teams)
 	stats = [_blank_stats(), _blank_stats()]
 	home_team = 0
 	_build_squads()
+	manager = MatchManager.new(self)
 	brain = MatchAI.new(self)
 	setup_kickoff(0 if rng.randf() < 0.5 else 1, false)
 
@@ -88,6 +89,7 @@ func tick() -> void:
 	clock += DT
 	flash = maxf(0.0, flash - DT * 2.0)
 	_update_referee(DT)
+	manager.tick(DT)
 
 	if phase != "goal":
 		_tick_clock_end()
@@ -136,6 +138,8 @@ func _end_first_half() -> void:
 	phase = "half_time"
 	half_break_timer = 4.0
 	_emit("half_time", Commentary.half_time(rng, teams[0]["data"]["short"], score[0], teams[1]["data"]["short"], score[1]), -1, null)
+	# Half-time is a free substitution window and a natural tactics moment.
+	manager.on_half_time()
 	blackout()
 
 func blackout() -> void:
@@ -155,6 +159,7 @@ func begin_second_half() -> void:
 	half = 2
 	phase = "restart"
 	setup_kickoff(1 - kickoff_team, true)
+	manager.on_second_half()
 
 func _end_match() -> void:
 	phase = "full_time"
@@ -197,6 +202,9 @@ func to_dict() -> Dictionary:
 		"subs_left": [teams[0]["subs_left"], teams[1]["subs_left"]], "finished": finished,
 		"stoppage_events": stoppage_events, "kickoff_team": kickoff_team,
 		"injury_timer": injury_timer,
+		"windows": [teams[0]["windows_used"], teams[1]["windows_used"]],
+		"window_token": [teams[0]["window_token"], teams[1]["window_token"]],
+		"stoppage_seq": stoppage_seq, "manager": manager.to_dict(),
 	}
 
 func from_dict(d: Dictionary) -> void:
@@ -296,6 +304,15 @@ func from_dict(d: Dictionary) -> void:
 	stoppage_events = d["stoppage_events"]
 	injury_timer = float(d.get("injury_timer", 45.0))
 	kickoff_team = d["kickoff_team"]
+	var win: Array = d.get("windows", [0, 0])
+	var tok: Array = d.get("window_token", [-1, -1])
+	for t in range(2):
+		teams[t]["windows_used"] = int(win[t])
+		teams[t]["window_token"] = int(tok[t])
+	stoppage_seq = int(d.get("stoppage_seq", 0))
+	var md: Dictionary = d.get("manager", {})
+	if manager != null and not md.is_empty():
+		manager.from_dict(md)
 	if brain != null:
 		brain.on_restore()
 

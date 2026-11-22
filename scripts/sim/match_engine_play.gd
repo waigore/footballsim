@@ -367,6 +367,8 @@ func _send_off_or_book(p, card: String) -> void:
 		_emit("card", line, p.team, p)
 		_remove_body(p)
 	stoppage_events += 1
+	# A card changes the picture: the dugouts weigh a response.
+	manager.on_event("card", {"team": p.team, "red": card != "yellow"})
 
 func _remove_body(p) -> void:
 	p.vel = Vector2.ZERO
