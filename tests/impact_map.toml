@@ -42,18 +42,36 @@ suites = [
   "test_hud_chrome.gd",
 ]
 
-# Shared engine spine: laws + finishing + restart when a core file moves.
+[domains.tactics]
+suites = [
+  "test_tactics.gd",
+  "test_tactics_ai.gd",
+]
+
+[domains.managers]
+suites = [
+  "test_managers.gd",
+  "test_manager_subs.gd",
+]
+
+# Shared engine spine: laws + finishing + restart + managers when a core file moves.
 [domains.match_engine]
 suites = [
   "test_match_laws.gd",
   "test_finishing.gd",
   "test_restart_judgement.gd",
+  "test_tactics.gd",
+  "test_tactics_ai.gd",
+  "test_managers.gd",
+  "test_manager_subs.gd",
 ]
 
 [domains.teams]
 suites = [
   "test_poisson_model.gd",
   "test_kits.gd",
+  "test_tactics.gd",
+  "test_tactics_ai.gd",
 ]
 
 # Lightest suite for tooling / project / addons / map edits.
@@ -109,6 +127,14 @@ match = "scripts/sim/match_ai.gd*"
 domain = "match_engine"
 
 [[rules]]
+match = "scripts/sim/tactics.gd*"
+domain = "tactics"
+
+[[rules]]
+match = "scripts/sim/match_manager.gd*"
+domain = "managers"
+
+[[rules]]
 match = "scripts/sim/attributes.gd*"
 domain = "match_engine"
 
@@ -117,6 +143,10 @@ match = "scripts/sim/pitch_queries.gd*"
 domain = "match_engine"
 
 # ---------------------------------------------------------------- data ---
+
+[[rules]]
+match = "scripts/data/managers.gd*"
+domain = "managers"
 
 [[rules]]
 match = "scripts/data/teams.gd*"
@@ -150,6 +180,10 @@ domain = "hud_chrome"
 
 [[rules]]
 match = "scripts/ui/hud_commentary.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/ui/hud_managers.gd*"
 domain = "hud_chrome"
 
 [[rules]]

@@ -161,7 +161,10 @@ func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, 
 		return
 	var dist: float = p.pos.distance_to(target_point)
 	var pressure = pressure_on(p)
+	var live: Dictionary = style_of(p.team)
 	var sigma = Attrs.pass_sigma_deg(p, dist, pressure) / home_factor(p)
+	if kind == "cross":
+		sigma *= 1.15 - float(live["crossing"]) * 0.30
 	var aim = target_point
 	if lofted:
 		var land_sigma: float = dist * tan(deg_to_rad(sigma)) * 0.8
@@ -177,7 +180,7 @@ func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, 
 	else:
 		var ang_err = deg_to_rad(rng.randf_range(-sigma, sigma))
 		var dir: Vector2 = (aim - p.pos).normalized().rotated(ang_err)
-		var sp: float = Attrs.pass_speed_for(p, dist) * (1.0 + rng.randf_range(-0.06, 0.06))
+		var sp: float = Attrs.pass_speed_for(p, dist) * (0.88 + float(live["tempo"]) * 0.24) * (1.0 + rng.randf_range(-0.06, 0.06))
 		ball.vel = dir * sp
 		ball.z = 0.0
 		ball.vz = 0.0

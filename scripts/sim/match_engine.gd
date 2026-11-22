@@ -17,6 +17,7 @@ func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) 
 	phase = "restart"
 	possession_team = team
 	possession_loose = false
+	stoppage_seq += 1
 	ball.owner_id = -1
 	ball.vel = Vector2.ZERO
 	ball.vz = 0.0
@@ -90,6 +91,9 @@ func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) 
 			q.target = q.pos
 	_vlog("RESTART %s team %s at (%.1f,%.1f)" % [kind, teams[team]["id"], pos.x, pos.y])
 	_emit(kind, _restart_text(kind, team, taker), team, taker)
+	# A dead ball is the manager's legal moment to change a player.
+	if manager != null:
+		manager.on_stoppage(kind, team)
 
 func _restart_text(kind: String, team: int, taker) -> String:
 	var who: String = taker.name if taker != null else ""
@@ -162,7 +166,7 @@ func _restart_patience(taker, kind: String, team: int) -> float:
 		if margin < 0:
 			want *= 0.5
 		elif margin > 0:
-			want *= 1.6
+			want *= 1.6 + float(style_of(team)["time_wasting"]) * 0.9
 	var limit: float = 2700.0 + added[0] if half == 1 else 5400.0 + added[1]
 	return clampf(minf(want, limit - clock - 1.5), 0.0, 4.5)
 
@@ -274,7 +278,7 @@ func _execute_restart() -> void:
 			else:
 				_claim_ball(taker)
 		"goal_kick":
-			var style: float = teams[team]["data"]["style"]["possession"]
+			var style: float = float(style_of(team)["possession"])
 			if style > 0.58:
 				var mate = _best_short_outlet(team, taker)
 				if mate != null:
@@ -284,13 +288,20 @@ func _execute_restart() -> void:
 			else:
 				_clear_long(taker, team)
 		"corner":
-			var target = Vector2(L - 7.5 if restart["pos"].x > L * 0.5 else 7.5, W * 0.5 + rng.randf_range(-4.0, 4.0))
-			pass_ball(taker, target, true, null, "cross")
+			var target = Vector2(L - 7.5 if restart["pos"].x > L * 0.5 else 7.5, _corner_aim(team) + rng.randf_range(-1.5, 1.5))
+			var short: bool = manager != null and manager.tactics_for(team).corner_routine() == "short"
+			var near = _nearest_teammate_to(restart["pos"] + Vector2(-teams[team]["dir"] * 6.0, 0.0), team, false, taker.id)
+			if short and near != null:
+				pass_ball(taker, near.pos, false, near)
+			else:
+				pass_ball(taker, target, true, null, "cross")
 			stats[team]["crosses"] = stats[team].get("crosses", 0) + 1
 		"free_kick":
 			var goal: Vector2 = target_goal_pos(team)
 			var d: float = taker.pos.distance_to(goal)
-			if d < 27.0 and opponent_goal_angle(taker) > 0.16 and rng.randf() < 0.45:
+			var direct: bool = manager == null or manager.tactics_for(team).free_kick_routine() == "direct"
+			var shoot_p: float = 0.45 if direct else 0.15
+			if d < 27.0 and opponent_goal_angle(taker) > 0.16 and rng.randf() < shoot_p:
 				shoot_ball(taker, rng.randf_range(-2.6, 2.6), rng.randf_range(0.4, 1.9), 1.0, "freekick")
 			elif d < 45.0 and absf(taker.pos.y - W * 0.5) > 12.0:
 				var target = Vector2(goal.x - teams[team]["dir"] * 8.0, W * 0.5 + rng.randf_range(-3.0, 3.0))
@@ -357,3 +368,15 @@ func _best_short_outlet(team: int, taker):
 func _clear_long(taker, team: int) -> void:
 	var aim = Vector2(L * 0.5 + teams[team]["dir"] * 12.0, W * 0.5 + rng.randf_range(-16.0, 16.0))
 	clear_ball(taker, aim)
+
+## Where the corner is aimed: the live set-piece routine decides near or far.
+func _corner_aim(team: int) -> float:
+	var routine := "far_post"
+	if manager != null:
+		routine = manager.tactics_for(team).corner_routine()
+	match routine:
+		"near_post":
+			return W * 0.5 - 5.5
+		"short":
+			return W * 0.5
+	return W * 0.5 + 5.5

@@ -17,6 +17,7 @@ var panel_cache := {}
 # Commentary ticker state lives in HudCommentary; the HUD only forwards time
 # and draws it.
 var ticker: HudCommentary = null
+var manager_card: HudManagers = null
 
 const C_PANEL := Color(0.035, 0.055, 0.070, 0.94)
 const C_PANEL_LIGHT := Color(0.075, 0.105, 0.125, 0.94)
@@ -31,10 +32,13 @@ func _ready() -> void:
 	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
 	f_body = load("res://fonts/Inter-Regular.ttf")
 	ticker = HudCommentary.new(C_PANEL, C_GOLD, C_TEXT, C_DIM)
+	manager_card = HudManagers.new(C_PANEL, C_GOLD, C_TEXT, C_DIM)
 
 func _process(d: float) -> void:
 	if ticker != null:
 		ticker.tick(d, engine, game)
+	if manager_card != null:
+		manager_card.tick(d, engine, game)
 	queue_redraw()
 
 func _style(c: Color, r: int = 10, bc: Color = C_BORDER, bw: int = 1) -> StyleBoxFlat:
@@ -80,6 +84,8 @@ func _draw() -> void:
 	_draw_controls(vp)
 	if ticker != null:
 		ticker.draw(self, vp, f_bold, f_med, game)
+	if manager_card != null:
+		manager_card.draw(self, vp, f_bold, f_med, engine)
 	_draw_status(vp)
 	_draw_focus(vp)
 	_draw_tooltip(vp)
@@ -293,6 +299,8 @@ func _speed_label() -> String:
 	return "%.1f" % s
 
 func button_at(p: Vector2) -> String:
+	if manager_card != null and manager_card.button_at(p):
+		return "manager_card"
 	for b in buttons:
 		if (b["rect"] as Rect2).has_point(p):
 			return b["id"]

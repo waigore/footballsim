@@ -67,6 +67,49 @@ func test_ticker_follows_events_then_live_play() -> void:
 	await get_tree().process_frame
 	hud.queue_free()
 
+func test_manager_card_shows_without_blocking_the_match() -> void:
+	var eng := MatchEngine.new(26)
+	var hud := _hud(eng)
+	eng.manager.demo()
+	hud.manager_card.tick(0.1, eng, hud.game)
+	assert_true(hud.manager_card.visible(), "the manager card did not show for a manager act")
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	assert_false(HudLayout.controls_rect(vp).intersects(hud.manager_card.box), "the manager card covers the control bar")
+	assert_false(Rect2(0, 0, 300, 120).intersects(hud.manager_card.box), "the manager card covers the fixture panel")
+	var mid: Vector2 = hud.manager_card.box.position + hud.manager_card.box.size * 0.5
+	assert_eq(hud.button_at(mid), "manager_card", "the card is not tappable")
+	hud.manager_card.dismiss()
+	assert_false(hud.manager_card.visible(), "the manager card did not dismiss")
+	hud.queue_free()
+
+func test_manager_card_holds_when_paused_and_expires() -> void:
+	var eng := MatchEngine.new(27)
+	var hud := _hud(eng)
+	eng.manager.demo()
+	hud.manager_card.tick(0.1, eng, hud.game)
+	assert_true(hud.manager_card.visible(), "the manager card did not show")
+	hud.game.paused = true
+	hud.manager_card.tick(30.0, eng, hud.game)
+	assert_true(hud.manager_card.visible(), "the card vanished while paused")
+	hud.game.paused = false
+	hud.manager_card.tick(30.0, eng, hud.game)
+	assert_false(hud.manager_card.visible(), "the card never faded")
+	hud.queue_free()
+
+func test_manager_card_draws_a_tactics_change() -> void:
+	var eng := MatchEngine.new(28)
+	var hud := _hud(eng)
+	eng.manager._apply(0, {"mentality": "attacking", "line_delta": 0.06}, "test")
+	hud.manager_card.tick(0.1, eng, hud.game)
+	assert_true(hud.manager_card.visible(), "the tactics card did not show")
+	assert_eq(str(hud.manager_card.card.get("type", "")), "tactics", "tactics card not built")
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_gt(hud.manager_card.box.size.x, 0.0, "the tactics card never drew")
+	hud.queue_free()
+
 func test_referee_is_drawn_on_the_pitch() -> void:
 	var eng := MatchEngine.new(25)
 	for i in range(30):

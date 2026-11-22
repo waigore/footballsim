@@ -73,6 +73,8 @@ func _freshness(kind: String) -> float:
 			h = 4.2
 		"CARD", "FOUL", "OFFSIDE", "HANDBALL", "INJURY":
 			h = 3.6
+		"TACTICS", "SUBSTITUTION":
+			h = 5.0
 		"CLEARANCE", "CROSS":
 			h = 2.6
 	return h
