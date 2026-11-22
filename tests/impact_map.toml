@@ -40,6 +40,7 @@ suites = [
 [domains.hud_chrome]
 suites = [
   "test_hud_chrome.gd",
+  "test_touch_flow.gd",
 ]
 
 [domains.tactics]

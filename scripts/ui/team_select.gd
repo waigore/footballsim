@@ -159,8 +159,17 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	var label := "HOME" if side == 0 else "AWAY"
 	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
 
+## Design space this sheet draws in (the layer is scaled up by main.gd).
+func design_vp() -> Vector2:
+	return get_viewport().get_visible_rect().size / maxf(ui_scale, 0.001)
+
+## A touch build has no Escape key, so the sheet needs a door that a tap can
+## reach; the layout test reads this rect instead of a screenshot.
+func back_rect(vp: Vector2) -> Rect2:
+	return Rect2(vp.x - 24.0 - 116.0, 18.0, 116.0, 44.0)
+
 func _draw() -> void:
-	var vp: Vector2 = get_viewport().get_visible_rect().size / maxf(ui_scale, 0.001)
+	var vp := design_vp()
 	buttons.clear()
 	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.015, 0.025, 0.032, 0.94))
 	draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
@@ -221,7 +230,7 @@ func _draw() -> void:
 		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 9, Color(0.96, 0.78, 0.30, 0.55), f_med)
 
 	# A touch build has no Escape key: the sheet needs a visible way out.
-	var back := Rect2(vp.x - 24.0 - 104.0, 20.0, 104.0, 36.0)
+	var back := back_rect(vp)
 	var back_hover := back.has_point(mouse)
 	rect(C_PANEL_LIGHT if back_hover else C_PANEL, back, 8, Color(1, 1, 1, 0.14 if back_hover else 0.07))
 	text_c(back.position.x + back.size.x * 0.5, back.position.y + back.size.y * 0.66, "‹  BACK", 13, C_TEXT if back_hover else C_DIM, f_bold)

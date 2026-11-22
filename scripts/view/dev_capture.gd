@@ -17,8 +17,10 @@ var elapsed := 0.0
 ## desktop build, so the phone layout can be inspected without a device.
 var ui_scale := 0.0
 
-func parse(game) -> void:
-	for a in OS.get_cmdline_user_args():
+## `args` is injectable so the flag table can be tested; production passes the
+## real command line.
+func parse(game, args := OS.get_cmdline_user_args()) -> void:
+	for a in args:
 		if a.begins_with("--shots="):
 			for p in a.substr(8).split(","):
 				shot_times.append(float(p))
