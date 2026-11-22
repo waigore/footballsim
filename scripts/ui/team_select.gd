@@ -16,6 +16,11 @@ const C_GOLD := Color(0.96, 0.78, 0.30)
 var ids: Array = []
 var home_idx := 0
 var away_idx := 1
+## Design-space multiplier and touch flag, pushed in by main.gd: on a phone the
+## whole layer is scaled up, so every rect here is derived from the smaller
+## design viewport.
+var ui_scale := 1.0
+var touch := false
 var mouse := Vector2(-1000, -1000)
 var buttons: Array = []
 
@@ -74,26 +79,41 @@ func randomize_fixture() -> void:
 func confirm() -> void:
 	confirmed.emit(home_id(), away_id())
 
+## if/elif rather than match: the coverage injector cannot instrument a match
+## statement, and an uninstrumentable file fails the patch gate.
 func click(id: String) -> void:
-	match id:
-		"home_prev": cycle_home(-1)
-		"home_next": cycle_home(1)
-		"away_prev": cycle_away(-1)
-		"away_next": cycle_away(1)
-		"random": randomize_fixture()
-		"confirm": confirm()
-		"cancel": cancelled.emit()
+	if id == "back" or id == "cancel":
+		cancelled.emit()
+	elif id == "home_prev":
+		cycle_home(-1)
+	elif id == "home_next":
+		cycle_home(1)
+	elif id == "away_prev":
+		cycle_away(-1)
+	elif id == "away_next":
+		cycle_away(1)
+	elif id == "random":
+		randomize_fixture()
+	elif id == "confirm":
+		confirm()
 
 func key(code: int) -> bool:
-	match code:
-		KEY_LEFT, KEY_A: cycle_home(-1)
-		KEY_RIGHT, KEY_D: cycle_home(1)
-		KEY_UP, KEY_W: cycle_away(-1)
-		KEY_DOWN, KEY_S: cycle_away(1)
-		KEY_TAB: randomize_fixture()
-		KEY_ENTER, KEY_KP_ENTER, KEY_SPACE: confirm()
-		KEY_ESCAPE: cancelled.emit()
-		_: return false
+	if code == KEY_LEFT or code == KEY_A:
+		cycle_home(-1)
+	elif code == KEY_RIGHT or code == KEY_D:
+		cycle_home(1)
+	elif code == KEY_UP or code == KEY_W:
+		cycle_away(-1)
+	elif code == KEY_DOWN or code == KEY_S:
+		cycle_away(1)
+	elif code == KEY_TAB:
+		randomize_fixture()
+	elif code == KEY_ENTER or code == KEY_KP_ENTER or code == KEY_SPACE:
+		confirm()
+	elif code == KEY_ESCAPE:
+		cancelled.emit()
+	else:
+		return false
 	return true
 
 func button_at(p: Vector2) -> String:
@@ -107,12 +127,18 @@ func button_at(p: Vector2) -> String:
 func _process(_d: float) -> void:
 	queue_redraw()
 
+var style_cache := {}
+
 func _style(c: Color, r: int = 10, bc: Color = C_BORDER, bw: int = 1) -> StyleBoxFlat:
+	var key := "%s|%d|%s|%d" % [c.to_html(), r, bc.to_html(), bw]
+	if style_cache.has(key):
+		return style_cache[key]
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = c
 	sb.set_corner_radius_all(r)
 	sb.border_color = bc
 	sb.set_border_width_all(bw)
+	style_cache[key] = sb
 	return sb
 
 func rect(c: Color, r: Rect2, radius: int = 10, bc: Color = C_BORDER) -> void:
@@ -145,12 +171,19 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	text_c(cx, r.position.y + r.size.y * 0.64, str(t["nickname"]).to_upper(), 11, C_DIM, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.80, "%s  ·  %s" % [str(t["formation"]), str(t["manager"]).to_upper()], 10, C_GOLD, f_med)
 	var label := "HOME" if side == 0 else "AWAY"
-	text_c(cx, r.position.y - 14, label, 11, C_DIM, f_bold)
+	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
+
+## Design space this sheet draws in (the layer is scaled up by main.gd).
+func design_vp() -> Vector2:
+	return get_viewport().get_visible_rect().size / maxf(ui_scale, 0.001)
+
+## A touch build has no Escape key, so the sheet needs a door that a tap can
+## reach; the layout test reads this rect instead of a screenshot.
+func back_rect(vp: Vector2) -> Rect2:
+	return Rect2(vp.x - 24.0 - 116.0, 18.0, 116.0, 44.0)
 
 func _draw() -> void:
-	var vp := size
-	if vp.x <= 0.0 or vp.y <= 0.0:
-		vp = get_viewport().get_visible_rect().size
+	var vp := design_vp()
 	buttons.clear()
 	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.015, 0.025, 0.032, 0.94))
 	draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
@@ -188,7 +221,7 @@ func _draw() -> void:
 
 	var bw := 190.0
 	var bh := 50.0
-	var by := card_y + card_h + 54.0
+	var by: float = minf(card_y + card_h + 54.0, vp.y - bh - 78.0)
 	var confirm_rect := Rect2(vp.x * 0.5 - bw - 8.0, by, bw, bh)
 	var random_rect := Rect2(vp.x * 0.5 + 8.0, by, bw, bh)
 	for spec in [["confirm", confirm_rect, "KICK OFF", "ENTER"], ["random", random_rect, "RANDOM", "TAB"]]:
@@ -196,10 +229,23 @@ func _draw() -> void:
 		var hovered := r.has_point(mouse)
 		var bg: Color = Color(0.16, 0.13, 0.05, 0.98) if spec[0] == "confirm" else (C_PANEL_LIGHT if hovered else C_PANEL)
 		rect(bg, r, 10, Color(0.96, 0.78, 0.30, 0.55) if spec[0] == "confirm" else Color(1, 1, 1, 0.10 if hovered else 0.06))
-		text_c(r.position.x + r.size.x * 0.5, r.position.y + 24, spec[2], 16, C_GOLD if spec[0] == "confirm" else C_TEXT, f_bold)
-		text_c(r.position.x + r.size.x * 0.5, r.position.y + 39, spec[3], 9, C_DIM, f_med)
+		var cap_y: float = r.position.y + (r.size.y * 0.5 + 6.0 if touch else 24.0)
+		text_c(r.position.x + r.size.x * 0.5, cap_y, spec[2], 16, C_GOLD if spec[0] == "confirm" else C_TEXT, f_bold)
+		if not touch:
+			text_c(r.position.x + r.size.x * 0.5, r.position.y + 39, spec[3], 9, C_DIM, f_med)
 		_add_button(spec[0], r)
 
-	text_c(vp.x * 0.5, vp.y - 64, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, C_DIM, f_med)
-	text_c(vp.x * 0.5, vp.y - 44, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   ESC  BACK", 10, C_DIM, f_med)
-	text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 9, Color(0.96, 0.78, 0.30, 0.55), f_med)
+	if touch:
+		text_c(vp.x * 0.5, vp.y - 44, "TAP THE ARROWS TO CHANGE CLUBS  ·  TAP KICK OFF", 11, C_DIM, f_med)
+		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 9, Color(0.96, 0.78, 0.30, 0.55), f_med)
+	else:
+		text_c(vp.x * 0.5, vp.y - 64, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, C_DIM, f_med)
+		text_c(vp.x * 0.5, vp.y - 44, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   ESC  BACK", 10, C_DIM, f_med)
+		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 9, Color(0.96, 0.78, 0.30, 0.55), f_med)
+
+	# A touch build has no Escape key: the sheet needs a visible way out.
+	var back := back_rect(vp)
+	var back_hover := back.has_point(mouse)
+	rect(C_PANEL_LIGHT if back_hover else C_PANEL, back, 8, Color(1, 1, 1, 0.14 if back_hover else 0.07))
+	text_c(back.position.x + back.size.x * 0.5, back.position.y + back.size.y * 0.66, "‹  BACK", 13, C_TEXT if back_hover else C_DIM, f_bold)
+	_add_button("back", back)

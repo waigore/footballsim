@@ -91,6 +91,15 @@ class Player:
 	var trail_t = 0.0
 	var last_action = ""
 	var active = true
+	var _surname = ""
+
+	## Last word of the name, upper-cased. Cached: the overlay draws 22 tokens
+	## every frame and splitting a string 22 times a frame is phone-garbage.
+	func surname_text() -> String:
+		if _surname == "":
+			var bits: PackedStringArray = String(name).split(" ")
+			_surname = bits[bits.size() - 1].to_upper()
+		return _surname
 
 class Ball:
 	var pos = Vector2(52.5, 34.0)

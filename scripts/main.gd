@@ -50,7 +50,11 @@ var sfx_pool: Array = []
 var sfx_next := 0
 var sfx_streams := {}
 var batch_abort := false
-var hover_force := -1
+var hud_scale := 1.0
+var token_scale := 1.0
+var pitch_shift := 0.0
+var touch := false
+var dev: DevCapture = null
 
 var home_id := "MUN"
 var away_id := "MCI"
@@ -64,7 +68,9 @@ func _ready() -> void:
 	setup_audio()
 	_parse_fixture_args()
 	new_match(seeded)
-	_parse_capture_args()
+	dev = DevCapture.new()
+	dev.parse(self)
+	_sync_overlay_scale()
 	_build_selector()
 	if not fixture_arg_given:
 		open_select()
@@ -125,8 +131,28 @@ func build_scene() -> void:
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud_layer.add_child(hud)
 	hud.game = self
+	touch = OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
+	_sync_overlay_scale()
 	_recalc_zoom()
 	actors.game = self
+
+## Handhelds read the overlay at roughly one density point per design unit: the
+## layer is scaled up by HudLayout.overlay_scale() and every rect is derived
+## from the smaller design viewport, so type and tap targets grow with the
+## screen instead of shrinking with it.
+func _sync_overlay_scale() -> void:
+	hud_scale = HudLayout.overlay_scale()
+	if dev != null and dev.ui_scale > 0.0:
+		hud_scale = dev.ui_scale
+		touch = true
+	token_scale = 1.5 if HudLayout.is_compact(get_viewport_rect().size / hud_scale) else 1.0
+	actors.token_scale = token_scale
+	hud.ui_scale = hud_scale
+	hud.touch = touch
+	var frame := Transform2D.IDENTITY.scaled(Vector2(hud_scale, hud_scale))
+	hud_layer.transform = frame
+	if sel_layer != null:
+		sel_layer.transform = frame
 
 func new_match(seed: int) -> void:
 	if engine != null and engine.event_fired.is_connected(_on_engine_event):
@@ -156,14 +182,14 @@ func new_match(seed: int) -> void:
 	replay_banner = 0.0
 	last_event_notice = 0.0
 	match_time = 0.0
-	cam.position = Vector2(L * 0.5, W * 0.5)
+	cam.position = Vector2(L * 0.5, W * 0.5 + pitch_shift)
 	cam.zoom = Vector2(base_zoom, base_zoom)
 	_snapshot()
 
 func _recalc_zoom() -> void:
-	var vp := get_viewport_rect().size
-	var fit := minf(vp.y / (W + 34.0), (vp.x - 40.0) / (L + 30.0))
-	base_zoom = clampf(fit, 6.0, 16.0)
+	var geo := HudLayout.pitch_fit(get_viewport_rect().size, hud_scale, touch)
+	base_zoom = clampf(float(geo["zoom"]), 3.0, 16.0)
+	pitch_shift = float(geo["offset"])
 	if cam != null:
 		cam.zoom = Vector2(base_zoom * zoom_scale, base_zoom * zoom_scale)
 
@@ -182,6 +208,9 @@ func _build_selector() -> void:
 	sel_layer.add_child(selector)
 	selector.confirmed.connect(_on_fixture_confirmed)
 	selector.cancelled.connect(_close_select)
+	sel_layer.transform = Transform2D.IDENTITY.scaled(Vector2(hud_scale, hud_scale))
+	selector.ui_scale = hud_scale
+	selector.touch = touch
 	sel_layer.visible = false
 
 func open_select() -> void:
@@ -232,6 +261,7 @@ func _parse_fixture_args() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
+		_sync_overlay_scale()
 		_recalc_zoom()
 
 # ------------------------------------------------------------------ input ----
@@ -240,12 +270,13 @@ func _input(event: InputEvent) -> void:
 	if select_open:
 		if event is InputEventMouseMotion:
 			mouse = event.position
-			selector.mouse = event.position
-			Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if selector.button_at(event.position) != "" else Input.CURSOR_ARROW)
+			selector.mouse = _design(event.position)
+			if not touch:
+				Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if selector.button_at(selector.mouse) != "" else Input.CURSOR_ARROW)
 		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			mouse = event.position
-			selector.mouse = event.position
-			var sid: String = selector.button_at(event.position)
+			selector.mouse = _design(event.position)
+			var sid: String = selector.button_at(selector.mouse)
 			if sid != "":
 				selector.click(sid)
 		elif event is InputEventKey and event.pressed and not event.echo:
@@ -265,49 +296,64 @@ func _input(event: InputEvent) -> void:
 			mouse = event.position
 			_click(event.position)
 	elif event is InputEventKey and event.pressed and not event.echo:
-		match event.keycode:
-			KEY_SPACE:
-				paused = not paused
-			KEY_1:
-				speed = 1.0
-			KEY_2:
-				speed = 2.0
-			KEY_3:
-				speed = 4.0
-			KEY_4:
-				speed = 8.0
-			KEY_H:
-				_toggle_mode()
-			KEY_S:
-				_skip()
-			KEY_R:
-				new_match(seeded + randi_range(0, 9999))
-			KEY_N:
-				names_visible = not names_visible
-				actors.names_visible = names_visible
-			KEY_C:
-				camera_follow = not camera_follow
-			KEY_T:
-				open_select()
-			KEY_ESCAPE:
-				if focus_id >= 0:
-					focus_id = -1
-				else:
-					get_tree().quit()
+		# if/elif rather than match: the coverage injector cannot instrument a
+		# match statement, and an uninstrumentable main.gd fails the patch gate.
+		var k: int = event.keycode
+		if k == KEY_SPACE:
+			paused = not paused
+		elif k == KEY_1:
+			speed = 1.0
+		elif k == KEY_2:
+			speed = 2.0
+		elif k == KEY_3:
+			speed = 4.0
+		elif k == KEY_4:
+			speed = 8.0
+		elif k == KEY_H:
+			_toggle_mode()
+		elif k == KEY_S:
+			_skip()
+		elif k == KEY_R:
+			new_match(seeded + randi_range(0, 9999))
+		elif k == KEY_N:
+			names_visible = not names_visible
+			actors.names_visible = names_visible
+		elif k == KEY_C:
+			camera_follow = not camera_follow
+		elif k == KEY_T:
+			open_select()
+		elif k == KEY_ESCAPE:
+			if focus_id >= 0:
+				focus_id = -1
+			else:
+				get_tree().quit()
+
+## Overlay widgets live in design space; pointer events arrive in logical
+## viewport units.
+func _design(p: Vector2) -> Vector2:
+	return p / maxf(hud_scale, 0.001)
 
 func _click(p: Vector2) -> void:
-	var b: String = hud.button_at(p)
+	var b: String = hud.button_at(_design(p))
+	if b == "pause":
+		paused = not paused
+	elif b == "speed":
+		_cycle_speed()
+	elif b == "mode":
+		_toggle_mode()
+	elif b == "skip":
+		_skip()
+	elif b == "camera":
+		camera_follow = not camera_follow
+	elif b == "teams":
+		open_select()
+	elif b == "manager_card":
+		hud.manager_card.dismiss()
+	elif b == "restart":
+		new_match(seeded + randi_range(0, 9999))
 	if b != "":
-		match b:
-			"pause": paused = not paused
-			"speed": _cycle_speed()
-			"mode": _toggle_mode()
-			"skip": _skip()
-			"camera": camera_follow = not camera_follow
-			"teams": open_select()
-			"manager_card": hud.manager_card.dismiss()
-			"restart": new_match(seeded + randi_range(0, 9999))
 		return
+	hover_id = _pick(p)
 	if hover_id >= 0:
 		focus_id = -1 if focus_id == hover_id else hover_id
 		actors.focus_id = focus_id
@@ -343,45 +389,43 @@ func _skip() -> void:
 	else:
 		_advance_ticks(60 * 10)
 
-func _update_hover() -> void:
-	var world: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * mouse
+## Nearest player to a logical-space point, within a radius a finger can hit.
+func _pick(p: Vector2) -> int:
+	var world: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * p
 	var best = null
-	var bd := 1.7 * 1.7
-	for p in engine.players:
-		if p.sent_off:
+	var reach: float = 2.8 if touch else 1.7
+	var bd := reach * reach
+	for q in engine.players:
+		if q.sent_off:
 			continue
-		var d: float = p.pos.distance_squared_to(world)
+		var d: float = q.pos.distance_squared_to(world)
 		if d < bd:
 			bd = d
-			best = p
-	hover_id = -1 if best == null else best.id
+			best = q
+	return -1 if best == null else best.id
+
+func _update_hover() -> void:
+	hover_id = _pick(mouse)
 	actors.hover_id = hover_id
-	hud.mouse = mouse
-	var over_button: bool = hud.button_at(mouse) != ""
-	Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if (best != null or over_button) else Input.CURSOR_ARROW)
+	hud.mouse = _design(mouse)
+	if not touch:
+		var over_button: bool = hud.button_at(hud.mouse) != ""
+		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if (hover_id >= 0 or over_button) else Input.CURSOR_ARROW)
 
 # ------------------------------------------------------------------ loop ----
 
 func _process(delta: float) -> void:
 	elapsed_real += delta
 	match_time += delta
-	_capture_tick(delta)
+	dev.tick(self, delta)
 	if select_open:
-		_capture_screenshots()
 		return
 	var zm: float = zoom_scale * (2.6 if camera_follow else (1.10 if in_highlight else 1.0))
 	cam.zoom = cam.zoom.lerp(Vector2(base_zoom * zm, base_zoom * zm), clampf(delta * 3.0, 0.0, 1.0))
 	_update_camera(delta)
 	_apply_camera(false)
-	if hover_force >= 0:
-		var hp = engine.by_id.get(hover_force, null)
-		if hp != null:
-			hover_id = hover_force
-			actors.hover_id = hover_force
-			hud.mouse = get_viewport().get_canvas_transform() * hp.pos + Vector2(24, 10)
-	else:
+	if not dev.apply_hover(self):
 		_update_hover()
-	_capture_screenshots()
 
 	if engine.phase == "full_time":
 		return
@@ -527,7 +571,7 @@ func _update_camera_target() -> void:
 		if half_h * 2.0 > W + 18.0:
 			cam_target.y = W * 0.5
 	else:
-		cam_target = Vector2(L * 0.5, W * 0.5)
+		cam_target = Vector2(L * 0.5, W * 0.5 + pitch_shift)
 
 func _update_camera(delta: float) -> void:
 	_update_camera_target()
@@ -537,62 +581,3 @@ func _apply_camera(snap_zoom: bool) -> void:
 	if snap_zoom:
 		cam.zoom = Vector2(base_zoom * zoom_scale, base_zoom * zoom_scale)
 
-# --------------------------------------------------------------- capture ----
-
-func _parse_capture_args() -> void:
-	for a in OS.get_cmdline_user_args():
-		if a.begins_with("--shots="):
-			var parts := a.substr(8).split(",")
-			for p in parts:
-				shot_times.append(float(p))
-		elif a.begins_with("--quit="):
-			quit_after = float(a.substr(7))
-		elif a.begins_with("--focus="):
-			focus_id = int(a.substr(8))
-			actors.focus_id = focus_id
-		elif a == "--follow":
-			camera_follow = true
-		elif a.begins_with("--clock="):
-			engine.clock = float(a.substr(8))
-			if engine.clock > 2700.0:
-				engine.half = 2
-				engine.teams[0]["dir"] = -1
-				engine.teams[1]["dir"] = 1
-				engine.setup_kickoff(1, false)
-		elif a.begins_with("--hover="):
-			hover_force = int(a.substr(8))
-		elif a == "--paused":
-			paused = true
-		elif a == "--fakegoal":
-			engine.score[0] = 2
-			engine.score[1] = 1
-			engine.phase = "goal"
-			engine.goal_timer = 8.0
-			engine.last_goal = {"team": 0, "conceded_by": 1, "scorer": "B. Šeško", "minute": 63, "own_goal": false}
-		elif a == "--managers":
-			engine.manager.demo()
-		elif a == "--full":
-			mode = "full"
-			fast_mode = false
-			speed = 1.0
-
-func _capture_screenshots() -> void:
-	if shot_times.is_empty() and quit_after < 0.0:
-		return
-	if shot_index < shot_times.size() and elapsed_real >= float(shot_times[shot_index]):
-		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://shots"))
-		var img := get_viewport().get_texture().get_image()
-		var path := ProjectSettings.globalize_path("res://shots/shot_%02d.png" % shot_index)
-		img.save_png(path)
-		print("saved ", path, " t=", snappedf(elapsed_real,0.1), " clock=", engine.display_clock(), " hl=", in_highlight, " fast=", fast_mode, " score=", engine.score)
-		shot_index += 1
-	if not goal_captured and engine.phase == "goal":
-		goal_captured = true
-		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://shots"))
-		var gimg := get_viewport().get_texture().get_image()
-		gimg.save_png(ProjectSettings.globalize_path("res://shots/goal.png"))
-		print("saved goal banner at clock=", engine.display_clock())
-func _capture_tick(delta: float) -> void:
-	if quit_after > 0.0 and elapsed_real >= quit_after:
-		print("EXIT clock=", engine.display_clock(), " score=", engine.score, " hl=", in_highlight, " fast=", fast_mode, " events=", engine.events.size(), " focus=", focus_id)
-		get_tree().quit()

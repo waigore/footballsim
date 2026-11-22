@@ -18,7 +18,8 @@ window/size/viewport_height=900
 window/size/window_width_override=1600
 window/size/window_height_override=900
 window/stretch/mode="canvas_items"
-window/handheld/orientation=1
+window/stretch/aspect="expand"
+window/handheld/orientation=4
 
 [rendering]
 
@@ -26,7 +27,8 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/canvas_textures/default_texture_filter=1
 environment/defaults/default_clear_color=Color(0.043, 0.071, 0.09, 1)
-anti_aliasing/quality/msaa_2d=2
+textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_2d=0
 
 [audio]
 

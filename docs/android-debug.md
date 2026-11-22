@@ -8,15 +8,13 @@ Workflow: [`.github/workflows/android-debug.yml`](../.github/workflows/android-d
 
 It runs on `pull_request` (`opened` / `synchronize` / `reopened`) into the long-lived **`android-debug`** branch (same-repo heads only). A push to that branch alone does not build.
 
-The job exports preset `Android Debug` via [`.github/scripts/export_android_debug.sh`](../.github/scripts/export_android_debug.sh) (CI-only: requires `ANDROID_EXPORT_CI=1`). Package `com.waigore.footballsim.debug`, arm64 only, signed with [`export/android/debug.keystore`](../export/android/debug.keystore) once that keystore and export presets exist.
-
-Until `project.godot` and Android export assets exist, the workflow fails closed with a clear message — do not treat that as a local-export fallback.
+The job exports preset `Android Debug` via [`.github/scripts/export_android_debug.sh`](../.github/scripts/export_android_debug.sh) (CI-only: requires `ANDROID_EXPORT_CI=1`). Package `com.waigore.footballsim.debug`, arm64 only, signed with the committed debug key [`export/android/debug.keystore`](../export/android/debug.keystore) (`androiddebugkey` / `android`) and [`export_presets.cfg`](../export_presets.cfg).
 
 ## Publish
 
 On success the workflow creates or updates a **prerelease** tagged `android-debug/<YYYY-MM-DD>/<sha>` (UTC date), titled `android-debug <YYYY-MM-DD> <12-char-sha>`, with asset `footballsim-<12-char-sha>-debug.apk`.
 
-Install over a previous build: `adb install -r <apk>`.
+Install over a previous build: `adb install -r --no-incremental <apk>`. An incremental install on a full emulator fails without a non-zero exit, and the next launch then runs the previous APK — require `Success` in the output.
 
 ## Agent procedure
 
@@ -24,6 +22,18 @@ Install over a previous build: `adb install -r <apk>`.
 2. If `main` → `android-debug` conflicts, branch from `origin/android-debug` (`chore/android-debug-sync`), merge `origin/main`, resolve conflicts **in favor of `main`**, push, and open (or retarget) the PR from that branch. Never force-push `android-debug`.
 3. Wait for the **Android debug** check to succeed. Report the release URL and the `.apk` download URL. Do not stop at the PR URL alone.
 4. Leave auto-merge alone unless the user asks; merging updates `android-debug` for the next sync.
+
+## Device parity
+
+A 105x68 m pitch needs the long edge, and the desktop overlay's 10-unit type is a one-millimetre hairline on a 420 dpi panel. `project.godot` pins sensor landscape, `stretch/aspect = expand` (the 20:9 width is used instead of letterboxed), and ETC2/ASTC import, which an Android export requires.
+
+`HudLayout` owns the phone layout. `overlay_scale()` maps one design unit to about one density point (`900 / screen height in dp`, clamped 1–2.6); `main.gd` scales the overlay layer by it and every rect is then derived from the smaller design viewport. `is_compact()` switches to phone metrics: scoreboard beside a three-or-five-row stats card, a seven-door control bar (teams joins it), the horizontal player card, and no 20-unit row to tap. Tap targets stay ≥ 44 design units — `tests/test_hud_layout.gd` asserts it, with the card and the pitch band.
+
+Point events arrive in logical viewport units, so convert with `main.gd::_design(p)` before `hud.button_at()` or `selector.button_at()`. A tap picks a player from the tap point (`_pick`), never from a hover a finger never made.
+
+## Local playtest
+
+`tools/android_playtest.sh [seconds]` exports, installs, launches and prints the engine log. On a desktop build, `-- --ui-scale=2.19` forces the phone overlay in a 2400x1080 window, so phone screenshots and geometry need no device.
 
 ## Out of scope
 

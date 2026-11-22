@@ -40,6 +40,7 @@ suites = [
 [domains.hud_chrome]
 suites = [
   "test_hud_chrome.gd",
+  "test_touch_flow.gd",
 ]
 
 [domains.tactics]
@@ -191,11 +192,23 @@ match = "scripts/ui/team_select.gd*"
 domain = "hud_chrome"
 
 [[rules]]
+match = "scripts/ui/hud_player_card.gd*"
+domain = "hud_chrome"
+
+[[rules]]
 match = "scripts/view/actor_layer.gd*"
 domain = "hud_chrome"
 
 [[rules]]
 match = "scripts/view/pitch_view.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/view/dev_capture.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/platform/**"
 domain = "hud_chrome"
 
 [[rules]]
@@ -221,6 +234,15 @@ domain = "misc"
 
 [[rules]]
 match = "project.godot"
+domain = "misc"
+
+# Android export plumbing: no GDScript surface, so the lightest suite gates it.
+[[rules]]
+match = "export_presets.cfg"
+domain = "misc"
+
+[[rules]]
+match = "export/android/**"
 domain = "misc"
 
 [[rules]]
