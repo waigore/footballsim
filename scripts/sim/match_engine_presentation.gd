@@ -15,6 +15,10 @@ func _update_restart(dt: float) -> void:
 func _offside(p) -> void:
 	pass
 
+## Implemented by the rules layer (a bad challenge can take the victim off).
+func _injure(p) -> void:
+	pass
+
 func _vlog(msg: String) -> void:
 	if verbose:
 		print("[%6.2f] %s" % [clock, msg])
@@ -63,7 +67,52 @@ func _emit(kind: String, text: String, team: int, player, extra: Dictionary = {}
 	events.append(e)
 	if events.size() > 600:
 		events.pop_front()
+	_official_reacts(kind, player)
 	event_fired.emit(e)
+
+## The official's cue: whistle and move to the spot when play stops. Purely
+## presentation, but it is driven by the same event log the HUD narrates.
+func _official_reacts(kind: String, player) -> void:
+	if not kind in ["foul", "card", "offside", "handball", "penalty", "penalty_taken",
+			"kickoff", "half_time", "full_time", "injury"]:
+		return
+	referee.whistle = 0.8
+	if player != null:
+		referee.focus = player.pos
+		referee.focus_t = 1.8
+
+## The referee runs the same diagonal as a real official: behind the ball, on
+## the opposite side of the pitch, closing on the spot whenever play stops.
+func _update_referee(dt: float) -> void:
+	var r = referee
+	r.whistle = maxf(0.0, r.whistle - dt)
+	if r.focus_t > 0.0:
+		r.focus_t -= dt
+	var target: Vector2
+	if r.focus_t > 0.0:
+		target = r.focus + Vector2(0.0, 2.6)
+	else:
+		var dir: float = float(attacking_dir(possession_team))
+		target = ball.pos - Vector2(dir * REF_TRAIL, 0.0)
+		target.y += REF_SIDE if ball.pos.y <= W * 0.5 else -REF_SIDE
+	target.x = clampf(target.x, 3.0, L - 3.0)
+	target.y = clampf(target.y, 3.0, W - 3.0)
+	var to: Vector2 = target - r.pos
+	var d: float = to.length()
+	var cap: float = REF_SPRINT if d > 20.0 else REF_JOG
+	var desired := Vector2.ZERO
+	if d > 0.5:
+		desired = to / d * minf(cap, d * 1.8)
+	var dv: Vector2 = desired - r.vel
+	var acc: float = 11.0 * dt
+	if dv.length() > acc:
+		dv = dv.normalized() * acc
+	r.vel += dv
+	r.pos += r.vel * dt
+	if r.vel.length() > 0.5:
+		r.facing = r.vel.normalized()
+	elif r.pos.distance_to(ball.pos) > 0.1:
+		r.facing = (ball.pos - r.pos).normalized()
 
 func _add_involvement(p, kind: String, text: String, pos: Vector2) -> void:
 	if p == null:

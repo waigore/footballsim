@@ -66,15 +66,25 @@ func _move_players(dt: float) -> void:
 
 func _separation(p) -> Vector2:
 	var push = Vector2.ZERO
+	var px: float = p.pos.x
+	var py: float = p.pos.y
 	for q in players:
 		if q.id == p.id or q.sent_off:
 			continue
-		var dp = p.pos - q.pos
-		var d2 = dp.length_squared()
+		# Cheap axis reject first: a body more than 1.7m away on either axis
+		# cannot be inside the separation radius, and this loop runs for every
+		# player on every sim tick.
+		var dx: float = px - q.pos.x
+		if dx > 1.7 or dx < -1.7:
+			continue
+		var dy: float = py - q.pos.y
+		if dy > 1.7 or dy < -1.7:
+			continue
+		var d2: float = dx * dx + dy * dy
 		if d2 < 1.7 * 1.7 and d2 > 0.0001:
 			var d = sqrt(d2)
 			var w = (1.7 - d) / 1.7
-			push += dp / d * w * 0.55
+			push += Vector2(dx, dy) / d * w * 0.55
 	return push
 
 func _ball_physics(dt: float, goal_mode: bool = false) -> void:
@@ -176,6 +186,10 @@ func _ball_interactions(dt: float) -> void:
 			if q.team == ball.shot_team or q.sent_off or q.is_gk or q.cooldown > 0.0:
 				continue
 			if q.pos.distance_to(ball.pos) < 1.75:
+				# An arm in the flight path is a handball, not a block.
+				if rng.randf() < HANDBALL_P:
+					_award_handball(q)
+					break
 				var defl: Vector2 = ball.vel.rotated(rng.randf_range(-0.9, 0.9)) * rng.randf_range(0.25, 0.5)
 				if q.pos.distance_to(own_goal_pos(q.team)) < 22.0 and defl.dot(own_goal_pos(q.team) - q.pos) > 0.0:
 					defl = Vector2(teams[q.team]["dir"], rng.randf_range(-1.0, 1.0)).normalized() * defl.length()
@@ -306,6 +320,28 @@ func _award_foul(fouler, victim) -> void:
 		_emit("foul", Commentary.foul(rng, fouler.name, victim.name, false), victim.team, victim)
 		_start_restart("free_kick", victim.team, spot, 2.6)
 	_flash(0.4)
+	# A bad challenge can take the victim off as well.
+	if rng.randf() < 0.05:
+		_injure(victim)
+
+## The ball struck an arm in the flight path. Restart to the attacking side:
+## a penalty inside the box, a free kick anywhere else.
+func _award_handball(q) -> void:
+	var box: bool = in_penalty_box(q.pos, q.team)
+	var attack: int = 1 - q.team
+	stats[q.team]["handballs"] += 1
+	q.stats["handballs"] = int(q.stats.get("handballs", 0)) + 1
+	ball.shot_team = -1
+	ball.last_touch_id = q.id
+	ball.last_touch_team = q.team
+	possession_team = attack
+	_flash(0.4)
+	_emit("handball", Commentary.handball(rng, q.name, box), attack, q)
+	_add_involvement(q, "handball", "Handball", q.pos)
+	if box:
+		_start_restart("penalty", attack, q.pos, 3.6)
+	else:
+		_start_restart("free_kick", attack, q.pos, 2.6)
 
 func _send_off_or_book(p, card: String) -> void:
 	var line: String = Commentary.card(rng, p.name, card)

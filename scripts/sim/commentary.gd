@@ -183,6 +183,32 @@ static func offside(rng, name: String) -> String:
 		"%s went too early — offside." % name,
 	])
 
+static func handball(rng, name: String, penalty: bool) -> String:
+	if penalty:
+		return _pick(rng, [
+			"PENALTY! %s handles it in the box!" % name,
+			"Spot kick! %s is punished for handball!" % name,
+			"PENALTY — %s blocked that with his arm!" % name,
+		])
+	return _pick(rng, [
+		"Handball by %s — free kick." % name,
+		"%s handled that. Free kick given." % name,
+		"%s's arm got in the way — free kick." % name,
+	])
+
+## `continues` is false when the side has no change left to make.
+static func injury(rng, name: String, continues: bool) -> String:
+	if continues:
+		return _pick(rng, [
+			"%s is down and can't continue — a change is coming." % name,
+			"%s pulls up. He signals to the bench." % name,
+			"%s looks in trouble — the stretcher is on." % name,
+		])
+	return _pick(rng, [
+		"%s can't continue and there's no change left — they're down to ten." % name,
+		"%s hobbles off. No substitutions remaining." % name,
+	])
+
 static func substitution(rng, team_short: String, on_name: String, off_name: String) -> String:
 	return _pick(rng, [
 		"Change for %s: %s on for %s." % [team_short, on_name, off_name],

@@ -34,6 +34,7 @@ A broadcast-style, top-down 2D football match simulator built in Godot 4.
 ## Broadcast layer
 
 - **Kits**: the home side keeps its first-choice shirt; if the visitors' shirt clashes, they change (`scripts/sim/kits.gd`). The possession bar and shirt numbers follow the kit actually worn.
+- **Officials**: a named referee works the diagonal behind play, whistles every stoppage and moves to the spot. Added time ends each half; injuries cost a change; an arm in a shot's path is a handball.
 - **Dead balls**: the taker reads the picture and holds the restart until his side is roughly set — bounded by his reading of the game and by the clock (`match_engine.gd`).
 - **Commentary**: every line names the real actors; when nothing fresh has fired, the ticker describes the live picture rather than leaving an old line up.
 

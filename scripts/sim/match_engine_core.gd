@@ -26,6 +26,16 @@ const RESTART_READY_RADIUS := 8.5   # metres from a player's target that counts 
 const RESTART_SETTLED_SPEED := 3.0  # m/s; still sprinting = not set
 const RESTART_WAIT_STEP := 0.3      # seconds per re-read while holding play up
 
+## Referee movement: he runs the opposite side of the diagonal to the ball,
+## a dozen metres behind it, and closes on the spot when play stops.
+const REF_TRAIL := 12.0
+const REF_SIDE := 6.5
+const REF_JOG := 7.6
+const REF_SPRINT := 8.8
+
+## Share of shot blocks that are really an arm in the flight path.
+const HANDBALL_P := 0.055
+
 class Player:
 	var id = 0
 	var team = 0
@@ -50,6 +60,7 @@ class Player:
 	var yellow = 0
 	var red = false
 	var sent_off = false
+	var injured = false
 	var is_gk = false
 	var dive = Vector2.ZERO
 	var dive_t = 0.0
@@ -89,6 +100,17 @@ class Ball:
 	var shot_saved = false
 	var loose_t = 0.0
 
+## The match official. Presentation only: laws are decided by the engine, but
+## the referee has a body on the pitch, a position that follows play and a
+## whistle that fires on restarts, cards and disciplinary calls.
+class Official:
+	var pos = Vector2(52.5, 24.0)
+	var vel = Vector2.ZERO
+	var facing = Vector2.RIGHT
+	var whistle = 0.0          # presentation: seconds of whistle / arm-raise left
+	var focus = Vector2.ZERO   # where play stopped (foul spot, kick-off spot)
+	var focus_t = 0.0
+
 var rng = RandomNumberGenerator.new()
 var home_team := 0
 var home_advantage := 0.05   # +5% composure/duels for the home side
@@ -98,6 +120,8 @@ var teams: Array = []
 var players: Array = []
 var by_id: Dictionary = {}
 var ball = Ball.new()
+var referee = Official.new()
+var referee_name: String = TeamData.REFEREE
 var brain = null  # MatchAI
 
 var clock = 0.0
@@ -122,6 +146,7 @@ var momentum: Array = [0.0, 0.0]
 var last_pass_time = 0.0
 var flash = 0.0                   # presentation hint: 0..1
 var stoppage_events = 0
+var injury_timer := 45.0
 var commentary_key = 0
 var xt_gain = 0.0
 var verbose := false
@@ -148,7 +173,7 @@ func _blank_stats() -> Dictionary:
 		"possession": 0.0, "shots": 0, "on_target": 0, "goals": 0, "xg": 0.0,
 		"passes": 0, "passes_ok": 0, "tackles": 0, "fouls": 0, "corners": 0,
 		"offsides": 0, "saves": 0, "yellow": 0, "red": 0, "distance": 0.0,
-		"big_chances": 0, "woodwork": 0,
+		"big_chances": 0, "woodwork": 0, "handballs": 0, "injuries": 0,
 	}
 
 func _build_squads() -> void:

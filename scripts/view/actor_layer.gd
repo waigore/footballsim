@@ -63,6 +63,7 @@ func _draw() -> void:
 			draw_arc(p.pos, 1.42, 0, TAU, 44, Color(1, 1, 1, 0.34), 0.12, true)
 		_draw_player(p, own_ball)
 	# ball (drawn above the players, with its shadow tied to the ground)
+	_draw_referee()
 	_draw_ball()
 
 func _draw_player(p, own_ball: bool) -> void:
@@ -100,6 +101,26 @@ func _draw_player(p, own_ball: bool) -> void:
 		draw_rect(Rect2(p.pos + Vector2(0.45, -1.05), Vector2(0.22, 0.32)), Color("#f4d03f"))
 	if p.red:
 		draw_rect(Rect2(p.pos + Vector2(0.15, -1.05), Vector2(0.22, 0.32)), Color("#d0342c"))
+
+func _draw_referee() -> void:
+	var r = engine.referee
+	# shadow, then the black shirt with its hi-vis trim so the official reads
+	# as its own entity against both kits
+	draw_circle(r.pos + Vector2(0.24, 0.44), 0.76, Color(0, 0, 0, 0.26))
+	var p: Vector2 = r.pos - Vector2(0, 0.10)
+	draw_circle(p, 0.72, Color(0.09, 0.10, 0.12))
+	draw_circle(p + Vector2(-0.12, -0.14), 0.50, Color(0.20, 0.22, 0.25))
+	draw_arc(p, 0.72, PI * 0.10, PI * 0.90, 22, Color(0.97, 0.83, 0.25, 0.95), 0.13, true)
+	draw_arc(p, 0.72, 0, TAU, 40, Color(0.03, 0.04, 0.05, 0.9), 0.05, true)
+	var d: Vector2 = r.facing
+	if d.length() > 0.1:
+		draw_line(p + d * 0.30, p + d * 0.92, Color(1.0, 0.92, 0.55, 0.5), 0.07, true)
+	# whistle: a rising ring at his feet and the raised arm
+	if r.whistle > 0.0:
+		var k: float = clampf(1.0 - r.whistle / 0.8, 0.0, 1.0)
+		draw_arc(r.pos, 0.9 + k * 1.6, 0, TAU, 40, Color(1, 1, 1, 0.34 * (1.0 - k)), 0.10, true)
+		draw_line(p, p + Vector2(0.0, -1.20), Color(0.98, 0.95, 0.82, 0.95), 0.12, true)
+		draw_circle(p + Vector2(0.0, -1.30), 0.16, Color(1.0, 0.86, 0.35, 0.95))
 
 func _draw_ball() -> void:
 	var b = engine.ball
@@ -152,10 +173,15 @@ func _draw_trail(p) -> void:
 	for inv in p.involvements:
 		var ip: Vector2 = inv["pos"]
 		var col := Color(1, 1, 1, 0.5)
-		match inv["type"]:
-			"goal": col = Color("#ffd54a")
-			"shot": col = Color("#ff6a4d")
-			"assist", "pass": col = Color("#6fd1ff")
-			"tackle": col = Color("#9adf8a")
-			"card": col = Color("#ff5a5a")
+		var kind := str(inv["type"])
+		if kind == "goal":
+			col = Color("#ffd54a")
+		elif kind == "shot":
+			col = Color("#ff6a4d")
+		elif kind == "assist" or kind == "pass":
+			col = Color("#6fd1ff")
+		elif kind == "tackle":
+			col = Color("#9adf8a")
+		elif kind == "card":
+			col = Color("#ff5a5a")
 		draw_circle(ip, 0.16, Color(col.r, col.g, col.b, 0.55))

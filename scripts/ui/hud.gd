@@ -14,15 +14,9 @@ var mouse := Vector2.ZERO
 var hover_button := -1
 var panel_cache := {}
 
-# Commentary ticker state: the newest event owns the panel for a few real
-# seconds, then a live description of the pitch takes over. Both come straight
-# from the engine, so a replay always narrates what is on screen.
-var comm_text := ""
-var comm_label := ""
-var comm_minute := 0
-var comm_hold := 0.0
-var comm_ev_id := -1
-var last_engine_clock := -1.0
+# Commentary ticker state lives in HudCommentary; the HUD only forwards time
+# and draws it.
+var ticker: HudCommentary = null
 
 const C_PANEL := Color(0.035, 0.055, 0.070, 0.94)
 const C_PANEL_LIGHT := Color(0.075, 0.105, 0.125, 0.94)
@@ -36,9 +30,11 @@ func _ready() -> void:
 	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
 	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
 	f_body = load("res://fonts/Inter-Regular.ttf")
+	ticker = HudCommentary.new(C_PANEL, C_GOLD, C_TEXT, C_DIM)
 
 func _process(d: float) -> void:
-	_tick_commentary(d)
+	if ticker != null:
+		ticker.tick(d, engine, game)
 	queue_redraw()
 
 func _style(c: Color, r: int = 10, bc: Color = C_BORDER, bw: int = 1) -> StyleBoxFlat:
@@ -82,7 +78,8 @@ func _draw() -> void:
 	_draw_meta(vp)
 	_draw_stats(vp)
 	_draw_controls(vp)
-	_draw_commentary(vp)
+	if ticker != null:
+		ticker.draw(self, vp, f_bold, f_med, game)
 	_draw_status(vp)
 	_draw_focus(vp)
 	_draw_tooltip(vp)
@@ -172,8 +169,8 @@ func _draw_top(vp: Vector2) -> void:
 		var sw := 226.0
 		var sx := vp.x * 0.5 - sw * 0.5
 		var pulse := 0.55 + 0.25 * sin(Time.get_ticks_msec() * 0.006)
-		rect(Color(0.03, 0.05, 0.06, 0.82), Rect2(sx, vp.y - 120, sw, 26), 6, Color(1, 1, 1, 0.10))
-		text_c(vp.x * 0.5, vp.y - 102, "SIMULATING  ·  NEXT CHANCE", 11, Color(0.62, 0.82, 0.86, pulse), f_bold)
+		rect(Color(0.03, 0.05, 0.06, 0.82), Rect2(sx, vp.y - 156, sw, 26), 6, Color(1, 1, 1, 0.10))
+		text_c(vp.x * 0.5, vp.y - 138, "SIMULATING  ·  NEXT CHANCE", 11, Color(0.62, 0.82, 0.86, pulse), f_bold)
 	if game.replay_banner > 0.0:
 		var rw := 126.0
 		var rxp := vp.x * 0.5 - rw * 0.5
@@ -195,18 +192,20 @@ func _badge(r: Rect2, t: int) -> void:
 func _draw_meta(vp: Vector2) -> void:
 	var x := 24.0
 	var y := 24.0
-	rect(C_PANEL, Rect2(x, y, 286, 78), 10, Color(1, 1, 1, 0.07))
+	rect(C_PANEL, Rect2(x, y, 286, 96), 10, Color(1, 1, 1, 0.07))
 	draw_rect(Rect2(x + 1, y + 12, 3, 30), C_GOLD)
 	var home: Dictionary = engine.teams[0]["data"]
 	var venue := str(home.get("stadium", "")).to_upper()
 	var city := str(home.get("city", "")).to_upper()
 	text(Vector2(x + 14, y + 23), "%s  ·  %s" % [venue, city], 13, C_TEXT, f_bold)
 	text(Vector2(x + 14, y + 40), "PREMIER LEAGUE  ·  ATT. %s" % _thousands(int(home.get("capacity", 0))), 9, C_DIM, f_med)
-	var btn := Rect2(x + 12, y + 50, 262, 20)
+	text(Vector2(x + 14, y + 56), "REFEREE", 9, C_DIM, f_bold)
+	text(Vector2(x + 70, y + 56), engine.referee_name, 10, C_TEXT, f_bold)
+	var btn := Rect2(x + 12, y + 68, 262, 20)
 	var hovered := btn.has_point(mouse)
 	rect(C_PANEL_LIGHT if hovered else Color(0.05, 0.07, 0.09, 0.92), btn, 5, Color(1, 1, 1, 0.12 if hovered else 0.05))
-	text(Vector2(x + 20, y + 64), "CHANGE TEAMS", 10, C_TEXT if hovered else C_DIM, f_bold)
-	text_r(x + 266, y + 64, "T", 9, C_GOLD, f_bold)
+	text(Vector2(x + 20, y + 82), "CHANGE TEAMS", 10, C_TEXT if hovered else C_DIM, f_bold)
+	text_r(x + 266, y + 82, "T", 9, C_GOLD, f_bold)
 	_add_button("teams", btn, "CHANGE TEAMS", "T")
 
 func _thousands(n: int) -> String:
@@ -257,12 +256,12 @@ func _add_button(id: String, r: Rect2, label: String, hint: String) -> void:
 	buttons.append({"id": id, "rect": r, "label": label, "hint": hint})
 
 func _draw_controls(vp: Vector2) -> void:
-	var bw := 108.0
-	var gap := 6.0
-	var total := bw * 6 + gap * 5
-	var x := vp.x * 0.5 - total * 0.5
-	var y := vp.y - 66.0
-	var h := 46.0
+	var bar := HudLayout.controls_rect(vp)
+	var bw: float = HudLayout.CONTROL_W
+	var gap: float = HudLayout.CONTROL_GAP
+	var x: float = bar.position.x
+	var y: float = bar.position.y
+	var h: float = bar.size.y
 	var specs := [
 		["pause", "PAUSE" if not game.paused else "RESUME", "SPACE"],
 		["speed", "%sx" % _speed_label(), "1-4"],
@@ -299,85 +298,7 @@ func button_at(p: Vector2) -> String:
 			return b["id"]
 	return ""
 
-# ---------------------------------------------------------------- ticker ----
-
-# Commentary freshness per event type, in real seconds.
-func _commentary_hold(kind: String) -> float:
-	var h := 3.2
-	match kind:
-		"GOAL":
-			h = 5.5
-		"SAVE", "SHOT", "HEADER", "BLOCK", "PENALTY", "PENALTY_TAKEN":
-			h = 4.2
-		"CARD", "FOUL", "OFFSIDE":
-			h = 3.6
-		"CLEARANCE", "CROSS":
-			h = 2.6
-	if game != null and game.mode == "highlights" and game.fast_mode:
-		h *= 0.55
-	return h
-
-## Keep the ticker honest: narrate the newest event while it is fresh, then
-## describe the actual pitch state. A rewind (highlight replay) refreshes the
-## cue immediately instead of leaving a future event on screen.
-func _tick_commentary(d: float) -> void:
-	if engine == null or game == null:
-		return
-	if game.paused:
-		return
-	var evs: Array = engine.events
-	if evs.is_empty():
-		# Fresh match / restart: forget the previous fixture's lines.
-		comm_text = ""
-		comm_label = ""
-		comm_ev_id = -1
-		last_engine_clock = -1.0
-		return
-	comm_hold = maxf(0.0, comm_hold - d)
-	var now: float = float(engine.clock)
-	var rewound: bool = now < last_engine_clock - 0.75
-	last_engine_clock = now
-	var ev: Dictionary = evs[evs.size() - 1]
-	var eid: int = int(ev.get("id", -1))
-	if eid != comm_ev_id or rewound:
-		comm_ev_id = eid
-		comm_label = str(ev.get("type", "")).to_upper().replace("_", " ")
-		comm_text = str(ev.get("text", ""))
-		comm_minute = int(ev.get("minute", 0))
-		comm_hold = _commentary_hold(comm_label)
-	if comm_hold <= 0.0 or comm_text == "":
-		comm_label = "LIVE"
-		comm_text = Commentary.live(engine)
-		comm_minute = int(engine.minute_of(engine.clock))
-
-func _fit_line(s: String, max_chars: int = 90) -> String:
-	if s.length() <= max_chars:
-		return s
-	var cut := s.substr(0, max_chars)
-	var space := cut.rfind(" ")
-	if space > max_chars - 18:
-		cut = cut.substr(0, space)
-	return cut + "…"
-
-func _draw_commentary(vp: Vector2) -> void:
-	var w := 620.0
-	var h := 52.0
-	var x := 24.0
-	var y := vp.y - 72.0
-	rect(C_PANEL, Rect2(x, y, w, h), 10, Color(1, 1, 1, 0.07))
-	draw_rect(Rect2(x + 1, y + 8, 3, h - 16), C_GOLD)
-	if engine.events.is_empty():
-		var home: Dictionary = engine.teams[0]["data"]
-		var away: Dictionary = engine.teams[1]["data"]
-		text(Vector2(x + 16, y + 24), "%s IS READY" % str(home.get("stadium", "THE GROUND")).to_upper(), 13, C_TEXT, f_bold)
-		text(Vector2(x + 16, y + 40), "%s v %s" % [home["name"], away["name"]], 10, C_DIM, f_med)
-		return
-	var label: String = comm_label
-	if game.in_highlight:
-		label = "◀ " + label
-	var col := C_GOLD if comm_label == "GOAL" else C_TEXT
-	text(Vector2(x + 16, y + 21), "%d'  %s" % [comm_minute, label], 10, C_GOLD, f_bold)
-	text(Vector2(x + 16, y + 39), _fit_line(comm_text), 13, col, f_med)
+# ---------------------------------------------------------------- status ----
 
 func _draw_status(vp: Vector2) -> void:
 	var x := vp.x - 24.0 - 300.0
@@ -556,7 +477,7 @@ func _draw_intro(vp: Vector2) -> void:
 	var w := 690.0
 	var h := 96.0
 	var x := 24.0 - (1.0 - a) * 30.0
-	var y := vp.y - 190.0
+	var y := vp.y - 300.0
 	var bg := Color(0.03, 0.05, 0.06, 0.94 * a)
 	rect(bg, Rect2(x, y, w, h), 10, Color(1, 1, 1, 0.10 * a))
 	draw_rect(Rect2(x + 1, y + 1, 6, h - 2), Color(engine.teams[0]["data"]["color"].r, engine.teams[0]["data"]["color"].g, engine.teams[0]["data"]["color"].b, a))
