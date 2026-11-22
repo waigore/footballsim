@@ -36,6 +36,13 @@ const REF_SPRINT := 8.8
 ## Share of shot blocks that are really an arm in the flight path.
 const HANDBALL_P := 0.055
 
+## Finishing calibration against the Poisson model: a shot converts with
+## p = FINISH_EFFICIENCY · xG, so a match's goals track its expected goals (the
+## model's λ) instead of the old keeper-steer hack.
+const FINISH_EFFICIENCY := 1.0
+## Positional xG is calibrated down to real-football levels.
+const XG_SCALE := 0.70
+
 class Player:
 	var id = 0
 	var team = 0
@@ -98,6 +105,7 @@ class Ball:
 	var shot_xg = 0.0
 	var last_touch_time = -10.0
 	var shot_saved = false
+	var planned_goal = false   # this on-target shot has already beaten the keeper
 	var loose_t = 0.0
 
 ## The match official. Presentation only: laws are decided by the engine, but

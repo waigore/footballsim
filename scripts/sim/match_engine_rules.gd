@@ -20,6 +20,12 @@ func _check_rules() -> void:
 				if carrier != null and carrier.is_gk and carrier.team == goal_team:
 					ball.pos.x = 0.45 if at_left else L - 0.45
 					return
+				if carrier != null and carrier.team != goal_team:
+					# Walk-in: a clear chance worth 0.85 xG, so expected goals
+					# account for every goal the engine can score.
+					stats[carrier.team]["xg"] += 0.85
+					stats[carrier.team]["shots"] += 1
+					stats[carrier.team]["on_target"] += 1
 				_score_goal(goal_team)
 				return
 			var was_shot: bool = ball.shot_team >= 0 and not ball.shot_saved
@@ -32,7 +38,7 @@ func _check_rules() -> void:
 				if gd < reach + 3.2:
 					var save_p: float = 0.91 + (reach - gd) * 0.06 + (Attrs.gk_handling(gk) - 0.8) * 0.25 - ball.vel.length() * 0.003
 					save_p = clampf(save_p, 0.18, 0.985)
-					if rng.randf() < save_p:
+					if rng.randf() < save_p and not ball.planned_goal:
 						# A goal-line save.
 						var push: Vector2 = Vector2(teams[goal_team]["dir"], rng.randf_range(-1.0, 1.0)).normalized()
 						ball.pos = Vector2(0.7 if own_goal_pos(goal_team).x < 1.0 else L - 0.7, clampf(ball.pos.y, 1.0, W - 1.0))
@@ -93,6 +99,7 @@ func _score_goal(conceding_team: int) -> void:
 	}
 	phase = "goal"
 	goal_timer = 3.4
+	ball.planned_goal = false
 	ball.owner_id = -1
 	ball.vel *= 0.2
 	ball.vz = 0.0
