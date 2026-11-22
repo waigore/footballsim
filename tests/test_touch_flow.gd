@@ -188,3 +188,6 @@ func test_dev_flags_cover_the_rest_of_the_table() -> void:
 	assert_true(game.paused, "--paused did not pause")
 	assert_eq(game.engine.phase, "goal", "--fakegoal did not stage a goal")
 	assert_false(game.engine.last_goal.is_empty(), "--fakegoal left no scorer")
+
+func test_a_headless_run_cannot_read_a_frame() -> void:
+	assert_false(DisplayCaps.can_read_frame(), "the headless runner claims it can read a frame")

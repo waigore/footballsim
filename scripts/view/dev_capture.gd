@@ -81,7 +81,7 @@ func shots(game) -> void:
 ## A headless run has no renderer to read back, so the capture degrades to a
 ## no-op instead of erroring on a null image.
 func _save(game, path: String) -> void:
-	if DisplayServer.get_name() == "headless":
+	if not DisplayCaps.can_read_frame():
 		return
 	var tex: ViewportTexture = game.get_viewport().get_texture()
 	if tex == null:

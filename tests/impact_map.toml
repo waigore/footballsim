@@ -208,6 +208,10 @@ match = "scripts/view/dev_capture.gd*"
 domain = "hud_chrome"
 
 [[rules]]
+match = "scripts/platform/**"
+domain = "hud_chrome"
+
+[[rules]]
 match = "scripts/main.gd*"
 domain = "hud_chrome"
 
