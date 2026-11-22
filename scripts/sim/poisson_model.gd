@@ -15,13 +15,13 @@ extends RefCounted
 ## plain Poisson under-counts low-scoring draws.
 
 ## League baselines (goals per side in an average fixture, home advantage built in).
-const HOME_XG := 1.52
-const AWAY_XG := 1.18
-## Rating elasticity per 10 points of the derived 0-100 strength scale. Set so
-## the model's split matches what the physics engine creates for the same two
-## squads (an 11-point OVR gap lands near 2.8 : 0.6 expected goals).
-const ATTACK_ELASTICITY := 0.90
-const DEFENCE_ELASTICITY := 0.90
+const HOME_XG := 1.65
+const AWAY_XG := 1.45
+## Rating elasticity per 10 points of the derived 0-100 strength scale. Fitted to
+## the physics engine's census over mismatched fixtures: an 11-point OVR gap lands
+## near 3.9 : 0.5 expected goals.
+const ATTACK_ELASTICITY := 1.15
+const DEFENCE_ELASTICITY := 1.15
 ## Dixon-Coles low-score dependence (negative = more 0-0 and 1-1 draws).
 const RHO := -0.10
 ## Score grid: values above this per side carry < 0.01% of the mass for λ ≤ 6.
