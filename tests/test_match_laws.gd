@@ -111,3 +111,19 @@ func test_referee_stays_on_the_pitch_and_whistles() -> void:
 	for i in range(60):
 		eng.tick()
 	assert_eq(float(r.whistle), 0.0, "the whistle never cleared")
+
+func test_snapshot_carries_official_and_injury_state() -> void:
+	var eng := MatchEngine.new(18)
+	eng.teams[0]["subs_left"] = 0
+	var p = _outfield(eng, 0)
+	eng._injure(p)
+	for i in range(5):
+		eng.tick()
+	var snap: Dictionary = eng.to_dict()
+	var other := MatchEngine.new(19)
+	other.from_dict(snap)
+	assert_almost_eq(other.referee.pos.x, eng.referee.pos.x, 0.001, "referee position was not restored")
+	assert_almost_eq(float(other.injury_timer), float(eng.injury_timer), 0.001, "injury timer was not restored")
+	var got = other.by_id.get(p.id, null)
+	assert_not_null(got, "the injured player vanished from the restored squad")
+	assert_true(got.injured, "the injured flag was not restored")

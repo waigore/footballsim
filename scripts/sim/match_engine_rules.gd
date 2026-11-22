@@ -194,10 +194,12 @@ func _most_tired_outfield(t: int):
 
 func _role_family(role: String) -> String:
 	# Formation slots use sided labels; bench entries use the generic position.
-	match role:
-		"RCB", "LCB": return "CB"
-		"RDM", "LDM": return "CDM"
-		"RWB", "LWB": return "RB"
+	if role == "RCB" or role == "LCB":
+		return "CB"
+	if role == "RDM" or role == "LDM":
+		return "CDM"
+	if role == "RWB" or role == "LWB":
+		return "RB"
 	return role
 
 func _pick_bench(t: int, want_role: String, for_gk: bool) -> Dictionary:
@@ -308,4 +310,3 @@ func _send_off_injured(p) -> void:
 	p.mark_id = -1
 	_add_involvement(p, "injury", "Injured — off", p.pos)
 
-# --------------------------------------------------------------- snapshots --

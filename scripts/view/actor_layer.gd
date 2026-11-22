@@ -173,10 +173,15 @@ func _draw_trail(p) -> void:
 	for inv in p.involvements:
 		var ip: Vector2 = inv["pos"]
 		var col := Color(1, 1, 1, 0.5)
-		match inv["type"]:
-			"goal": col = Color("#ffd54a")
-			"shot": col = Color("#ff6a4d")
-			"assist", "pass": col = Color("#6fd1ff")
-			"tackle": col = Color("#9adf8a")
-			"card": col = Color("#ff5a5a")
+		var kind := str(inv["type"])
+		if kind == "goal":
+			col = Color("#ffd54a")
+		elif kind == "shot":
+			col = Color("#ff6a4d")
+		elif kind == "assist" or kind == "pass":
+			col = Color("#6fd1ff")
+		elif kind == "tackle":
+			col = Color("#9adf8a")
+		elif kind == "card":
+			col = Color("#ff5a5a")
 		draw_circle(ip, 0.16, Color(col.r, col.g, col.b, 0.55))
