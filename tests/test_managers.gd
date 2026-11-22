@@ -183,3 +183,12 @@ func test_push_falls_back_without_a_manager() -> void:
 			break
 	eng.manager = null
 	assert_eq(eng.push_of(p), Attrs.role_push(p.role), "push_of did not fall back without a manager")
+
+func test_demo_tactics_flag_emits_a_tactics_event() -> void:
+	var eng := MatchEngine.new(97)
+	eng.manager.demo(true)
+	var seen := false
+	for e in eng.events:
+		if str(e.get("type", "")) == "tactics":
+			seen = true
+	assert_true(seen, "the tactics showcase did not emit a tactics event")
