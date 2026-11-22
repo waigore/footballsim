@@ -296,35 +296,37 @@ func _input(event: InputEvent) -> void:
 			mouse = event.position
 			_click(event.position)
 	elif event is InputEventKey and event.pressed and not event.echo:
-		match event.keycode:
-			KEY_SPACE:
-				paused = not paused
-			KEY_1:
-				speed = 1.0
-			KEY_2:
-				speed = 2.0
-			KEY_3:
-				speed = 4.0
-			KEY_4:
-				speed = 8.0
-			KEY_H:
-				_toggle_mode()
-			KEY_S:
-				_skip()
-			KEY_R:
-				new_match(seeded + randi_range(0, 9999))
-			KEY_N:
-				names_visible = not names_visible
-				actors.names_visible = names_visible
-			KEY_C:
-				camera_follow = not camera_follow
-			KEY_T:
-				open_select()
-			KEY_ESCAPE:
-				if focus_id >= 0:
-					focus_id = -1
-				else:
-					get_tree().quit()
+		# if/elif rather than match: the coverage injector cannot instrument a
+		# match statement, and an uninstrumentable main.gd fails the patch gate.
+		var k: int = event.keycode
+		if k == KEY_SPACE:
+			paused = not paused
+		elif k == KEY_1:
+			speed = 1.0
+		elif k == KEY_2:
+			speed = 2.0
+		elif k == KEY_3:
+			speed = 4.0
+		elif k == KEY_4:
+			speed = 8.0
+		elif k == KEY_H:
+			_toggle_mode()
+		elif k == KEY_S:
+			_skip()
+		elif k == KEY_R:
+			new_match(seeded + randi_range(0, 9999))
+		elif k == KEY_N:
+			names_visible = not names_visible
+			actors.names_visible = names_visible
+		elif k == KEY_C:
+			camera_follow = not camera_follow
+		elif k == KEY_T:
+			open_select()
+		elif k == KEY_ESCAPE:
+			if focus_id >= 0:
+				focus_id = -1
+			else:
+				get_tree().quit()
 
 ## Overlay widgets live in design space; pointer events arrive in logical
 ## viewport units.
@@ -333,16 +335,23 @@ func _design(p: Vector2) -> Vector2:
 
 func _click(p: Vector2) -> void:
 	var b: String = hud.button_at(_design(p))
+	if b == "pause":
+		paused = not paused
+	elif b == "speed":
+		_cycle_speed()
+	elif b == "mode":
+		_toggle_mode()
+	elif b == "skip":
+		_skip()
+	elif b == "camera":
+		camera_follow = not camera_follow
+	elif b == "teams":
+		open_select()
+	elif b == "manager_card":
+		hud.manager_card.dismiss()
+	elif b == "restart":
+		new_match(seeded + randi_range(0, 9999))
 	if b != "":
-		match b:
-			"pause": paused = not paused
-			"speed": _cycle_speed()
-			"mode": _toggle_mode()
-			"skip": _skip()
-			"camera": camera_follow = not camera_follow
-			"teams": open_select()
-			"manager_card": hud.manager_card.dismiss()
-			"restart": new_match(seeded + randi_range(0, 9999))
 		return
 	hover_id = _pick(p)
 	if hover_id >= 0:

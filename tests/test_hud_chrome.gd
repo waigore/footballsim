@@ -173,3 +173,19 @@ func test_phone_player_card_stays_clear_of_the_other_panels() -> void:
 		assert_lte(box.end.x, vp.x, "the card runs off the right edge at %s" % vp)
 		assert_gte(box.position.y, stats.end.y, "the card rises into the top bar at %s" % vp)
 		assert_gte(box.size.y, 96.0, "the card is too short to hold its rows at %s" % vp)
+
+func test_player_card_draws_in_both_layouts() -> void:
+	var eng := MatchEngine.new(34)
+	var hud := _hud(eng)
+	hud.game.focus_id = eng.players[2].id
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 900.0
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_gt(hud.card.rect_for(hud.design_vp()).size.y, 300.0, "desktop card is not the column layout")
+	hud.touch = true
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 411.0
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_lte(hud.card.rect_for(hud.design_vp()).size.y, 132.0, "phone card is not the strip layout")
+	assert_eq(hud.button_at(hud.card.rect_for(hud.design_vp()).position + Vector2(4, 4)), "", "the card is not a door")
+	hud.queue_free()

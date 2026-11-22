@@ -79,27 +79,41 @@ func randomize_fixture() -> void:
 func confirm() -> void:
 	confirmed.emit(home_id(), away_id())
 
+## if/elif rather than match: the coverage injector cannot instrument a match
+## statement, and an uninstrumentable file fails the patch gate.
 func click(id: String) -> void:
-	match id:
-		"back": cancelled.emit()
-		"home_prev": cycle_home(-1)
-		"home_next": cycle_home(1)
-		"away_prev": cycle_away(-1)
-		"away_next": cycle_away(1)
-		"random": randomize_fixture()
-		"confirm": confirm()
-		"cancel": cancelled.emit()
+	if id == "back" or id == "cancel":
+		cancelled.emit()
+	elif id == "home_prev":
+		cycle_home(-1)
+	elif id == "home_next":
+		cycle_home(1)
+	elif id == "away_prev":
+		cycle_away(-1)
+	elif id == "away_next":
+		cycle_away(1)
+	elif id == "random":
+		randomize_fixture()
+	elif id == "confirm":
+		confirm()
 
 func key(code: int) -> bool:
-	match code:
-		KEY_LEFT, KEY_A: cycle_home(-1)
-		KEY_RIGHT, KEY_D: cycle_home(1)
-		KEY_UP, KEY_W: cycle_away(-1)
-		KEY_DOWN, KEY_S: cycle_away(1)
-		KEY_TAB: randomize_fixture()
-		KEY_ENTER, KEY_KP_ENTER, KEY_SPACE: confirm()
-		KEY_ESCAPE: cancelled.emit()
-		_: return false
+	if code == KEY_LEFT or code == KEY_A:
+		cycle_home(-1)
+	elif code == KEY_RIGHT or code == KEY_D:
+		cycle_home(1)
+	elif code == KEY_UP or code == KEY_W:
+		cycle_away(-1)
+	elif code == KEY_DOWN or code == KEY_S:
+		cycle_away(1)
+	elif code == KEY_TAB:
+		randomize_fixture()
+	elif code == KEY_ENTER or code == KEY_KP_ENTER or code == KEY_SPACE:
+		confirm()
+	elif code == KEY_ESCAPE:
+		cancelled.emit()
+	else:
+		return false
 	return true
 
 func button_at(p: Vector2) -> String:

@@ -105,3 +105,29 @@ func test_overlay_scale_is_a_sane_multiplier() -> void:
 	# branch is bounded and monotonic in device density.
 	var s: float = HudLayout.overlay_scale()
 	assert_between(s, 1.0, 2.6, "overlay scale out of range")
+
+func test_a_tablet_bar_counts_the_teams_door() -> void:
+	# A wide touch viewport keeps the desktop metrics but still needs the door
+	# on the bar, because the fixture panel's 20-unit row is not tappable.
+	var vp := Vector2(1600, 900)
+	assert_eq(HudLayout.control_count(vp), HudLayout.CONTROL_COUNT, "desktop count changed")
+	assert_eq(HudLayout.control_count(vp, true), HudLayout.CONTROL_COUNT_TOUCH, "a touch bar is missing the teams door")
+	assert_eq(HudLayout.controls_rect(vp), HudLayout.controls_rect(vp, false), "touch moved the desktop bar")
+	assert_ne(HudLayout.controls_rect(vp, true), HudLayout.controls_rect(vp, false), "the touch bar did not grow")
+
+func test_short_viewports_drop_stats_rows() -> void:
+	var tall := Vector2(1000, 450)
+	var short := Vector2(800, 360)
+	assert_eq(HudLayout.stats_row_limit(tall), 5, "a tall phone should keep five rows")
+	assert_eq(HudLayout.stats_row_limit(short), 3, "a short phone should drop to three rows")
+	assert_gt(HudLayout.stats_rect(tall).size.y, HudLayout.stats_rect(short).size.y, "the short card did not shrink")
+	assert_eq(HudLayout.stats_row_limit(Vector2(1600, 900)), 5, "desktop row count changed")
+
+func test_pitch_fit_reads_the_touch_bar() -> void:
+	# The seven-door bar is wider, so a coarse touch fit can differ from the
+	# six-door one only by the band it measures; both must stay in range.
+	var geo: Dictionary = HudLayout.pitch_fit(Vector2(2000, 900), 2.19, true)
+	assert_between(float(geo["zoom"]), 3.0, 16.0, "touch fit out of range")
+	# An absurdly small viewport must still yield a usable floor, not a zero.
+	var tiny: Dictionary = HudLayout.pitch_fit(Vector2(640, 300), 1.0, true)
+	assert_gte(float(tiny["zoom"]), 3.0, "the fit floor collapsed")

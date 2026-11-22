@@ -7,7 +7,10 @@ extends GdToolsTest
 var game = null
 
 func before_all() -> void:
-	game = load("res://scenes/main.tscn").instantiate()
+	# Loaded by path rather than through the scene's ext_resource: coverage
+	# instrumentation only sees the script a test loads itself.
+	game = Node2D.new()
+	game.set_script(load("res://scripts/main.gd"))
 	add_child(game)
 	# Force the handheld overlay, landing the design height on a phone's, so the
 	# point-to-design conversion is exercised rather than the identity. The test
@@ -69,6 +72,10 @@ func test_the_teams_door_opens_the_sheet_and_back_closes_it() -> void:
 	assert_gt(door.size.x, 0.0, "the phone bar has no teams door")
 	_tap(door.position + door.size * 0.5)
 	assert_true(game.select_open, "the teams door did not open the fixture sheet")
+	# Draw the sheet once: its rows and its back door are built in _draw.
+	game.selector.queue_redraw()
+	await get_tree().process_frame
+	assert_gt(game.selector.buttons.size(), 4, "the sheet drew no doors")
 	var svp: Vector2 = game.selector.design_vp()
 	var back: Rect2 = game.selector.back_rect(svp)
 	assert_gte(back.size.y, 44.0, "the back door is too small to tap")
@@ -107,3 +114,69 @@ func test_dev_hover_pin_moves_the_overlay_pointer() -> void:
 	assert_almost_eq(game.hud.mouse.x, (screen.x + 24.0) / game.hud_scale, 0.5, "the pinned pointer is not in design space")
 	var idle := DevCapture.new()
 	assert_false(idle.apply_hover(game), "an unpinned hover should do nothing")
+
+func test_dev_capture_writes_a_due_shot() -> void:
+	var cap := DevCapture.new()
+	cap.shot_times = [0.0]
+	cap.tick(game, 0.5)
+	assert_eq(cap.shot_index, 1, "the due shot did not fire")
+	var path := ProjectSettings.globalize_path("res://shots/shot_00.png")
+	if FileAccess.file_exists(path):
+		assert_gt(FileAccess.get_file_as_bytes(path).size(), 0, "an empty PNG was written")
+		DirAccess.remove_absolute(path)
+	var idle := DevCapture.new()
+	idle.tick(game, 6.0)
+	assert_almost_eq(idle.elapsed, 6.0, 0.01, "the harness clock does not advance")
+
+func _key(code: int) -> void:
+	var ev := InputEventKey.new()
+	ev.keycode = code
+	ev.pressed = true
+	game._input(ev)
+
+func test_key_bindings_cover_every_arm() -> void:
+	game.paused = false
+	_key(KEY_SPACE)
+	assert_true(game.paused, "space did not pause")
+	_key(KEY_1)
+	assert_almost_eq(game.speed, 1.0, 0.01, "1x not selected")
+	_key(KEY_2)
+	assert_almost_eq(game.speed, 2.0, 0.01, "2x not selected")
+	_key(KEY_3)
+	assert_almost_eq(game.speed, 4.0, 0.01, "4x not selected")
+	_key(KEY_4)
+	assert_almost_eq(game.speed, 8.0, 0.01, "8x not selected")
+	game.mode = "highlights"
+	_key(KEY_H)
+	assert_eq(game.mode, "full", "H did not switch to the full match")
+	_key(KEY_H)
+	assert_eq(game.mode, "highlights", "H did not switch back to highlights")
+	_key(KEY_C)
+	assert_true(game.camera_follow, "C did not follow the ball")
+	_key(KEY_C)
+	assert_false(game.camera_follow, "C did not return to the wide view")
+	game.names_visible = true
+	_key(KEY_N)
+	assert_false(game.names_visible, "N did not hide the names")
+	_key(KEY_S)
+	_key(KEY_R)
+	game.focus_id = 3
+	_key(KEY_ESCAPE)
+	assert_eq(game.focus_id, -1, "escape did not clear the tracked player")
+
+func test_sheet_key_bindings_cover_every_arm() -> void:
+	game.open_select()
+	var sheet = game.selector
+	var home: int = sheet.home_idx
+	sheet.key(KEY_RIGHT)
+	assert_ne(sheet.home_idx, home, "right did not cycle the home club")
+	sheet.key(KEY_LEFT)
+	sheet.key(KEY_DOWN)
+	sheet.key(KEY_UP)
+	sheet.key(KEY_TAB)
+	sheet.key(KEY_KP_ENTER)
+	assert_false(game.select_open, "enter did not kick off")
+	game.open_select()
+	assert_false(sheet.key(KEY_F1), "an unbound key should report unhandled")
+	sheet.key(KEY_ESCAPE)
+	assert_false(game.select_open, "escape did not close the sheet")

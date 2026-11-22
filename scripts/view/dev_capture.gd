@@ -70,16 +70,27 @@ func shots(game) -> void:
 	if shot_times.is_empty():
 		return
 	if shot_index < shot_times.size() and elapsed >= float(shot_times[shot_index]):
-		var path := ProjectSettings.globalize_path("res://shots/shot_%02d.png" % shot_index)
-		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://shots"))
-		game.get_viewport().get_texture().get_image().save_png(path)
-		print("saved ", path, " t=", snappedf(elapsed, 0.1), " clock=", game.engine.display_clock(), " score=", game.engine.score)
+		_save(game, "res://shots/shot_%02d.png" % shot_index)
+		print("saved shot ", shot_index, " t=", snappedf(elapsed, 0.1), " clock=", game.engine.display_clock(), " score=", game.engine.score)
 		shot_index += 1
 	if not goal_captured and game.engine.phase == "goal":
 		goal_captured = true
-		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://shots"))
-		game.get_viewport().get_texture().get_image().save_png(ProjectSettings.globalize_path("res://shots/goal.png"))
+		_save(game, "res://shots/goal.png")
 		print("saved goal banner at clock=", game.engine.display_clock())
+
+## A headless run has no renderer to read back, so the capture degrades to a
+## no-op instead of erroring on a null image.
+func _save(game, path: String) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var tex: ViewportTexture = game.get_viewport().get_texture()
+	if tex == null:
+		return
+	var img: Image = tex.get_image()
+	if img == null:
+		return
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://shots"))
+	img.save_png(ProjectSettings.globalize_path(path))
 
 ## Pin the hover to one player so a screenshot has a dossier on screen.
 func apply_hover(game) -> bool:
