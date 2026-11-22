@@ -157,3 +157,29 @@ func test_manager_state_survives_a_snapshot() -> void:
 	assert_eq(other.manager.changes, eng.manager.changes, "tactics counts did not round-trip")
 	assert_eq(str(other.manager.tactics_for(1).to_dict()), str(eng.manager.tactics_for(1).to_dict()),
 		"tactics board did not round-trip")
+
+func test_a_card_tells_the_dugout() -> void:
+	var eng := MatchEngine.new(95)
+	eng.phase = "play"
+	eng.clock = 1200.0
+	var p = null
+	for q in eng.players:
+		if q.team == 0 and not q.is_gk:
+			p = q
+			break
+	eng._send_off_or_book(p, "yellow")
+	var seen := false
+	for e in eng.events:
+		if str(e.get("type", "")) == "card":
+			seen = true
+	assert_true(seen, "a card never reached the event log")
+
+func test_push_falls_back_without_a_manager() -> void:
+	var eng := MatchEngine.new(96)
+	var p = null
+	for q in eng.players:
+		if q.team == 0 and not q.is_gk:
+			p = q
+			break
+	eng.manager = null
+	assert_eq(eng.push_of(p), Attrs.role_push(p.role), "push_of did not fall back without a manager")

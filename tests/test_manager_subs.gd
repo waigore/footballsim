@@ -106,3 +106,20 @@ func test_windows_survive_a_snapshot() -> void:
 	assert_eq(int(other.teams[0]["window_token"]), int(eng.teams[0]["window_token"]), "window token did not restore")
 	assert_eq(int(other.teams[0]["subs_made"]), int(eng.teams[0]["subs_made"]), "subs made did not restore")
 	assert_eq(int(other.teams[0]["subs_left"]), int(eng.teams[0]["subs_left"]), "subs left did not restore")
+
+func test_substituting_the_ball_carrier_keeps_possession() -> void:
+	var eng := _at_stoppage(50, 3000.0)
+	var off = _outfield(eng, 0)
+	eng.ball.owner_id = off.id
+	eng.ball.last_touch_id = off.id
+	assert_true(eng._bring_on(0, off, false, false, {}), "the carrier was not replaced")
+	assert_true(eng.ball.owner_id >= 200, "possession was lost when the carrier was replaced")
+
+func test_injury_without_a_change_clears_the_ball() -> void:
+	var eng := _at_stoppage(51, 3000.0)
+	eng.teams[0]["windows_used"] = 3
+	eng.teams[0]["window_token"] = 5
+	var p = _outfield(eng, 0)
+	eng.ball.owner_id = p.id
+	eng._injure(p)
+	assert_eq(eng.ball.owner_id, -1, "the ball stayed with a player who left injured")

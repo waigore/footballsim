@@ -117,8 +117,10 @@ func duty_of(role: String) -> String:
 ## Role duties move a player's push: attack runs higher, defend holds deeper.
 func duty_offset(role: String) -> float:
 	match duty_of(role):
-		"attack": return 0.06
-		"defend": return -0.06
+		"attack":
+			return 0.06
+		"defend":
+			return -0.06
 	return 0.0
 
 func corner_routine() -> String:
@@ -182,12 +184,18 @@ func apply(change: Dictionary) -> Array:
 static func label_delta(field: String, delta: float) -> String:
 	var up: bool = delta > 0.0
 	match field:
-		"line": return "higher line" if up else "deeper line"
-		"press": return "more pressing" if up else "less pressing"
-		"width": return "wider" if up else "narrower"
-		"tempo": return "faster tempo" if up else "slower tempo"
-		"directness": return "more direct" if up else "shorter passing"
-		"crossing": return "more crosses" if up else "fewer crosses"
+		"line":
+			return "higher line" if up else "deeper line"
+		"press":
+			return "more pressing" if up else "less pressing"
+		"width":
+			return "wider" if up else "narrower"
+		"tempo":
+			return "faster tempo" if up else "slower tempo"
+		"directness":
+			return "more direct" if up else "shorter passing"
+		"crossing":
+			return "more crosses" if up else "fewer crosses"
 	return field
 
 func to_dict() -> Dictionary:

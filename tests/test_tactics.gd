@@ -75,3 +75,69 @@ func test_set_piece_routine_reaches_the_pitch() -> void:
 	assert_lt(near, far, "the corner routine does not change the aim")
 	eng.manager._apply(0, {"free_kick": "direct"}, "test")
 	assert_eq(eng.manager.tactics_for(0).free_kick_routine(), "direct", "free-kick routine not stored")
+
+func test_every_lever_and_description() -> void:
+	var t := Tactics.from_team(TeamData.get_team("MCI"), ManagerData.profile("MCI"))
+	t.line = 0.10
+	t.press = 0.10
+	t.width = 0.10
+	t.tempo = 0.10
+	t.directness = 0.90
+	t.time_wasting = 0.60
+	var d: Array = t.describe()
+	for label in ["deeper line", "less pressing", "narrower", "slower tempo", "more direct", "time-wasting"]:
+		assert_true(d.has(label), "describe missed %s: %s" % [label, str(d)])
+	var labels: Array = t.apply({
+		"tempo_delta": 0.2, "width_delta": 0.2, "press_delta": 0.2, "crossing_delta": -0.2,
+		"directness_delta": -0.2, "line_delta": 0.05, "time_wasting": 0.0,
+		"roles": {"ST": "defend", "GK": "attack"}, "opposition": {"press": "high", "marking": "man"},
+		"free_kick": "direct", "corner": "short",
+	})
+	assert_gte(labels.size(), 6, "levers did not produce labels: %s" % str(labels))
+	assert_eq(t.duty_of("ST"), "defend", "role duty not stored")
+	assert_eq(t.free_kick_routine(), "direct", "free-kick routine not stored")
+	assert_eq(t.corner_routine(), "short", "corner routine not stored")
+	assert_eq(str(t.style()["press_trigger"]), "high", "opposition press not exposed")
+	assert_eq(str(t.style()["marking"]), "man", "marking not exposed")
+	var u := Tactics.from_team(TeamData.get_team("MUN"))
+	u.from_dict({"mentality": "defensive"})
+	assert_eq(u.mentality, "defensive", "partial from_dict lost mentality")
+	assert_eq(u.formation, "4-2-3-1", "partial from_dict clobbered formation")
+
+func test_restart_patience_honours_time_wasting() -> void:
+	var eng := MatchEngine.new(36)
+	eng.phase = "restart"
+	eng.half = 2
+	eng.clock = 4400.0
+	eng.score[0] = 1
+	var taker = null
+	for p in eng.players:
+		if p.team == 0 and not p.is_gk:
+			taker = p
+			break
+	var plain: float = eng._restart_patience(taker, "throw_in", 0)
+	eng.manager._apply(0, {"time_wasting": 0.9}, "test")
+	var managed: float = eng._restart_patience(taker, "throw_in", 0)
+	assert_gt(managed, plain, "time-wasting did not buy the leader more patience")
+
+func test_corner_and_free_kick_routines_execute() -> void:
+	var eng := MatchEngine.new(37)
+	eng.phase = "play"
+	eng.clock = 2000.0
+	eng.manager._apply(0, {"corner": "short"}, "test")
+	assert_eq(eng._corner_aim(0), eng.W * 0.5, "short corner routine not aimed short")
+	eng._start_restart("corner", 0, Vector2(eng.L - 0.5, 0.5))
+	eng._execute_restart()
+	assert_eq(eng.phase, "play", "a short corner did not put the ball back in play")
+	eng.manager._apply(0, {"corner": "far_post"}, "test")
+	eng._start_restart("corner", 0, Vector2(eng.L - 0.5, 0.5))
+	eng._execute_restart()
+	assert_eq(eng.phase, "play", "a far-post corner did not put the ball back in play")
+	eng.manager._apply(0, {"free_kick": "direct"}, "test")
+	eng._start_restart("free_kick", 0, Vector2(eng.L - 24.0, eng.W * 0.5))
+	eng._execute_restart()
+	assert_eq(eng.phase, "play", "a direct free kick did not put the ball back in play")
+	eng.manager._apply(0, {"free_kick": "worked"}, "test")
+	eng._start_restart("free_kick", 0, Vector2(eng.L - 40.0, 8.0))
+	eng._execute_restart()
+	assert_eq(eng.phase, "play", "a worked free kick did not put the ball back in play")
