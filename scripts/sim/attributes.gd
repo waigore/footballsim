@@ -45,7 +45,7 @@ static func pass_speed_for(p, dist: float) -> float:
 
 static func shot_sigma_deg(p, dist: float, pressure: float) -> float:
 	var sho: float = float(p.attr["sho"])
-	return 4.15 + (100.0 - sho) * 0.150 + dist * 0.060 + pressure * 8.0
+	return 5.5 + (100.0 - sho) * 0.170 + dist * 0.085 + pressure * 9.2
 
 static func shot_speed(p, power: float = 1.0) -> float:
 	var sho: float = float(p.attr["sho"])

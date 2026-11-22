@@ -67,9 +67,12 @@ func _draw() -> void:
 
 func _draw_player(p, own_ball: bool) -> void:
 	var team: Dictionary = engine.teams[p.team]["data"]
-	var base: Color = team["color"]
+	var kit: Dictionary = engine.teams[p.team].get("kit", {})
+	var base: Color = kit.get("shirt", team["color"])
+	var shorts: Color = kit.get("shorts", team["shorts"])
 	if p.is_gk:
 		base = team["gk_color"]
+		shorts = base.darkened(0.45)
 	var pos: Vector2 = p.pos - Vector2(0, p.z * 0.55)
 	var r := 0.86
 	# selected ring
@@ -84,7 +87,7 @@ func _draw_player(p, own_ball: bool) -> void:
 	draw_circle(pos + Vector2(-0.16, -0.20), r * 0.74, base.lightened(0.18))
 	draw_arc(pos, r, 0, TAU, 44, base.darkened(0.62), 0.11, true)
 	# shorts hint: a small dark arc at the bottom
-	draw_arc(pos, r * 0.86, PI * 0.12, PI * 0.88, 16, Color(team["shorts"].r, team["shorts"].g, team["shorts"].b, 0.95), 0.14, true)
+	draw_arc(pos, r * 0.86, PI * 0.12, PI * 0.88, 16, Color(shorts.r, shorts.g, shorts.b, 0.95), 0.14, true)
 	# direction tick
 	var d: Vector2 = p.facing
 	if d.length() > 0.1:

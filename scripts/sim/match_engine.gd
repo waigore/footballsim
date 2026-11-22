@@ -19,6 +19,13 @@ const PEN_D := 11.0
 const CENTER := Vector2(52.5, 34.0)
 const DT := 1.0 / 60.0
 
+## Dead-ball judgement. The taker only kicks once most of his side is roughly on
+## its slot; how long he is willing to hold play up depends on how well he reads
+## the game and on whether the clock is on his side.
+const RESTART_READY_RADIUS := 8.5   # metres from a player's target that counts as set
+const RESTART_SETTLED_SPEED := 3.0  # m/s; still sprinting = not set
+const RESTART_WAIT_STEP := 0.3      # seconds per re-read while holding play up
+
 class Player:
 	var id = 0
 	var team = 0
@@ -77,6 +84,7 @@ class Ball:
 	var assist_time = -10.0
 	var shot_team = -1
 	var shot_time = -10.0
+	var shot_xg = 0.0
 	var last_touch_time = -10.0
 	var shot_saved = false
 	var loose_t = 0.0
@@ -131,21 +139,30 @@ func home_factor(p) -> float:
 		return 1.0 + home_advantage
 	return 1.0 - home_advantage * 0.5
 
-func _init(seed_in: int = 4242) -> void:
+## Shirt colour the side is actually wearing in this match (kit selection may
+## have sent the visitors to their change kit).
+func kit_color(t: int) -> Color:
+	var kit: Dictionary = teams[t].get("kit", {})
+	if kit.has("shirt"):
+		return kit["shirt"]
+	return teams[t]["data"]["color"]
+
+func _init(seed_in: int = 4242, home_id: String = "MUN", away_id: String = "MCI") -> void:
 	seed_value = seed_in
 	rng.seed = seed_in
 	teams = [
 		{
-			"id": "MUN", "data": TeamData.get_team("MUN"), "dir": 1, "score": 0,
+			"id": home_id, "data": TeamData.get_team(home_id), "dir": 1, "score": 0,
 			"subs_left": 5, "sub_minutes": [62, 71, 80], "subs_made": 0,
 		},
 		{
-			"id": "MCI", "data": TeamData.get_team("MCI"), "dir": -1, "score": 0,
+			"id": away_id, "data": TeamData.get_team(away_id), "dir": -1, "score": 0,
 			"subs_left": 5, "sub_minutes": [58, 68, 78], "subs_made": 0,
 		},
 	]
+	Kits.assign(teams)
 	stats = [_blank_stats(), _blank_stats()]
-	home_team = 0 if TeamData.FIXTURE["home"] == teams[0]["id"] else 1
+	home_team = 0
 	_build_squads()
 	brain = MatchAI.new(self)
 	setup_kickoff(0 if rng.randf() < 0.5 else 1, false)
@@ -336,7 +353,7 @@ func setup_kickoff(kicking_team: int, swap: bool) -> void:
 		ball.last_touch_team = kicking_team
 		taker.has_ball = true
 	brain.on_kickoff()
-	_emit("kickoff", "Kick-off. %s get us underway." % teams[kicking_team]["data"]["name"], kicking_team, taker)
+	_emit("kickoff", Commentary.kickoff(rng, teams[kicking_team]["data"]["name"]), kicking_team, taker)
 
 func _nearest_teammate_to(pos: Vector2, t: int, include_gk: bool = false, exclude_id: int = -1):
 	var best = null
@@ -403,7 +420,7 @@ func _tick_clock_end() -> void:
 func _end_first_half() -> void:
 	phase = "half_time"
 	half_break_timer = 4.0
-	_emit("half_time", "Half-time at Old Trafford. %s %d-%d %s." % [teams[0]["data"]["short"], score[0], score[1], teams[1]["data"]["short"]], -1, null)
+	_emit("half_time", Commentary.half_time(rng, teams[0]["data"]["short"], score[0], teams[1]["data"]["short"], score[1]), -1, null)
 	blackout()
 
 func blackout() -> void:
@@ -424,7 +441,7 @@ func begin_second_half() -> void:
 func _end_match() -> void:
 	phase = "full_time"
 	finished = true
-	var line = "Full time. %s %d-%d %s." % [teams[0]["data"]["short"], score[0], score[1], teams[1]["data"]["short"]]
+	var line = Commentary.full_time(rng, teams[0]["data"]["short"], score[0], teams[1]["data"]["short"], score[1])
 	_emit("full_time", line, -1, null)
 
 func elapsed_minutes() -> float:
@@ -628,7 +645,7 @@ func _ball_interactions(dt: float) -> void:
 				ball.last_touch_id = q.id
 				ball.last_touch_team = q.team
 				q.cooldown = 0.5
-				_emit("block", "%s blocks it!" % q.name, q.team, q)
+				_emit("block", Commentary.block(rng, q.name, _last_kicker_name(q.team)), q.team, q)
 				_flash(0.35)
 				break
 	# A loose ball in a crowd eventually squirts clear.
@@ -745,26 +762,27 @@ func _award_foul(fouler, victim) -> void:
 	var spot = victim.pos
 	if box:
 		spot = Vector2(PEN_D if fouler.team == 1 else L - PEN_D, W * 0.5)
-		_emit("foul", "PENALTY! %s brings down %s." % [fouler.name, victim.name], victim.team, victim)
+		_emit("foul", Commentary.foul(rng, fouler.name, victim.name, true), victim.team, victim)
 		_start_restart("penalty", victim.team, spot, 3.6)
 	else:
-		_emit("foul", "Foul by %s on %s. Free kick." % [fouler.name, victim.name], victim.team, victim)
+		_emit("foul", Commentary.foul(rng, fouler.name, victim.name, false), victim.team, victim)
 		_start_restart("free_kick", victim.team, spot, 2.6)
 	_flash(0.4)
 
 func _send_off_or_book(p, card: String) -> void:
+	var line: String = Commentary.card(rng, p.name, card)
 	if card == "yellow":
-		_emit("card", "Yellow card — %s." % p.name, p.team, p)
+		_emit("card", line, p.team, p)
 	elif card == "red_second":
 		p.red = true
 		p.sent_off = true
-		_emit("card", "Second yellow — %s is off!" % p.name, p.team, p)
+		_emit("card", line, p.team, p)
 		stats[p.team]["red"] += 1
 		_remove_body(p)
 	else:
 		p.red = true
 		p.sent_off = true
-		_emit("card", "RED CARD! %s is sent off." % p.name, p.team, p)
+		_emit("card", line, p.team, p)
 		_remove_body(p)
 	stoppage_events += 1
 
@@ -828,9 +846,10 @@ func _claim_ball(p) -> void:
 	if possession_team != p.team:
 		possession_team = p.team
 		possession_loose = false
+	# Offside is judged at the pass, not carried forward: a touch by anyone
+	# resets the phase, so stale flags must not convict a later receiver.
 	for q in players:
-		if q.team != p.team:
-			q.offside_flag = false
+		q.offside_flag = false
 	if p.mark_id >= 0:
 		p.mark_id = -1
 
@@ -859,7 +878,7 @@ func _gk_claim(gk, d: float) -> void:
 			ball.shot_saved = true
 			gk.stats["saves"] += 1
 			stats[gk.team]["saves"] += 1
-			_emit("save", "Saved! %s holds it." % gk.name, gk.team, gk)
+			_emit("save", Commentary.save(rng, gk.name, _shot_credit(gk), "hold", ball.shot_xg), gk.team, gk)
 			_flash(0.8)
 		gk.action_t = 0.8
 		gk.state = "gk_hold"
@@ -878,7 +897,7 @@ func _gk_claim(gk, d: float) -> void:
 			ball.shot_saved = true
 			gk.stats["saves"] += 1
 			stats[gk.team]["saves"] += 1
-			_emit("save", "Saved! %s parries it away." % gk.name, gk.team, gk)
+			_emit("save", Commentary.save(rng, gk.name, _shot_credit(gk), "parry", ball.shot_xg), gk.team, gk)
 			_flash(0.8)
 
 func _header(p) -> void:
@@ -898,7 +917,7 @@ func _header(p) -> void:
 			ball.vel = aim.normalized() * rng.randf_range(9.0, 15.0)
 			ball.vz = 1.2
 			ball.z = maxf(ball.z, 1.7)
-			_emit("header", "%s rises to head it goalwards." % p.name, p.team, p)
+			_emit("header", Commentary.shot(rng, p.name, to_goal.length(), 0.18, pressure_on(p), "header"), p.team, p)
 			_stats_shot(p, 0.18, "header")
 		else:
 			var mate = _best_outlet(p)
@@ -911,7 +930,7 @@ func _header(p) -> void:
 		ball.vel = away.normalized() * rng.randf_range(10.0, 16.0)
 		ball.vz = 5.5
 		ball.z = maxf(ball.z, 1.8)
-		_emit("clearance", "%s heads it clear." % p.name, p.team, p)
+		_emit("clearance", Commentary.clearance(rng, p.name, true), p.team, p)
 		ball_kicked.emit(0.5)
 
 func _best_outlet(p):
@@ -981,7 +1000,7 @@ func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, 
 		_vlog("PASS %s -> %s aim=(%.1f,%.1f) dist=%.1f loft=%s kind=%s" % [p.name, receiver.name if receiver != null else "-", aim.x, aim.y, dist, str(lofted), kind])
 	if kind == "cross":
 		_add_involvement(p, "cross", "Cross into the box", p.pos)
-		_emit("cross", "%s whips a cross into the box." % p.name, p.team, p)
+		_emit("cross", Commentary.cross(rng, p.name), p.team, p)
 	elif kind == "through":
 		_add_involvement(p, "pass", "Through ball", p.pos)
 	else:
@@ -997,7 +1016,7 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 		# Finishing: keepers stop most on-target efforts; only the best chances beat them.
 	var gkk = _gk_of(1 - p.team)
 	var xg_est: float = expected_goals(p.pos, aim_y, p.team)
-	var p_goal: float = clampf(0.02 + xg_est * 0.22, 0.015, 0.22)
+	var p_goal: float = clampf(0.015 + xg_est * 0.16, 0.012, 0.18)
 	var aim = Vector2(goal.x, goal.y + aim_y)
 	var ang = atan2(aim.y - p.pos.y, aim.x - p.pos.x) + deg_to_rad(rng.randf_range(-sigma, sigma))
 	var speed = Attrs.shot_speed(p, power) * rng.randf_range(0.94, 1.06)
@@ -1007,7 +1026,7 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	var tg0: float = (goal.x - p.pos.x) / maxf(absf(dir.x), 0.05) * signf(goal.x - p.pos.x)
 	var y_cross: float = p.pos.y + dir.y * absf(tg0)
 	var on_target: bool = tg0 > 0.0 and absf(y_cross - goal.y) < GOAL_W * 0.5 and aim_z < GOAL_H
-	if on_target and gkk != null and kind != "penalty" and rng.randf() > p_goal and rng.randf() < 0.70:
+	if on_target and gkk != null and kind != "penalty" and rng.randf() > p_goal and rng.randf() < 0.87:
 		ang = atan2(gkk.pos.y - p.pos.y, goal.x - p.pos.x)
 		dir = Vector2(cos(ang), sin(ang))
 		speed *= 0.97
@@ -1039,13 +1058,14 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	p.state = "shoot"
 	p.action_t = 0.4
 	var xg = expected_goals(p.pos, aim_y, p.team)
+	ball.shot_xg = xg
 	shot_buckets[int(dist / 5)] = shot_buckets.get(int(dist / 5), 0) + 1
 	_stats_shot(p, xg, kind)
 	_add_involvement(p, "shot", "Shot (%.2f xG)" % xg, p.pos)
 	stats[p.team]["xg"] += xg
 	if xg > 0.28:
 		stats[p.team]["big_chances"] += 1
-	_emit("shot", "%s lets fly from %s!" % [p.name, _range_word(dist)], p.team, p, {"xg": xg})
+	_emit("shot", Commentary.shot(rng, p.name, dist, xg, pressure, kind), p.team, p, {"xg": xg})
 	var near_def := 0
 	var min_def := 99.0
 	var goal_side_def := 0
@@ -1095,7 +1115,7 @@ func clear_ball(p, point: Vector2) -> void:
 	p.has_ball = false
 	p.cooldown = 0.35
 	p.state = "clear"
-	_emit("clearance", "%s hoofs it clear." % p.name, p.team, p)
+	_emit("clearance", Commentary.clearance(rng, p.name, false), p.team, p)
 	_add_involvement(p, "clearance", "Clearance", p.pos)
 	ball_kicked.emit(0.7)
 
@@ -1112,6 +1132,16 @@ func _check_rules() -> void:
 		if goal_team < 0:
 			return
 		if absf(ball.pos.y - W * 0.5) <= GOAL_W * 0.5 and ball.z <= GOAL_H:
+			# A carried ball on the line is not a shot: a keeper holding it stays in
+			# play, anyone else carrying it in scores (own goal when defending).
+			if ball.owner_id >= 0:
+				var carrier = by_id.get(ball.owner_id, null)
+				if carrier != null and carrier.is_gk and carrier.team == goal_team:
+					ball.pos.x = 0.45 if at_left else L - 0.45
+					return
+				_score_goal(goal_team)
+				return
+			var was_shot: bool = ball.shot_team >= 0 and not ball.shot_saved
 			var gk = _gk_of(goal_team)
 			if gk != null:
 				var gpos: Vector2 = Vector2(own_goal_pos(goal_team).x, ball.pos.y)
@@ -1119,7 +1149,7 @@ func _check_rules() -> void:
 				var reach: float = Attrs.gk_dive_reach(gk) + 1.05
 				gk_debug.append("GOALCHECK gkdist=%.1f reach=%.1f z=%.1f speed=%.1f" % [gd, reach, ball.z, ball.vel.length()])
 				if gd < reach + 3.2:
-					var save_p: float = 0.88 + (reach - gd) * 0.06 + (Attrs.gk_handling(gk) - 0.8) * 0.25 - ball.vel.length() * 0.003
+					var save_p: float = 0.91 + (reach - gd) * 0.06 + (Attrs.gk_handling(gk) - 0.8) * 0.25 - ball.vel.length() * 0.003
 					save_p = clampf(save_p, 0.18, 0.985)
 					if rng.randf() < save_p:
 						# A goal-line save.
@@ -1130,11 +1160,12 @@ func _check_rules() -> void:
 						ball.vz = 1.8
 						ball.shot_team = -1
 						ball.shot_saved = true
-						gk.stats["saves"] += 1
-						stats[goal_team]["saves"] += 1
 						gk.cooldown = 0.5
-						_emit("save", "Huge save! %s keeps it out." % gk.name, goal_team, gk)
-						_flash(1.0)
+						if was_shot:
+							gk.stats["saves"] += 1
+							stats[goal_team]["saves"] += 1
+							_emit("save", Commentary.save(rng, gk.name, _shot_credit(gk), "goal_line", ball.shot_xg), goal_team, gk)
+							_flash(1.0)
 						return
 			var lt = by_id.get(ball.last_touch_id, null)
 			if lt != null and lt.team == goal_team and lt.is_gk:
@@ -1187,9 +1218,10 @@ func _score_goal(conceding_team: int) -> void:
 	ball.z = 0.0
 	ball.shot_team = -1
 	stoppage_events += 1
-	_emit("goal", "GOAL! %s %d-%d %s. %s, %d'." % [
-		teams[0]["data"]["short"], score[0], score[1], teams[1]["data"]["short"],
-		scorer_name, minute_of(clock), ], scoring_team, scorer, {"xg": 0.0})
+	_emit("goal", Commentary.goal(rng, scorer.name if scorer != null else "Unknown",
+		str(last_goal.get("assist", "")), own_goal,
+		teams[scoring_team]["data"]["short"], teams[conceding_team]["data"]["short"],
+		score[scoring_team] - 1, score[conceding_team], minute_of(clock)), scoring_team, scorer, {"xg": 0.0})
 	flash = 1.0
 	for p in players:
 		if p.team == scoring_team:
@@ -1210,6 +1242,24 @@ func _goal_line_out(defending_team: int) -> void:
 	else:
 		_start_restart("goal_kick", defending_team, Vector2(goal_x, W * 0.5))
 
+## Would a pass to this team-mate catch him offside right now? The AI uses this
+## to avoid passes the referee would flag.
+func would_be_offside(receiver) -> bool:
+	var t: int = receiver.team
+	var ax_ball: float = attacking_x(t, ball.pos)
+	var ds := []
+	for q in players:
+		if q.team == t or q.sent_off:
+			continue
+		ds.append(attacking_x(t, q.pos))
+	if ds.size() < 2:
+		return false
+	ds.sort()
+	ds.reverse()
+	var line: float = ds[1]
+	var ax: float = attacking_x(t, receiver.pos)
+	return ax > ax_ball + 0.35 and ax > L * 0.5 and ax > line + 0.45
+
 func _mark_offside_at_pass(p) -> void:
 	if phase != "play":
 		return
@@ -1229,7 +1279,7 @@ func _mark_offside_at_pass(p) -> void:
 		if q.team != t or q.id == p.id or q.sent_off or q.is_gk:
 			continue
 		var ax = attacking_x(t, q.pos)
-		q.offside_flag = (ax > ax_ball + 0.15 and ax > L * 0.5 and ax > line + 0.12)
+		q.offside_flag = (ax > ax_ball + 0.35 and ax > L * 0.5 and ax > line + 0.45)
 		if q.offside_flag:
 			q.run_until = 0.0
 
@@ -1237,7 +1287,7 @@ func _offside(p) -> void:
 	if not p.offside_flag:
 		return
 	stats[p.team]["offsides"] += 1
-	_emit("offside", "Offside against %s." % p.name, p.team, p)
+	_emit("offside", Commentary.offside(rng, p.name), p.team, p)
 	_add_involvement(p, "offside", "Caught offside", p.pos)
 	for q in players:
 		q.offside_flag = false
@@ -1288,7 +1338,8 @@ func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) 
 		"penalty":
 			d = 3.6
 			stoppage_events += 1
-	restart = {"type": kind, "team": team, "pos": pos, "timer": d, "taker": taker.id if taker != null else -1}
+	restart = {"type": kind, "team": team, "pos": pos, "timer": d, "taker": taker.id if taker != null else -1,
+		"base_delay": d, "wait": 0.0, "patience": _restart_patience(taker, kind, team), "called_wait": false}
 	restart_timer = d
 	if taker != null:
 		taker.target = pos + (pos - own_goal_pos(team)).normalized() * 0.9
@@ -1327,20 +1378,25 @@ func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) 
 	_emit(kind, _restart_text(kind, team, taker), team, taker)
 
 func _restart_text(kind: String, team: int, taker) -> String:
-	var who: String = taker.name if taker != null else teams[team]["data"]["short"]
-	match kind:
-		"throw_in": return "Throw-in, %s." % teams[team]["data"]["short"]
-		"corner": return "Corner kick to %s." % teams[team]["data"]["short"]
-		"goal_kick": return "Goal kick, %s." % who
-		"free_kick": return "Free kick to %s." % teams[team]["data"]["short"]
-		"penalty": return "PENALTY to %s!" % teams[team]["data"]["short"]
-	return "Restart."
+	var who: String = taker.name if taker != null else ""
+	return Commentary.restart(rng, kind, teams[team]["data"]["short"], who, false)
 
 func _gk_of(t: int):
 	for p in players:
 		if p.team == t and p.is_gk and not p.sent_off:
 			return p
 	return null
+
+## Name of the player whose effort has just been stopped, unless the ball was
+## last kicked by the stopping side (deflections, blocks, keeper clearances).
+func _last_kicker_name(not_team: int) -> String:
+	var k = by_id.get(ball.last_kick_id, null)
+	if k == null or k.team == not_team:
+		return ""
+	return k.name
+
+func _shot_credit(gk) -> String:
+	return _last_kicker_name(gk.team)
 
 func _best_penalty_taker(t: int):
 	var best = null
@@ -1353,6 +1409,94 @@ func _best_penalty_taker(t: int):
 			bs = s
 			best = p
 	return best
+
+## The taker's picture of his side: x = share of nearby outfield team-mates
+## roughly on their slot and no longer sprinting, y = their mean distance from
+## it. Players far from the restart are not part of this picture — nobody holds
+## a throw-in up for a centre-back 50m away.
+func _restart_picture(team: int, taker, pos: Vector2) -> Vector2:
+	var set_count := 0
+	var outfield := 0
+	var err_sum := 0.0
+	for q in players:
+		if q.team != team or q.sent_off or q.is_gk:
+			continue
+		if taker != null and q.id == taker.id:
+			continue
+		if q.pos.distance_to(pos) > 42.0:
+			continue
+		var err: float = q.pos.distance_to(q.target)
+		err_sum += err
+		outfield += 1
+		if err <= RESTART_READY_RADIUS and q.vel.length() <= RESTART_SETTLED_SPEED:
+			set_count += 1
+	if outfield == 0:
+		return Vector2(1.0, 0.0)
+	return Vector2(float(set_count) / float(outfield), err_sum / float(outfield))
+
+## How well this player reads a dead-ball picture (0..1, home composure included).
+func _restart_read(taker) -> float:
+	if taker == null:
+		return 0.5
+	var pas: float = float(taker.attr.get("pas", 60)) / 100.0
+	var ovr: float = float(taker.attr.get("ovr", 60)) / 100.0
+	return clampf((pas * 0.6 + ovr * 0.4) * home_factor(taker), 0.0, 1.0)
+
+## Share of his side the taker wants set before he plays it: a better reader
+## waits for a cleaner picture.
+func _restart_ready_needed(taker) -> float:
+	return 0.45 + _restart_read(taker) * 0.35
+
+## Seconds of extra waiting the taker will tolerate. A good reader and a side
+## protecting a lead will hold play up; a chase or a quick restart won't.
+func _restart_patience(taker, kind: String, team: int) -> float:
+	if taker == null:
+		return 0.0
+	var want: float = 0.8 + _restart_read(taker) * 2.8
+	match kind:
+		"throw_in":
+			want *= 0.35
+		"goal_kick":
+			want *= 0.7
+		"corner":
+			want *= 1.2
+	if clock > 4200.0:
+		var margin: int = score[team] - score[1 - team]
+		if margin < 0:
+			want *= 0.5
+		elif margin > 0:
+			want *= 1.6
+	var limit: float = 2700.0 + added[0] if half == 1 else 5400.0 + added[1]
+	return clampf(minf(want, limit - clock - 1.5), 0.0, 4.5)
+
+func _restart_should_wait(ready: float, taker) -> bool:
+	var kind: String = str(restart.get("type", ""))
+	if kind == "kickoff" or kind == "penalty":
+		return false
+	if taker == null or taker.sent_off:
+		return false
+	if float(restart.get("wait", 0.0)) >= float(restart.get("patience", 0.0)):
+		return false
+	if ready >= _restart_ready_needed(taker):
+		return false
+	# A picture that has stopped improving is as good as it is going to get:
+	# the taker gets on with it rather than burning his whole patience.
+	if float(restart.get("still", 0.0)) >= 1.2:
+		return false
+	return true
+
+## Track how long the picture has gone without improving, so the wait ends when
+## the side has settled even if it never hits the ideal shape.
+func _note_restart_picture(pic: Vector2) -> void:
+	restart["ready"] = pic.x
+	var err: float = pic.y
+	var shrinking: bool = err < float(restart.get("err", 999.0)) - 0.08
+	if pic.x > float(restart.get("best_ready", 0.0)) + 0.01 or shrinking:
+		restart["best_ready"] = maxf(float(restart.get("best_ready", 0.0)), pic.x)
+		restart["still"] = 0.0
+	else:
+		restart["still"] = float(restart.get("still", 0.0)) + RESTART_WAIT_STEP
+	restart["err"] = err
 
 func _update_restart(dt: float) -> void:
 	restart_timer -= dt
@@ -1370,7 +1514,26 @@ func _update_restart(dt: float) -> void:
 	if restart["type"] == "corner":
 		_arrange_corner(restart["team"], restart["pos"])
 	if restart_timer <= 0.0:
-		_execute_restart()
+		var ready := 1.0
+		if taker != null and not taker.sent_off:
+			var pic := _restart_picture(int(restart["team"]), taker, restart["pos"])
+			ready = pic.x
+			_note_restart_picture(pic)
+		if _restart_should_wait(ready, taker):
+			# Hold the restart: re-read the picture in short steps so the taker
+			# kicks as soon as his side is set, not on a fixed delay.
+			restart["wait"] = float(restart.get("wait", 0.0)) + RESTART_WAIT_STEP
+			restart_timer = RESTART_WAIT_STEP
+			if not bool(restart.get("called_wait", false)):
+				restart["called_wait"] = true
+				_emit("restart_wait",
+					Commentary.restart(rng, str(restart["type"]), teams[restart["team"]]["data"]["short"],
+						taker.name if taker != null else "", true), int(restart["team"]), taker)
+			if verbose:
+				_vlog("RESTART WAIT %s ready=%.2f/%.2f waited=%.1f/%.1f" % [restart["type"], ready,
+					_restart_ready_needed(taker), float(restart.get("wait", 0.0)), float(restart.get("patience", 0.0))])
+		else:
+			_execute_restart()
 
 func _arrange_corner(team: int, corner: Vector2) -> void:
 	var box_x = L - 8.0 if corner.x > L * 0.5 else 8.0
@@ -1457,7 +1620,7 @@ func _take_penalty(taker, team: int) -> void:
 	shoot_ball(taker, aim_y, aim_z, 0.92, "penalty")
 	ball.pos = restart["pos"]
 	phase = "play"
-	_emit("penalty_taken", "%s steps up..." % taker.name, team, taker)
+	_emit("penalty_taken", Commentary.penalty_taken(rng, taker.name), team, taker)
 
 func _best_throw_target(team: int, taker):
 	var best = null
@@ -1520,26 +1683,28 @@ func _tick_substitutions() -> void:
 	if half < 2:
 		return
 	for t in range(2):
+		if teams[t]["subs_left"] <= 0:
+			continue
+		# A team must always have a keeper: replace a sent-off one first.
+		if _gk_of(t) == null and not _bench_keeper(t).is_empty():
+			_make_substitution(t, true)
+			continue
 		var mins: Array = teams[t]["sub_minutes"]
 		var made: int = teams[t]["subs_made"]
 		if made < mins.size() and clock / 60.0 >= float(mins[made]):
-			_make_substitution(t)
+			_make_substitution(t, false)
 
-func _make_substitution(t: int) -> void:
-	var bench: Array = teams[t]["data"]["bench"].duplicate(true)
-	var on_field_ids = {}
+func _bench_keeper(t: int) -> Dictionary:
+	var on_field := {}
 	for p in players:
 		if p.team == t:
-			on_field_ids[p.name] = true
-	var candidate = {}
-	for b in bench:
-		if not on_field_ids.has(b["name"]):
-			candidate = b
-			break
-	if candidate.is_empty():
-		teams[t]["subs_made"] += 1
-		return
-	# Replace the most tired outfield player.
+			on_field[p.name] = true
+	for b in teams[t]["data"]["bench"]:
+		if b["role"] == "GK" and not on_field.has(b["name"]):
+			return b
+	return {}
+
+func _most_tired_outfield(t: int):
 	var worst = null
 	var worst_score = 1e9
 	for p in players:
@@ -1549,10 +1714,59 @@ func _make_substitution(t: int) -> void:
 		if sc < worst_score:
 			worst_score = sc
 			worst = p
+	return worst
+
+func _role_family(role: String) -> String:
+	# Formation slots use sided labels; bench entries use the generic position.
+	match role:
+		"RCB", "LCB": return "CB"
+		"RDM", "LDM": return "CDM"
+		"RWB", "LWB": return "RB"
+	return role
+
+func _pick_bench(t: int, want_role: String, for_gk: bool) -> Dictionary:
+	var on_field := {}
+	for p in players:
+		if p.team == t:
+			on_field[p.name] = true
+	var fallback := {}
+	var want: String = _role_family(want_role)
+	for b in teams[t]["data"]["bench"]:
+		if on_field.has(b["name"]):
+			continue
+		# Keepers only come on for a keeper; outfield subs never take the gloves.
+		if (b["role"] == "GK") != for_gk:
+			continue
+		if _role_family(b["role"]) == want:
+			return b
+		if fallback.is_empty():
+			fallback = b
+	return fallback
+
+func _make_substitution(t: int, for_gk: bool = false) -> bool:
+	var worst = null
+	if for_gk:
+		for p in players:
+			if p.team == t and p.is_gk and p.sent_off:
+				worst = p
+				break
+	else:
+		worst = _most_tired_outfield(t)
 	if worst == null:
-		teams[t]["subs_made"] += 1
-		return
+		# No eligible body: bank the scheduled sub so we don't retry every tick.
+		if not for_gk:
+			teams[t]["subs_made"] += 1
+		return false
+	var candidate: Dictionary = _pick_bench(t, worst.role, for_gk)
+	if candidate.is_empty():
+		if not for_gk:
+			teams[t]["subs_made"] += 1
+		return false
 	var np = _make_player(candidate, t, 200 + t * 40 + teams[t]["subs_made"])
+	# The substitute fills the slot of the player he replaces, not his own.
+	np.role = worst.role
+	np.is_gk = worst.is_gk
+	np.base = worst.base
 	np.pos = worst.pos
 	np.target = worst.target
 	np.stamina = 1.0
@@ -1564,8 +1778,10 @@ func _make_substitution(t: int) -> void:
 		ball.owner_id = np.id
 		ball.last_touch_id = np.id
 	teams[t]["subs_made"] += 1
-	_emit("substitution", "Substitution, %s: %s replaces %s." % [teams[t]["data"]["short"], np.name, worst.name], t, np)
+	teams[t]["subs_left"] -= 1
+	_emit("substitution", Commentary.substitution(rng, teams[t]["data"]["short"], np.name, worst.name), t, np)
 	_add_involvement(np, "sub", "On for %s" % worst.name, np.pos)
+	return true
 
 # --------------------------------------------------------------- snapshots --
 
@@ -1591,11 +1807,13 @@ func to_dict() -> Dictionary:
 			"owner_id": ball.owner_id, "last_touch_id": ball.last_touch_id,
 			"last_touch_team": ball.last_touch_team, "last_kick_id": ball.last_kick_id,
 			"assist_id": ball.assist_id, "assist_time": ball.assist_time,
-			"shot_team": ball.shot_team, "shot_time": ball.shot_time, "shot_saved": ball.shot_saved, "loose_t": ball.loose_t},
+			"shot_team": ball.shot_team, "shot_time": ball.shot_time, "shot_saved": ball.shot_saved, "loose_t": ball.loose_t,
+			"shot_xg": ball.shot_xg},
 		"players": ps, "stats": stats.duplicate(true), "events": events.duplicate(true),
 		"ev_seq": ev_seq, "sim_tick": sim_tick, "goal_timer": goal_timer,
 		"last_goal": last_goal.duplicate(true), "rng": rng.state, "dirs": [teams[0]["dir"], teams[1]["dir"]],
-		"subs": [teams[0]["subs_made"], teams[1]["subs_made"]], "finished": finished,
+		"subs": [teams[0]["subs_made"], teams[1]["subs_made"]],
+		"subs_left": [teams[0]["subs_left"], teams[1]["subs_left"]], "finished": finished,
 		"stoppage_events": stoppage_events, "kickoff_team": kickoff_team,
 	}
 
@@ -1626,6 +1844,7 @@ func from_dict(d: Dictionary) -> void:
 	ball.shot_team = b.get("shot_team", -1)
 	ball.shot_time = b.get("shot_time", -10.0)
 	ball.shot_saved = b.get("shot_saved", false)
+	ball.shot_xg = b.get("shot_xg", 0.0)
 	ball.loose_t = b.get("loose_t", 0.0)
 	var old_trails := {}
 	for q in players:
@@ -1679,6 +1898,9 @@ func from_dict(d: Dictionary) -> void:
 	teams[1]["dir"] = d["dirs"][1]
 	teams[0]["subs_made"] = d["subs"][0]
 	teams[1]["subs_made"] = d["subs"][1]
+	var sl: Array = d.get("subs_left", [5, 5])
+	teams[0]["subs_left"] = sl[0]
+	teams[1]["subs_left"] = sl[1]
 	finished = d["finished"]
 	stoppage_events = d["stoppage_events"]
 	kickoff_team = d["kickoff_team"]

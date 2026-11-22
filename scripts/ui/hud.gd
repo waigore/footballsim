@@ -14,6 +14,16 @@ var mouse := Vector2.ZERO
 var hover_button := -1
 var panel_cache := {}
 
+# Commentary ticker state: the newest event owns the panel for a few real
+# seconds, then a live description of the pitch takes over. Both come straight
+# from the engine, so a replay always narrates what is on screen.
+var comm_text := ""
+var comm_label := ""
+var comm_minute := 0
+var comm_hold := 0.0
+var comm_ev_id := -1
+var last_engine_clock := -1.0
+
 const C_PANEL := Color(0.035, 0.055, 0.070, 0.94)
 const C_PANEL_LIGHT := Color(0.075, 0.105, 0.125, 0.94)
 const C_BORDER := Color(1, 1, 1, 0.085)
@@ -27,7 +37,8 @@ func _ready() -> void:
 	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
 	f_body = load("res://fonts/Inter-Regular.ttf")
 
-func _process(_d: float) -> void:
+func _process(d: float) -> void:
+	_tick_commentary(d)
 	queue_redraw()
 
 func _style(c: Color, r: int = 10, bc: Color = C_BORDER, bw: int = 1) -> StyleBoxFlat:
@@ -64,6 +75,7 @@ func text_r(right_x: float, y: float, s: String, size: int, color: Color = C_TEX
 func _draw() -> void:
 	if game == null or engine == null:
 		return
+	buttons.clear()
 	var vp := get_viewport().get_visible_rect().size
 	_draw_world_labels(vp)
 	_draw_top(vp)
@@ -101,8 +113,11 @@ func _draw_world_labels(vp: Vector2) -> void:
 		var ns: int = clampi(int(r * 0.95), 10, 24)
 		var nw: float = f_bold.get_string_size(num, HORIZONTAL_ALIGNMENT_LEFT, -1, ns).x
 		var ncol: Color = Color(1, 1, 1, 0.96) if p.team == 0 else Color(0.08, 0.12, 0.16, 0.96)
+		var kit: Dictionary = engine.teams[p.team].get("kit", {})
 		if p.is_gk:
-			ncol = Color(1, 1, 1, 0.96)
+			ncol = Kits.ink(engine.teams[p.team]["data"]["gk_color"])
+		elif not kit.is_empty():
+			ncol = Kits.ink(kit.get("shirt", engine.teams[p.team]["data"]["color"]))
 		text(Vector2(sp.x - nw * 0.5, sp.y + ns * 0.36), num, ns, ncol, f_bold, 2, Color(0, 0, 0, 0.35))
 		# surnames
 		if show_names and near and p.id != game.focus_id:
@@ -151,8 +166,8 @@ func _draw_top(vp: Vector2) -> void:
 	var bar := Rect2(x + 18, y + h + 8, w - 36, 5)
 	draw_rect(bar, Color(1, 1, 1, 0.08))
 	var split: float = bar.size.x * pos.x / 100.0
-	draw_rect(Rect2(bar.position, Vector2(split, bar.size.y)), engine.teams[0]["data"]["color"])
-	draw_rect(Rect2(bar.position + Vector2(split, 0), Vector2(bar.size.x - split, bar.size.y)), engine.teams[1]["data"]["color"])
+	draw_rect(Rect2(bar.position, Vector2(split, bar.size.y)), engine.kit_color(0))
+	draw_rect(Rect2(bar.position + Vector2(split, 0), Vector2(bar.size.x - split, bar.size.y)), engine.kit_color(1))
 	if game.mode == "highlights" and game.fast_mode and not game.paused and game.match_time > 9.0:
 		var sw := 226.0
 		var sx := vp.x * 0.5 - sw * 0.5
@@ -174,16 +189,36 @@ func _badge(r: Rect2, t: int) -> void:
 	draw_rect(Rect2(r.position.x + 3, r.position.y + 3, r.size.x - 6, 10), d["color"].lightened(0.10))
 	var code: String = d["abbr"]
 	var w: float = f_bold.get_string_size(code, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
-	var col: Color = Color(1, 1, 1) if t == 0 else Color(0.06, 0.10, 0.16)
+	var col: Color = Kits.ink(d["color"].lightened(0.10))
 	text(Vector2(r.position.x + r.size.x * 0.5 - w * 0.5, r.position.y + r.size.y * 0.62), code, 17, col, f_bold)
 
 func _draw_meta(vp: Vector2) -> void:
 	var x := 24.0
 	var y := 24.0
-	rect(C_PANEL, Rect2(x, y, 286, 54), 10, Color(1, 1, 1, 0.07))
+	rect(C_PANEL, Rect2(x, y, 286, 78), 10, Color(1, 1, 1, 0.07))
 	draw_rect(Rect2(x + 1, y + 12, 3, 30), C_GOLD)
-	text(Vector2(x + 14, y + 23), "OLD TRAFFORD  ·  MANCHESTER", 13, C_TEXT, f_bold)
-	text(Vector2(x + 14, y + 40), "PREMIER LEAGUE  ·  ATT. 74,197  ·  REF. M. OLIVER", 9, C_DIM, f_med)
+	var home: Dictionary = engine.teams[0]["data"]
+	var venue := str(home.get("stadium", "")).to_upper()
+	var city := str(home.get("city", "")).to_upper()
+	text(Vector2(x + 14, y + 23), "%s  ·  %s" % [venue, city], 13, C_TEXT, f_bold)
+	text(Vector2(x + 14, y + 40), "PREMIER LEAGUE  ·  ATT. %s" % _thousands(int(home.get("capacity", 0))), 9, C_DIM, f_med)
+	var btn := Rect2(x + 12, y + 50, 262, 20)
+	var hovered := btn.has_point(mouse)
+	rect(C_PANEL_LIGHT if hovered else Color(0.05, 0.07, 0.09, 0.92), btn, 5, Color(1, 1, 1, 0.12 if hovered else 0.05))
+	text(Vector2(x + 20, y + 64), "CHANGE TEAMS", 10, C_TEXT if hovered else C_DIM, f_bold)
+	text_r(x + 266, y + 64, "T", 9, C_GOLD, f_bold)
+	_add_button("teams", btn, "CHANGE TEAMS", "T")
+
+func _thousands(n: int) -> String:
+	var s := str(n)
+	var out := ""
+	var c := 0
+	for i in range(s.length() - 1, -1, -1):
+		out = s[i] + out
+		c += 1
+		if c % 3 == 0 and i > 0:
+			out = "," + out
+	return out
 
 # ------------------------------------------------------------------ stats ----
 
@@ -191,10 +226,14 @@ func _draw_stats(vp: Vector2) -> void:
 	var w := 300.0
 	var x := vp.x - 24.0 - w
 	var y := 24.0
+	var col_home := x + w * 0.40
+	var col_away := x + w * 0.72
 	rect(C_PANEL, Rect2(x, y, w, 132), 10, Color(1, 1, 1, 0.07))
 	text(Vector2(x + 14, y + 21), "MATCH STATS", 11, C_DIM, f_bold)
-	text_r(x + w - 14, y + 21, engine.teams[1]["data"]["abbr"], 12, engine.teams[1]["data"]["color"].lightened(0.35), f_bold)
-	text_r(x + w * 0.66, y + 21, engine.teams[0]["data"]["abbr"], 12, engine.teams[0]["data"]["color"].lightened(0.35), f_bold)
+	# Team abbreviations sit centred on the value columns below them.
+	text_c(col_home, y + 21, engine.teams[0]["data"]["abbr"], 12, engine.teams[0]["data"]["color"].lightened(0.35), f_bold)
+	text_c(col_away, y + 21, engine.teams[1]["data"]["abbr"], 12, engine.teams[1]["data"]["color"].lightened(0.35), f_bold)
+	draw_line(Vector2(x + 14, y + 28), Vector2(x + w - 14, y + 28), Color(1, 1, 1, 0.07), 1)
 	var s0: Dictionary = engine.stats[0]
 	var s1: Dictionary = engine.stats[1]
 	var rows := [
@@ -204,11 +243,11 @@ func _draw_stats(vp: Vector2) -> void:
 		["CORNERS", str(s0["corners"]), str(s1["corners"])],
 		["FOULS", str(s0["fouls"]), str(s1["fouls"])],
 	]
-	var yy := y + 40.0
+	var yy := y + 45.0
 	for row in rows:
 		text(Vector2(x + 14, yy), str(row[0]), 10, C_DIM, f_med)
-		text_c(x + w * 0.36, yy, str(row[1]), 15, C_TEXT, f_bold)
-		text_c(x + w * 0.64, yy, str(row[2]), 15, C_TEXT, f_bold)
+		text_c(col_home, yy, str(row[1]), 15, C_TEXT, f_bold)
+		text_c(col_away, yy, str(row[2]), 15, C_TEXT, f_bold)
 		draw_line(Vector2(x + 14, yy + 5), Vector2(x + w - 14, yy + 5), Color(1, 1, 1, 0.05), 1)
 		yy += 18.0
 
@@ -218,7 +257,6 @@ func _add_button(id: String, r: Rect2, label: String, hint: String) -> void:
 	buttons.append({"id": id, "rect": r, "label": label, "hint": hint})
 
 func _draw_controls(vp: Vector2) -> void:
-	buttons.clear()
 	var bw := 108.0
 	var gap := 6.0
 	var total := bw * 6 + gap * 5
@@ -263,10 +301,63 @@ func button_at(p: Vector2) -> String:
 
 # ---------------------------------------------------------------- ticker ----
 
-func _latest_event() -> Dictionary:
-	if engine.events.is_empty():
-		return {}
-	return engine.events[engine.events.size() - 1]
+# Commentary freshness per event type, in real seconds.
+func _commentary_hold(kind: String) -> float:
+	var h := 3.2
+	match kind:
+		"GOAL":
+			h = 5.5
+		"SAVE", "SHOT", "HEADER", "BLOCK", "PENALTY", "PENALTY_TAKEN":
+			h = 4.2
+		"CARD", "FOUL", "OFFSIDE":
+			h = 3.6
+		"CLEARANCE", "CROSS":
+			h = 2.6
+	if game != null and game.mode == "highlights" and game.fast_mode:
+		h *= 0.55
+	return h
+
+## Keep the ticker honest: narrate the newest event while it is fresh, then
+## describe the actual pitch state. A rewind (highlight replay) refreshes the
+## cue immediately instead of leaving a future event on screen.
+func _tick_commentary(d: float) -> void:
+	if engine == null or game == null:
+		return
+	if game.paused:
+		return
+	var evs: Array = engine.events
+	if evs.is_empty():
+		# Fresh match / restart: forget the previous fixture's lines.
+		comm_text = ""
+		comm_label = ""
+		comm_ev_id = -1
+		last_engine_clock = -1.0
+		return
+	comm_hold = maxf(0.0, comm_hold - d)
+	var now: float = float(engine.clock)
+	var rewound: bool = now < last_engine_clock - 0.75
+	last_engine_clock = now
+	var ev: Dictionary = evs[evs.size() - 1]
+	var eid: int = int(ev.get("id", -1))
+	if eid != comm_ev_id or rewound:
+		comm_ev_id = eid
+		comm_label = str(ev.get("type", "")).to_upper().replace("_", " ")
+		comm_text = str(ev.get("text", ""))
+		comm_minute = int(ev.get("minute", 0))
+		comm_hold = _commentary_hold(comm_label)
+	if comm_hold <= 0.0 or comm_text == "":
+		comm_label = "LIVE"
+		comm_text = Commentary.live(engine)
+		comm_minute = int(engine.minute_of(engine.clock))
+
+func _fit_line(s: String, max_chars: int = 90) -> String:
+	if s.length() <= max_chars:
+		return s
+	var cut := s.substr(0, max_chars)
+	var space := cut.rfind(" ")
+	if space > max_chars - 18:
+		cut = cut.substr(0, space)
+	return cut + "…"
 
 func _draw_commentary(vp: Vector2) -> void:
 	var w := 620.0
@@ -275,16 +366,18 @@ func _draw_commentary(vp: Vector2) -> void:
 	var y := vp.y - 72.0
 	rect(C_PANEL, Rect2(x, y, w, h), 10, Color(1, 1, 1, 0.07))
 	draw_rect(Rect2(x + 1, y + 8, 3, h - 16), C_GOLD)
-	var ev := _latest_event()
-	if ev.is_empty():
-		text(Vector2(x + 16, y + 24), "OLD TRAFFORD IS READY", 13, C_TEXT, f_bold)
-		text(Vector2(x + 16, y + 40), "Manchester United v Manchester City", 10, C_DIM, f_med)
+	if engine.events.is_empty():
+		var home: Dictionary = engine.teams[0]["data"]
+		var away: Dictionary = engine.teams[1]["data"]
+		text(Vector2(x + 16, y + 24), "%s IS READY" % str(home.get("stadium", "THE GROUND")).to_upper(), 13, C_TEXT, f_bold)
+		text(Vector2(x + 16, y + 40), "%s v %s" % [home["name"], away["name"]], 10, C_DIM, f_med)
 		return
-	text(Vector2(x + 16, y + 21), "%d'  %s" % [int(ev.get("minute", 0)), str(ev.get("type", "")).to_upper()], 10, C_GOLD, f_bold)
-	var line: String = str(ev.get("text", ""))
-	if line.length() > 92:
-		line = line.substr(0, 90) + "…"
-	text(Vector2(x + 16, y + 39), line, 13, C_TEXT, f_med)
+	var label: String = comm_label
+	if game.in_highlight:
+		label = "◀ " + label
+	var col := C_GOLD if comm_label == "GOAL" else C_TEXT
+	text(Vector2(x + 16, y + 21), "%d'  %s" % [comm_minute, label], 10, C_GOLD, f_bold)
+	text(Vector2(x + 16, y + 39), _fit_line(comm_text), 13, col, f_med)
 
 func _draw_status(vp: Vector2) -> void:
 	var x := vp.x - 24.0 - 300.0
@@ -440,7 +533,7 @@ func _draw_event_banners(vp: Vector2) -> void:
 			text(Vector2(x + 200, y + 48), str(gk.get("scorer", "")), 22, Color(1, 1, 1), f_bold)
 			var team_name: String = engine.teams[t]["data"]["name"].to_upper()
 			text(Vector2(x + 200, y + 72), "%s  ·  %d'" % [team_name, int(gk.get("minute", 0))], 12, Color(0.8, 0.85, 0.88), f_med)
-			text(Vector2(x + 200, y + 98), "MAN UNITED %d  –  %d MAN CITY" % [engine.score[0], engine.score[1]], 14, C_GOLD, f_bold)
+			text(Vector2(x + 200, y + 98), "%s %d  –  %d %s" % [engine.teams[0]["data"]["abbr"], engine.score[0], engine.score[1], engine.teams[1]["data"]["abbr"]], 14, C_GOLD, f_bold)
 	if engine.phase == "half_time" or engine.phase == "full_time":
 		var bw2 := 460.0
 		var bh2 := 190.0
@@ -450,7 +543,7 @@ func _draw_event_banners(vp: Vector2) -> void:
 		var title := "HALF TIME" if engine.phase == "half_time" else "FULL TIME"
 		text_c(vp.x * 0.5, y2 + 48, title, 30, C_GOLD, f_bold)
 		text_c(vp.x * 0.5, y2 + 104, "%d  –  %d" % [engine.score[0], engine.score[1]], 48, C_TEXT, f_bold)
-		text_c(vp.x * 0.5, y2 + 132, "MAN UNITED  ·  MAN CITY", 11, C_DIM, f_med)
+		text_c(vp.x * 0.5, y2 + 132, "%s  ·  %s" % [engine.teams[0]["data"]["abbr"], engine.teams[1]["data"]["abbr"]], 11, C_DIM, f_med)
 		var sub := "SECOND HALF STARTS SHORTLY" if engine.phase == "half_time" else "PRESS R TO PLAY AGAIN"
 		text_c(vp.x * 0.5, y2 + 168, sub, 10, C_DIM, f_med)
 
@@ -468,13 +561,14 @@ func _draw_intro(vp: Vector2) -> void:
 	rect(bg, Rect2(x, y, w, h), 10, Color(1, 1, 1, 0.10 * a))
 	draw_rect(Rect2(x + 1, y + 1, 6, h - 2), Color(engine.teams[0]["data"]["color"].r, engine.teams[0]["data"]["color"].g, engine.teams[0]["data"]["color"].b, a))
 	draw_rect(Rect2(x + w - 7, y + 1, 6, h - 2), Color(engine.teams[1]["data"]["color"].r, engine.teams[1]["data"]["color"].g, engine.teams[1]["data"]["color"].b, a))
-	text(Vector2(x + 22, y + 26), "PREMIER LEAGUE  ·  OLD TRAFFORD  ·  MANCHESTER", 11, Color(C_GOLD.r, C_GOLD.g, C_GOLD.b, a), f_bold)
-	text(Vector2(x + 22, y + 56), "MANCHESTER UNITED", 26, Color(C_TEXT.r, C_TEXT.g, C_TEXT.b, a), f_bold)
-	var vw: float = f_bold.get_string_size("v", HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	var home: Dictionary = engine.teams[0]["data"]
+	var away: Dictionary = engine.teams[1]["data"]
+	text(Vector2(x + 22, y + 26), "PREMIER LEAGUE  ·  %s  ·  %s" % [str(home.get("stadium", "")).to_upper(), str(home.get("city", "")).to_upper()], 11, Color(C_GOLD.r, C_GOLD.g, C_GOLD.b, a), f_bold)
+	text(Vector2(x + 22, y + 56), str(home["name"]).to_upper(), 26, Color(C_TEXT.r, C_TEXT.g, C_TEXT.b, a), f_bold)
 	text_c(x + w * 0.5, y + 54, "v", 16, Color(C_DIM.r, C_DIM.g, C_DIM.b, a), f_med)
-	text_r(x + w - 22, y + 56, "MANCHESTER CITY", 26, Color(C_TEXT.r, C_TEXT.g, C_TEXT.b, a), f_bold)
-	text(Vector2(x + 22, y + 78), "4-2-3-1  ·  R. AMORIM", 10, Color(C_DIM.r, C_DIM.g, C_DIM.b, a), f_med)
-	text_r(x + w - 22, y + 78, "4-2-3-1  ·  P. GUARDIOLA", 10, Color(C_DIM.r, C_DIM.g, C_DIM.b, a), f_med)
+	text_r(x + w - 22, y + 56, str(away["name"]).to_upper(), 26, Color(C_TEXT.r, C_TEXT.g, C_TEXT.b, a), f_bold)
+	text(Vector2(x + 22, y + 78), "%s  ·  %s" % [home["formation"], str(home["manager"]).to_upper()], 10, Color(C_DIM.r, C_DIM.g, C_DIM.b, a), f_med)
+	text_r(x + w - 22, y + 78, "%s  ·  %s" % [away["formation"], str(away["manager"]).to_upper()], 10, Color(C_DIM.r, C_DIM.g, C_DIM.b, a), f_med)
 
 func _draw_paused(vp: Vector2) -> void:
 	if not game.paused:

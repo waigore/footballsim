@@ -13,6 +13,7 @@ var pitch
 var actors
 var cam: Camera2D
 var hud
+var hud_layer: CanvasLayer
 
 var mode := "highlights"
 var paused := false
@@ -51,11 +52,22 @@ var sfx_streams := {}
 var batch_abort := false
 var hover_force := -1
 
+var home_id := "MUN"
+var away_id := "MCI"
+var select_open := false
+var selector = null
+var sel_layer: CanvasLayer
+var fixture_arg_given := false
+
 func _ready() -> void:
 	build_scene()
 	setup_audio()
+	_parse_fixture_args()
 	new_match(seeded)
 	_parse_capture_args()
+	_build_selector()
+	if not fixture_arg_given:
+		open_select()
 
 func setup_audio() -> void:
 	crowd = AudioStreamPlayer.new()
@@ -104,7 +116,7 @@ func build_scene() -> void:
 	cam.enabled = true
 	arena.add_child(cam)
 	cam.make_current()
-	var hud_layer := CanvasLayer.new()
+	hud_layer = CanvasLayer.new()
 	hud_layer.layer = 10
 	add_child(hud_layer)
 	hud = Control.new()
@@ -121,7 +133,7 @@ func new_match(seed: int) -> void:
 		engine.event_fired.disconnect(_on_engine_event)
 	if engine != null and engine.ball_kicked.is_connected(_on_ball_kicked):
 		engine.ball_kicked.disconnect(_on_ball_kicked)
-	engine = MatchEngine.new(seed)
+	engine = MatchEngine.new(seed, home_id, away_id)
 	engine.verbose = false
 	engine.event_fired.connect(_on_engine_event)
 	engine.ball_kicked.connect(_on_ball_kicked)
@@ -155,6 +167,69 @@ func _recalc_zoom() -> void:
 	if cam != null:
 		cam.zoom = Vector2(base_zoom * zoom_scale, base_zoom * zoom_scale)
 
+# --------------------------------------------------------------- fixture ----
+
+func _build_selector() -> void:
+	if selector != null:
+		return
+	sel_layer = CanvasLayer.new()
+	sel_layer.layer = 20
+	add_child(sel_layer)
+	selector = Control.new()
+	selector.set_script(load("res://scripts/ui/team_select.gd"))
+	selector.set_anchors_preset(Control.PRESET_FULL_RECT)
+	selector.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sel_layer.add_child(selector)
+	selector.confirmed.connect(_on_fixture_confirmed)
+	selector.cancelled.connect(_close_select)
+	sel_layer.visible = false
+
+func open_select() -> void:
+	if selector == null:
+		return
+	select_open = true
+	paused = true
+	selector.setup(home_id, away_id)
+	if hud_layer != null:
+		hud_layer.visible = false
+	sel_layer.visible = true
+	selector.visible = true
+
+func _close_select() -> void:
+	select_open = false
+	if sel_layer != null:
+		sel_layer.visible = false
+	if hud_layer != null:
+		hud_layer.visible = true
+	paused = false
+
+func _on_fixture_confirmed(h: String, a: String) -> void:
+	home_id = h
+	away_id = a
+	select_open = false
+	if sel_layer != null:
+		sel_layer.visible = false
+	if hud_layer != null:
+		hud_layer.visible = true
+	seeded += randi_range(1, 9999)
+	new_match(seeded)
+
+func _parse_fixture_args() -> void:
+	var known: Array = TeamData.team_ids()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--seed="):
+			seeded = int(a.substr(7))
+		elif a.begins_with("--home="):
+			var h := a.substr(7).to_upper()
+			if known.has(h):
+				home_id = h
+				fixture_arg_given = true
+		elif a.begins_with("--away="):
+			var w := a.substr(7).to_upper()
+			if known.has(w):
+				away_id = w
+				fixture_arg_given = true
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		_recalc_zoom()
@@ -162,6 +237,20 @@ func _notification(what: int) -> void:
 # ------------------------------------------------------------------ input ----
 
 func _input(event: InputEvent) -> void:
+	if select_open:
+		if event is InputEventMouseMotion:
+			mouse = event.position
+			selector.mouse = event.position
+			Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if selector.button_at(event.position) != "" else Input.CURSOR_ARROW)
+		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			mouse = event.position
+			selector.mouse = event.position
+			var sid: String = selector.button_at(event.position)
+			if sid != "":
+				selector.click(sid)
+		elif event is InputEventKey and event.pressed and not event.echo:
+			selector.key(event.keycode)
+		return
 	if event is InputEventMouseMotion:
 		mouse = event.position
 		_update_hover()
@@ -198,6 +287,8 @@ func _input(event: InputEvent) -> void:
 				actors.names_visible = names_visible
 			KEY_C:
 				camera_follow = not camera_follow
+			KEY_T:
+				open_select()
 			KEY_ESCAPE:
 				if focus_id >= 0:
 					focus_id = -1
@@ -213,6 +304,7 @@ func _click(p: Vector2) -> void:
 			"mode": _toggle_mode()
 			"skip": _skip()
 			"camera": camera_follow = not camera_follow
+			"teams": open_select()
 			"restart": new_match(seeded + randi_range(0, 9999))
 		return
 	if hover_id >= 0:
@@ -272,6 +364,9 @@ func _process(delta: float) -> void:
 	elapsed_real += delta
 	match_time += delta
 	_capture_tick(delta)
+	if select_open:
+		_capture_screenshots()
+		return
 	var zm: float = zoom_scale * (2.6 if camera_follow else (1.10 if in_highlight else 1.0))
 	cam.zoom = cam.zoom.lerp(Vector2(base_zoom * zm, base_zoom * zm), clampf(delta * 3.0, 0.0, 1.0))
 	_update_camera(delta)
@@ -455,8 +550,6 @@ func _parse_capture_args() -> void:
 				shot_times.append(float(p))
 		elif a.begins_with("--quit="):
 			quit_after = float(a.substr(7))
-		elif a.begins_with("--seed="):
-			seeded = int(a.substr(7))
 		elif a.begins_with("--focus="):
 			focus_id = int(a.substr(8))
 			actors.focus_id = focus_id

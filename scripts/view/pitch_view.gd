@@ -1,6 +1,6 @@
 extends Node2D
 
-## Static broadcast set: Old Trafford seen from the main stand.
+## Static broadcast stadium set: a generic top-tier ground seen from the main stand.
 ## Everything is drawn in pitch metres; the camera maps metres to pixels.
 
 const L := 105.0

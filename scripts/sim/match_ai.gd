@@ -393,11 +393,12 @@ func _gk_shape(gk) -> void:
 				gk.target = target
 				return
 	# Otherwise hold a keeper's arc between ball and goal.
-	var depth = clampf(1.2 + dist * 0.075, 1.2, 6.0)
-	if dist > 55.0:
-		depth = 1.6
+	# Keeper's arc: come out to narrow the angle when the ball is close, drop
+	# back onto the line when it is far. (Depth must fall as ball distance rises.)
+	var depth = clampf(5.0 - dist * 0.065, 1.2, 4.0)
 	var guard: Vector2 = own + to_ball.normalized() * depth
-	guard.y = clampf(guard.y, own.y - 5.2, own.y + 5.2)
+	# Stay inside the posts so the far corner is not a free shot.
+	guard.y = clampf(guard.y, own.y - 2.8, own.y + 2.8)
 	guard.x = clampf(guard.x, minf(own.x, own.x + (2.0 if gk.team == 0 else -2.0)), maxf(own.x, own.x + (2.0 if gk.team == 0 else -2.0)))
 	# Sweeper-keeper: come and collect loose balls, and close down a clean run at goal.
 	if ball.owner_id < 0 and dist < 20.0 and ball.z < 1.2:
@@ -448,7 +449,7 @@ func _carrier_decide(p) -> void:
 	var final_third: bool = e.attacking_x(p.team, p.pos) > e.L * 0.66
 
 	# --- shoot -------------------------------------------------------------
-	if dist < 27.0 and angle > 0.04 and p.cooldown <= 0.0 and p.attr["sho"] >= 40.0 and e.clock - last_shot[p.team] > 3.0:
+	if dist < 27.0 and angle > 0.04 and p.cooldown <= 0.0 and p.attr["sho"] >= 40.0 and e.clock - last_shot[p.team] > 5.0:
 		var blocked: float = 0.0
 		var to_goal: Vector2 = (goal - p.pos).normalized()
 		for q in e.players:
@@ -471,17 +472,17 @@ func _carrier_decide(p) -> void:
 			shoot_score += 0.35
 		# A clear sight of goal: shoot. Strikers do not dribble this.
 		var facing_goal: float = p.facing.dot(to_goal)
-		var clear_chance: bool = dist < 15.0 and blocked < 0.10 and facing_goal > 0.25
-		if clear_chance and e.rng.randf() < 0.85:
+		var clear_chance: bool = dist < 12.5 and blocked < 0.10 and facing_goal > 0.25
+		if clear_chance and e.rng.randf() < 0.14:
 			_finish(p, dist)
 			return
-		if shoot_score > 1.75 + pressure * 0.18:
+		if shoot_score > 1.90 + pressure * 0.18:
 			_finish(p, dist)
 			return
 
 	# Long shot from space (low xG, but it keeps defences honest).
 	if dist >= 19.0 and dist < 30.0 and pressure < 0.55 and angle > 0.10 and p.cooldown <= 0.0:
-		if p.attr["sho"] > 68.0 and e.rng.randf() < 0.030:
+		if p.attr["sho"] > 68.0 and e.rng.randf() < 0.010:
 			var lside: float = 1.0 if e.rng.randf() < 0.5 else -1.0
 			e.shoot_ball(p, lside * e.rng.randf_range(1.8, 3.0), e.rng.randf_range(0.4, 1.8), 1.0)
 			return
@@ -497,6 +498,10 @@ func _carrier_decide(p) -> void:
 			continue
 		var d: float = p.pos.distance_to(q.pos)
 		if d < 2.6 or d > 48.0:
+			continue
+		# Avoid runners the referee would flag: better passers see the line
+		# better, so they skip the risky ball almost every time.
+		if e.would_be_offside(q) and e.rng.randf() < 0.55 + float(p.attr["pas"]) * 0.004:
 			continue
 		var flight: float = d / 14.0
 		var lead: Vector2 = q.vel * clampf(flight, 0.15, 1.1)
