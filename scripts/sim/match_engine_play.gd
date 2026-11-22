@@ -153,8 +153,9 @@ func _ball_interactions(dt: float) -> void:
 				return
 	else:
 		ball.loose_t += dt
+	var in_flight: bool = ball.shot_team >= 0 and ball.vel.length() > 14.0
 	for p in players:
-		if p.sent_off or p.cooldown > 0.0:
+		if p.sent_off or p.cooldown > 0.0 or in_flight:
 			continue
 		if p.is_gk:
 			continue
@@ -173,7 +174,13 @@ func _ball_interactions(dt: float) -> void:
 		if (teams[t]["dir"] == 1) == (ball.pos.x < L * 0.5):
 			def_team = t
 	var kgk = _gk_of(def_team)
-	if kgk != null and not kgk.sent_off and kgk.cooldown <= 0.0:
+	if kgk != null and not kgk.sent_off and kgk.cooldown <= 0.0 and ball.owner_id >= 0:
+		# Smother a carrier who has broken through: keepers dive on the ball.
+		var carried = by_id.get(ball.owner_id, null)
+		if carried != null and carried.team != kgk.team and kgk.pos.distance_to(carried.pos) < 2.1:
+			_gk_claim(kgk, kgk.pos.distance_to(ball.pos))
+			return
+	if kgk != null and not kgk.sent_off and kgk.cooldown <= 0.0 and ball.owner_id < 0 and not in_flight:
 		var gdx = absf(kgk.pos.x - ball.pos.x)
 		if gdx < 2.4:
 			var d = kgk.pos.distance_to(ball.pos)
@@ -197,6 +204,7 @@ func _ball_interactions(dt: float) -> void:
 				ball.vz = rng.randf_range(0.5, 2.0)
 				ball.z = maxf(ball.z, 0.3)
 				ball.shot_team = -1
+				ball.planned_goal = false
 				ball.last_touch_id = q.id
 				ball.last_touch_team = q.team
 				q.cooldown = 0.5
