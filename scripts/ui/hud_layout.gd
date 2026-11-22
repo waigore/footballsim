@@ -27,6 +27,10 @@ const CONTROL_COUNT_TOUCH := 7
 static func is_compact(vp: Vector2) -> bool:
 	return vp.y < COMPACT_H
 
+## One design unit per density point, measured against the short screen edge.
+static func scale_for(dp_height: float) -> float:
+	return clampf(DESIGN_H / maxf(dp_height, 1.0), 1.0, 2.6)
+
 ## Design-space multiplier for touch builds; 1.0 on desktop.
 static func overlay_scale() -> float:
 	if not (OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()):
@@ -35,8 +39,7 @@ static func overlay_scale() -> float:
 	var density: float = maxf(DisplayServer.screen_get_scale(), DisplayServer.screen_get_dpi() / 160.0)
 	if px.x <= 0 or px.y <= 0 or density <= 0.0:
 		return 1.0
-	var dp_h: float = float(mini(px.x, px.y)) / density
-	return clampf(DESIGN_H / maxf(dp_h, 1.0), 1.0, 2.6)
+	return scale_for(float(mini(px.x, px.y)) / density)
 
 ## Touch builds carry the teams door on the bar (the fixture panel that holds
 ## it on desktop is not drawn there), and phone metrics need it regardless

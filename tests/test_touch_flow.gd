@@ -180,3 +180,11 @@ func test_sheet_key_bindings_cover_every_arm() -> void:
 	assert_false(sheet.key(KEY_F1), "an unbound key should report unhandled")
 	sheet.key(KEY_ESCAPE)
 	assert_false(game.select_open, "escape did not close the sheet")
+
+func test_dev_flags_cover_the_rest_of_the_table() -> void:
+	var cap := DevCapture.new()
+	cap.parse(game, ["--follow", "--paused", "--fakegoal"])
+	assert_true(game.camera_follow, "--follow did not follow the ball")
+	assert_true(game.paused, "--paused did not pause")
+	assert_eq(game.engine.phase, "goal", "--fakegoal did not stage a goal")
+	assert_false(game.engine.last_goal.is_empty(), "--fakegoal left no scorer")

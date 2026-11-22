@@ -131,3 +131,11 @@ func test_pitch_fit_reads_the_touch_bar() -> void:
 	# An absurdly small viewport must still yield a usable floor, not a zero.
 	var tiny: Dictionary = HudLayout.pitch_fit(Vector2(640, 300), 1.0, true)
 	assert_gte(float(tiny["zoom"]), 3.0, "the fit floor collapsed")
+
+func test_the_scale_lands_a_phone_at_about_one_unit_per_point() -> void:
+	# 1080 px tall at 420 dpi is 411 dp: the emulator this was tuned on.
+	assert_almost_eq(HudLayout.scale_for(411.0), 2.19, 0.01, "a 411 dp screen did not land near 2.2")
+	assert_almost_eq(HudLayout.scale_for(360.0), 2.5, 0.01, "a 360 dp screen did not land at the cap of the range")
+	assert_almost_eq(HudLayout.scale_for(1080.0), 1.0, 0.01, "a desktop-height screen should not scale")
+	assert_almost_eq(HudLayout.scale_for(0.0), 2.6, 0.01, "a zero height should clamp, not divide")
+	assert_gte(HudLayout.scale_for(2400.0), 1.0, "the scale floor is below one unit per point")

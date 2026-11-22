@@ -189,3 +189,40 @@ func test_player_card_draws_in_both_layouts() -> void:
 	assert_lte(hud.card.rect_for(hud.design_vp()).size.y, 132.0, "phone card is not the strip layout")
 	assert_eq(hud.button_at(hud.card.rect_for(hud.design_vp()).position + Vector2(4, 4)), "", "the card is not a door")
 	hud.queue_free()
+
+func test_goal_and_half_time_banners_draw_on_a_phone() -> void:
+	var eng := MatchEngine.new(35)
+	var hud := _hud(eng)
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 411.0
+	hud.touch = true
+	eng.score = [2, 1]
+	eng.phase = "goal"
+	eng.last_goal = {"team": 0, "conceded_by": 1, "scorer": "B. Šeško", "minute": 63, "own_goal": false}
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_eq(eng.phase, "goal", "the goal banner case did not stage")
+	eng.phase = "half_time"
+	hud.queue_redraw()
+	await get_tree().process_frame
+	eng.phase = "full_time"
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_true(HudLayout.is_compact(hud.design_vp()), "banners were drawn in desktop metrics")
+	hud.queue_free()
+
+func test_zoomed_follow_view_draws_the_surname_labels() -> void:
+	var eng := MatchEngine.new(36)
+	var hud := _hud(eng)
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 411.0
+	hud.touch = true
+	hud.game.camera_follow = true
+	# The follow camera's zoom multiplier is what lifts labels above the gate.
+	var cam := Camera2D.new()
+	cam.zoom = Vector2(40.0, 40.0)
+	add_child(cam)
+	cam.make_current()
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_gt(hud.get_viewport().get_canvas_transform().get_scale().x, 14.0, "the follow zoom never reached the label gate")
+	cam.queue_free()
+	hud.queue_free()
