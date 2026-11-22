@@ -10,6 +10,8 @@ description: |-
   the user before noting a wiki follow-up when rules conflict or are silent.
   Use when the user reports a bug, defect, issue, broken behavior, or asks
   for a feature / enhancement, or when they ask to file/log a GitHub issue.
+  For large, multi-system, or ambiguous features, hand off to
+  capture-requirements instead.
 
   Examples:
     - "fleet move ignores range on Android" → bug interview → analysis → issue

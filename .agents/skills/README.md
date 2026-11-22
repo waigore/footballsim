@@ -8,6 +8,7 @@ Canonical skill bodies live here (one folder per skill). Native facades and auth
 |-------|---------|
 | [`audit-deferred-agent`](audit-deferred-agent/SKILL.md) | Audit deferred vs code/wiki; re-rank gaps; update `docs/deferred.md`; docs-only PR |
 | [`babysit-pr-agent`](babysit-pr-agent/SKILL.md) | Unblock one same-repo PR for squash auto-merge |
+| [`capture-requirements`](capture-requirements/SKILL.md) | Interactive multi-dimension feature capture; confirm; container + sub-issues via file-github-issue |
 | [`clarify-github-issue`](clarify-github-issue/SKILL.md) | Chat: accept/revise/reject one open `question` issue → `todo`+`bug`/`enhancement` or close |
 | [`elucidate-design-agent`](elucidate-design-agent/SKILL.md) | Find unclear wiki rules (P5-first); file `question` issue with precise design; stop |
 | [`file-github-issue`](file-github-issue/SKILL.md) | Interview bug/feature reports; duplicate check; analyze; file GitHub issue (`todo` + `bug`/`enhancement`) |
