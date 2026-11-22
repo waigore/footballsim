@@ -41,7 +41,9 @@ already ships, ranked so a human (or implement-feature) can pick next work.
 
 **Not this agent:** shipping a gap → [`implement-feature-agent`](../implement-feature-agent/SKILL.md).
 Wrong behavior of something already shipped → [`hunt-defects-agent`](../hunt-defects-agent/SKILL.md).
-Ambiguous wiki needing a design call → [`elucidate-design-agent`](../elucidate-design-agent/SKILL.md).
+Ambiguous wiki needing a design call → [`elucidate-design-agent`](../elucidate-design-agent/SKILL.md) (files a `question` issue only).
+
+Human-facing PR/docs text: plain English ([`../_shared/plain-english.md`](../_shared/plain-english.md)).
 
 Do **not** hand off or chain into implement-feature. Report the top gap; stop.
 

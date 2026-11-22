@@ -2,12 +2,13 @@
 name: resolve-issue-agent
 description: |-
   Autonomously take an open GitHub issue labelled todo, implement every task
-  on it (code and any wiki follow-ups), open fix PR(s), put screenshots/logs
-  under the wiki Evidence hierarchy, wait until fix PR(s) are merged, then
-  comment with proof + PR links, add resolved, and remove todo. One issue per
-  run. Ask the user only on true blockers. Safe for continuous/hourly dispatch
-  with no user message. Use when the user or automation asks to resolve a
-  todo issue, work an open todo, or run the resolve-issue agent.
+  on it (code and any wiki follow-ups, including Design Records when required),
+  open fix PR(s), put screenshots/logs under the wiki Evidence hierarchy, wait
+  until fix PR(s) are merged, then comment with proof + PR links, add resolved,
+  and remove todo. One issue per run. Ask the user only on true blockers. Safe
+  for continuous/hourly dispatch with no user message. Use when the user or
+  automation asks to resolve a todo issue, work an open todo, or run the
+  resolve-issue agent.
 
   Examples:
     - no target → pick an open todo by judgement; resolve or advance it; stop
