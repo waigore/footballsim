@@ -5,6 +5,7 @@ extends RefCounted
 ## All reads/writes go through the engine `e` (untyped to keep the dependency one-way).
 
 var e = null
+var pq = null
 var shape_timer = 0.0
 var mark_timer = 0.0
 var decide_cd = {}
@@ -17,6 +18,7 @@ var last_shot := [-10.0, -10.0]
 
 func _init(engine) -> void:
 	e = engine
+	pq = PitchQueries.new(engine)
 
 func on_kickoff() -> void:
 	pass_chain = [[], []]
@@ -120,7 +122,7 @@ func _attack_shape(p, fallback: Vector2) -> Vector2:
 	var target = fallback
 	# Strikers and wingers attack the space behind once the ball is advanced.
 	if Attrs.role_push(p.role) >= 0.7 and ax > e.L * 0.48:
-		var line = _offside_line(p.team)
+		var line = pq.offside_line(p.team)
 		var run_x = line - e.rng.randf_range(0.4, 2.4)
 		if my_ax < run_x:
 			var world_y = p.pos.y
@@ -143,7 +145,7 @@ func _attack_shape(p, fallback: Vector2) -> Vector2:
 		target.y = lerpf(target.y, 8.0 if p.role == "RW" else 60.0, 0.35)
 	# Respect the offside line unless the ball is already beyond it.
 	if Attrs.role_push(p.role) >= 0.6:
-		var line = _offside_line(p.team)
+		var line = pq.offside_line(p.team)
 		var cap = line - 0.35
 		var tx_att = e.attacking_x(p.team, target)
 		var ball_att = e.attacking_x(p.team, ball.pos)
@@ -206,7 +208,7 @@ func _defence_shape(p, fallback: Vector2) -> Vector2:
 	if dist_to_own < 26.0 and target.distance_to(own) > dist_to_own + 3.5:
 		target = own + (target - own).normalized() * (dist_to_own + 3.5)
 	if is_back:
-		var defensive_line: Vector2 = _defensive_line(p.team)
+		var defensive_line: Vector2 = pq.defensive_line(p.team)
 		var ax2: float = e.attacking_x(p.team, target)
 		var line_ax: float = e.attacking_x(p.team, defensive_line)
 		ax2 = clampf(ax2, line_ax - 11.0, line_ax + 1.5)
@@ -226,7 +228,7 @@ func _apply_pressing() -> void:
 		for p in e.players:
 			if p.team != t or p.sent_off or p.is_gk:
 				continue
-			var rt := _ball_reach_time(p)
+			var rt: float = pq.ball_reach_time(p)
 			if rt < best_t:
 				second_t = best_t
 				second = presser
@@ -248,7 +250,7 @@ func _apply_pressing() -> void:
 				target = owner.pos + owner.vel * 0.20
 				target += (e.own_goal_pos(t) - owner.pos).normalized() * 0.5
 			else:
-				target = _intercept_point(presser)
+				target = pq.intercept_point(presser)
 			target.x = clampf(target.x, 0.5, e.L - 0.5)
 			target.y = clampf(target.y, 0.5, e.W - 0.5)
 			presser.target = target
@@ -271,43 +273,13 @@ func _apply_pressing() -> void:
 			for p in e.players:
 				if p.team != t or p.sent_off or p.is_gk or p == presser or p == second:
 					continue
-				var rt: float = _ball_reach_time(p)
+				var rt: float = pq.ball_reach_time(p)
 				if rt < third_t:
 					third_t = rt
 					third = p
 			if third != null and third_t < 3.0:
 				third.target = e.ball.pos + e.ball.vel * 0.10
 				third.speed_scale = 1.0
-
-func _ball_reach_time(p) -> float:
-	var bp: Vector2 = e.ball.pos
-	var bv: Vector2 = e.ball.vel
-	var spd: float = Attrs.max_speed(p) * (0.72 + 0.28 * p.stamina)
-	var t := 0.0
-	while t < 3.6:
-		if p.pos.distance_to(bp) <= spd * t + 1.35:
-			return t
-		bp += bv * 0.12
-		var dec: float = 0.95 + 0.055 * bv.length()
-		bv = bv.move_toward(Vector2.ZERO, dec * 0.12)
-		t += 0.12
-	return 9.0
-
-func _intercept_point(p) -> Vector2:
-	var bp: Vector2 = e.ball.pos
-	var bv: Vector2 = e.ball.vel
-	var spd: float = Attrs.max_speed(p) * (0.72 + 0.28 * p.stamina)
-	var t := 0.0
-	var last := bp
-	while t < 3.6:
-		last = bp
-		if p.pos.distance_to(bp) <= spd * t + 1.35:
-			return bp
-		bp += bv * 0.12
-		var dec: float = 0.95 + 0.055 * bv.length()
-		bv = bv.move_toward(Vector2.ZERO, dec * 0.12)
-		t += 0.12
-	return last
 
 func _assign_marks() -> void:
 	for t in range(2):
@@ -337,37 +309,6 @@ func _assign_marks() -> void:
 					best = d
 			if best != null and bd < 26.0:
 				best.mark_id = a.id
-
-func _offside_line(t: int) -> float:
-	# Attacking-x of the second-last defender of the opposing team.
-	var xs = []
-	for q in e.players:
-		if q.team == t or q.sent_off:
-			continue
-		xs.append(e.attacking_x(t, q.pos))
-	xs.sort()
-	if xs.size() < 2:
-		return e.L * 0.85
-	return xs[xs.size() - 2]
-
-func _defensive_line(t: int) -> Vector2:
-	# World position of the deepest outfield defender (for line discipline).
-	var best = null
-	var bx = 1e9
-	for p in e.players:
-		if p.team != t or p.sent_off or p.is_gk:
-			continue
-		if not Attrs.is_defender(p.role):
-			continue
-		var ax = e.attacking_x(t, p.pos)
-		if ax < bx:
-			bx = ax
-			best = p
-	if best == null:
-		return e.to_world(t, Vector2(0.18, 0.5))
-	return best.pos
-
-# -------------------------------------------------------------- goalkeeper --
 
 func _gk_shape(gk) -> void:
 	var own: Vector2 = e.own_goal_pos(gk.team)
@@ -506,7 +447,7 @@ func _carrier_decide(p) -> void:
 		var flight: float = d / 14.0
 		var lead: Vector2 = q.vel * clampf(flight, 0.15, 1.1)
 		var pt: Vector2 = q.pos + lead
-		var lane: float = _lane_risk(p.pos, pt, p.team)
+		var lane: float = pq.lane_risk(p.pos, pt, p.team)
 		var open: float = minf(10.0, e.nearest_opponent_dist(q.pos, p.team))
 		var prog: float = (e.attacking_x(p.team, q.pos) - e.attacking_x(p.team, p.pos)) / 38.0
 		var dpen: float = maxf(0.0, d - 12.0) * 0.045
@@ -522,10 +463,10 @@ func _carrier_decide(p) -> void:
 			s += 0.38
 		# Through ball into space behind the defence (short and sharp, not a punt).
 		if prog > 0.18 and Attrs.role_push(q.role) > 0.6 and d < 24.0:
-			var space_behind: float = _space_behind(p.team, q)
+			var space_behind: float = pq.space_behind(p.team, q)
 			if space_behind > 4.0:
 				var thru: Vector2 = q.pos + Vector2(e.teams[p.team]["dir"] * clampf(space_behind * 0.5, 4.0, 9.0), q.vel.y * 0.15)
-				var tlane: float = _lane_risk(p.pos, thru, p.team)
+				var tlane: float = pq.lane_risk(p.pos, thru, p.team)
 				var ts: float = s + 0.20 - tlane * 1.2
 				if ts > best_s:
 					best_s = ts
@@ -553,7 +494,7 @@ func _carrier_decide(p) -> void:
 			best_loft = d > 30.0 or lane > 0.75
 
 	# --- dribble -----------------------------------------------------------
-	var space: float = _space_ahead(p)
+	var space: float = pq.space_ahead(p)
 	var drib_score: float = (p.attr["dri"] / 100.0) * 1.18 + minf(space, 14.0) * 0.085 - pressure * 0.58
 	drib_score += _urgency(p.team) * 0.55
 	if dist < 16.0:
@@ -651,41 +592,3 @@ func _finish(p, dist: float) -> void:
 	var aim_z: float = e.rng.randf_range(0.25, 1.5) if dist > 12.0 else e.rng.randf_range(0.2, 1.1)
 	var power: float = clampf(0.88 + dist * 0.005, 0.85, 1.06)
 	e.shoot_ball(p, aim_y, aim_z, power)
-
-func _lane_risk(from: Vector2, to: Vector2, team: int) -> float:
-	var seg = to - from
-	var dist = seg.length()
-	if dist < 0.01:
-		return 0.0
-	var dir = seg / dist
-	var risk = 0.0
-	for q in e.players:
-		if q.team == team or q.sent_off:
-			continue
-		var rel: Vector2 = q.pos - from
-		var along: float = rel.dot(dir)
-		if along < 0.4 or along > dist:
-			continue
-		var perp: float = absf(rel.cross(dir))
-		if perp < 2.6:
-			risk += (1.0 - perp / 2.6) * (1.0 - along / (dist + 1.0) * 0.35)
-	return clampf(risk, 0.0, 2.0)
-
-func _space_ahead(p) -> float:
-	var dir: Vector2 = (e.target_goal_pos(p.team) - p.pos).normalized()
-	var best = 18.0
-	for q in e.players:
-		if q.team == p.team or q.sent_off:
-			continue
-		var rel: Vector2 = q.pos - p.pos
-		var along: float = rel.dot(dir)
-		if along <= 0.0 or along > 20.0:
-			continue
-		var perp: float = absf(rel.cross(dir))
-		if perp < 5.0:
-			best = minf(best, along)
-	return best
-
-func _space_behind(team: int, q) -> float:
-	var line = _offside_line(team)
-	return maxf(0.0, line - e.attacking_x(team, q.pos))
