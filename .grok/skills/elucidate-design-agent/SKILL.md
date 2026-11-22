@@ -1,17 +1,17 @@
 ---
 name: elucidate-design-agent
 description: |-
-  Autonomously analyze Footballsim wiki (Game rules + AI) for unclear,
-  contradictory, or underspecified statements; elucidate a P5-first design
-  (other pillars accounted for); update wiki + Design Record + Design Changelog;
-  implement when code is affected; open one PR; stop. Ask the user only on true
-  blockers. Use when the user asks to elucidate design, clarify wiki gaps,
+  Autonomously analyze Footballsim wiki (Simulation rules + AI) for unclear,
+  contradictory, or underspecified statements; write a precise P5-first design
+  (other pillars accounted for); file one GitHub issue per theme with the
+  question label only — no wiki edits, no code, no PR. Ask the user only on
+  true blockers. Use when the user asks to elucidate design, clarify wiki gaps,
   resolve rules/AI ambiguity, P5 design climb, or run the elucidate-design agent.
 
   Examples:
-    - no target → judge related wiki gaps, record, wiki, implement, PR, stop
-    - cited theme → that theme only; batch related gaps; PR
-    - cross-page ambiguity → clarify, record, PR
+    - no target → judge related wiki gaps; file question issue; stop
+    - cited theme → that theme only; batch related gaps; file issue
+    - cross-page ambiguity → propose one design; file question issue
 ---
 
 # Elucidate design agent (facade)

@@ -118,6 +118,8 @@ Do not ask for mid-run approval of fixture shape or which slow suite to hit firs
 
 **Ask only on true blockers**, then stop: cannot run Godot/gd-tools; credentials/`gh` broken; coverage cannot stay ≥ 80% without the slow path and no alternative fixture exists; change would need secrets, force-push, or check bypass.
 
+PR text: plain English ([`../_shared/plain-english.md`](../_shared/plain-english.md)).
+
 ## Report
 
 Lead with the PR URL. State theme, before/after timings, coverage %, whether budgets hold.

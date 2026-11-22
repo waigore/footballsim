@@ -48,6 +48,8 @@ gh pr merge --auto --squash "$PR_URL"
 
 `--auto` waits for required checks. It does not merge early. Leave a `no-automerge` PR unarmed and say so. After your push, watch required checks to completion (`gh pr checks --watch`). Report success only when a fresh read shows the PR mergeable, up to date, required checks green, and auto-merge armed or explicitly held by `no-automerge` or draft.
 
+PR/issue comments: plain English ([`../_shared/plain-english.md`](../_shared/plain-english.md)).
+
 ## Report
 
 Lead with the PR URL and what blocked it. Then what you changed, check status, and whether auto-merge is armed, still running, or held (draft or `no-automerge`). If you stop short, say what you tried and what is still blocking.
