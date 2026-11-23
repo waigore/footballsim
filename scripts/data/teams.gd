@@ -137,18 +137,28 @@ static func formation_slot(team: Dictionary, role: String) -> Vector2:
 	return formation_slot_for(str(team.get("formation", "4-2-3-1")), role)
 
 ## Slot for a role in a named formation. Bench players brought on out of
-## position fall back to a sensible line.
+## position fall back to a sensible line. Block bodies (not `"CB": return ...`)
+## keep every arm on its own line so the coverage injector can place a tracker
+## inside the arm.
 static func formation_slot_for(formation: String, role: String) -> Vector2:
 	var f: Dictionary = slots(formation)
 	if f.has(role):
 		return f[role]
 	match role:
-		"CB": return Vector2(0.155, 0.5)
-		"CDM": return Vector2(0.33, 0.5)
-		"CM": return Vector2(0.36, 0.5)
-		"LM", "RM": return Vector2(0.6, 0.5)
-		"LW", "RW": return Vector2(0.6, 0.2)
-		"CAM": return Vector2(0.55, 0.5)
-		"ST": return Vector2(0.715, 0.5)
-		"GK": return Vector2(0.035, 0.5)
+		"CB":
+			return Vector2(0.155, 0.5)
+		"CDM":
+			return Vector2(0.33, 0.5)
+		"CM":
+			return Vector2(0.36, 0.5)
+		"LM", "RM":
+			return Vector2(0.6, 0.5)
+		"LW", "RW":
+			return Vector2(0.6, 0.2)
+		"CAM":
+			return Vector2(0.55, 0.5)
+		"ST":
+			return Vector2(0.715, 0.5)
+		"GK":
+			return Vector2(0.035, 0.5)
 	return Vector2(0.3, 0.5)

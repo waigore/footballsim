@@ -25,6 +25,7 @@ suites = [
 [domains.match_laws]
 suites = [
   "test_match_laws.gd",
+  "test_engine_rules.gd",
 ]
 
 [domains.restart]
@@ -65,6 +66,9 @@ suites = [
   "test_tactics_ai.gd",
   "test_managers.gd",
   "test_manager_subs.gd",
+  "test_attributes.gd",
+  "test_engine_contact.gd",
+  "test_engine_rules.gd",
 ]
 
 [domains.teams]
@@ -73,6 +77,7 @@ suites = [
   "test_kits.gd",
   "test_tactics.gd",
   "test_tactics_ai.gd",
+  "test_team_data.gd",
 ]
 
 # Lightest suite for tooling / project / addons / map edits.
