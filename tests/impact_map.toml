@@ -161,6 +161,10 @@ match = "scripts/sim/match_engine_core.gd*"
 domain = "match_engine"
 
 [[rules]]
+match = "scripts/sim/match_engine_pitch.gd*"
+domain = "match_engine"
+
+[[rules]]
 match = "scripts/sim/match_engine_presentation.gd*"
 domain = "match_engine"
 
@@ -295,6 +299,13 @@ domain = "hud_chrome"
 # SceneTree helper (not a GdTools suite); keep on poisson.
 [[rules]]
 match = "tests/check_poisson_agreement.gd*"
+domain = "poisson"
+
+# Tier-2 census drives (playtests/census): heavy full-match grids that must
+# never ride the PR tier-1 budget. Editing them re-runs the fast poisson
+# suite; the census itself runs in the tier-2 workflow only.
+[[rules]]
+match = "playtests/census/**"
 domain = "poisson"
 
 [[rules]]

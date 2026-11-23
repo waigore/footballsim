@@ -279,6 +279,7 @@ func _bring_on(t: int, off, for_gk: bool = false, at_half_time: bool = false, me
 	players[idx] = np
 	by_id.erase(off.id)
 	by_id[np.id] = np
+	_touch_squad()
 	if ball.owner_id == off.id:
 		ball.owner_id = np.id
 		ball.last_touch_id = np.id
@@ -329,6 +330,7 @@ func _injure(p) -> void:
 
 func _send_off_injured(p) -> void:
 	p.sent_off = true
+	_touch_squad()
 	p.vel = Vector2.ZERO
 	p.has_ball = false
 	if ball.owner_id == p.id:

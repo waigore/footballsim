@@ -354,16 +354,10 @@ func clear_ball(p, point: Vector2) -> void:
 func would_be_offside(receiver) -> bool:
 	var t: int = receiver.team
 	var ax_ball: float = attacking_x(t, ball.pos)
-	var ds := []
-	for q in players:
-		if q.team == t or q.sent_off:
-			continue
-		ds.append(attacking_x(t, q.pos))
-	if ds.size() < 2:
+	var xs := offside_xs(t)
+	if xs.size() < 2:
 		return false
-	ds.sort()
-	ds.reverse()
-	var line: float = ds[1]
+	var line: float = xs[1]
 	var ax: float = attacking_x(t, receiver.pos)
 	return ax > ax_ball + 0.35 and ax > L * 0.5 and ax > line + 0.45
 
@@ -372,13 +366,7 @@ func _mark_offside_at_pass(p) -> void:
 		return
 	var t: int = p.team
 	var ax_ball: float = attacking_x(t, ball.pos)
-	var defenders = []
-	for q in players:
-		if q.team == t or q.sent_off:
-			continue
-		defenders.append(attacking_x(t, q.pos))
-	defenders.sort()
-	defenders.reverse()
+	var defenders := offside_xs(t)
 	if defenders.size() < 2:
 		return
 	var line: float = defenders[1]

@@ -285,8 +285,10 @@ func from_dict(d: Dictionary) -> void:
 				tr = tr.slice(0, tr.size() - 9)
 			p.trail = tr
 		p.involvements = pd["involvements"].duplicate(true)
+		_fill_attr_cache(p)
 		players.append(p)
 		by_id[p.id] = p
+	_touch_squad()
 	stats = d["stats"].duplicate(true)
 	events = d["events"].duplicate(true)
 	ev_seq = d["ev_seq"]
