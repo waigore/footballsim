@@ -15,6 +15,7 @@ var ink := Color.WHITE
 var dim := Color.GRAY
 var touch := false
 var _bg := StyleBoxFlat.new()
+var _btn := StyleBoxFlat.new()
 
 func _init(panel: Color, accent: Color, text_col: Color, muted: Color) -> void:
 	panel_col = panel
@@ -25,6 +26,10 @@ func _init(panel: Color, accent: Color, text_col: Color, muted: Color) -> void:
 	_bg.set_corner_radius_all(12)
 	_bg.set_border_width_all(1)
 	_bg.border_color = Color(1, 1, 1, 0.10)
+	_btn.bg_color = Color(0.075, 0.105, 0.125, 0.98)
+	_btn.set_corner_radius_all(5)
+	_btn.set_border_width_all(1)
+	_btn.border_color = Color(0.96, 0.78, 0.30, 0.45)
 
 func player(engine, game):
 	if game.focus_id < 0 or engine == null:
@@ -42,6 +47,21 @@ func rect_for(vp: Vector2) -> Rect2:
 		var h: float = clampf(bottom - top, 96.0, 132.0)
 		return Rect2(vp.x - 12.0 - w, bottom - h, w, h)
 	return Rect2(vp.x - 12.0 - W, 176.0, W, H)
+
+## The "open the full profile" door. Read by the drawer and by hud.gd, which
+## turns it into a hit target for the encyclopedia.
+func profile_rect(vp: Vector2) -> Rect2:
+	var box := rect_for(vp)
+	if HudLayout.is_compact(vp):
+		return Rect2(box.position.x + box.size.x - 100.0, box.position.y + 47.0, 86.0, 16.0)
+	return Rect2(box.position.x + box.size.x - 118.0, box.position.y + box.size.y - 32.0, 104.0, 20.0)
+
+func _draw_profile(c: CanvasItem, r: Rect2, font: Font) -> void:
+	c.draw_style_box(_btn, r)
+	var label := "PROFILE  ›"
+	var size_px := 8 if r.size.y < 18.0 else 10
+	var w: float = font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
+	c.draw_string(font, Vector2(r.position.x + (r.size.x - w) * 0.5, r.position.y + r.size.y * 0.5 + float(size_px) * 0.36), label, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, gold)
 
 func draw(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, engine, game) -> void:
 	var p = player(engine, game)
@@ -96,7 +116,8 @@ func _draw_compact(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, eng
 		var nx: float = x + 22.0 + nw * float(i)
 		_label(c, Vector2(nx, y + 101), str(cells[i][0]), 8, dim, f_bold)
 		_label(c, Vector2(nx, y + 116), str(cells[i][1]), 14, ink, f_bold)
-	_label(c, Vector2(x + 22, y + h - 5), "TAP THE PITCH TO CLEAR", 8, dim, f_med)
+	_label(c, Vector2(x + 22, y + h - 6), "TAP THE PITCH TO CLEAR", 8, dim, f_med)
+	_draw_profile(c, profile_rect(vp), f_bold)
 
 # -------------------------------------------------------------- desktop ----
 
@@ -154,6 +175,7 @@ func _draw_column(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, engi
 		_label(c, Vector2(x + 40, ty), txt, 9, Color(0.84, 0.89, 0.91), f_med)
 	var hint := "TAP THE PITCH TO CLEAR" if touch else "CLICK PLAYER AGAIN TO CLEAR"
 	_label(c, Vector2(x + 14, y + h - 12), hint, 8, dim, f_med)
+	_draw_profile(c, profile_rect(vp), f_bold)
 
 func _attrs(p) -> Array:
 	if p.is_gk:
