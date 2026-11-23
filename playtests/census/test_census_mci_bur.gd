@@ -19,7 +19,7 @@ extends GdToolsTest
 const HOME := "MCI"
 const AWAY := "BUR"
 
-const N := 2          # matches on the fixed grid
+const N := 32         # matches on the fixed grid
 const SEED0 := 7000
 const STRIDE := 13
 const VAR_TOLERANCE := 0.10
