@@ -40,3 +40,12 @@ func update(delta: float) -> void:
 func apply(snap_zoom: bool) -> void:
 	if snap_zoom and game.cam != null:
 		game.cam.zoom = Vector2(game.base_zoom * game.zoom_scale, game.base_zoom * game.zoom_scale)
+
+## Wide-shot fit for the current viewport: pixels per metre, plus the metres the
+## pitch centre must move so it sits inside the HUD's vertical band.
+func fit() -> void:
+	var geo := HudLayout.pitch_fit(game.get_viewport_rect().size, game.hud_scale, game.touch)
+	game.base_zoom = clampf(float(geo["zoom"]), 3.0, 16.0)
+	game.pitch_shift = float(geo["offset"])
+	if game.cam != null:
+		game.cam.zoom = Vector2(game.base_zoom * game.zoom_scale, game.base_zoom * game.zoom_scale)

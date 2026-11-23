@@ -25,6 +25,8 @@ var ui_scale := 1.0
 var touch := false
 var mouse := Vector2(-1000, -1000)
 var buttons: Array = []
+## Opened from the main menu, so its way out is the menu rather than the match.
+var back_to_menu := false
 
 var f_bold: FontFile
 var f_med: FontFile
@@ -199,8 +201,10 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.015, 0.025, 0.032, 0.94))
 	draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
 	draw_rect(Rect2(0, vp.y - 3, vp.x, 3), Color(0, 0, 0, 0.5))
-	text_c(vp.x * 0.5, vp.y * 0.16, "PREMIER LEAGUE", 13, C_GOLD, f_bold)
-	text_c(vp.x * 0.5, vp.y * 0.235, "SELECT FIXTURE", 40, C_TEXT, f_bold)
+	UiChrome.sheet_header(self, vp, {"bold": f_bold, "med": f_med, "body": f_body}, "PREMIER LEAGUE · 20 CLUBS", "SELECT FIXTURE")
+	# The top corners belong to the league and menu doors, so the wordmark rides
+	# the centre of the header where nothing covers it.
+	UiChrome.wordmark_c(self, vp.x * 0.5, vp.y * (0.075 if vp.y < 620.0 else 0.105), 12, f_bold)
 
 	var card_w := minf(vp.x * 0.30, 460.0)
 	var card_h := minf(vp.y * 0.32, 250.0)
@@ -254,14 +258,14 @@ func _draw() -> void:
 		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 9, Color(0.96, 0.78, 0.30, 0.55), f_med)
 	else:
 		text_c(vp.x * 0.5, vp.y - 64, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 44, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   ESC  BACK", 10, C_DIM, f_med)
+		text_c(vp.x * 0.5, vp.y - 44, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   ESC  %s" % ("MENU" if back_to_menu else "BACK"), 10, C_DIM, f_med)
 		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 9, Color(0.96, 0.78, 0.30, 0.55), f_med)
 
 	# A touch build has no Escape key: the sheet needs a visible way out.
 	var back := back_rect(vp)
 	var back_hover := back.has_point(mouse)
 	rect(C_PANEL_LIGHT if back_hover else C_PANEL, back, 8, Color(1, 1, 1, 0.14 if back_hover else 0.07))
-	text_c(back.position.x + back.size.x * 0.5, back.position.y + back.size.y * 0.66, "‹  BACK", 13, C_TEXT if back_hover else C_DIM, f_bold)
+	text_c(back.position.x + back.size.x * 0.5, back.position.y + back.size.y * 0.66, "‹  MENU" if back_to_menu else "‹  BACK", 13, C_TEXT if back_hover else C_DIM, f_bold)
 	_add_button("back", back)
 
 	# Encyclopedia door: the whole league is one tap from the fixture sheet.

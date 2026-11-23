@@ -51,7 +51,7 @@ func _screen() -> Control:
 
 func test_the_phone_sheet_is_compact_and_scrolls() -> void:
 	assert_true(game.touch, "the forced phone scale should count as touch")
-	game.open_wiki(WikiModel.LEAGUE, "")
+	game.wiki_host.open_page(WikiModel.LEAGUE, "")
 	await get_tree().process_frame
 	var screen := _screen()
 	assert_true(screen.is_compact(), "the sheet did not read as compact")
@@ -64,7 +64,7 @@ func test_the_phone_sheet_is_compact_and_scrolls() -> void:
 
 func test_every_page_kind_draws() -> void:
 	for page in [[WikiModel.LEAGUE, ""], [WikiModel.TEAM, "MUN"], [WikiModel.PLAYER, "MUN-b-fernandes"], [WikiModel.PLAYER, "MUN-s-lammens"]]:
-		game.open_wiki(str(page[0]), str(page[1]))
+		game.wiki_host.open_page(str(page[0]), str(page[1]))
 		await get_tree().process_frame
 		var screen := _screen()
 		assert_gt(screen.body.rows().size(), 5, "%s laid out no rows" % str(page[0]))
@@ -75,7 +75,7 @@ func test_every_page_kind_draws() -> void:
 		game.wiki_host.close()
 
 func test_a_pointer_tap_opens_a_row() -> void:
-	game.open_wiki(WikiModel.LEAGUE, "")
+	game.wiki_host.open_page(WikiModel.LEAGUE, "")
 	await get_tree().process_frame
 	var screen := _screen()
 	var row: Dictionary = {}

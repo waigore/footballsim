@@ -60,6 +60,10 @@ var select_open := false
 var selector = null
 var sel_layer: CanvasLayer
 var fixture_arg_given := false
+## Menu shell: main menu, settings, quit confirm and the menu music.
+var menus: MenuHost = null
+var select_from_menu := false
+var match_started := false
 ## Encyclopedia sheet: league / club / player pages over the paused broadcast.
 var wiki_host: WikiHost = null
 ## A finished match is written to the cached seed exactly once.
@@ -72,18 +76,16 @@ func _ready() -> void:
 	new_match(seeded)
 	dev = DevCapture.new()
 	dev.parse(self)
-	_sync_overlay_scale()
-	_build_selector()
 	_build_wiki()
-	if not fixture_arg_given:
-		open_select()
+	_build_selector()
+	menus = MenuHost.new()
+	menus.attach(self)
+	_sync_overlay_scale()
+	menus.pose(dev)
 
 func setup_audio() -> void:
 	audio = MatchAudio.new(self)
 	audio.setup()
-
-func _on_ball_kicked(strength: float) -> void:
-	audio.ball_kicked(strength)
 
 func build_scene() -> void:
 	arena = Node2D.new()
@@ -110,10 +112,10 @@ func build_scene() -> void:
 	hud_layer.add_child(hud)
 	hud.game = self
 	touch = OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
-	_sync_overlay_scale()
-	_recalc_zoom()
-	actors.game = self
 	camera = MatchCamera.new(self)
+	_sync_overlay_scale()
+	camera.fit()
+	actors.game = self
 
 ## Handhelds read the overlay at roughly one density point per design unit: the
 ## layer is scaled up by HudLayout.overlay_scale() and every rect is derived
@@ -134,16 +136,16 @@ func _sync_overlay_scale() -> void:
 		sel_layer.transform = frame
 	if wiki_host != null:
 		wiki_host.sync_scale()
+	if menus != null:
+		menus.sync(frame, hud_scale, touch)
 
 func new_match(seed: int) -> void:
 	if engine != null and engine.event_fired.is_connected(_on_engine_event):
 		engine.event_fired.disconnect(_on_engine_event)
-	if engine != null and engine.ball_kicked.is_connected(_on_ball_kicked):
-		engine.ball_kicked.disconnect(_on_ball_kicked)
 	engine = MatchEngine.new(seed, home_id, away_id)
 	engine.verbose = false
 	engine.event_fired.connect(_on_engine_event)
-	engine.ball_kicked.connect(_on_ball_kicked)
+	engine.ball_kicked.connect(audio.ball_kicked)
 	actors.engine = engine
 	actors.ball_trail.clear()
 	hud.engine = engine
@@ -168,13 +170,6 @@ func new_match(seed: int) -> void:
 	result_recorded = false
 	_snapshot()
 
-func _recalc_zoom() -> void:
-	var geo := HudLayout.pitch_fit(get_viewport_rect().size, hud_scale, touch)
-	base_zoom = clampf(float(geo["zoom"]), 3.0, 16.0)
-	pitch_shift = float(geo["offset"])
-	if cam != null:
-		cam.zoom = Vector2(base_zoom * zoom_scale, base_zoom * zoom_scale)
-
 # --------------------------------------------------------------- fixture ----
 
 func _build_selector() -> void:
@@ -190,7 +185,7 @@ func _build_selector() -> void:
 	sel_layer.add_child(selector)
 	selector.confirmed.connect(_on_fixture_confirmed)
 	selector.cancelled.connect(_close_select)
-	selector.browse.connect(_on_browse)
+	selector.browse.connect(wiki_host.open_page)
 	sel_layer.transform = Transform2D.IDENTITY.scaled(Vector2(hud_scale, hud_scale))
 	selector.ui_scale = hud_scale
 	selector.touch = touch
@@ -202,19 +197,15 @@ func _build_wiki() -> void:
 	wiki_host = WikiHost.new(self)
 	wiki_host.build()
 
-func open_wiki(page: String, id: String) -> void:
-	if wiki_host == null:
-		_build_wiki()
-	wiki_host.open_page(page, id)
-
-func _on_browse(page: String, id: String) -> void:
-	open_wiki(page, id)
-
-func open_select() -> void:
+func open_select(from_menu: bool = false) -> void:
 	if selector == null:
 		return
+	select_from_menu = from_menu
 	select_open = true
 	paused = true
+	if from_menu and menus != null:
+		menus.close(true)
+	selector.back_to_menu = from_menu
 	selector.setup(home_id, away_id)
 	if hud_layer != null:
 		hud_layer.visible = false
@@ -225,6 +216,11 @@ func _close_select() -> void:
 	select_open = false
 	if sel_layer != null:
 		sel_layer.visible = false
+	if select_from_menu:
+		select_from_menu = false
+		if menus != null:
+			menus.open_menu()
+		return
 	if hud_layer != null:
 		hud_layer.visible = true
 	paused = false
@@ -233,39 +229,37 @@ func _on_fixture_confirmed(h: String, a: String) -> void:
 	home_id = h
 	away_id = a
 	select_open = false
+	select_from_menu = false
 	if sel_layer != null:
 		sel_layer.visible = false
 	if hud_layer != null:
 		hud_layer.visible = true
+	if menus != null:
+		menus.close()
+	match_started = true
 	seeded += randi_range(1, 9999)
 	new_match(seeded)
 
 func _parse_fixture_args() -> void:
-	var known: Array = TeamData.team_ids()
-	for a in OS.get_cmdline_user_args():
-		if a.begins_with("--seed="):
-			seeded = int(a.substr(7))
-		elif a.begins_with("--home="):
-			var h := a.substr(7).to_upper()
-			if known.has(h):
-				home_id = h
-				fixture_arg_given = true
-		elif a.begins_with("--away="):
-			var w := a.substr(7).to_upper()
-			if known.has(w):
-				away_id = w
-				fixture_arg_given = true
+	var f := FixtureArgs.parse(OS.get_cmdline_user_args(), TeamData.team_ids(), {"seed": seeded, "home": home_id, "away": away_id})
+	seeded = int(f["seed"])
+	home_id = str(f["home"])
+	away_id = str(f["away"])
+	fixture_arg_given = bool(f["given"])
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		_sync_overlay_scale()
-		_recalc_zoom()
+		if camera != null:
+			camera.fit()
 
 # ------------------------------------------------------------------ input ----
 
 func _input(event: InputEvent) -> void:
 	if wiki_host != null and wiki_host.is_open():
 		wiki_host.handle_input(event)
+		return
+	if menus != null and menus.handle_input(event, _design(event.position) if event is InputEventMouse else Vector2.ZERO):
 		return
 	if select_open:
 		if event is InputEventMouseMotion:
@@ -320,15 +314,17 @@ func _input(event: InputEvent) -> void:
 			actors.names_visible = names_visible
 		elif k == KEY_C:
 			camera_follow = not camera_follow
+		elif k == KEY_M:
+			menus.open_menu()
 		elif k == KEY_T:
 			open_select()
 		elif k == KEY_L:
-			open_wiki(WikiModel.LEAGUE, "")
+			wiki_host.open_page(WikiModel.LEAGUE, "")
 		elif k == KEY_ESCAPE:
 			if focus_id >= 0:
 				focus_id = -1
 			else:
-				get_tree().quit()
+				menus.ask_quit()
 
 ## Overlay widgets live in design space; pointer events arrive in logical
 ## viewport units.
@@ -349,16 +345,18 @@ func _click(p: Vector2) -> void:
 		camera_follow = not camera_follow
 	elif b == "teams":
 		open_select()
+	elif b == "menu":
+		menus.open_menu()
 	elif b == "league":
-		open_wiki(WikiModel.LEAGUE, "")
+		wiki_host.open_page(WikiModel.LEAGUE, "")
 	elif b == "team_0":
-		open_wiki(WikiModel.TEAM, str(engine.teams[0]["id"]))
+		wiki_host.open_page(WikiModel.TEAM, str(engine.teams[0]["id"]))
 	elif b == "team_1":
-		open_wiki(WikiModel.TEAM, str(engine.teams[1]["id"]))
+		wiki_host.open_page(WikiModel.TEAM, str(engine.teams[1]["id"]))
 	elif b == "profile":
 		var tracked = engine.by_id.get(focus_id, null)
 		if tracked != null and str(tracked.key) != "":
-			open_wiki(WikiModel.PLAYER, str(tracked.key))
+			wiki_host.open_page(WikiModel.PLAYER, str(tracked.key))
 	elif b == "manager_card":
 		hud.manager_card.dismiss()
 	elif b == "restart":
@@ -431,6 +429,8 @@ func _process(delta: float) -> void:
 	match_time += delta
 	dev.tick(self, delta)
 	if wiki_host != null and wiki_host.is_open():
+		return
+	if menus != null and menus.active():
 		return
 	if select_open:
 		return
@@ -576,7 +576,4 @@ func _on_engine_event(e: Dictionary) -> void:
 func _apply_camera(snap_zoom: bool) -> void:
 	if camera != null:
 		camera.apply(snap_zoom)
-
-	if snap_zoom:
-		cam.zoom = Vector2(base_zoom * zoom_scale, base_zoom * zoom_scale)
 

@@ -1,4 +1,4 @@
-# THE MANCHESTER DERBY — Match Simulator
+# FOOTBALL SIM — Match Simulator
 
 A broadcast-style, top-down 2D football match simulator built in Godot 4.
 

@@ -46,8 +46,8 @@ func test_desktop_metrics_are_the_shipped_ones() -> void:
 	var vp := Vector2(1600, 900)
 	assert_eq(HudLayout.scoreboard_rect(vp), Rect2(480.0, 14.0, 640.0, 86.0), "desktop scoreboard moved")
 	assert_eq(HudLayout.stats_rect(vp), Rect2(1276.0, 24.0, 300.0, 132.0), "desktop stats card moved")
-	# Seven doors since the encyclopedia added its league door to the bar.
-	assert_eq(HudLayout.controls_rect(vp), Rect2(404.0, 834.0, 792.0, 46.0), "desktop control bar moved")
+	# Eight doors: the encyclopedia's league door and the menu door ride the bar.
+	assert_eq(HudLayout.controls_rect(vp), Rect2(347.0, 834.0, 906.0, 46.0), "desktop control bar moved")
 	assert_eq(HudLayout.commentary_rect(vp), Rect2(24.0, 774.0, 620.0, 52.0), "desktop ticker moved")
 	assert_false(HudLayout.is_compact(vp), "the desktop viewport must not switch to phone metrics")
 
@@ -71,7 +71,9 @@ func test_compact_metrics_fit_the_design_viewport() -> void:
 		var w: float = HudLayout.control_width(vp)
 		assert_gte(w, 44.0, "control at %s is %.1f wide — too small to tap" % [vp, w])
 		assert_gte(bar.size.y, 44.0, "control bar at %s is too short to tap" % vp)
-		assert_gte(bar.size.x, 7.0 * 44.0 + 6.0 * HudLayout.CONTROL_GAP, "the bar does not hold seven tappable doors at %s" % vp)
+		var per: int = HudLayout.controls_per_row(vp)
+		assert_gte(bar.size.x, float(per) * 44.0 + float(per - 1) * HudLayout.CONTROL_GAP, "the bar does not hold %d tappable doors at %s" % [per, vp])
+		assert_gte(bar.size.y, float(HudLayout.control_rows(vp)) * 44.0, "the bar rows are too short to tap at %s" % vp)
 
 func test_pitch_band_stays_between_the_full_width_bars() -> void:
 	for vp in COMPACT_SIZES:
