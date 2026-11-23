@@ -171,7 +171,7 @@ func to_dict() -> Dictionary:
 	var ps = []
 	for p in players:
 		ps.append({
-			"id": p.id, "team": p.team, "name": p.name, "number": p.number, "role": p.role,
+			"id": p.id, "key": p.key, "team": p.team, "name": p.name, "number": p.number, "role": p.role,
 			"pos_label": p.pos_label, "attr": p.attr, "gk": p.gk, "base": p.base,
 			"pos": p.pos, "vel": p.vel, "facing": p.facing, "target": p.target,
 			"stamina": p.stamina, "state": p.state, "has_ball": p.has_ball,
@@ -252,6 +252,7 @@ func from_dict(d: Dictionary) -> void:
 	for pd in d["players"]:
 		var p = Player.new()
 		p.id = pd["id"]
+		p.key = str(pd.get("key", ""))
 		p.team = pd["team"]
 		p.name = pd["name"]
 		p.number = pd["number"]

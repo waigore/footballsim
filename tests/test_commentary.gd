@@ -57,3 +57,111 @@ func test_live_line_describes_state() -> void:
 	var line: String = Commentary.live(eng)
 	assert_ne(line, "", "live line is empty")
 	assert_lte(line.length(), MAX_LEN, "live line too long: " + line)
+
+# ---------------------------------------------------------- every builder ---
+
+func _each(builder: Callable, count: int, must_contain: String) -> void:
+	# Every line a builder can produce must name the actor and fit the ticker.
+	for i in range(count):
+		var line: String = builder.call(i)
+		assert_true(line.contains(must_contain), "a line lost \"%s\": %s" % [must_contain, line])
+		assert_lte(line.length(), MAX_LEN, "line too long: " + line)
+
+func test_save_lines_cover_hold_parry_and_the_goal_line() -> void:
+	for how in ["hold", "parry", "goal_line"]:
+		_each(func(i): return Commentary.save(_rng(), "A. Onana", "E. Haaland", how, 0.05 + 0.1 * i), 12, "Onana")
+	_each(func(i): return Commentary.save(_rng(), "A. Onana", "", "hold", 0.5), 6, "Onana")
+
+func test_goal_lines_read_leads_assists_and_late_winners() -> void:
+	_each(func(i): return Commentary.goal(_rng(), "B. Šeško", "Bruno", false, "MUN", "MCI", 1, 0, 30), 8, "Šeško")
+	# An assist is only named when the goal line is not already carrying the
+	# state of the game (level, ahead, late drama).
+	var assisted: String = Commentary.goal(_rng(), "B. Šeško", "Bruno", false, "MUN", "MCI", 0, 2, 30)
+	assert_true(assisted.to_lower().contains("bruno"), "an assist was dropped from the goal line: " + assisted)
+	var lead: String = Commentary.goal(_rng(), "B. Šeško", "", false, "MUN", "MCI", 1, 0, 30)
+	assert_true(lead.contains("MUN lead"), "a goal that puts a side ahead was not read as a lead: " + lead)
+
+func test_foul_lines_read_penalties_and_free_kicks() -> void:
+	_each(func(i): return Commentary.foul(_rng(), "D. Dalot", "E. Haaland", true), 8, "Haaland")
+	_each(func(i): return Commentary.foul(_rng(), "D. Dalot", "E. Haaland", false), 8, "Dalot")
+
+func test_card_lines_cover_every_kind() -> void:
+	for kind in ["yellow", "red", "red_second"]:
+		_each(func(i): return Commentary.card(_rng(), "L. Yoro", kind), 8, "Yoro")
+
+func test_clearance_lines_read_headed_or_hoofed() -> void:
+	_each(func(i): return Commentary.clearance(_rng(), "M. Škriniar", true), 6, "Škriniar")
+	_each(func(i): return Commentary.clearance(_rng(), "M. Škriniar", false), 6, "Škriniar")
+
+func test_handball_lines_read_the_box() -> void:
+	_each(func(i): return Commentary.handball(_rng(), "D. Dalot", true), 6, "Dalot")
+	_each(func(i): return Commentary.handball(_rng(), "D. Dalot", false), 6, "Dalot")
+
+func test_injury_lines_read_whether_a_change_is_left() -> void:
+	_each(func(i): return Commentary.injury(_rng(), "L. Martínez", true), 6, "Martínez")
+	_each(func(i): return Commentary.injury(_rng(), "L. Martínez", false), 6, "Martínez")
+
+func test_substitution_lines_name_manager_or_team() -> void:
+	_each(func(i): return Commentary.substitution(_rng(), "MUN", "R. Højlund", "C. Eriksen", "R. Amorim"),
+		6, "Højlund")
+	_each(func(i): return Commentary.substitution(_rng(), "MUN", "R. Højlund", "C. Eriksen"), 6, "Højlund")
+
+func test_restart_lines_cover_every_kind_and_the_wait() -> void:
+	for kind in ["throw_in", "corner", "free_kick", "penalty", "kickoff"]:
+		_each(func(i): return Commentary.restart(_rng(), kind, "NFO", "M. Sels", false), 6, "NFO")
+	# A goal kick is named for the keeper who takes it.
+	_each(func(i): return Commentary.restart(_rng(), "goal_kick", "NFO", "M. Sels", false), 6, "Sels")
+	_each(func(i): return Commentary.restart(_rng(), "goal_kick", "NFO", "", false), 6, "NFO")
+	for kind in ["corner", "free_kick", "throw_in"]:
+		_each(func(i): return Commentary.restart(_rng(), kind, "NFO", "M. Sels", true), 6, "NFO")
+	assert_true(Commentary.restart(_rng(), "goal_kick", "NFO", "", false).begins_with("Goal kick"),
+		"a goal kick with no named taker was not read as one")
+
+func test_kickoff_cross_offside_and_penalty_lines_name_the_actor() -> void:
+	_each(func(i): return Commentary.kickoff(_rng(), "Manchester United"), 6, "Manchester United")
+	_each(func(i): return Commentary.cross(_rng(), "A. Garnacho"), 8, "Garnacho")
+	_each(func(i): return Commentary.offside(_rng(), "A. Garnacho"), 6, "Garnacho")
+	_each(func(i): return Commentary.penalty_taken(_rng(), "B. Fernandes"), 6, "Fernandes")
+
+func test_half_time_and_full_time_read_the_score() -> void:
+	var half: String = Commentary.half_time(_rng(), "MUN", 2, "MCI", 1)
+	assert_true(half.contains("MUN") and half.contains("MCI"), "half-time line lost a side: " + half)
+	var draw: String = Commentary.full_time(_rng(), "MUN", 1, "MCI", 1)
+	assert_true(draw.contains("Honours even"), "a draw was not read as honours even: " + draw)
+	var home: String = Commentary.full_time(_rng(), "MUN", 3, "MCI", 1)
+	assert_true(home.contains("MUN take it"), "a home win was not credited to the home side: " + home)
+	var away: String = Commentary.full_time(_rng(), "MUN", 1, "MCI", 2)
+	assert_true(away.contains("MCI take it"), "an away win was not credited to the away side: " + away)
+
+func test_tactics_line_names_the_manager_and_the_change() -> void:
+	var line: String = Commentary.tactics(_rng(), "R. Amorim", "MUN", ["press higher", "narrower"])
+	assert_true(line.contains("Amorim"), "tactics line lost the manager: " + line)
+	assert_true(line.contains("press higher"), "tactics line lost the change: " + line)
+	var nothing: String = Commentary.tactics(_rng(), "R. Amorim", "MUN", [])
+	assert_true(nothing.contains("shape change"), "an empty change list was not described: " + nothing)
+
+func test_live_line_reads_the_zone_and_the_scoreline() -> void:
+	var eng := MatchEngine.new(6)
+	eng.phase = "play"
+	eng.clock = 4700.0
+	eng.score[0] = 2
+	eng.score[1] = 0
+	for pos in [Vector2(10.0, 34.0), Vector2(50.0, 34.0), Vector2(75.0, 34.0), Vector2(92.0, 5.0)]:
+		var p = eng.players[3]
+		eng.ball.owner_id = p.id
+		eng.ball.pos = pos
+		p.pos = pos
+		var line: String = Commentary.live(eng)
+		assert_true(line.contains("MUN 2-0 MCI"), "a late live line dropped the score: " + line)
+	for kind in ["penalty", "corner", "throw_in", "goal_kick", "kickoff", "free_kick"]:
+		eng.phase = "restart"
+		eng.restart = {"type": kind}
+		assert_ne(Commentary.live(eng), "", "no live line for a " + kind)
+	eng.phase = "play"
+	eng.ball.owner_id = -1
+	eng.ball.last_touch_team = 0
+	eng.ball.pos = Vector2(52.0, 34.0)
+	assert_ne(Commentary.live(eng), "", "no live line for a loose ball")
+	var gk = eng._gk_of(0)
+	eng.ball.owner_id = gk.id
+	assert_true(Commentary.live(eng).contains("keeper"), "a keeper on the ball was not read as building from the back")

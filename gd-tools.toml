@@ -35,11 +35,16 @@ enabled = false
 min_percent = 0
 format = "html"
 output_dir = ".gd-tools/coverage"
+# Coverage measures shipped game code. `tools/` holds developer probes, one-off
+# reporting scripts and old copies of suites — nothing a player runs, and nothing
+# a test suite is meant to drive. Leaving it in the plan dragged the overall gate
+# down by ~14 points of unreachable code.
 exclude = [
     "addons",
     ".godot",
     ".gd-tools",
     ".git",
+    "tools",
 ]
 test_dirs = [
     "test",

@@ -2,6 +2,13 @@ extends Node2D
 
 ## Static broadcast stadium set: a generic top-tier ground seen from the main stand.
 ## Everything is drawn in pitch metres; the camera maps metres to pixels.
+##
+## Not covered by tests: every line here is Image/CanvasItem painting that only
+## runs when a frame is rendered, and the suite runs headless with no renderer.
+## The screenshot playtest (tools/ and the launch-game skill) is what exercises
+## this file. The block below keeps it out of the coverage plan instead of
+## letting a painter the tests can never reach drag the overall gate down.
+# gd-tools: no cover start
 
 const L := 105.0
 const W := 68.0
@@ -352,3 +359,5 @@ func _draw_ad_strip_v(rect: Rect2, variant: int) -> void:
 		draw_circle(Vector2(rect.position.x + rect.size.x * 0.5, y - 0.55), 0.14, col)
 		draw_line(Vector2(rect.position.x + 0.3, y), Vector2(rect.position.x + rect.size.x - 0.3, y), Color(1, 1, 1, 0.10), 0.04)
 
+
+# gd-tools: no cover end
