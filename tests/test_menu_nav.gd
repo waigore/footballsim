@@ -224,3 +224,117 @@ func test_the_dev_flags_pose_the_shell() -> void:
 	assert_true(cap.open_menu, "--menu did not parse")
 	assert_true(cap.open_settings, "--settings did not parse")
 	assert_true(cap.open_confirm, "--quit-confirm did not parse")
+
+# ---------------------------------------------------- input-surface sweep ---
+
+func _mouse_press(p: Vector2) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = p * game.menus.shell.ui_scale
+	game._input(ev)
+
+func _mouse_release(p: Vector2) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = false
+	ev.position = p * game.menus.shell.ui_scale
+	game._input(ev)
+
+func _mouse_drag(p: Vector2) -> void:
+	var ev := InputEventMouseMotion.new()
+	ev.position = p * game.menus.shell.ui_scale
+	ev.button_mask = MOUSE_BUTTON_MASK_LEFT
+	game._input(ev)
+
+func test_the_settings_bar_drags_and_steps() -> void:
+	game.menus.open_menu()
+	press(door("settings"))
+	var track := SettingsScreen.track_rect(vp())
+	var start := Vector2(track.position.x + track.size.x * 0.5, track.position.y + 2.0)
+	_mouse_press(start)
+	assert_almost_eq(game.menus.shell.volume, 0.5, 0.04, "pressing the track did not set half volume")
+	_mouse_drag(Vector2(track.position.x + track.size.x * 0.2, track.position.y + 2.0))
+	assert_almost_eq(game.menus.shell.volume, 0.2, 0.04, "dragging the track did not follow the pointer")
+	_mouse_release(Vector2(track.position.x + track.size.x * 0.2, track.position.y + 2.0))
+	assert_false(game.menus.shell.settings.dragging, "releasing the slider left it dragging")
+	game.menus.shell.set_volume(0.7)
+
+func test_keyboard_walks_every_sheet() -> void:
+	game.menus.open_menu()
+	game.menus.shell.set_volume(0.5)
+	assert_true(game.menus.shell.key(KEY_S), "S did not open settings")
+	assert_eq(game.menus.shell.screen, AppShell.SCREEN_SETTINGS, "S did not land on settings")
+	assert_true(game.menus.shell.key(KEY_LEFT), "left arrow was ignored on settings")
+	assert_almost_eq(game.menus.shell.volume, 0.4, 0.03, "left arrow did not step down")
+	assert_true(game.menus.shell.key(KEY_RIGHT), "right arrow was ignored on settings")
+	assert_almost_eq(game.menus.shell.volume, 0.5, 0.03, "right arrow did not step up")
+	assert_true(game.menus.shell.key(KEY_A), "A was ignored on settings")
+	assert_almost_eq(game.menus.shell.volume, 0.4, 0.03, "A did not step down")
+	assert_true(game.menus.shell.key(KEY_D), "D was ignored on settings")
+	assert_almost_eq(game.menus.shell.volume, 0.5, 0.03, "D did not step up")
+	assert_false(game.menus.shell.key(KEY_X), "settings took an unrelated key")
+	game.menus.open_menu()
+	assert_false(game.menus.shell.key(KEY_X), "the menu took an unrelated key")
+	assert_true(game.menus.shell.key(KEY_ENTER), "Enter did not start from the menu")
+	assert_true(game.select_open, "Enter did not open fixture setup")
+	game._close_select()
+
+func test_hit_tests_cover_every_sheet() -> void:
+	game.menus.open_menu()
+	assert_eq(game.menus.shell.button_at(door("start").get_center()), "start", "the start door did not hit")
+	assert_eq(game.menus.shell.button_at(Vector2(-10, -10)), "", "empty space hit a door")
+	game.menus.open_settings()
+	assert_eq(game.menus.shell.button_at(SettingsScreen.track_rect(vp()).get_center()), "track", "the track did not hit")
+	assert_eq(game.menus.shell.button_at(SettingsScreen.minus_rect(vp()).get_center()), "minus", "minus did not hit")
+	assert_eq(game.menus.shell.button_at(SettingsScreen.plus_rect(vp()).get_center()), "plus", "plus did not hit")
+	assert_eq(game.menus.shell.button_at(SettingsScreen.back_rect(vp()).get_center()), "back", "back did not hit")
+	game.menus.shell.open_quit_confirm()
+	assert_eq(game.menus.shell.button_at(ConfirmPrompt.confirm_rect(vp()).get_center()), "confirm", "quit did not hit")
+	assert_eq(game.menus.shell.button_at(ConfirmPrompt.cancel_rect(vp()).get_center()), "cancel", "cancel did not hit")
+	assert_false(game.menus.shell.key(KEY_X), "the confirm took an unrelated key")
+	game.menus.shell.cancel_confirm()
+
+func test_confirm_from_the_match_dims_the_pitch_and_cancels_back() -> void:
+	game.menus.close()
+	game.hud_layer.visible = true
+	game.menus.shell.open_quit_confirm()
+	assert_eq(game.menus.shell.screen, AppShell.SCREEN_CONFIRM, "Esc from the match did not raise the confirm")
+	assert_eq(game.menus.shell.prev_screen, AppShell.SCREEN_NONE, "a match-side confirm thinks a menu is underneath")
+	game.menus.shell.queue_redraw()
+	await get_tree().process_frame
+	game.menus.shell.cancel_confirm()
+	assert_false(game.menus.active(), "cancelling the match-side confirm left the shell up")
+	assert_true(game.hud_layer.visible, "cancelling the match-side confirm hid the pitch")
+
+func test_an_inactive_shell_swallows_nothing() -> void:
+	game.menus.close()
+	assert_false(game.menus.shell.click(Vector2(10, 10)), "an inactive shell took a click")
+	assert_false(game.menus.shell.key(KEY_ENTER), "an inactive shell took a key")
+	assert_false(game.menus.shell.handle_input(InputEventKey.new(), Vector2.ZERO), "an inactive shell took an event")
+	assert_false(game.menus.handle_input(InputEventKey.new(), Vector2.ZERO), "the host forwarded input to an inactive shell")
+
+func test_closing_keeps_music_only_for_fixture_setup() -> void:
+	game.menus.open_menu()
+	assert_true(game.menus.shell.music.wanted, "the menu did not start its music")
+	game.menus.shell.close(true)
+	assert_true(game.menus.shell.music.wanted, "walking to fixture setup stopped the music")
+	game.menus.shell.open_menu(true)
+	game.menus.shell.close()
+	assert_false(game.menus.shell.music.wanted, "closing the shell kept the music")
+
+func test_the_backdrop_falls_back_and_crossfades() -> void:
+	game.menus.open_menu()
+	assert_eq(game.menus.shell.volume_percent(), game.menus.shell.volume_percent(), "the volume readout is unstable")
+	var saved: Array = game.menus.shell.stills
+	game.menus.shell.stills = []
+	game.menus.shell.queue_redraw()
+	await get_tree().process_frame
+	game.menus.shell.stills = saved
+	game.menus.shell.motion = MenuScreen.SLOT - 0.2
+	game.menus.shell.queue_redraw()
+	await get_tree().process_frame
+	assert_gt(MenuScreen.fade_alpha(game.menus.shell.motion), 0.0, "the crossfade pose drew no incoming still")
+	game.menus.shell.motion = 0.0
+	game.menus.shell.queue_redraw()
+	await get_tree().process_frame
