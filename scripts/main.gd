@@ -45,10 +45,8 @@ var paused_start := false
 var quit_after := -1.0
 var elapsed_real := 0.0
 var match_time := 0.0
-var crowd: AudioStreamPlayer
-var sfx_pool: Array = []
-var sfx_next := 0
-var sfx_streams := {}
+var audio: MatchAudio = null
+var camera: MatchCamera = null
 var batch_abort := false
 var hud_scale := 1.0
 var token_scale := 1.0
@@ -62,6 +60,10 @@ var select_open := false
 var selector = null
 var sel_layer: CanvasLayer
 var fixture_arg_given := false
+## Encyclopedia sheet: league / club / player pages over the paused broadcast.
+var wiki_host: WikiHost = null
+## A finished match is written to the cached seed exactly once.
+var result_recorded := false
 
 func _ready() -> void:
 	build_scene()
@@ -72,40 +74,16 @@ func _ready() -> void:
 	dev.parse(self)
 	_sync_overlay_scale()
 	_build_selector()
+	_build_wiki()
 	if not fixture_arg_given:
 		open_select()
 
 func setup_audio() -> void:
-	crowd = AudioStreamPlayer.new()
-	var cs = load("res://audio/crowd_loop.wav")
-	if cs != null:
-		cs.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		cs.loop_end = int(cs.get_length() * cs.mix_rate)
-	crowd.stream = cs
-	crowd.volume_db = -21.0
-	add_child(crowd)
-	crowd.play()
-	for n in ["kick", "whistle", "goal_roar", "ooh"]:
-		var st = load("res://audio/%s.wav" % n)
-		sfx_streams[n] = st
-	for i in range(6):
-		var pl := AudioStreamPlayer.new()
-		pl.volume_db = -8.0
-		add_child(pl)
-		sfx_pool.append(pl)
-
-func play_sfx(name: String, vol_db: float = -8.0, pitch: float = 1.0) -> void:
-	if not sfx_streams.has(name) or sfx_streams[name] == null:
-		return
-	var pl: AudioStreamPlayer = sfx_pool[sfx_next % sfx_pool.size()]
-	sfx_next += 1
-	pl.stream = sfx_streams[name]
-	pl.volume_db = vol_db
-	pl.pitch_scale = pitch
-	pl.play()
+	audio = MatchAudio.new(self)
+	audio.setup()
 
 func _on_ball_kicked(strength: float) -> void:
-	play_sfx("kick", -10.0 + strength * 4.0, randf_range(0.9, 1.08))
+	audio.ball_kicked(strength)
 
 func build_scene() -> void:
 	arena = Node2D.new()
@@ -135,6 +113,7 @@ func build_scene() -> void:
 	_sync_overlay_scale()
 	_recalc_zoom()
 	actors.game = self
+	camera = MatchCamera.new(self)
 
 ## Handhelds read the overlay at roughly one density point per design unit: the
 ## layer is scaled up by HudLayout.overlay_scale() and every rect is derived
@@ -153,6 +132,8 @@ func _sync_overlay_scale() -> void:
 	hud_layer.transform = frame
 	if sel_layer != null:
 		sel_layer.transform = frame
+	if wiki_host != null:
+		wiki_host.sync_scale()
 
 func new_match(seed: int) -> void:
 	if engine != null and engine.event_fired.is_connected(_on_engine_event):
@@ -184,6 +165,7 @@ func new_match(seed: int) -> void:
 	match_time = 0.0
 	cam.position = Vector2(L * 0.5, W * 0.5 + pitch_shift)
 	cam.zoom = Vector2(base_zoom, base_zoom)
+	result_recorded = false
 	_snapshot()
 
 func _recalc_zoom() -> void:
@@ -208,10 +190,25 @@ func _build_selector() -> void:
 	sel_layer.add_child(selector)
 	selector.confirmed.connect(_on_fixture_confirmed)
 	selector.cancelled.connect(_close_select)
+	selector.browse.connect(_on_browse)
 	sel_layer.transform = Transform2D.IDENTITY.scaled(Vector2(hud_scale, hud_scale))
 	selector.ui_scale = hud_scale
 	selector.touch = touch
 	sel_layer.visible = false
+
+# -------------------------------------------------------------- encyclopedia --
+
+func _build_wiki() -> void:
+	wiki_host = WikiHost.new(self)
+	wiki_host.build()
+
+func open_wiki(page: String, id: String) -> void:
+	if wiki_host == null:
+		_build_wiki()
+	wiki_host.open_page(page, id)
+
+func _on_browse(page: String, id: String) -> void:
+	open_wiki(page, id)
 
 func open_select() -> void:
 	if selector == null:
@@ -267,6 +264,9 @@ func _notification(what: int) -> void:
 # ------------------------------------------------------------------ input ----
 
 func _input(event: InputEvent) -> void:
+	if wiki_host != null and wiki_host.is_open():
+		wiki_host.handle_input(event)
+		return
 	if select_open:
 		if event is InputEventMouseMotion:
 			mouse = event.position
@@ -322,6 +322,8 @@ func _input(event: InputEvent) -> void:
 			camera_follow = not camera_follow
 		elif k == KEY_T:
 			open_select()
+		elif k == KEY_L:
+			open_wiki(WikiModel.LEAGUE, "")
 		elif k == KEY_ESCAPE:
 			if focus_id >= 0:
 				focus_id = -1
@@ -347,6 +349,16 @@ func _click(p: Vector2) -> void:
 		camera_follow = not camera_follow
 	elif b == "teams":
 		open_select()
+	elif b == "league":
+		open_wiki(WikiModel.LEAGUE, "")
+	elif b == "team_0":
+		open_wiki(WikiModel.TEAM, str(engine.teams[0]["id"]))
+	elif b == "team_1":
+		open_wiki(WikiModel.TEAM, str(engine.teams[1]["id"]))
+	elif b == "profile":
+		var tracked = engine.by_id.get(focus_id, null)
+		if tracked != null and str(tracked.key) != "":
+			open_wiki(WikiModel.PLAYER, str(tracked.key))
 	elif b == "manager_card":
 		hud.manager_card.dismiss()
 	elif b == "restart":
@@ -418,16 +430,21 @@ func _process(delta: float) -> void:
 	elapsed_real += delta
 	match_time += delta
 	dev.tick(self, delta)
+	if wiki_host != null and wiki_host.is_open():
+		return
 	if select_open:
 		return
 	var zm: float = zoom_scale * (2.6 if camera_follow else (1.10 if in_highlight else 1.0))
 	cam.zoom = cam.zoom.lerp(Vector2(base_zoom * zm, base_zoom * zm), clampf(delta * 3.0, 0.0, 1.0))
-	_update_camera(delta)
+	if camera != null:
+		camera.update(delta)
 	_apply_camera(false)
 	if not dev.apply_hover(self):
 		_update_hover()
 
 	if engine.phase == "full_time":
+		if not result_recorded:
+			result_recorded = PLSimStats.record_match(engine)
 		return
 	if engine.phase == "half_time":
 		if half_time_timer < 0.0:
@@ -477,7 +494,8 @@ func _post_tick() -> void:
 			_end_highlight()
 	elif mode == "highlights":
 		fast_mode = true
-	_update_camera_target()
+	if camera != null:
+		camera.update_target()
 	_apply_camera(false)
 
 func _end_highlight() -> void:
@@ -518,14 +536,14 @@ func _on_engine_event(e: Dictionary) -> void:
 	var key := "%d|%s|%d" % [int(float(e.get("clock", 0.0)) * 60.0), kind, int(e.get("player_id", -1))]
 	if kind == "goal":
 		last_event_notice = 3.0
-		play_sfx("goal_roar", -4.0)
-		play_sfx("whistle", -12.0, 0.98)
+		audio.play("goal_roar", -4.0)
+		audio.play("whistle", -12.0, 0.98)
 	elif kind == "save":
-		play_sfx("ooh", -9.0)
+		audio.play("ooh", -9.0)
 	elif kind in ["foul", "offside", "half_time", "full_time", "kickoff"]:
-		play_sfx("whistle", -14.0, randf_range(0.97, 1.03))
+		audio.play("whistle", -14.0, randf_range(0.97, 1.03))
 	elif kind == "miss":
-		play_sfx("ooh", -12.0)
+		audio.play("ooh", -12.0)
 	if mode != "highlights":
 		return
 	if shown_triggers.has(key):
@@ -555,29 +573,10 @@ func _on_engine_event(e: Dictionary) -> void:
 
 # ---------------------------------------------------------------- camera ----
 
-var cam_target := Vector2(L * 0.5, W * 0.5)
-
-func _update_camera_target() -> void:
-	if camera_follow:
-		var b: Vector2 = engine.ball.pos
-		var half_w := (get_viewport_rect().size.x / (base_zoom * zoom_scale)) * 0.5
-		var half_h := (get_viewport_rect().size.y / (base_zoom * zoom_scale)) * 0.5
-		cam_target = Vector2(
-			clampf(b.x, half_w - 8.0, L - half_w + 8.0),
-			clampf(b.y, half_h - 6.0, W - half_h + 6.0)
-		)
-		if half_w * 2.0 > L + 20.0:
-			cam_target.x = L * 0.5
-		if half_h * 2.0 > W + 18.0:
-			cam_target.y = W * 0.5
-	else:
-		cam_target = Vector2(L * 0.5, W * 0.5 + pitch_shift)
-
-func _update_camera(delta: float) -> void:
-	_update_camera_target()
-	cam.position = cam.position.lerp(cam_target, clampf(delta * 4.0, 0.0, 1.0))
-
 func _apply_camera(snap_zoom: bool) -> void:
+	if camera != null:
+		camera.apply(snap_zoom)
+
 	if snap_zoom:
 		cam.zoom = Vector2(base_zoom * zoom_scale, base_zoom * zoom_scale)
 
