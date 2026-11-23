@@ -73,10 +73,6 @@ func update_restart(dt: float, restart: Dictionary) -> void:
 func _update_shapes() -> void:
 	var bt: int = e.possession_team
 	var ball = e.ball
-	# Per-team invariants of this pass: ball position in each attacking frame
-	# and the two effective styles. Values are unchanged; just read once.
-	var bn_team: Array = [e.to_norm(0, ball.pos), e.to_norm(1, ball.pos)]
-	var style_team: Array = [e.style_of(0), e.style_of(1)]
 	for p in e.players:
 		if p.sent_off or p.celebrate > 0.0:
 			continue
@@ -90,9 +86,9 @@ func _update_shapes() -> void:
 			p.speed_scale = 1.0
 			p.state = "run"
 			continue
-		var style: Dictionary = style_team[p.team]
+		var style: Dictionary = e.style_of(p.team)
 		var b: Vector2 = p.base
-		var bn: Vector2 = bn_team[p.team]
+		var bn: Vector2 = e.to_norm(p.team, ball.pos)
 		var attacking: bool = (p.team == bt)
 		var tx = 0.0
 		var ty = 0.0

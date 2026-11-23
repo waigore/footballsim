@@ -120,6 +120,10 @@ match = "scripts/sim/match_engine_core.gd*"
 domain = "match_engine"
 
 [[rules]]
+match = "scripts/sim/match_engine_pitch.gd*"
+domain = "match_engine"
+
+[[rules]]
 match = "scripts/sim/match_engine_presentation.gd*"
 domain = "match_engine"
 

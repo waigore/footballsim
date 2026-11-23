@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_core.gd"
+extends "res://scripts/sim/match_engine_pitch.gd"
 
 ## Broadcast-facing helpers: event log, clock formatting, possession and summaries.
 

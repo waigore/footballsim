@@ -3,11 +3,10 @@ extends "res://scripts/sim/match_engine_actions.gd"
 ## Movement, ball physics and duels.
 
 func _move_players(dt: float) -> void:
-	# Flat position arrays for the separation pass: one rebuild per tick keeps
-	# the O(n^2) scan off object member lookups without changing the arithmetic.
-	var n := players.size()
-	_sep_x.resize(n)
-	_sep_y.resize(n)
+	# Flat position arrays for the separation pass (rebuilt per tick; see the
+	# squad layer). Same arithmetic, same order, fewer member lookups.
+	_sep_x.resize(players.size())
+	_sep_y.resize(players.size())
 	var idx := 0
 	for q: Player in players:
 		if q.sent_off:
@@ -57,10 +56,8 @@ func _move_players(dt: float) -> void:
 		desired_vel += _separation(p, p._sep_idx) * 1.4
 		var dv := desired_vel - p.vel
 		var max_dv := acc * dt
-		var dv_len := dv.length()
-		if dv_len > max_dv:
+		if dv.length() > max_dv:
 			dv = dv.normalized() * max_dv
-			dv_len = max_dv
 		p.vel += dv
 		# clamp overspeed caused by separation pushes
 		var vl := p.vel.length()
@@ -68,16 +65,14 @@ func _move_players(dt: float) -> void:
 			p.vel = p.vel.normalized() * spd_cap * 1.25
 			vl = p.vel.length()
 		p.pos += p.vel * dt
-		# Publish the moved position: separation for later players must read
-		# it, exactly as the old per-object scan did.
+		# Publish the moved position: separation for later players must read it.
 		_sep_x[p._sep_idx] = p.pos.x
 		_sep_y[p._sep_idx] = p.pos.y
 		var moved := vl * dt
 		p.stats["distance"] += moved
 		if vl > 0.3:
 			p.facing = p.vel.normalized()
-		# Attrs.stamina_drain, inlined on the cached attributes: intensity from
-		# the cached top speed, then per-second drain scaled by match time.
+		# Attrs.stamina_drain, inlined on the cached top speed and phy factor.
 		var intensity := clampf(vl / maxf(1.0, p.spd_max), 0.0, 1.0)
 		var per_sec := 0.00055 + intensity * intensity * 0.0026
 		var drain: float = per_sec * dt * p.drain_phy * (0.96 if p.team == home_team else 1.02)

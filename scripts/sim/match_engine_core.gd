@@ -1,8 +1,8 @@
 extends RefCounted
 
 ## Match state, geometry and squad construction — the base of the MatchEngine
-## chain. Each split file adds one layer: presentation, actions, play, rules,
-## clock, then the restarts leaf in match_engine.gd.
+## chain. Each split file adds one layer: pitch geometry, presentation,
+## actions, play, rules, clock, then the restarts leaf in match_engine.gd.
 
 signal event_fired(e: Dictionary)
 signal ball_kicked(strength: float)
@@ -199,6 +199,20 @@ var _squad_rev := 0
 var _team_cache := [[], []]
 var _team_cache_rev := -1
 
+# Sorted descending attacking-x per side, cached per sim tick: state lives in
+# the pitch layer (match_engine_pitch.gd) next to attacking_x.
+
+## Per-player derived-attribute cache: the Attrs mappings are fixed once the
+## attributes exist, so pay the dictionary reads and pow() once per squad.
+func _fill_attr_cache(p: Player) -> void:
+	var phy: float = float(p.attr["phy"])
+	p.spd_max = Attrs.max_speed(p)
+	p.acc = Attrs.accel(p)
+	p.dri_speed = Attrs.dribble_speed(p)
+	p.ctrl_radius = Attrs.control_radius(p)
+	p.drain_phy = 1.25 - phy / 100.0 * 0.45
+	p.aerial = Attrs.aerial(p)
+
 ## Active (on-pitch) players of one side, cached per squad revision.
 ## Callers must treat the returned array as read-only.
 func team_players(t: int) -> Array:
@@ -213,27 +227,6 @@ func team_players(t: int) -> Array:
 
 func _touch_squad() -> void:
 	_squad_rev += 1
-
-# Sorted descending attacking-x per side, cached per sim tick. Several AI
-# reads (offside line, would-be-offside) want the same list within one tick
-# and positions do not move inside a tick.
-var _offside_xs := [[], []]
-var _offside_xs_tick := [-1, -1]
-var _offside_xs_rev := [-1, -1]
-
-func offside_xs(t: int) -> Array:
-	if _offside_xs_tick[t] != sim_tick or _offside_xs_rev[t] != _squad_rev:
-		var xs: Array = _offside_xs[t]
-		xs.clear()
-		for q in players:
-			if q.team == t or q.sent_off:
-				continue
-			xs.append(attacking_x(t, q.pos))
-		xs.sort()
-		xs.reverse()
-		_offside_xs_tick[t] = sim_tick
-		_offside_xs_rev[t] = _squad_rev
-	return _offside_xs[t]
 
 ## Home advantage, expressed as a multiplier on technical execution.
 ## >1 means less error for the home side; <1 slightly more for the visitors.
@@ -304,49 +297,7 @@ func _make_player(pd: Dictionary, t: int, id_in: int) -> Player:
 	_fill_attr_cache(p)
 	return p
 
-## Per-player derived-attribute cache: the Attrs mappings are fixed once the
-## attributes exist, so pay the dictionary reads and pow() once per squad.
-func _fill_attr_cache(p: Player) -> void:
-	var phy: float = float(p.attr["phy"])
-	p.spd_max = Attrs.max_speed(p)
-	p.acc = Attrs.accel(p)
-	p.dri_speed = Attrs.dribble_speed(p)
-	p.ctrl_radius = Attrs.control_radius(p)
-	p.drain_phy = 1.25 - phy / 100.0 * 0.45
-	p.aerial = Attrs.aerial(p)
-
-# ---------------------------------------------------------------- geometry --
-
-func attacking_dir(t: int) -> int:
-	return teams[t]["dir"]
-
-func own_goal_pos(t: int) -> Vector2:
-	return Vector2(0.0 if teams[t]["dir"] == 1 else L, W * 0.5)
-
-func target_goal_pos(t: int) -> Vector2:
-	return Vector2(L if teams[t]["dir"] == 1 else 0.0, W * 0.5)
-
-func to_world(t: int, norm: Vector2) -> Vector2:
-	if teams[t]["dir"] == 1:
-		return Vector2(norm.x * L, norm.y * W)
-	return Vector2((1.0 - norm.x) * L, norm.y * W)
-
-func to_norm(t: int, world: Vector2) -> Vector2:
-	if teams[t]["dir"] == 1:
-		return Vector2(world.x / L, world.y / W)
-	return Vector2(1.0 - world.x / L, world.y / W)
-
-func attacking_x(t: int, world: Vector2) -> float:
-	return world.x if teams[t]["dir"] == 1 else L - world.x
-
-func in_penalty_box(pos: Vector2, defending_team: int) -> bool:
-	if teams[defending_team]["dir"] == 1:
-		return pos.x <= BOX_D and absf(pos.y - W * 0.5) <= BOX_W * 0.5
-	return pos.x >= L - BOX_D and absf(pos.y - W * 0.5) <= BOX_W * 0.5
-
-func is_attacking_third(t: int, pos: Vector2) -> bool:
-	var ax = attacking_x(t, pos)
-	return ax > L * 0.66
+# ------------------------------------------------------------ pitch caches --
 
 func ball_owner():
 	if ball.owner_id < 0:
@@ -393,17 +344,6 @@ func pressure_on(p) -> float:
 		if d < 6.0:
 			pressure += (1.0 - d / 6.0)
 	return clampf(pressure, 0.0, 2.5)
-
-func opponent_goal_angle(p) -> float:
-	# 0..1: how much of the goal mouth is visible from the player's position.
-	var g = target_goal_pos(p.team)
-	var to_goal = g - p.pos
-	if to_goal.length() < 0.001:
-		return 1.0
-	var half_w = GOAL_W * 0.5
-	var dx = absf(g.x - p.pos.x)
-	var angles = absf(atan2(half_w, maxf(dx, 0.4)))
-	return clampf(angles / 0.9, 0.0, 1.0)
 
 # ---------------------------------------------------------------- lifecycle --
 
