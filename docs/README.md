@@ -19,6 +19,6 @@ Every Markdown file at the repo root and under `docs/` must stay **≤ 500 words
 | Doc | Purpose |
 |-----|---------|
 | [pull-requests.md](pull-requests.md) | PR rules: `gh`, required checks, merge |
-| [testing.md](testing.md) | Test + e2e budgets (≤5 min / ≤2 min) |
+| [testing.md](testing.md) | Test + e2e budgets (≤5 min / ≤4 min) |
 | [android-debug.md](android-debug.md) | Debug APK via PR into `android-debug` |
 | [skills.md](skills.md) | Project skills; Cursor/OpenCode/Grok facades; Hermes via `.agents` |
