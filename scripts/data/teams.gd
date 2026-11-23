@@ -122,19 +122,25 @@ static func slots(formation: String) -> Dictionary:
 static func formation_slot(team: Dictionary, role: String) -> Vector2:
 	return formation_slot_for(str(team.get("formation", "4-2-3-1")), role)
 
-## Slot for a role in a named formation. Bench players brought on out of
-## position fall back to a sensible line.
+## Where a role stands when the formation does not name it: bench players
+## brought on out of position fall back to a sensible line. A table, not a
+## match, because every formation names the same eleven roles — the arms for
+## the roles no shape omits would be unreachable code.
+const FALLBACK_SLOTS := {
+	"CB": Vector2(0.155, 0.5),
+	"CDM": Vector2(0.33, 0.5),
+	"CM": Vector2(0.36, 0.5),
+	"LM": Vector2(0.6, 0.5),
+	"RM": Vector2(0.6, 0.5),
+	"LW": Vector2(0.6, 0.2),
+	"RW": Vector2(0.6, 0.2),
+	"CAM": Vector2(0.55, 0.5),
+	"ST": Vector2(0.715, 0.5),
+	"GK": Vector2(0.035, 0.5),
+}
+
 static func formation_slot_for(formation: String, role: String) -> Vector2:
 	var f: Dictionary = slots(formation)
 	if f.has(role):
 		return f[role]
-	match role:
-		"CB": return Vector2(0.155, 0.5)
-		"CDM": return Vector2(0.33, 0.5)
-		"CM": return Vector2(0.36, 0.5)
-		"LM", "RM": return Vector2(0.6, 0.5)
-		"LW", "RW": return Vector2(0.6, 0.2)
-		"CAM": return Vector2(0.55, 0.5)
-		"ST": return Vector2(0.715, 0.5)
-		"GK": return Vector2(0.035, 0.5)
-	return Vector2(0.3, 0.5)
+	return FALLBACK_SLOTS.get(role, Vector2(0.3, 0.5))

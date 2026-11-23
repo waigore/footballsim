@@ -35,6 +35,22 @@ gd-tools coverage diff --patch --base origin/main --patch-fail-under 80
 godot --headless --path . --script res://tools/e2e_smoke.gd
 ```
 
+## Coverage scope
+
+Tier 2 measures **shipped game code**: `scripts/`, `scenes/`, `ui/`, `autoload/`.
+
+| Excluded | Why |
+|----------|-----|
+| `tools/` | Dev probes, reporting scripts, old suite copies — nothing a player runs (`gd-tools.toml` `coverage.exclude`) |
+| `scripts/view/pitch_view.gd` | Stadium painting: only runs when a frame renders, and the suite is headless (`# gd-tools: no cover`) |
+
+Two gd-tools instrumentation rules shape the source:
+
+- A `match` arm with a statement body must use block form (`"ST":` then an indented `return` on its own line). Inline arms (`"ST": return 1.0`) cannot be tracked and the file drops out of the plan.
+- A ternary inside a `:=` declaration must carry an explicit type (`var x: float = a if c else b`); the tracker wrapper hides the inferred type.
+
+Check the plan locally with `gd-tools coverage show --min 80`; it reports files it could not instrument.
+
 ## Speed rules
 
 - Prefer pure fixtures over full UI mounts.
