@@ -6,7 +6,7 @@ Unit/integration tests and headless e2e smoke. Two CI tiers; budgets are hard ga
 
 | Tier | When | Command / gate | Budget |
 |------|------|----------------|--------|
-| **1 (PR)** | Code/test path PRs | Impacted suites + **80% patch** coverage; e2e smoke | tests **≤ 5 min**; smoke **≤ 2 min** |
+| **1 (PR)** | Code/test path PRs | Impacted suites + **80% patch** coverage; e2e smoke | tests **≤ 5 min**; smoke **≤ 4 min** |
 | **2 (trunk)** | Every **8 hours** on `main` (+ manual) | Full suite (sharded when large); overall **80%** coverage | shard **≤ 20 min**; gate **≤ 10 min** |
 
 Tier 1 is the merge gate (`tests` / `e2e-smoke`). Tier 2 does not block PRs; failures open a sticky `ci-tier2` issue the **fix-tests** agent closes.
@@ -17,7 +17,11 @@ Tier 1 selects suites via [`tests/impact_map.toml`](../tests/impact_map.toml) + 
 
 ## E2E smoke (tier 1)
 
-Smoke boots the app and exercises a short critical path. Deep rules stay in `tests/`. Budget **≤2 min**.
+Smoke proves the sim alone can play a match. [`tools/e2e_smoke.gd`](../tools/e2e_smoke.gd) builds one
+**sim-only** Manchester United v Manchester City match (seed **1000**), plays both halves to full
+time, prints the score and exits — no pitch, HUD, team select or highlights. Any scoreline passes,
+**0-0 included**. Deep rules stay in `tests/`. Budget **≤4 min**; the script exits as soon as full
+time (or added time) is reached and fails fast if the match stalls.
 
 ## Local
 

@@ -338,3 +338,15 @@ func test_the_backdrop_falls_back_and_crossfades() -> void:
 	game.menus.shell.motion = 0.0
 	game.menus.shell.queue_redraw()
 	await get_tree().process_frame
+
+func test_fixture_flags_parse_without_the_scene() -> void:
+	var known: Array = TeamData.team_ids()
+	var f := FixtureArgs.parse(PackedStringArray(["--seed=42", "--home=ars", "--away=liv"]), known, {"seed": 1000, "home": "MUN", "away": "MCI"})
+	assert_eq(int(f["seed"]), 42, "the seed flag did not parse")
+	assert_eq(str(f["home"]), "ARS", "the home flag did not normalise")
+	assert_eq(str(f["away"]), "LIV", "the away flag did not normalise")
+	assert_true(bool(f["given"]), "a given fixture was not marked")
+	var bad := FixtureArgs.parse(PackedStringArray(["--home=NOPE"]), known, {"seed": 7, "home": "MUN", "away": "MCI"})
+	assert_eq(str(bad["home"]), "MUN", "an unknown club replaced the default side")
+	assert_false(bool(bad["given"]), "an unknown club marked the fixture as given")
+	assert_eq(int(bad["seed"]), 7, "an untouched seed changed")

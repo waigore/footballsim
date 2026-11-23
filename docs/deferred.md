@@ -13,4 +13,4 @@ Bootstrap — no ranked backlog yet. Add rows as wiki domains and milestones app
 ## Out of scope (for now)
 
 - Traditional “manage this club” player mode
-- Real licensed club/player data unless explicitly added later
+- Real licensed data for leagues beyond the shipped Premier League 2025-26 snapshot (the PL snapshot is intentional — see [`data.md`](data.md))

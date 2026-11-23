@@ -5,6 +5,8 @@ extends Control
 
 signal confirmed(home_id: String, away_id: String)
 signal cancelled()
+## Entry into the encyclopedia: the league, or a club picked from a card.
+signal browse(page: String, id: String)
 
 const C_PANEL := Color(0.035, 0.055, 0.070, 0.97)
 const C_PANEL_LIGHT := Color(0.075, 0.105, 0.125, 0.97)
@@ -98,6 +100,12 @@ func click(id: String) -> void:
 		randomize_fixture()
 	elif id == "confirm":
 		confirm()
+	elif id == "league":
+		browse.emit(WikiModel.LEAGUE, "")
+	elif id == "team_home":
+		browse.emit(WikiModel.TEAM, home_id())
+	elif id == "team_away":
+		browse.emit(WikiModel.TEAM, away_id())
 
 func key(code: int) -> bool:
 	if code == KEY_LEFT or code == KEY_A:
@@ -114,6 +122,8 @@ func key(code: int) -> bool:
 		confirm()
 	elif code == KEY_ESCAPE:
 		cancelled.emit()
+	elif code == KEY_L:
+		browse.emit(WikiModel.LEAGUE, "")
 	else:
 		return false
 	return true
@@ -172,6 +182,7 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	text_c(cx, r.position.y + r.size.y * 0.50, str(t["name"]).to_upper(), 17, C_TEXT, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.64, str(t["nickname"]).to_upper(), 11, C_DIM, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.80, "%s  ·  %s" % [str(t["formation"]), str(t["manager"]).to_upper()], 10, C_GOLD, f_med)
+	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 9, C_DIM, f_bold)
 	var label := "HOME" if side == 0 else "AWAY"
 	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
 
@@ -207,6 +218,9 @@ func _draw() -> void:
 	var away := TeamData.get_team(away_id())
 	_card(home_rect, home, 0)
 	_card(away_rect, away, 1)
+	# The cards are also encyclopedia doors: a club page is one tap away.
+	_add_button("team_home", home_rect)
+	_add_button("team_away", away_rect)
 
 	var arrow := 46.0
 	var ay := card_y + card_h * 0.5 - arrow * 0.5
@@ -250,3 +264,10 @@ func _draw() -> void:
 	rect(C_PANEL_LIGHT if back_hover else C_PANEL, back, 8, Color(1, 1, 1, 0.14 if back_hover else 0.07))
 	text_c(back.position.x + back.size.x * 0.5, back.position.y + back.size.y * 0.66, "‹  MENU" if back_to_menu else "‹  BACK", 13, C_TEXT if back_hover else C_DIM, f_bold)
 	_add_button("back", back)
+
+	# Encyclopedia door: the whole league is one tap from the fixture sheet.
+	var league_btn := Rect2(24.0, 18.0, 138.0, 44.0)
+	var league_hover := league_btn.has_point(mouse)
+	rect(C_PANEL_LIGHT if league_hover else C_PANEL, league_btn, 8, Color(1, 1, 1, 0.14 if league_hover else 0.07))
+	text_c(league_btn.position.x + league_btn.size.x * 0.5, league_btn.position.y + league_btn.size.y * 0.66, "◈  LEAGUE", 13, C_TEXT if league_hover else C_DIM, f_bold)
+	_add_button("league", league_btn)

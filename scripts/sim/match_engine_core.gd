@@ -49,6 +49,9 @@ const XG_SCALE := 0.70
 
 class Player:
 	var id = 0
+	## Stable snapshot key ("MUN-b-fernandes"): survives a re-slot and is what
+	## in-sim stats are stored against.
+	var key = ""
 	var team = 0
 	var name = ""
 	var number = 0
@@ -229,6 +232,7 @@ func _build_squads() -> void:
 func _make_player(pd: Dictionary, t: int, id_in: int) -> Player:
 	var p = Player.new()
 	p.id = id_in
+	p.key = str(pd.get("id", ""))
 	p.team = t
 	p.name = pd["name"]
 	p.number = pd["number"]

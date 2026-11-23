@@ -27,6 +27,8 @@ func active() -> bool:
 	return shell != null and shell.active()
 
 func open_menu() -> void:
+	if game.wiki_host != null and game.wiki_host.is_open():
+		game.wiki_host.close()
 	game.paused = true
 	game.select_open = false
 	_hide_chrome()
@@ -34,6 +36,8 @@ func open_menu() -> void:
 		shell.open_menu(bool(game.match_started))
 
 func open_settings() -> void:
+	if game.wiki_host != null and game.wiki_host.is_open():
+		game.wiki_host.close()
 	game.paused = true
 	_hide_chrome()
 	if shell != null:
@@ -46,6 +50,21 @@ func ask_quit() -> void:
 func close(keep_music: bool = false) -> void:
 	if shell != null:
 		shell.close(keep_music)
+
+## Pose the shell for a cold start (or a dev/evidence run). A normal launch
+## opens the menu; `--home/--away` still goes straight to the match.
+func pose(dev) -> void:
+	if dev.open_settings:
+		open_settings()
+	elif dev.open_menu or not bool(game.fixture_arg_given):
+		open_menu()
+	else:
+		game.match_started = true
+	if dev.open_fixture:
+		open_menu()
+		game.open_select(true)
+	if dev.open_confirm and shell != null:
+		shell.open_quit_confirm()
 
 func sync(frame: Transform2D, scale: float, touch: bool) -> void:
 	if shell == null:

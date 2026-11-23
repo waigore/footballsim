@@ -103,6 +103,8 @@ func _draw() -> void:
 	if card != null:
 		card.touch = touch
 		card.draw(self, vp, f_bold, f_med, engine, game)
+		if card.player(engine, game) != null:
+			_add_button("profile", card.profile_rect(vp), "PROFILE", "")
 	_draw_tooltip(vp)
 	_draw_event_banners(vp)
 	_draw_intro(vp)
@@ -169,10 +171,13 @@ func _draw_top(vp: Vector2) -> void:
 	_badge(Rect2(x + 22, y + 19, 48, 48), 0)
 	text(Vector2(x + 82, y + 44), engine.teams[0]["data"]["abbr"], 30, C_TEXT, f_bold)
 	text(Vector2(x + 82, y + 64), engine.teams[0]["data"]["name"].to_upper(), 11, C_DIM, f_med)
+	# Club chrome opens the club's encyclopedia page.
+	_add_button("team_0", Rect2(x + 14, y + 14, 190, 58), "HOME CLUB", "CLUB")
 	# away
 	_badge(Rect2(x + w - 70, y + 19, 48, 48), 1)
 	text_r(x + w - 82, y + 44, engine.teams[1]["data"]["abbr"], 30, C_TEXT, f_bold)
 	text_r(x + w - 82, y + 64, engine.teams[1]["data"]["name"].to_upper(), 11, C_DIM, f_med)
+	_add_button("team_1", Rect2(x + w - 204, y + 14, 190, 58), "AWAY CLUB", "CLUB")
 	# score
 	var sc := "%d  –  %d" % [engine.score[0], engine.score[1]]
 	text_c(cxm, y + 52, sc, 40, C_TEXT, f_bold)
@@ -303,6 +308,7 @@ func _control_specs(vp: Vector2) -> Array:
 		["mode", "HIGHLIGHTS" if game.mode == "highlights" else "FULL MATCH", "H"],
 		["skip", "SKIP", "S"],
 		["camera", "FOLLOW" if game.camera_follow else "WIDE", "C"],
+		["league", "LEAGUE", "L"],
 		["restart", "RESTART", "R"],
 		["menu", "MENU", "M"],
 	]
@@ -314,12 +320,14 @@ func _draw_controls(vp: Vector2) -> void:
 	var bar := HudLayout.controls_rect(vp, touch)
 	var bw: float = HudLayout.control_width(vp, touch)
 	var gap: float = HudLayout.CONTROL_GAP
+	var per: int = HudLayout.controls_per_row(vp, touch)
 	var x: float = bar.position.x
-	var y: float = bar.position.y
-	var h: float = bar.size.y
 	var specs := _control_specs(vp)
 	for i in range(specs.size()):
-		var r := Rect2(x + i * (bw + gap), y, bw, h)
+		var row := i / per
+		var y: float = bar.position.y + float(row) * (HudLayout.CONTROL_H + gap)
+		var h: float = HudLayout.CONTROL_H
+		var r := Rect2(x + float(i % per) * (bw + gap), y, bw, h)
 		var hovered := r.has_point(mouse)
 		var active: bool = specs[i][0] == "mode" and game.mode == "highlights"
 		var bg: Color = C_PANEL_LIGHT if hovered else C_PANEL
