@@ -11,6 +11,7 @@ Canonical skill bodies live here (one folder per skill). Native facades and auth
 | [`capture-requirements`](capture-requirements/SKILL.md) | Interactive multi-dimension feature capture; confirm; container + sub-issues via file-github-issue |
 | [`clarify-github-issue`](clarify-github-issue/SKILL.md) | Chat: accept/revise/reject one open `question` issue → `todo`+`bug`/`enhancement` or close |
 | [`elucidate-design-agent`](elucidate-design-agent/SKILL.md) | Find unclear wiki rules (P5-first); file `question` issue with precise design; stop |
+| [`export-android-debug`](export-android-debug/SKILL.md) | Publish debug APK via Actions + `android-debug/` release; report download URL |
 | [`file-github-issue`](file-github-issue/SKILL.md) | Interview bug/feature reports; duplicate check; analyze; file GitHub issue (`todo` + `bug`/`enhancement`) |
 | [`fix-tests-agent`](fix-tests-agent/SKILL.md) | Hourly (gated on open `ci-tier2`); fix full-suite failure; PR; babysit; close issue |
 | [`launch-game`](launch-game/SKILL.md) | Desktop launch via `tools/launch_game.sh` (LaunchServices detach; optional clear-cache/restart) |
