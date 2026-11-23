@@ -1,0 +1,206 @@
+# Footballsim agent-orc config.
+# Run: uv run agent-orc --repo-root /path/to/footballsim --yes
+# Override via config.local.yaml in this directory.
+orchestrator:
+  cooldown_seconds: 10
+  # gate_backoff_initial_seconds omitted: tracks cooldown_seconds after merge.
+  gate_backoff_max_seconds: 60
+  stagger_seconds: 5
+  schedule_poll_seconds: 5
+  timezone: Asia/Hong_Kong
+  worktrees_dir: .orc/worktrees
+  logs_dir: .orc/logs
+  repo_root: .
+  pull_before_run: true
+  default_branch: main
+
+# Agents listed under schedules are schedule-only (no cooldown loop). Cron uses
+# orchestrator.timezone. Overrunning a tick skips missed fires (no catch-up).
+schedules:
+  hourly-refactor:
+    cron: "0 * * * *"
+    agents:
+      - refactor-code-agent
+  bihourly-optimize-tests:
+    cron: "0 */2 * * *"
+    agents:
+      - optimize-tests-agent
+  every-3h-audit-deferred:
+    cron: "30 */3 * * *"
+    agents:
+      - audit-deferred-agent
+  # Stagger :00 so it does not collide with audit-deferred at :30
+  every-3h-elucidate-design:
+    cron: "0 */3 * * *"
+    agents:
+      - elucidate-design-agent
+  hourly-fix-tests:
+    cron: "15 * * * *"
+    agents:
+      - fix-tests-agent
+  # 8am HKT — debug APK prerelease
+  daily-android-debug:
+    cron: "0 8 * * *"
+    agents:
+      - export-android-debug
+
+providers:
+  # Prefer cursor-agent: plain `agent` may resolve to Grok's binary on PATH.
+  # Docs: https://cursor.com/docs/cli/using — -p/--print, --workspace, --force/--yolo, --trust
+  cursor:
+    command:
+      - cursor-agent
+      - -p
+      - --force
+      - --trust
+      - --workspace
+      - "{workdir}"
+      - "{prompt}"
+  # Docs: https://hermes-agent.nousresearch.com/docs/reference/cli-commands — -z oneshot, --yolo, --in
+  # Do not pass Hermes -w/--worktree; agent-orc owns worktrees.
+  # agent-orc runs `hermes skills trust` on the worktree and repo root before each Hermes run.
+  # Do not pass -s/{skill}: Hermes oneshot preload rejects project skills (unknown_skill).
+  # Prompts must tell the agent to load the named project skill in-session instead.
+  hermes:
+    command:
+      - hermes
+      - -z
+      - "{prompt}"
+      - --yolo
+      - --in
+      - "{workdir}"
+  # Docs: https://opencode.ai/docs/cli/ — `opencode run`; --auto for unattended.
+  # Local v2.x has no --dir on run; orchestrator sets process cwd to the worktree.
+  # Cheaper Inference DeepSeek V4.1 Flash (not OpenCode Go).
+  opencode-cheaperinference-deepseek-v41-flash:
+    command:
+      - opencode
+      - run
+      - --auto
+      - --model
+      - cheaper-inference/deepseek-v4.1-flash-1017
+      - "{prompt}"
+
+agents:
+  # Continuous Hermes: next feature → PR.
+  implement-feature-agent:
+    skill: implement-feature-agent
+    provider: hermes
+    enabled: true
+    cooldown_seconds: 30
+    prompt: |
+      Load and follow the project skill implement-feature-agent (under .agents/skills).
+      Run it unattended.
+      Parallel id: {parallel_id}. Assigned issue: {issue}.
+      One feature pass; open a PR if work shipped; then exit.
+
+  # Continuous Hermes: open todo issues (gated). Separate from review-issue-agent.
+  resolve-issue-agent:
+    skill: resolve-issue-agent
+    provider: hermes
+    enabled: true
+    cooldown_seconds: 30
+    gate:
+      command:
+        - sh
+        - .agents/skills/resolve-issue-agent/scripts/gate.sh
+    prompt: |
+      Load and follow the project skill resolve-issue-agent (under .agents/skills).
+      Run it unattended.
+      Parallel id: {parallel_id}. Assigned issue: {issue}.
+      If Assigned issue is a non-empty issue number, that GitHub issue #N wins;
+      otherwise pick one open todo by judgement.
+      One resolve pass; then exit.
+
+  refactor-code-agent:
+    skill: refactor-code-agent
+    provider: opencode-cheaperinference-deepseek-v41-flash
+    enabled: true
+    prompt: |
+      Run the refactor-code-agent skill unattended.
+      Parallel id: {parallel_id}. Assigned issue: {issue}.
+      One refactor pass; open a PR if work shipped; then exit.
+
+  optimize-tests-agent:
+    skill: optimize-tests-agent
+    provider: opencode-cheaperinference-deepseek-v41-flash
+    enabled: true
+    prompt: |
+      Run the optimize-tests-agent skill unattended.
+      Parallel id: {parallel_id}. Assigned issue: {issue}.
+      One test-optimization pass; open a PR if work shipped; then exit.
+
+  audit-deferred-agent:
+    skill: audit-deferred-agent
+    provider: cursor
+    enabled: true
+    prompt: |
+      Run the audit-deferred-agent skill unattended.
+      Parallel id: {parallel_id}. Assigned issue: {issue}.
+      One deferred-backlog audit; update docs if needed; open a docs-only PR if
+      anything changed; then exit. Do not implement features.
+
+  elucidate-design-agent:
+    skill: elucidate-design-agent
+    provider: cursor
+    enabled: true
+    prompt: |
+      Run the elucidate-design-agent skill unattended.
+      Parallel id: {parallel_id}. Assigned issue: {issue}.
+      One design-elucidation pass; file a question issue if a gap remains; do not
+      edit the wiki, write code, or open a PR; then exit.
+
+  # Continuous Cursor: open resolved issues (gated). Separate from resolve-issue-agent.
+  review-issue-agent:
+    skill: review-issue-agent
+    provider: cursor
+    enabled: true
+    cooldown_seconds: 30
+    gate:
+      command:
+        - sh
+        - .agents/skills/review-issue-agent/scripts/gate.sh
+    prompt: |
+      Run the review-issue-agent skill unattended.
+      Parallel id: {parallel_id}. Assigned issue: {issue}.
+      If Assigned issue is a non-empty issue number, that GitHub issue #N wins;
+      otherwise pick one open resolved by judgement.
+      One review pass; then exit.
+
+  # Continuous Cursor: eligible same-repo PRs (gated).
+  babysit-pr-agent:
+    skill: babysit-pr-agent
+    provider: cursor
+    enabled: true
+    cooldown_seconds: 30
+    gate:
+      command:
+        - sh
+        - .agents/skills/babysit-pr-agent/scripts/gate.sh
+    prompt: |
+      Run the babysit-pr-agent skill unattended.
+      Parallel id: {parallel_id}. Assigned issue: {issue}.
+      Pick and unblock one same-repo PR; exit.
+      Skip fork PRs.
+
+  fix-tests-agent:
+    skill: fix-tests-agent
+    provider: cursor
+    enabled: true
+    gate:
+      command:
+        - sh
+        - .agents/skills/fix-tests-agent/scripts/gate.sh
+    prompt: |
+      Run the fix-tests-agent skill unattended.
+      Parallel id: {parallel_id}. Assigned issue: {issue}.
+      If an open ci-tier2 issue exists, diagnose shards and/or coverage-gate, fix the full suite (prove with overall --min 80, not one shard), open a PR, babysit to auto-merge, close the issue; then exit.
+
+  export-android-debug:
+    skill: export-android-debug
+    provider: cursor
+    enabled: true
+    prompt: |
+      Run the export-android-debug skill unattended.
+      Parallel id: {parallel_id}. Assigned issue: {issue}.
+      Follow docs/android-debug.md; ship a downloadable debug APK release URL; then exit.
