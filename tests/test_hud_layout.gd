@@ -46,7 +46,8 @@ func test_desktop_metrics_are_the_shipped_ones() -> void:
 	var vp := Vector2(1600, 900)
 	assert_eq(HudLayout.scoreboard_rect(vp), Rect2(480.0, 14.0, 640.0, 86.0), "desktop scoreboard moved")
 	assert_eq(HudLayout.stats_rect(vp), Rect2(1276.0, 24.0, 300.0, 132.0), "desktop stats card moved")
-	assert_eq(HudLayout.controls_rect(vp), Rect2(461.0, 834.0, 678.0, 46.0), "desktop control bar moved")
+	# Seven doors since the encyclopedia added its league door to the bar.
+	assert_eq(HudLayout.controls_rect(vp), Rect2(404.0, 834.0, 792.0, 46.0), "desktop control bar moved")
 	assert_eq(HudLayout.commentary_rect(vp), Rect2(24.0, 774.0, 620.0, 52.0), "desktop ticker moved")
 	assert_false(HudLayout.is_compact(vp), "the desktop viewport must not switch to phone metrics")
 

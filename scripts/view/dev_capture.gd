@@ -16,6 +16,9 @@ var elapsed := 0.0
 ## `--ui-scale=2.2` forces the handheld overlay scale and touch copy on a
 ## desktop build, so the phone layout can be inspected without a device.
 var ui_scale := 0.0
+## `--wiki=league` / `--wiki=team:MUN` / `--wiki=player:MUN-b-fernandes` opens
+## the encyclopedia on the first frame, so screenshots are reproducible.
+var want_wiki := ""
 
 ## `args` is injectable so the flag table can be tested; production passes the
 ## real command line.
@@ -42,6 +45,8 @@ func parse(game, args := OS.get_cmdline_user_args()) -> void:
 			hover_force = int(a.substr(8))
 		elif a.begins_with("--ui-scale="):
 			ui_scale = float(a.substr(11))
+		elif a.begins_with("--wiki="):
+			want_wiki = a.substr(7)
 		elif a == "--paused":
 			game.paused = true
 		elif a == "--fakegoal":
@@ -60,6 +65,10 @@ func parse(game, args := OS.get_cmdline_user_args()) -> void:
 ## Per-frame: capture due screenshots and quit when the clock runs out.
 func tick(game, delta: float) -> void:
 	elapsed += delta
+	if want_wiki != "":
+		var bits: PackedStringArray = want_wiki.split(":")
+		game.open_wiki(bits[0], bits[1] if bits.size() > 1 else "")
+		want_wiki = ""
 	if quit_after > 0.0 and elapsed >= quit_after:
 		print("EXIT clock=", game.engine.display_clock(), " score=", game.engine.score, " hl=", game.in_highlight, " fast=", game.fast_mode, " events=", game.engine.events.size(), " focus=", game.focus_id)
 		game.get_tree().quit()

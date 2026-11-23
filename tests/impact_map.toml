@@ -41,6 +41,7 @@ suites = [
 suites = [
   "test_hud_chrome.gd",
   "test_touch_flow.gd",
+  "test_wiki_entry.gd",
 ]
 
 [domains.tactics]
@@ -73,6 +74,32 @@ suites = [
   "test_kits.gd",
   "test_tactics.gd",
   "test_tactics_ai.gd",
+]
+
+# Snapshot storage and the repository the engine reads: the seed itself, the
+# in-sim ledger, and every consumer of squad data.
+[domains.pl_data]
+suites = [
+  "test_pl_seed.gd",
+  "test_pl_stats.gd",
+  "test_poisson_model.gd",
+  "test_kits.gd",
+  "test_tactics.gd",
+  "test_tactics_ai.gd",
+  "test_managers.gd",
+  "test_manager_subs.gd",
+]
+
+# Encyclopedia screens: page data, the sheet itself and every door into it.
+[domains.wiki]
+suites = [
+  "test_wiki_model.gd",
+  "test_wiki_screen.gd",
+  "test_wiki_entry.gd",
+  "test_wiki_render.gd",
+  "test_hud_layout.gd",
+  "test_hud_chrome.gd",
+  "test_touch_flow.gd",
 ]
 
 # Lightest suite for tooling / project / addons / map edits.
@@ -145,29 +172,11 @@ domain = "match_engine"
 
 # ---------------------------------------------------------------- data ---
 
+# Every data module (clubs, squads, snapshot storage, in-sim ledger) shares the
+# same suites; the old per-shard rules are gone because the shards are gone.
 [[rules]]
-match = "scripts/data/managers.gd*"
-domain = "managers"
-
-[[rules]]
-match = "scripts/data/teams.gd*"
-domain = "teams"
-
-[[rules]]
-match = "scripts/data/teams_core.gd*"
-domain = "teams"
-
-[[rules]]
-match = "scripts/data/teams_pl1.gd*"
-domain = "teams"
-
-[[rules]]
-match = "scripts/data/teams_pl2.gd*"
-domain = "teams"
-
-[[rules]]
-match = "scripts/data/teams_pl3.gd*"
-domain = "teams"
+match = "scripts/data/**"
+domain = "pl_data"
 
 # ------------------------------------------------------------------ ui ---
 
@@ -196,6 +205,10 @@ match = "scripts/ui/hud_player_card.gd*"
 domain = "hud_chrome"
 
 [[rules]]
+match = "scripts/ui/wiki_*.gd*"
+domain = "wiki"
+
+[[rules]]
 match = "scripts/view/actor_layer.gd*"
 domain = "hud_chrome"
 
@@ -205,6 +218,14 @@ domain = "hud_chrome"
 
 [[rules]]
 match = "scripts/view/dev_capture.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/view/match_audio.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/view/match_camera.gd*"
 domain = "hud_chrome"
 
 [[rules]]

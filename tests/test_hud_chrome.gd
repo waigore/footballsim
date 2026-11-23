@@ -139,7 +139,8 @@ func test_phone_bar_carries_one_tappable_teams_door() -> void:
 	for b in hud.buttons:
 		ids.append(str(b["id"]))
 	assert_eq(ids.count("teams"), 1, "expected exactly one teams door, got %s" % str(ids))
-	assert_eq(ids.size(), HudLayout.CONTROL_COUNT_TOUCH, "the phone bar should hold seven doors: %s" % str(ids))
+	# Seven bar doors plus the two club doors on the scoreboard chrome.
+	assert_eq(ids.size(), HudLayout.CONTROL_COUNT_TOUCH + 2, "the phone bar should hold seven doors and two club doors: %s" % str(ids))
 	for b in hud.buttons:
 		var r: Rect2 = b["rect"]
 		var mid: Vector2 = r.position + r.size * 0.5
@@ -158,7 +159,7 @@ func test_desktop_bar_keeps_the_fixture_panel_door() -> void:
 	for b in hud.buttons:
 		ids.append(str(b["id"]))
 	assert_eq(ids.count("teams"), 1, "expected the fixture panel's teams door only, got %s" % str(ids))
-	assert_eq(ids.size(), HudLayout.CONTROL_COUNT + 1, "desktop bar should hold six controls plus the door")
+	assert_eq(ids.size(), HudLayout.CONTROL_COUNT + 1 + 2, "desktop bar should hold seven controls, the door and the two club doors")
 	hud.queue_free()
 
 func test_phone_player_card_stays_clear_of_the_other_panels() -> void:
