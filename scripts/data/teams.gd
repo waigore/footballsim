@@ -1,17 +1,11 @@
 class_name TeamData
 extends RefCounted
 
-## Squad data lives in shards (teams_core / teams_pl1..3) so each file stays
-## under the architecture hard ceiling. Add a club to the matching shard.
-## MUN and MCI use OVRBase FC 26 club ratings (retrieved Nov 2026); the other
-## 18 use real 2025-26 squads with ratings estimated from role and overall.
-
-const _SHARDS := [
-	preload("res://scripts/data/teams_core.gd"),
-	preload("res://scripts/data/teams_pl1.gd"),
-	preload("res://scripts/data/teams_pl2.gd"),
-	preload("res://scripts/data/teams_pl3.gd"),
-]
+## Squads, clubs and the league table come from the cached SQLite snapshot
+## (`data/pl_seed.sqlite`, built by `tools/pl_snapshot.py`). This facade keeps
+## the small API the engine, picker and tests already speak, so the storage swap
+## stays invisible above it. Formation geometry is code, not data, and lives
+## here.
 
 ## Named match official. One source for the broadcast chrome and the pitch
 ## official: a referee name change belongs here, not in the HUD.
@@ -113,19 +107,11 @@ const FORMATIONS := {
 	},
 }
 
-static var _cache: Dictionary = {}
-
-static func _squads() -> Dictionary:
-	if _cache.is_empty():
-		for shard in _SHARDS:
-			_cache.merge(shard.TEAMS)
-	return _cache
-
 static func team_ids() -> Array:
-	return _squads().keys()
+	return PLRepository.shared().club_ids()
 
 static func get_team(id: String) -> Dictionary:
-	return _squads()[id]
+	return PLRepository.shared().team(id)
 
 static func other(id: String) -> String:
 	return "MCI" if id == "MUN" else "MUN"
