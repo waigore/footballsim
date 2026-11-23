@@ -50,18 +50,24 @@ func test_unknown_formation_falls_back_to_the_default_shape() -> void:
 	assert_eq(fallback, TeamData.FORMATIONS["4-2-3-1"], "the fallback is not the default shape")
 
 func test_bench_roles_fall_back_to_a_sensible_line() -> void:
-	# A bench player brought on out of position still needs somewhere to stand.
-	var cb: Vector2 = TeamData.formation_slot_for("4-3-3", "CB")
-	var st: Vector2 = TeamData.formation_slot_for("4-3-3", "ST")
-	var gk: Vector2 = TeamData.formation_slot_for("4-3-3", "GK")
-	assert_lt(cb.x, st.x, "the centre-back fallback stands ahead of the striker fallback")
+	# Every formation names the same eleven canonical roles; a bench body uses
+	# the generic position, so the fallback table is what places him.
+	var cb: Vector2 = TeamData.formation_slot_for("4-2-3-1", "CB")
+	var cdm: Vector2 = TeamData.formation_slot_for("4-2-3-1", "CDM")
+	var cm: Vector2 = TeamData.formation_slot_for("4-2-3-1", "CM")
+	var st: Vector2 = TeamData.formation_slot_for("4-2-3-1", "ST")
+	var gk: Vector2 = TeamData.formation_slot_for("4-2-3-1", "GK")
+	assert_lt(cb.x, cdm.x, "the centre-back fallback stands ahead of the holding mid")
+	assert_lt(cdm.x, cm.x, "the holding mid fallback stands ahead of the centre-mid")
+	assert_lt(cm.x, st.x, "the centre-mid fallback stands ahead of the striker")
 	assert_lt(gk.x, cb.x, "the keeper fallback does not stand deepest")
 	for role in ["CB", "CDM", "CM", "LM", "RM", "LW", "RW", "CAM", "ST", "GK"]:
-		var slot: Vector2 = TeamData.formation_slot_for("4-3-3", role)
+		var slot: Vector2 = TeamData.formation_slot_for("4-2-3-1", role)
 		assert_between(slot.x, 0.0, 1.0, "%s fallback x is off the pitch" % role)
 		assert_between(slot.y, 0.0, 1.0, "%s fallback y is off the pitch" % role)
-	var unknown: Vector2 = TeamData.formation_slot_for("4-3-3", "SWEEPER")
+	var unknown: Vector2 = TeamData.formation_slot_for("4-2-3-1", "SWEEPER")
 	assert_between(unknown.x, 0.0, 1.0, "an unknown role has no fallback slot")
+	assert_between(unknown.y, 0.0, 1.0, "an unknown role has no fallback slot")
 
 func test_named_slot_wins_over_the_fallback() -> void:
 	var slot: Vector2 = TeamData.formation_slot_for("4-2-3-1", "ST")
