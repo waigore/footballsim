@@ -25,7 +25,7 @@ time (or added time) is reached and fails fast if the match stalls.
 
 ## Poisson-agreement census (tier 2)
 
-`playtests/census` plays full physics matches on fixed seed grids for the anchors (MCI v BUR, MCI v MCI) and hard-gates two things: goal variance vs the Poisson λ (`|var − λ|/λ ≤ 10%`, both sides) and a **≤ 60 s** wall-clock budget per match (a 60 Hz GDScript tick bottoms out near 30 s; tighten with a native hot loop later). Tier-2 only — the impact map sends census edits to the fast poisson suite on PRs. Grid size, seeds and the latest measured numbers live on the wiki poisson-model page.
+`playtests/census` plays full physics matches on fixed seed grids for the anchors (MCI v BUR, MCI v MCI) and hard-gates goal variance vs the Poisson λ (`|var − λ|/λ ≤ 10%`, both sides) plus a **≤ 60 s** wall-clock budget per match (a 60 Hz GDScript tick bottoms out near 30 s). Tier-2 only — the impact map sends census edits to the fast poisson suite on PRs. Grid size, seeds and the latest numbers live on the wiki poisson-model page.
 
 ## Local
 
