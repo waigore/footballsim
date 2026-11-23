@@ -79,7 +79,7 @@ static func layout(blocks: Array, width: float, compact: bool = false) -> Dictio
 			var widths := _widths(block, cols.size())
 			rows.append({
 				"k": "thead", "rect": Rect2(x, y, width, HEADER_ROW), "cols": cols,
-				"widths": widths, "compact_keep": block.get("compact_cols", []), "index": -1,
+				"widths": widths, "text_cols": block.get("text_cols", [1]), "index": -1,
 			})
 			y += HEADER_ROW
 			var table_rows: Array = block.get("rows", [])
@@ -89,6 +89,7 @@ static func layout(blocks: Array, width: float, compact: bool = false) -> Dictio
 					"k": "trow", "rect": Rect2(x, y, width, row_h), "cells": tr.get("cells", []),
 					"widths": widths, "cols": cols, "target": tr.get("target", {}),
 					"accent": str(tr.get("accent", "")), "index": i,
+					"text_cols": block.get("text_cols", [1]),
 				})
 				y += row_h
 			y += 6.0
@@ -190,23 +191,31 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 	elif kind == "thead":
 		var cols: Array = row["cols"]
 		var widths: Array = row["widths"]
+		var text_cols: Array = row["text_cols"]
 		var x := rect.position.x
 		for i in range(cols.size()):
 			var cw: float = rect.size.x * float(widths[i])
-			_text(Vector2(x, rect.position.y + 15), str(cols[i]), 8, Color(0.55, 0.64, 0.69), true)
+			if text_cols.has(i) or i == 0:
+				_text(Vector2(x, rect.position.y + 15), str(cols[i]), 9, Color(0.62, 0.72, 0.78), true)
+			else:
+				_text_right(x + cw - 8.0, rect.position.y + 15.0, str(cols[i]), 9, Color(0.62, 0.72, 0.78), true)
 			x += cw
+		draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), Color(1, 1, 1, 0.10), 1)
 	elif kind == "trow":
 		if hovered:
 			draw_rect(rect, Color(0.075, 0.105, 0.125, 0.75))
+		elif int(row.get("index", 0)) % 2 == 1:
+			draw_rect(rect, Color(1, 1, 1, 0.022))
 		var accent := str(row.get("accent", ""))
 		if accent != "":
 			draw_rect(Rect2(rect.position.x, rect.position.y + 3, 2, rect.size.y - 6), Color(accent))
 		var widths: Array = row["widths"]
 		var cells: Array = row["cells"]
 		var x := rect.position.x + 6.0
+		var text_cols: Array = row.get("text_cols", [1])
 		for i in range(cells.size()):
 			var cw: float = (rect.size.x - 6.0) * float(widths[i])
-			var right: bool = i >= 2 and cells.size() >= 4
+			var right: bool = not text_cols.has(i) and i != 0
 			if right:
 				_text_right(x + cw - 8.0, rect.position.y + 16.0, str(cells[i]), 11, Color(0.92, 0.95, 0.96), i == cells.size() - 1)
 			else:

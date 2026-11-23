@@ -285,8 +285,10 @@ def _player_stats(athlete_id: str, season: int) -> dict:
         },
         "career": {
             "matches": int(career.get("appearances", 0)),
-            "goals": int(career.get("totalGoals", career.get("goals", 0))),
-            "assists": int(career.get("goalAssists", 0)),
+            # ESPN's career payload carries goals but no assists; -1 means
+            # "not in the snapshot" so the page prints a dash, never a fake 0.
+            "goals": int(career.get("totalGoals", career.get("goals", -1))),
+            "assists": int(career.get("goalAssists", -1)),
         },
     }
 

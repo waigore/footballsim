@@ -9,7 +9,7 @@ const PANEL := Color(0.035, 0.055, 0.070, 0.97)
 const PANEL_LIGHT := Color(0.075, 0.105, 0.125, 0.97)
 const BORDER := Color(1, 1, 1, 0.085)
 const TEXT := Color(0.92, 0.95, 0.96)
-const DIM := Color(0.55, 0.64, 0.69)
+const DIM := Color(0.62, 0.71, 0.76)
 const GOLD := Color(0.96, 0.78, 0.30)
 
 static var _styles := {}

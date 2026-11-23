@@ -73,12 +73,16 @@ static func league_page() -> Dictionary:
 	out["blocks"].append({
 		"k": "table",
 		"cols": ["#", "CLUB", "P", "W", "D", "L", "GF", "GA", "PTS"],
-		"compact_cols": ["#", "CLUB", "P", "PTS"],
+		"widths": [0.05, 0.27, 0.09, 0.09, 0.09, 0.09, 0.10, 0.10, 0.12],
+		"text_cols": [1],
 		"rows": rows,
-		"all_targets": true,
 	})
 	out["blocks"].append({"k": "section", "text": "TOP SCORERS  ·  SNAPSHOT"})
-	out["blocks"].append({"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"], "rows": _leader_rows(6, "goals")})
+	out["blocks"].append({
+		"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"],
+		"widths": [0.36, 0.22, 0.20, 0.22], "text_cols": [0, 1],
+		"rows": _leader_rows(6, "goals"),
+	})
 	out["blocks"].append({"k": "section", "text": "CLUB INDEX"})
 	out["blocks"].append({"k": "chips", "items": _club_chips()})
 	var results: Array = []
@@ -91,7 +95,11 @@ static func league_page() -> Dictionary:
 			"target": {"page": TEAM, "id": str(fx["home_club_id"])},
 		})
 	out["blocks"].append({"k": "section", "text": "LATEST RESULTS  ·  SNAPSHOT"})
-	out["blocks"].append({"k": "table", "cols": ["DATE", "HOME", "", "AWAY"], "rows": results})
+	out["blocks"].append({
+		"k": "table", "cols": ["DATE", "HOME", "", "AWAY"],
+		"widths": [0.16, 0.28, 0.22, 0.34], "text_cols": [0, 1, 3],
+		"rows": results,
+	})
 	out["blocks"].append_array(_sim_blocks("", true))
 	out["blocks"].append({"k": "note", "text": "SELECTED BY CLUB OR PLAYER  ·  ESC OR BACK RETURNS  ·  REAL DATA: %s" % str(meta.get("source", ""))})
 	return out
@@ -125,6 +133,7 @@ static func team_page(club_id: String) -> Dictionary:
 	var club := repo().club(club_id)
 	if club.is_empty():
 		return league_page()
+	var meta := repo().meta()
 	var table: Dictionary = club.get("table", {})
 	var out := {
 		"page": TEAM,
@@ -135,6 +144,7 @@ static func team_page(club_id: String) -> Dictionary:
 		"accent": club["color"],
 		"blocks": [],
 	}
+	out["blocks"].append({"k": "section", "text": "SEASON  ·  %s SNAPSHOT" % str(meta["season_label"])})
 	out["blocks"].append({
 		"k": "kv",
 		"items": [
@@ -162,7 +172,11 @@ static func team_page(club_id: String) -> Dictionary:
 			"cells": [str(p["number"]), str(p["name"]), str(p["pos"]), str(p["ovr"])],
 			"target": {"page": PLAYER, "id": str(p["id"])},
 		})
-	out["blocks"].append({"k": "table", "cols": ["#", "PLAYER", "POS", "OVR"], "rows": squad_rows})
+	out["blocks"].append({
+		"k": "table", "cols": ["#", "PLAYER", "POS", "OVR"],
+		"widths": [0.09, 0.55, 0.19, 0.17], "text_cols": [1, 2],
+		"rows": squad_rows,
+	})
 	out["blocks"].append({"k": "section", "text": "RESULTS  ·  SNAPSHOT"})
 	var results: Array = []
 	for fx in repo().fixtures(club_id, 8):
@@ -173,9 +187,19 @@ static func team_page(club_id: String) -> Dictionary:
 			],
 			"target": {"page": TEAM, "id": str(fx["away_club_id"] if str(fx["home_club_id"]) == club_id else fx["home_club_id"])},
 		})
-	out["blocks"].append({"k": "table", "cols": ["DATE", "FIXTURE"], "rows": results})
+	out["blocks"].append({
+		"k": "table", "cols": ["DATE", "FIXTURE"],
+		"widths": [0.16, 0.84], "text_cols": [0, 1],
+		"rows": results,
+	})
 	out["blocks"].append_array(_sim_blocks(club_id, false))
 	return out
+
+## A count that the snapshot may not carry: negative means "unknown", and a
+## dash is honest where a zero would be a lie.
+static func _count(source: Dictionary, key: String) -> String:
+	var value := int(source.get(key, -1))
+	return "—" if value < 0 else str(value)
 
 static func _or_dash(table: Dictionary, key: String) -> String:
 	if table.is_empty() or table.get(key) == null:
@@ -234,7 +258,7 @@ static func player_page(player_id: String) -> Dictionary:
 			"k": "kv",
 			"items": [
 				["APPS", str(int(season["matches"])), true], ["STARTS", str(int(season["starts"])), false],
-				["GOALS", str(int(season["goals"])), true], ["ASSISTS", str(int(season["assists"])), false],
+				["GOALS", _count(season, "goals"), true], ["ASSISTS", _count(season, "assists"), false],
 				["MINUTES", str(int(season["minutes"])), false],
 				["CARDS", "%d / %d" % [int(season["yellow"]), int(season["red"])], false],
 			],
@@ -246,8 +270,8 @@ static func player_page(player_id: String) -> Dictionary:
 		out["blocks"].append({
 			"k": "kv",
 			"items": [
-				["APPS", str(int(career["matches"])), true], ["GOALS", str(int(career["goals"])), true],
-				["ASSISTS", str(int(career["assists"])), false],
+				["APPS", str(int(career["matches"])), true], ["GOALS", _count(career, "goals"), true],
+				["ASSISTS", _count(career, "assists"), false],
 			],
 		})
 	else:
@@ -289,7 +313,7 @@ static func _sim_blocks(club_id: String, league: bool) -> Array:
 			return []
 		return [
 			{"k": "section", "text": "FOOTBALLSIM  ·  IN-SIM SCORERS"},
-			{"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"], "rows": top},
+			{"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"], "widths": [0.36, 0.22, 0.20, 0.22], "text_cols": [0, 1], "rows": top},
 		]
 	var record := repo().sim_club(club_id)
 	if int(record.get("played", 0)) == 0:
@@ -310,7 +334,7 @@ static func _sim_blocks(club_id: String, league: bool) -> Array:
 			"target": {"page": PLAYER, "id": str(row["player_id"])},
 		})
 	if not scorers.is_empty():
-		blocks.append({"k": "table", "cols": ["SCORER", "APPS", "GOALS", "ASSISTS"], "rows": scorers})
+		blocks.append({"k": "table", "cols": ["SCORER", "APPS", "GOALS", "ASSISTS"], "widths": [0.46, 0.16, 0.19, 0.19], "text_cols": [0], "rows": scorers})
 	return blocks
 
 static func _hex(col) -> String:

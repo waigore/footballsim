@@ -12,6 +12,7 @@ Every Markdown file at the repo root and under `docs/` must stay **≤ 500 words
 | [requirements.md](requirements.md) | Pillars P1–P5 (`REQ-*`) |
 | [rubric.md](rubric.md) | Evaluation gate (`RUB-*`) |
 | [deferred.md](deferred.md) | Deferred gaps ranked by impact |
+| [data.md](data.md) | PL snapshot: seed, cache versioning, refresh tool |
 
 ## Process
 

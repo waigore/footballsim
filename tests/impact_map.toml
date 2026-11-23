@@ -96,6 +96,7 @@ suites = [
   "test_wiki_model.gd",
   "test_wiki_screen.gd",
   "test_wiki_entry.gd",
+  "test_wiki_render.gd",
   "test_hud_layout.gd",
   "test_hud_chrome.gd",
   "test_touch_flow.gd",

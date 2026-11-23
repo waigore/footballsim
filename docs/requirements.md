@@ -61,4 +61,4 @@ P1 = look; P4 = latency; P5 = agency. Same outcomes everywhere; paths differ.
 
 ## Non-goals
 
-Club-manager career mode; licensed real club/player data unless added later; photoreal/3D primary; hover-only critical UX; desktop-only that cuts mobile.
+Club-manager career mode; real licensed data beyond the shipped Premier League 2025-26 snapshot (that snapshot is intentional — wiki [DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01)); photoreal/3D primary; hover-only critical UX; desktop-only that cuts mobile.
