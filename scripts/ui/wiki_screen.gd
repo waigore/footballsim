@@ -137,7 +137,7 @@ func is_compact() -> bool:
 ## The body is a document column: on a wide desktop it stops growing so a
 ## table row never stretches a short value across half a metre of screen.
 func body_rect(vp: Vector2) -> Rect2:
-	var header := 136.0 if is_compact() else 168.0
+	var header := 150.0 if is_compact() else 168.0
 	var w: float = minf(vp.x - 48.0, 1160.0)
 	return Rect2((vp.x - w) * 0.5, header, w, vp.y - header - 34.0)
 
@@ -154,7 +154,7 @@ func _draw() -> void:
 	var accent: Color = page_data.get("accent", WikiChrome.GOLD)
 	var x := 24.0
 	var compact := is_compact()
-	var title_y := 86.0 if compact else 108.0
+	var title_y := 92.0 if compact else 108.0
 	var back_rect := Rect2(x, 8.0 if compact else 10.0, 104, 30.0 if compact else 34.0)
 	var close_rect := Rect2(vp.x - 68.0, back_rect.position.y, 44, back_rect.size.y)
 	WikiChrome.button(self, f_bold, back_rect, "‹  BACK", back_rect.has_point(mouse))
@@ -165,7 +165,7 @@ func _draw() -> void:
 	draw_rect(Rect2(x, title_y - 28.0, 3, 28), accent)
 	WikiChrome.label(self, f_bold, Vector2(x + 12, title_y), str(page_data.get("title", "")), 26 if compact else 34)
 	WikiChrome.label(self, f_med, Vector2(x + 12, title_y + 18.0), str(page_data.get("subtitle", "")), 9, WikiChrome.DIM)
-	_draw_crumbs(body_rect(vp).position.y - 20.0)
+	_draw_crumbs(body_rect(vp).position.y - 16.0)
 	var br := body_rect(vp)
 	draw_line(Vector2(br.position.x, br.position.y - 8.0), Vector2(br.position.x + br.size.x, br.position.y - 8.0), Color(1, 1, 1, 0.07), 1)
 	_draw_furniture(vp, br)

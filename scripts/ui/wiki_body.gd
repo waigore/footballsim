@@ -113,12 +113,14 @@ func set_page(page: Dictionary, compact: bool = false) -> void:
 	_height = float(built["height"])
 	scroll = 0.0
 	_focus = -1
+	queue_redraw()
 
 func max_scroll() -> float:
 	return maxf(0.0, _height - size.y)
 
 func scroll_by(delta: float) -> void:
 	scroll = clampf(scroll + delta, 0.0, max_scroll())
+	queue_redraw()
 
 func rows() -> Array:
 	return _rows
@@ -156,6 +158,11 @@ func _draw() -> void:
 			continue
 		var shifted := Rect2(rect.position.x, top, rect.size.x, rect.size.y)
 		_draw_row(row, shifted, i == focus_row)
+
+## The body owns its pixels: a page swap, a scroll or a hover change must ask
+## for a redraw itself, because nothing above it redraws this child.
+func _process(_d: float) -> void:
+	queue_redraw()
 
 func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 	var kind := str(row["k"])
