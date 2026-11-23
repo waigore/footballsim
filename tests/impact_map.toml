@@ -221,6 +221,14 @@ match = "scripts/view/dev_capture.gd*"
 domain = "hud_chrome"
 
 [[rules]]
+match = "scripts/view/match_audio.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/view/match_camera.gd*"
+domain = "hud_chrome"
+
+[[rules]]
 match = "scripts/platform/**"
 domain = "hud_chrome"
 
