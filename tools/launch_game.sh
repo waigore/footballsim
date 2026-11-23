@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reliably launch The Manchester Derby on desktop.
+# Reliably launch Football Sim on desktop.
 # Detaches via macOS LaunchServices so agent shells cannot kill the process.
 #
 # Usage:
@@ -14,7 +14,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="${GODOT_APP:-/Applications/Godot.app}"
 GODOT_BIN="${GODOT_BIN:-}"
-USERDATA="${HOME}/Library/Application Support/Godot/app_userdata/The Manchester Derby"
+USERDATA="${HOME}/Library/Application Support/Godot/app_userdata/Football Sim"
 LOG="${TMPDIR:-/tmp}/footballsim-launch.log"
 PIDFILE="${TMPDIR:-/tmp}/footballsim-launch.pid"
 

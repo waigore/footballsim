@@ -19,8 +19,11 @@ const COMPACT_STATS_W := 240.0
 const CONTROL_W := 108.0
 const CONTROL_GAP := 6.0
 const CONTROL_H := 46.0
-const CONTROL_COUNT := 7
-const CONTROL_COUNT_TOUCH := 8
+## Desktop bar: pause, speed, mode, skip, camera, league, restart, menu.
+const CONTROL_COUNT := 8
+## Touch/compact adds the teams door, because the fixture panel that carries it
+## on desktop is not drawn there.
+const CONTROL_COUNT_TOUCH := 9
 
 ## Touch builds get one extra door (teams) because the fixture panel that
 ## carries it on desktop is not drawn in compact. The league door rides the bar
