@@ -202,6 +202,9 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
 	draw_rect(Rect2(0, vp.y - 3, vp.x, 3), Color(0, 0, 0, 0.5))
 	UiChrome.sheet_header(self, vp, {"bold": f_bold, "med": f_med, "body": f_body}, "PREMIER LEAGUE · 20 CLUBS", "SELECT FIXTURE")
+	# The top corners belong to the league and menu doors, so the wordmark rides
+	# the centre of the header where nothing covers it.
+	UiChrome.wordmark_c(self, vp.x * 0.5, vp.y * (0.075 if vp.y < 620.0 else 0.105), 12, f_bold)
 
 	var card_w := minf(vp.x * 0.30, 460.0)
 	var card_h := minf(vp.y * 0.32, 250.0)

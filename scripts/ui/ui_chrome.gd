@@ -87,6 +87,14 @@ static func make_scrim() -> GradientTexture2D:
 	tex.fill_to = Vector2(1.0, 0.5)
 	return tex
 
+static func wordmark_width(size: int, font: Font) -> float:
+	var hw: float = font.get_string_size(PRODUCT, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var gap: float = size * 0.22
+	return hw + gap + font.get_string_size(PRODUCT_TAIL, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+
+static func wordmark_c(c: CanvasItem, center_x: float, y: float, size: int, font: Font) -> void:
+	wordmark(c, Vector2(center_x - wordmark_width(size, font) * 0.5, y), size, font)
+
 ## Thin broadcast rule that anchors a sheet's title.
 static func rule(c: CanvasItem, center_x: float, y: float, w: float = 64.0, col: Color = C_GOLD) -> void:
 	c.draw_rect(Rect2(center_x - w * 0.5, y, w, 3.0), col)
