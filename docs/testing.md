@@ -7,7 +7,7 @@ Unit/integration tests and headless e2e smoke. Two CI tiers; budgets are hard ga
 | Tier | When | Command / gate | Budget |
 |------|------|----------------|--------|
 | **1 (PR)** | Code/test path PRs | Impacted suites + **80% patch** coverage; e2e smoke | tests **≤ 5 min**; smoke **≤ 2 min** |
-| **2 (trunk)** | Every **8 hours** on `main` (+ manual) | Full suite (sharded when large); overall **80%** coverage | shard **≤ 20 min**; gate **≤ 10 min** |
+| **2 (trunk)** | Every **8 hours** on `main` (+ manual) | Full suite (sharded when large); overall **80%** coverage; Poisson census | shard **≤ 45 min**; gate **≤ 10 min** |
 
 Tier 1 is the merge gate (`tests` / `e2e-smoke`). Tier 2 does not block PRs; failures open a sticky `ci-tier2` issue the **fix-tests** agent closes.
 
@@ -21,7 +21,7 @@ Smoke boots the app and exercises a short critical path. Deep rules stay in `tes
 
 ## Poisson-agreement census (tier 2)
 
-`playtests/census` plays full physics matches on fixed seed grids for the anchors (MCI v BUR, MCI v MCI) and hard-gates two things: goal variance vs the Poisson λ (`|var − λ|/λ ≤ 10%`, both sides) and a per-match wall-clock budget. Tier-2 only — the impact map sends census edits to the fast poisson suite on PRs. Grid size, seeds and the latest measured numbers live on the wiki poisson-model page.
+`playtests/census` plays full physics matches on fixed seed grids for the anchors (MCI v BUR, MCI v MCI) and hard-gates two things: goal variance vs the Poisson λ (`|var − λ|/λ ≤ 10%`, both sides) and a **≤ 60 s** wall-clock budget per match (a 60 Hz GDScript tick bottoms out near 30 s; tighten with a native hot loop later). Tier-2 only — the impact map sends census edits to the fast poisson suite on PRs. Grid size, seeds and the latest measured numbers live on the wiki poisson-model page.
 
 ## Local
 

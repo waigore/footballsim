@@ -119,20 +119,31 @@ static func league_means() -> Dictionary:
 
 # ---------------------------------------------------------------- lambdas ---
 
+## Per-side λ exponents for a pairing: what the model adds to (or subtracts
+## from) each side's goals relative to the league baselines, from the two
+## squads' effective attack/defence. Shared with the physics engine's
+## finishing-form calibration so both systems read one exponent source.
+static func side_exponents(home: String, away: String) -> Vector2:
+	var m := league_means()
+	var h := effective(team_strength(TeamData.get_team(home)))
+	var a := effective(team_strength(TeamData.get_team(away)))
+	var h_att := (h.x - float(m["attack"])) / 10.0
+	var a_att := (a.x - float(m["attack"])) / 10.0
+	var h_def := (float(m["defence"]) - h.y) / 10.0
+	var a_def := (float(m["defence"]) - a.y) / 10.0
+	return Vector2(
+		ATTACK_ELASTICITY * h_att + DEFENCE_ELASTICITY * a_def,
+		ATTACK_ELASTICITY * a_att + DEFENCE_ELASTICITY * h_def)
+
 func _recompute() -> void:
 	var m := league_means()
-	var h: Vector2 = effective(team_strength(TeamData.get_team(home_id)))
-	var a: Vector2 = effective(team_strength(TeamData.get_team(away_id)))
+	var ex := side_exponents(home_id, away_id)
 	var cond: float = float(WEATHER_MULT.get(weather, 1.0))
 	var home_mod: float = float(modifiers.get("home", 1.0))
 	var away_mod: float = float(modifiers.get("away", 1.0))
 	var total_mod: float = float(modifiers.get("total", 1.0))
-	var h_att: float = (h.x - float(m["attack"])) / 10.0
-	var a_att: float = (a.x - float(m["attack"])) / 10.0
-	var h_def: float = (float(m["defence"]) - h.y) / 10.0
-	var a_def: float = (float(m["defence"]) - a.y) / 10.0
-	lambda_home = HOME_XG * exp(ATTACK_ELASTICITY * h_att + DEFENCE_ELASTICITY * a_def) * cond * home_mod * total_mod
-	lambda_away = AWAY_XG * exp(ATTACK_ELASTICITY * a_att + DEFENCE_ELASTICITY * h_def) * cond * away_mod * total_mod
+	lambda_home = HOME_XG * exp(ex.x) * cond * home_mod * total_mod
+	lambda_away = AWAY_XG * exp(ex.y) * cond * away_mod * total_mod
 	lambda_home = clampf(lambda_home, 0.05, 6.5)
 	lambda_away = clampf(lambda_away, 0.05, 6.5)
 	_table.clear()
