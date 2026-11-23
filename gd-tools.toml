@@ -38,13 +38,16 @@ output_dir = ".gd-tools/coverage"
 # Coverage measures shipped game code. `tools/` holds developer probes, one-off
 # reporting scripts and old copies of suites — nothing a player runs, and nothing
 # a test suite is meant to drive. Leaving it in the plan dragged the overall gate
-# down by ~14 points of unreachable code.
+# down by ~14 points of unreachable code. `playtests/` holds the heavy tier-2
+# census drives for the same reason: full-match grids that no PR suite should
+# ride, so their lines stay out of the tier-1 patch gate.
 exclude = [
     "addons",
     ".godot",
     ".gd-tools",
     ".git",
     "tools",
+    "playtests",
 ]
 test_dirs = [
     "test",
