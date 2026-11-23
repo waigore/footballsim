@@ -70,6 +70,13 @@ jobs:
           gd-tools test --coverage --parallel 4 --timeout 600 --junit-xml .gd-tools/results.xml
           gd-tools coverage show --min 80
 
+      - name: Poisson-agreement census (variance + per-match budget)
+        if: steps.project.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          gd-tools test --parallel 2 --timeout 1200 --junit-xml .gd-tools/census.xml \
+            playtests/census
+
       - name: Skip complete
         if: steps.project.outputs.ready != 'true'
         run: echo 'tier 2 skipped (no project).'

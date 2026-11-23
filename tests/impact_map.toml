@@ -226,6 +226,13 @@ domain = "hud_chrome"
 match = "tests/check_poisson_agreement.gd*"
 domain = "poisson"
 
+# Tier-2 census drives (playtests/census): heavy full-match grids that must
+# never ride the PR tier-1 budget. Editing them re-runs the fast poisson
+# suite; the census itself runs in the tier-2 workflow only.
+[[rules]]
+match = "playtests/census/**"
+domain = "poisson"
+
 [[rules]]
 match = "tests/impact_map.toml"
 domain = "misc"

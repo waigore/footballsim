@@ -3,7 +3,21 @@ extends "res://scripts/sim/match_engine_actions.gd"
 ## Movement, ball physics and duels.
 
 func _move_players(dt: float) -> void:
-	for p in players:
+	# Flat position arrays for the separation pass: one rebuild per tick keeps
+	# the O(n^2) scan off object member lookups without changing the arithmetic.
+	var n := players.size()
+	_sep_x.resize(n)
+	_sep_y.resize(n)
+	var idx := 0
+	for q: Player in players:
+		if q.sent_off:
+			continue
+		_sep_x[idx] = q.pos.x
+		_sep_y[idx] = q.pos.y
+		q._sep_idx = idx
+		idx += 1
+	_sep_count = idx
+	for p: Player in players:
 		if p.sent_off:
 			continue
 		if p.cooldown > 0.0:
@@ -23,40 +37,50 @@ func _move_players(dt: float) -> void:
 			p.celebrate = maxf(0.0, p.celebrate - dt)
 			continue
 
-		var to = p.target - p.pos
-		var d = to.length()
-		var base_speed = Attrs.max_speed(p)
-		var fat = 0.70 + 0.30 * p.stamina
-		var spd_cap = base_speed * fat * p.speed_scale
-		var acc = Attrs.accel(p) * fat
+		var to := p.target - p.pos
+		var d := to.length()
+		var fat := 0.70 + 0.30 * p.stamina
+		var spd_cap := p.spd_max * fat * p.speed_scale
+		var acc := p.acc * fat
 		if ball.owner_id == p.id:
-			spd_cap = Attrs.dribble_speed(p) * fat * p.speed_scale
+			spd_cap = p.dri_speed * fat * p.speed_scale
 			acc *= 0.86
 		elif p.is_gk:
 			spd_cap = minf(spd_cap, 5.6 + float(p.gk["spd"]) * 0.022)
 		var desired_speed: float = spd_cap
 		if d < 3.0:
 			desired_speed = minf(spd_cap, d * 2.4)
-		var desired_vel = Vector2.ZERO
+		var desired_vel := Vector2.ZERO
 		if d > 0.02:
 			desired_vel = to / d * desired_speed
 		# separation from other bodies
-		if p.state != "tackle" or true:
-			desired_vel += _separation(p) * 1.4
-		var dv = desired_vel - p.vel
-		var max_dv = acc * dt
-		if dv.length() > max_dv:
+		desired_vel += _separation(p, p._sep_idx) * 1.4
+		var dv := desired_vel - p.vel
+		var max_dv := acc * dt
+		var dv_len := dv.length()
+		if dv_len > max_dv:
 			dv = dv.normalized() * max_dv
+			dv_len = max_dv
 		p.vel += dv
 		# clamp overspeed caused by separation pushes
-		if p.vel.length() > spd_cap * 1.25:
+		var vl := p.vel.length()
+		if vl > spd_cap * 1.25:
 			p.vel = p.vel.normalized() * spd_cap * 1.25
+			vl = p.vel.length()
 		p.pos += p.vel * dt
-		var moved = p.vel.length() * dt
+		# Publish the moved position: separation for later players must read
+		# it, exactly as the old per-object scan did.
+		_sep_x[p._sep_idx] = p.pos.x
+		_sep_y[p._sep_idx] = p.pos.y
+		var moved := vl * dt
 		p.stats["distance"] += moved
-		if p.vel.length() > 0.3:
+		if vl > 0.3:
 			p.facing = p.vel.normalized()
-		var drain: float = Attrs.stamina_drain(p, p.vel.length(), dt) * (0.96 if p.team == home_team else 1.02)
+		# Attrs.stamina_drain, inlined on the cached attributes: intensity from
+		# the cached top speed, then per-second drain scaled by match time.
+		var intensity := clampf(vl / maxf(1.0, p.spd_max), 0.0, 1.0)
+		var per_sec := 0.00055 + intensity * intensity * 0.0026
+		var drain: float = per_sec * dt * p.drain_phy * (0.96 if p.team == home_team else 1.02)
 		p.stamina = maxf(0.25, p.stamina - drain)
 		# keep bodies loosely on the field
 		p.pos.x = clampf(p.pos.x, -3.0, L + 3.0)
@@ -64,26 +88,26 @@ func _move_players(dt: float) -> void:
 		if p.has_ball and ball.owner_id != p.id:
 			p.has_ball = false
 
-func _separation(p) -> Vector2:
-	var push = Vector2.ZERO
+func _separation(p: Player, self_idx: int) -> Vector2:
+	var push := Vector2.ZERO
 	var px: float = p.pos.x
 	var py: float = p.pos.y
-	for q in players:
-		if q.id == p.id or q.sent_off:
+	for j in _sep_count:
+		if j == self_idx:
 			continue
 		# Cheap axis reject first: a body more than 1.7m away on either axis
 		# cannot be inside the separation radius, and this loop runs for every
 		# player on every sim tick.
-		var dx: float = px - q.pos.x
+		var dx: float = px - _sep_x[j]
 		if dx > 1.7 or dx < -1.7:
 			continue
-		var dy: float = py - q.pos.y
+		var dy: float = py - _sep_y[j]
 		if dy > 1.7 or dy < -1.7:
 			continue
 		var d2: float = dx * dx + dy * dy
 		if d2 < 1.7 * 1.7 and d2 > 0.0001:
-			var d = sqrt(d2)
-			var w = (1.7 - d) / 1.7
+			var d := sqrt(d2)
+			var w := (1.7 - d) / 1.7
 			push += Vector2(dx, dy) / d * w * 0.55
 	return push
 
@@ -358,12 +382,14 @@ func _send_off_or_book(p, card: String) -> void:
 	elif card == "red_second":
 		p.red = true
 		p.sent_off = true
+		_touch_squad()
 		_emit("card", line, p.team, p)
 		stats[p.team]["red"] += 1
 		_remove_body(p)
 	else:
 		p.red = true
 		p.sent_off = true
+		_touch_squad()
 		_emit("card", line, p.team, p)
 		_remove_body(p)
 	stoppage_events += 1

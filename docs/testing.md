@@ -19,6 +19,10 @@ Tier 1 selects suites via [`tests/impact_map.toml`](../tests/impact_map.toml) + 
 
 Smoke boots the app and exercises a short critical path. Deep rules stay in `tests/`. Budget **≤2 min**.
 
+## Poisson-agreement census (tier 2)
+
+`playtests/census` plays full physics matches on fixed seed grids for the anchors (MCI v BUR, MCI v MCI) and hard-gates two things: goal variance vs the Poisson λ (`|var − λ|/λ ≤ 10%`, both sides) and a per-match wall-clock budget. Tier-2 only — the impact map sends census edits to the fast poisson suite on PRs. Grid size, seeds and the latest measured numbers live on the wiki poisson-model page.
+
 ## Local
 
 ```bash
