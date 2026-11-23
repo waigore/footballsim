@@ -45,10 +45,7 @@ var paused_start := false
 var quit_after := -1.0
 var elapsed_real := 0.0
 var match_time := 0.0
-var crowd: AudioStreamPlayer
-var sfx_pool: Array = []
-var sfx_next := 0
-var sfx_streams := {}
+var sfx: SfxBank = null
 var batch_abort := false
 var hud_scale := 1.0
 var token_scale := 1.0
@@ -62,6 +59,9 @@ var select_open := false
 var selector = null
 var sel_layer: CanvasLayer
 var fixture_arg_given := false
+var menus: MenuHost = null
+var select_from_menu := false
+var match_started := false
 
 func _ready() -> void:
 	build_scene()
@@ -70,39 +70,29 @@ func _ready() -> void:
 	new_match(seeded)
 	dev = DevCapture.new()
 	dev.parse(self)
-	_sync_overlay_scale()
 	_build_selector()
-	if not fixture_arg_given:
-		open_select()
+	menus = MenuHost.new()
+	menus.attach(self)
+	_sync_overlay_scale()
+	if dev.open_settings:
+		menus.open_settings()
+	elif dev.open_menu or not fixture_arg_given:
+		menus.open_menu()
+	else:
+		match_started = true
+	if dev.open_fixture:
+		menus.open_menu()
+		open_select(true)
+	if dev.open_confirm and menus.shell != null:
+		menus.shell.open_quit_confirm()
 
 func setup_audio() -> void:
-	crowd = AudioStreamPlayer.new()
-	var cs = load("res://audio/crowd_loop.wav")
-	if cs != null:
-		cs.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		cs.loop_end = int(cs.get_length() * cs.mix_rate)
-	crowd.stream = cs
-	crowd.volume_db = -21.0
-	add_child(crowd)
-	crowd.play()
-	for n in ["kick", "whistle", "goal_roar", "ooh"]:
-		var st = load("res://audio/%s.wav" % n)
-		sfx_streams[n] = st
-	for i in range(6):
-		var pl := AudioStreamPlayer.new()
-		pl.volume_db = -8.0
-		add_child(pl)
-		sfx_pool.append(pl)
+	sfx = SfxBank.new()
+	add_child(sfx)
 
 func play_sfx(name: String, vol_db: float = -8.0, pitch: float = 1.0) -> void:
-	if not sfx_streams.has(name) or sfx_streams[name] == null:
-		return
-	var pl: AudioStreamPlayer = sfx_pool[sfx_next % sfx_pool.size()]
-	sfx_next += 1
-	pl.stream = sfx_streams[name]
-	pl.volume_db = vol_db
-	pl.pitch_scale = pitch
-	pl.play()
+	if sfx != null:
+		sfx.play(name, vol_db, pitch)
 
 func _on_ball_kicked(strength: float) -> void:
 	play_sfx("kick", -10.0 + strength * 4.0, randf_range(0.9, 1.08))
@@ -153,6 +143,8 @@ func _sync_overlay_scale() -> void:
 	hud_layer.transform = frame
 	if sel_layer != null:
 		sel_layer.transform = frame
+	if menus != null:
+		menus.sync(frame, hud_scale, touch)
 
 func new_match(seed: int) -> void:
 	if engine != null and engine.event_fired.is_connected(_on_engine_event):
@@ -213,11 +205,15 @@ func _build_selector() -> void:
 	selector.touch = touch
 	sel_layer.visible = false
 
-func open_select() -> void:
+func open_select(from_menu: bool = false) -> void:
 	if selector == null:
 		return
+	select_from_menu = from_menu
 	select_open = true
 	paused = true
+	if from_menu and menus != null:
+		menus.close(true)
+	selector.back_to_menu = from_menu
 	selector.setup(home_id, away_id)
 	if hud_layer != null:
 		hud_layer.visible = false
@@ -228,6 +224,10 @@ func _close_select() -> void:
 	select_open = false
 	if sel_layer != null:
 		sel_layer.visible = false
+	if select_from_menu:
+		select_from_menu = false
+		menus.open_menu()
+		return
 	if hud_layer != null:
 		hud_layer.visible = true
 	paused = false
@@ -236,10 +236,14 @@ func _on_fixture_confirmed(h: String, a: String) -> void:
 	home_id = h
 	away_id = a
 	select_open = false
+	select_from_menu = false
 	if sel_layer != null:
 		sel_layer.visible = false
 	if hud_layer != null:
 		hud_layer.visible = true
+	if menus != null:
+		menus.close()
+	match_started = true
 	seeded += randi_range(1, 9999)
 	new_match(seeded)
 
@@ -267,6 +271,8 @@ func _notification(what: int) -> void:
 # ------------------------------------------------------------------ input ----
 
 func _input(event: InputEvent) -> void:
+	if menus != null and menus.handle_input(event, _design(event.position) if event is InputEventMouse else Vector2.ZERO):
+		return
 	if select_open:
 		if event is InputEventMouseMotion:
 			mouse = event.position
@@ -320,13 +326,15 @@ func _input(event: InputEvent) -> void:
 			actors.names_visible = names_visible
 		elif k == KEY_C:
 			camera_follow = not camera_follow
+		elif k == KEY_M:
+			menus.open_menu()
 		elif k == KEY_T:
 			open_select()
 		elif k == KEY_ESCAPE:
 			if focus_id >= 0:
 				focus_id = -1
 			else:
-				get_tree().quit()
+				menus.ask_quit()
 
 ## Overlay widgets live in design space; pointer events arrive in logical
 ## viewport units.
@@ -347,6 +355,8 @@ func _click(p: Vector2) -> void:
 		camera_follow = not camera_follow
 	elif b == "teams":
 		open_select()
+	elif b == "menu":
+		menus.open_menu()
 	elif b == "manager_card":
 		hud.manager_card.dismiss()
 	elif b == "restart":
@@ -418,6 +428,8 @@ func _process(delta: float) -> void:
 	elapsed_real += delta
 	match_time += delta
 	dev.tick(self, delta)
+	if menus != null and menus.active():
+		return
 	if select_open:
 		return
 	var zm: float = zoom_scale * (2.6 if camera_follow else (1.10 if in_highlight else 1.0))

@@ -16,6 +16,13 @@ var elapsed := 0.0
 ## `--ui-scale=2.2` forces the handheld overlay scale and touch copy on a
 ## desktop build, so the phone layout can be inspected without a device.
 var ui_scale := 0.0
+## Menu-shell poses for evidence runs: `--menu` opens the main menu even when a
+## fixture was passed, `--settings` opens settings, `--quit-confirm` raises the
+## quit dialog over the menu.
+var open_menu := false
+var open_settings := false
+var open_confirm := false
+var open_fixture := false
 
 ## `args` is injectable so the flag table can be tested; production passes the
 ## real command line.
@@ -52,6 +59,14 @@ func parse(game, args := OS.get_cmdline_user_args()) -> void:
 			game.engine.last_goal = {"team": 0, "conceded_by": 1, "scorer": "B. Šeško", "minute": 63, "own_goal": false}
 		elif a == "--managers":
 			game.engine.manager.demo()
+		elif a == "--menu":
+			open_menu = true
+		elif a == "--settings":
+			open_settings = true
+		elif a == "--quit-confirm":
+			open_confirm = true
+		elif a == "--fixture-sheet":
+			open_fixture = true
 		elif a == "--full":
 			game.mode = "full"
 			game.fast_mode = false

@@ -231,10 +231,11 @@ func _draw_meta(vp: Vector2) -> void:
 	var home: Dictionary = engine.teams[0]["data"]
 	var venue := str(home.get("stadium", "")).to_upper()
 	var city := str(home.get("city", "")).to_upper()
-	text(Vector2(x + 14, y + 23), "%s  ·  %s" % [venue, city], 13, C_TEXT, f_bold)
-	text(Vector2(x + 14, y + 40), "PREMIER LEAGUE  ·  ATT. %s" % _thousands(int(home.get("capacity", 0))), 9, C_DIM, f_med)
-	text(Vector2(x + 14, y + 56), "REFEREE", 9, C_DIM, f_bold)
-	text(Vector2(x + 70, y + 56), engine.referee_name, 10, C_TEXT, f_bold)
+	UiChrome.wordmark(self, Vector2(x + 14, y + 16), 13, f_bold)
+	text(Vector2(x + 14, y + 33), "%s  ·  %s" % [venue, city], 13, C_TEXT, f_bold)
+	text(Vector2(x + 14, y + 47), "PREMIER LEAGUE  ·  ATT. %s" % _thousands(int(home.get("capacity", 0))), 9, C_DIM, f_med)
+	text(Vector2(x + 14, y + 60), "REFEREE", 9, C_DIM, f_bold)
+	text(Vector2(x + 70, y + 60), engine.referee_name, 10, C_TEXT, f_bold)
 	var btn := Rect2(x + 12, y + 68, 262, 20)
 	var hovered := btn.has_point(mouse)
 	rect(C_PANEL_LIGHT if hovered else Color(0.05, 0.07, 0.09, 0.92), btn, 5, Color(1, 1, 1, 0.12 if hovered else 0.05))
@@ -303,6 +304,7 @@ func _control_specs(vp: Vector2) -> Array:
 		["skip", "SKIP", "S"],
 		["camera", "FOLLOW" if game.camera_follow else "WIDE", "C"],
 		["restart", "RESTART", "R"],
+		["menu", "MENU", "M"],
 	]
 	if touch or HudLayout.is_compact(vp):
 		specs.append(["teams", "TEAMS", "CLUBS"])
@@ -463,7 +465,7 @@ func _draw_intro(vp: Vector2) -> void:
 	draw_rect(Rect2(x + w - 7, y + 1, 6, h - 2), Color(engine.teams[1]["data"]["color"].r, engine.teams[1]["data"]["color"].g, engine.teams[1]["data"]["color"].b, a))
 	var home: Dictionary = engine.teams[0]["data"]
 	var away: Dictionary = engine.teams[1]["data"]
-	text(Vector2(x + 22, y + 26), "PREMIER LEAGUE  ·  %s  ·  %s" % [str(home.get("stadium", "")).to_upper(), str(home.get("city", "")).to_upper()], 11, Color(C_GOLD.r, C_GOLD.g, C_GOLD.b, a), f_bold)
+	text(Vector2(x + 22, y + 26), "FOOTBALL SIM  ·  PREMIER LEAGUE  ·  %s  ·  %s" % [str(home.get("stadium", "")).to_upper(), str(home.get("city", "")).to_upper()], 11, Color(C_GOLD.r, C_GOLD.g, C_GOLD.b, a), f_bold)
 	text(Vector2(x + 22, y + 56), str(home["name"]).to_upper(), 26, Color(C_TEXT.r, C_TEXT.g, C_TEXT.b, a), f_bold)
 	text_c(x + w * 0.5, y + 54, "v", 16, Color(C_DIM.r, C_DIM.g, C_DIM.b, a), f_med)
 	text_r(x + w - 22, y + 56, str(away["name"]).to_upper(), 26, Color(C_TEXT.r, C_TEXT.g, C_TEXT.b, a), f_bold)

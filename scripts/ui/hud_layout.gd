@@ -19,8 +19,11 @@ const COMPACT_STATS_W := 240.0
 const CONTROL_W := 108.0
 const CONTROL_GAP := 6.0
 const CONTROL_H := 46.0
-const CONTROL_COUNT := 6
-const CONTROL_COUNT_TOUCH := 7
+## Desktop bar: pause, speed, mode, skip, camera, restart, menu.
+const CONTROL_COUNT := 7
+## Touch/compact adds the teams door, because the fixture panel that carries it
+## on desktop is not drawn there.
+const CONTROL_COUNT_TOUCH := 8
 
 ## Touch builds get one extra door (teams) because the fixture panel that
 ## carries it on desktop is not drawn in compact.
@@ -47,9 +50,15 @@ static func overlay_scale() -> float:
 static func control_count(vp: Vector2, touch := false) -> int:
 	return CONTROL_COUNT_TOUCH if (touch or is_compact(vp)) else CONTROL_COUNT
 
+## A near-square design viewport (a test viewport, or a phone held to the ear)
+## is narrower than any real landscape handset; the bar keeps 44-unit doors by
+## giving up its outer margin rather than shrinking a tap target.
+static func control_margin(vp: Vector2) -> float:
+	return 8.0 if vp.x < 520.0 else PANEL_MARGIN
+
 static func control_width(vp: Vector2, touch := false) -> float:
 	var n := control_count(vp, touch)
-	var avail: float = vp.x - 2.0 * PANEL_MARGIN - CONTROL_GAP * float(n - 1)
+	var avail: float = vp.x - 2.0 * control_margin(vp) - CONTROL_GAP * float(n - 1)
 	return minf(CONTROL_W, avail / float(n))
 
 static func controls_rect(vp: Vector2, touch := false) -> Rect2:
