@@ -65,8 +65,8 @@ func test_exponent_terms_feed_both_consumers() -> void:
 	var def_ex := PoissonModel.defence_exponents(HOME, AWAY)
 	assert_almost_eq(def_ex.x, defence.x, 0.0001, "defence_exponents disagrees with exponent_terms")
 	assert_almost_eq(def_ex.y, defence.y, 0.0001, "defence_exponents disagrees with exponent_terms")
-	# Facing BUR's back line is a break; facing ARS's is not.
-	assert_gt(def_ex.x, 0.0, "BUR's defence was not read as below the league")
+	# Facing IPS's back line is a break; facing ARS's is not.
+	assert_gt(def_ex.x, 0.0, "IPS's defence was not read as below the league")
 	assert_lt(PoissonModel.defence_exponents(HOME, "ARS").x, 0.0, "ARS's defence was not read as above the league")
 
 func test_distribution_is_normalised() -> void:

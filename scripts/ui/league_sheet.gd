@@ -162,6 +162,9 @@ func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dicti
 	var label: String = FixtureCalendar.day_label(date) if date != "" else str(state.get("day", ""))
 	var rest := " · GW %d · %d OF %d PLAYED" % [int(state.get("matchday", 1)),
 		int(state.get("played", 0)), int(state.get("total", 0))]
+	# A left-behind watch is still being played out: the result lands on its own.
+	if bool(state.get("settling", false)):
+		rest += " · FINISHING THE WATCHED MATCH"
 	_heading(c, vp, fonts, str(state.get("name", "LEAGUE")), label + rest)
 	if date != "":
 		var bold: Font = fonts["bold"]
@@ -173,8 +176,13 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, 
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	## The plan hint rides the caption: the first fixture row starts right under
-	## it, so a second line would print through the row.
+	## it, so a second line would print through the row. A day that still holds
+	## watches says what CONTINUE does with them (#100).
 	var hint := " · TAP A GAME TO SWITCH AUTO / WATCH" if bool(state.get("can_suggest", false)) else ""
+	for fx in state.get("plan", []):
+		if int(fx.get("watched", 0)) == 1:
+			hint = " · CONTINUE OPENS THE NEXT WATCH"
+			break
 	UiChrome.text(c, Vector2(24.0, HEADER + 18.0), "TODAY'S FIXTURES" + hint, 11, UiChrome.C_DIM, bold)
 	if vp.x >= 760.0 and not compact(vp):
 		var places := _hub_table_places(_hub_table_box(vp))

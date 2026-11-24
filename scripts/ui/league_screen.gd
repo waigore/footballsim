@@ -1,19 +1,16 @@
 class_name LeagueScreen
 extends Control
 
-## The god-mode league surface: New/Setup, Load, the Continue hub with its
-## matchday planner, the table, the calendar, match reports and the podium.
-##
-## The screen is the only stateful part; the sheets own geometry and paint, and
-## the season object owns the sim. Input arrives in design space from
-## `LeagueHost`, exactly like the encyclopedia sheet.
+## God-mode league surface: New/Setup, Load, Continue hub, table, calendar,
+## reports and podium. Screen holds state; sheets paint; season owns the sim.
+## Input arrives in design space from `LeagueHost`.
 
 signal closed
 signal match_requested(home: String, away: String, fixture_id: String)
 signal season_opened(season: LeagueSeason)
-## A club row was pressed: the host opens that club's team page over the season.
+## Club row: host opens that club's team page over the season.
 signal club_requested(club_id: String)
-## A goal's ▶ was pressed: the host plays that stored clip over the broadcast.
+## Goal ▶: host plays that stored clip over the broadcast.
 signal goal_highlight_requested(fixture_id: String, goal_index: int)
 
 const MODE_HUB := "hub"
@@ -27,7 +24,7 @@ const MODE_PODIUM := "podium"
 var ui_scale := 1.0
 var touch := false
 var mouse := Vector2(-1000, -1000)
-## The pointer's button is down: the touch stand-in for a hover (#99).
+## Pointer button down: touch stand-in for hover (#99).
 var holding := false
 
 var mode := MODE_WIZARD
@@ -52,8 +49,7 @@ var hints := DateHints.new()
 var rows_hints: DateHints = null
 var tooltip: DateOverlay = null
 var _last_mode := ""
-## Pose -> [sheet, layout, body painter, chrome painter]. The screens share one
-## scroll window; the table says which sheet owns each pose's geometry and paint.
+## Pose -> [sheet, layout, body painter, chrome painter].
 var _poses := {
 	MODE_HUB: ["hub", "hub_layout", "draw_hub_body", "draw_hub_chrome"],
 	MODE_WIZARD: ["hub", "wizard_layout", "draw_wizard_body", "draw_wizard_chrome"],
@@ -155,6 +151,7 @@ func current_view() -> Dictionary:
 	if season != null:
 		view["plan"] = season.plan()
 		view["can_suggest"] = bool(view.get("can_suggest", false))
+		view["settling"] = season.finishing
 	else:
 		view["plan"] = []
 	view["screen"] = mode
@@ -176,13 +173,11 @@ func refresh() -> void:
 	_last_mode = mode
 	queue_redraw()
 
-## Later items are painted on top (a delete chip sits inside its save row), so
-## the hit test walks the list back to front.
+## Hit test walks back to front so later items (e.g. a delete chip) win.
 func button_at(p: Vector2) -> String:
 	return body.hit(p) if body != null else ""
 
-## Wheel notches, trackpad pans, drags and the keys all land here. The full
-## table is wider than a phone window, so a drag pans it sideways too.
+## Wheel, trackpad, drag and keys; wide tables also pan sideways.
 func scroll_by(delta: float, dx: float = 0.0) -> void:
 	if body != null:
 		body.pan_by(Vector2(dx, delta))
@@ -294,7 +289,8 @@ func _open_save(slug: String) -> void:
 	open_season(opened, str(opened.state().get("status", "")) == "complete")
 
 func _continue() -> void:
-	if season == null:
+	if season == null or season.finishing:
+		refresh()
 		return
 	var result := season.advance()
 	var played: Array = result.get("played", [])
@@ -303,6 +299,13 @@ func _continue() -> void:
 		month = LeagueBook.state_month(season, month)
 		refresh()
 		return
+	# Pending watch: Continue opens it instead of settling the day (#100).
+	var pending: Array = result.get("pending", [])
+	if not pending.is_empty():
+		var watch := season.start_watch(str(pending[0]["id"]))
+		if not watch.is_empty():
+			match_requested.emit(str(watch["home"]), str(watch["away"]), str(watch["fixture_id"]))
+			return
 	if not played.is_empty():
 		show_roundup(played)
 		return
@@ -339,7 +342,6 @@ func key(code: int) -> bool:
 	if mode == MODE_WIZARD and _type_name(code):
 		return true
 	if mode == MODE_REPORT and code >= KEY_1 and code <= KEY_9:
-		# Keyboard parity for ▶: the number keys play the report's goals.
 		var want := code - KEY_1
 		if has_clip(want):
 			play_goal(want)

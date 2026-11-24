@@ -168,6 +168,22 @@ func _end_match() -> void:
 	var line = Commentary.full_time(rng, teams[0]["data"]["short"], score[0], teams[1]["data"]["short"], score[1])
 	_emit("full_time", line, -1, null)
 
+## Play the rest of the match out with no presentation: a caller that has left
+## the viewer drives this in slices. `budget_usec` caps the work in one call so
+## the caller can keep painting; a negative budget runs to the end. Returns true
+## once the match is at full time.
+func run_to_full_time(budget_usec: int = -1) -> bool:
+	var started := Time.get_ticks_usec()
+	var guard := 0
+	while phase != "full_time" and guard < FAST_FORWARD_TICKS:
+		if phase == "half_time":
+			begin_second_half()
+		tick()
+		guard += 1
+		if budget_usec >= 0 and Time.get_ticks_usec() - started >= budget_usec:
+			break
+	return phase == "full_time"
+
 func to_dict() -> Dictionary:
 	var ps = []
 	for p in players:

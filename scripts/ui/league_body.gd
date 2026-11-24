@@ -23,10 +23,19 @@ var painter: Callable = Callable()
 ## The current sheet: rows that scroll, and doors that stay where they were put.
 var content: Array = []
 var pinned: Array = []
+## The host above the sheet: a leftover watched match takes a slice of its
+## engine each frame from here (#100).
+var host: LeagueHost = null
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
+
+## The season sheet paints every frame it is up, so the leftover match rides the
+## same frame instead of needing a ticker of its own.
+func _process(_delta: float) -> void:
+	if host != null and host.watch != null:
+		host.watch.tick()
 
 func max_scroll() -> float:
 	return maxf(0.0, content_height - size.y)
