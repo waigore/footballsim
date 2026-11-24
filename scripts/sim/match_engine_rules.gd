@@ -2,12 +2,6 @@ extends "res://scripts/sim/match_engine_play.gd"
 
 ## Laws of the game: goals, offside, out of play, substitutions.
 
-## Every goal this match has scored, in order: `team` (the side credited),
-## `minute`, `scorer` and `own_goal`. The goal path writes it, so the whistle
-## card can list the goals without re-reading `events`, which drops its oldest
-## entries once a match gets busy (DR-20261125-04).
-var goal_sheet: Array = []
-
 func _check_rules() -> void:
 	# Goal?
 	if ball.pos.x <= 0.0 or ball.pos.x >= L:
@@ -119,11 +113,6 @@ func _score_goal(conceding_team: int) -> void:
 		"scorer": scorer_name, "minute": minute_of(clock), "own_goal": own_goal,
 		"assist": by_id.get(ball.assist_id, null).name if by_id.get(ball.assist_id, null) != null and not own_goal else "",
 	}
-	goal_sheet.append({
-		"team": scoring_team, "minute": minute_of(clock),
-		"scorer": scorer.name if scorer != null else "Unknown",
-		"own_goal": own_goal,
-	})
 	phase = "goal"
 	goal_timer = 3.4
 	ball.planned_goal = false
@@ -137,7 +126,8 @@ func _score_goal(conceding_team: int) -> void:
 	_emit("goal", Commentary.goal(rng, scorer.name if scorer != null else "Unknown",
 		str(last_goal.get("assist", "")), own_goal,
 		teams[scoring_team]["data"]["short"], teams[conceding_team]["data"]["short"],
-		score[scoring_team] - 1, score[conceding_team], minute_of(clock)), scoring_team, scorer, {"xg": 0.0})
+		score[scoring_team] - 1, score[conceding_team], minute_of(clock)), scoring_team, scorer,
+		{"xg": 0.0, "own_goal": own_goal})
 	flash = 1.0
 	for p in players:
 		if p.team == scoring_team:
