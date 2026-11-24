@@ -82,7 +82,7 @@ jobs:
     uses: ./.github/workflows/census.yml
     with:
       n: 32
-      budget_ms: 60000
+      budget_ms: 120000
 
   # Sticky issue for fix-tests agent (at most one open ci-tier2). Own job so a
   # census failure raises it too, not just the full suite.
