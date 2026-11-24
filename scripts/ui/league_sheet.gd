@@ -33,10 +33,10 @@ static func compact(vp: Vector2) -> bool:
 func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	var items: Array = []
 	var plan: Array = state.get("plan", [])
-	var top := HEADER + (14.0 if not compact(vp) else 8.0)
+	var top: float = HEADER + (14.0 if not compact(vp) else 8.0)
 	var body_bottom := vp.y - BAR_H - 6.0
 	var wide := vp.x >= 760.0 and not compact(vp)
-	var left_w := (vp.x - 72.0) * 0.58 if wide else vp.x - 48.0
+	var left_w: float = (vp.x - 72.0) * 0.58 if wide else vp.x - 48.0
 	var y := top + 24.0
 	var fits := int((body_bottom - y) / (ROW_H + ROW_GAP))
 	for i in range(mini(plan.size(), maxi(fits, 0))):
@@ -137,7 +137,7 @@ func draw_hub(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, state
 	if vp.x >= 760.0 and not compact(vp):
 		var left_w := (vp.x - 72.0) * 0.58
 		var tx := 24.0 + left_w + 22.0
-		var top := HEADER + (14.0 if not compact(vp) else 8.0)
+		var top: float = HEADER + (14.0 if not compact(vp) else 8.0)
 		UiChrome.text(c, Vector2(tx + 32.0, top + 16.0), "CLUB", 9, UiChrome.C_DIM, bold)
 		UiChrome.text(c, Vector2(tx + 82.0, top + 16.0), "P", 9, UiChrome.C_DIM, bold)
 		UiChrome.text(c, Vector2(tx + 112.0, top + 16.0), "GD", 9, UiChrome.C_DIM, bold)

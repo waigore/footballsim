@@ -34,7 +34,7 @@ func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 	var month := str(view.get("month", ""))
 	var grid_top := HEADER + 34.0
 	var cw := (vp.x - 48.0) / 7.0
-	var ch := 30.0 if vp.y < 620.0 else 34.0
+	var ch: float = 30.0 if vp.y < 620.0 else 34.0
 	var count := month_days(month)
 	var first := _first_weekday(month)
 	for i in range(count):
@@ -216,7 +216,7 @@ func draw_report(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, vi
 	var med: Font = fonts["med"]
 	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
 	var roundup: Array = view.get("roundup", [])
-	var kicker := "RESULTS · %s" % str(view.get("day", "")) if not roundup.is_empty() else "MATCH REPORT"
+	var kicker: String = "RESULTS · %s" % str(view.get("day", "")) if not roundup.is_empty() else "MATCH REPORT"
 	UiChrome.text(c, Vector2(24.0, 48.0), kicker, 12, UiChrome.C_GOLD, bold)
 	if roundup.is_empty():
 		var fx: Dictionary = view.get("fixture", {})
