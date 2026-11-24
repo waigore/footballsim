@@ -267,12 +267,11 @@ func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 18.0),
 				"%s %d – %d %s" % [str(fx["home_abbr"]), int(fx["home_goals"]), int(fx["away_goals"]),
 					str(fx["away_abbr"])], 15, UiChrome.C_TEXT, bold)
-			var names: Array = []
-			for e in report["events"]:
-				if str(e.get("kind", "")) == "goal":
-					names.append("%s %d'" % [str(e.get("player_name", "")), int(e.get("minute", 0))])
+			# Every scorer says which club scored (DR-20261125-07): the run mixes
+			# both sides, so the entry carries its own club label.
+			var line := LeagueRoundup.run(report, med, rect.size.x - 20.0, 10)
 			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 34.0),
-				", ".join(names) if not names.is_empty() else "no goals", 10, UiChrome.C_DIM, med)
+				line if line != "" else LeagueRoundup.NONE, 10, UiChrome.C_DIM, med)
 
 func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
 	var e: Dictionary = item["event"]
