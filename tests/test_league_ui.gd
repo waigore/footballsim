@@ -170,15 +170,15 @@ func test_watching_a_fixture_hands_it_to_the_viewer_and_back() -> void:
 		assert_ne(str(item["id"]), "toggle:" + fixture_id, "a played row still offers AUTO/WATCH")
 
 func test_continue_plays_the_autos_and_shows_the_roundup() -> void:
-	var before := int(LeagueSeason.active.record.played())
+	var before := int(LeagueSeason.active.record.fixtures.played())
 	press_id("continue")
 	if screen().mode == LeagueScreen.MODE_REPORT:
 		var results: Array = screen().roundup
 		assert_gt(results.size(), 0, "the roundup is empty")
-		assert_eq(int(LeagueSeason.active.record.played()), before + results.size(), "the ledger lost matches")
+		assert_eq(int(LeagueSeason.active.record.fixtures.played()), before + results.size(), "the ledger lost matches")
 		press_id("back")
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Continue did not settle on the hub")
-	assert_gte(int(LeagueSeason.active.record.played()), before, "the ledger went backwards")
+	assert_gte(int(LeagueSeason.active.record.fixtures.played()), before, "the ledger went backwards")
 
 ## #100: Continue on a day that still holds watches hands the viewer the next
 ## watched fixture instead of settling the day and leaving the hub as it was.
@@ -267,7 +267,7 @@ func test_a_leftover_watch_finishes_behind_the_main_menu() -> void:
 func test_a_report_play_door_plays_the_stored_clip_and_comes_back() -> void:
 	var season := LeagueSeason.active
 	var fixture := ""
-	for row in season.record.fixtures():
+	for row in season.record.fixtures.all():
 		if not season.record.clips.list(str(row["id"])).is_empty():
 			fixture = str(row["id"])
 			break
@@ -300,7 +300,7 @@ func test_the_number_keys_play_report_goals() -> void:
 	# The report with the fewest goals: the key beyond the last one must find
 	# nothing, whatever the season's high scores look like.
 	var fewest := 1 << 30
-	for row in season.record.fixtures():
+	for row in season.record.fixtures.all():
 		var goals := season.record.clips.list(str(row["id"])).size()
 		if goals > 0 and goals < fewest:
 			fewest = goals
@@ -363,7 +363,7 @@ func test_the_calendar_opens_a_day_and_a_report() -> void:
 func test_the_podium_reads_a_finished_season() -> void:
 	var season := LeagueSeason.active
 	PLDatabase.execute("UPDATE league_fixture SET home_goals = 1, away_goals = 0, status = 'played';")
-	season.record.recompute_table()
+	season.record.standings.recompute()
 	season.save.set_status("complete")
 	season.save.reload()
 	screen().open_season(season)
@@ -450,7 +450,7 @@ func test_every_league_pose_draws() -> void:
 		press_id("back")
 	var active := LeagueSeason.active
 	PLDatabase.execute("UPDATE league_fixture SET home_goals = 2, away_goals = 2, status = 'played';")
-	active.record.recompute_table()
+	active.record.standings.recompute()
 	active.save.set_status("complete")
 	active.save.reload()
 	screen().open_season(active)
@@ -474,9 +474,9 @@ func test_the_wizard_reports_a_save_it_cannot_open() -> void:
 
 func test_keyboard_walks_the_league_and_respects_its_limits() -> void:
 	_open_hub()
-	var before := int(LeagueSeason.active.record.played())
+	var before := int(LeagueSeason.active.record.fixtures.played())
 	assert_true(screen().key(KEY_ENTER), "Enter did not press Continue")
-	assert_gte(int(LeagueSeason.active.record.played()), before, "Enter lost matches")
+	assert_gte(int(LeagueSeason.active.record.fixtures.played()), before, "Enter lost matches")
 	assert_true(screen().key(KEY_ESCAPE), "Esc did not leave the hub")
 	if game.menus.league_active():
 		screen().key(KEY_ESCAPE)
@@ -514,15 +514,15 @@ func test_the_month_doors_and_an_empty_day_draw() -> void:
 
 func test_a_report_with_every_event_kind_draws() -> void:
 	var season := LeagueSeason.active
-	var played := season.record.fixtures()
+	var played := season.record.fixtures.all()
 	var fixture_id := ""
 	for fx in played:
 		if str(fx["status"]) == "played":
 			fixture_id = str(fx["id"])
 			break
 	assert_true(fixture_id != "", "there is no played fixture to report")
-	var fx := season.record.fixture(fixture_id)
-	season.record.add_events([
+	var fx := season.record.fixtures.one(fixture_id)
+	season.record.report.add_events([
 		{"fixture_id": fixture_id, "minute": 1, "kind": "goal", "player_id": "", "club_id": str(fx["home_club_id"]), "detail": "A. Player"},
 		{"fixture_id": fixture_id, "minute": 2, "kind": "assist", "player_id": "", "club_id": str(fx["home_club_id"]), "detail": "B. Player"},
 		{"fixture_id": fixture_id, "minute": 3, "kind": "yellow", "player_id": "", "club_id": str(fx["away_club_id"]), "detail": "C. Player"},

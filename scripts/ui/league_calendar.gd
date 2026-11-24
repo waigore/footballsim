@@ -15,7 +15,7 @@ static func open(screen) -> void:
 	screen.days_cache = {}
 	var season = screen.season
 	if season != null:
-		for fx in season.record.fixtures():
+		for fx in season.record.fixtures.all():
 			var date: String = str(fx["kickoff"])
 			if not screen.days_cache.has(date):
 				screen.days_cache[date] = {"n": 0, "played": 0}
@@ -55,6 +55,6 @@ static func pick(screen, date: String) -> void:
 	screen.day = date
 	screen.day_fixtures = []
 	if screen.season != null:
-		for fx in screen.season.record.fixtures_on(date):
+		for fx in screen.season.record.fixtures.on(date):
 			screen.day_fixtures.append(fx)
 	screen.refresh()

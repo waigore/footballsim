@@ -14,21 +14,21 @@ const SUGGEST_AFTER_ROUNDS := 5
 static func suggest(season) -> Array:
 	if season == null or season.record == null or season.save == null:
 		return []
-	if season.record.completed_matchdays() < SUGGEST_AFTER_ROUNDS:
+	if season.record.fixtures.completed_matchdays() < SUGGEST_AFTER_ROUNDS:
 		return []
 	var top := top_six(season.record)
 	var ids: Array = []
-	for fx in season.record.pending_upto(season.save.current_date()):
+	for fx in season.record.fixtures.pending_upto(season.save.current_date()):
 		if top.has(str(fx["home_club_id"])) and top.has(str(fx["away_club_id"])):
 			ids.append(str(fx["id"]))
-	season.record.suggest(ids)
+	season.record.fixtures.suggest(ids)
 	season.state_changed.emit()
 	return ids
 
 ## The six clubs the table currently leads with.
 static func top_six(record) -> Dictionary:
 	var out := {}
-	var rows: Array = record.table()
+	var rows: Array = record.standings.table()
 	for i in range(mini(6, rows.size())):
 		out[str(rows[i]["club_id"])] = true
 	return out

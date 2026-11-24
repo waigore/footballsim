@@ -6,8 +6,9 @@ extends RefCounted
 ## fixture's report, so a row and its clip always agree. Re-settling a fixture
 ## replaces its clips instead of stacking a second set behind the first.
 ##
-## Split out of `LeagueRecord` so the ledger of results and the store of
-## pictures stay one concern each; both talk to the same bound save.
+## Owned by `LeagueReport`, thin beside the event rows it belongs to: the
+## ledger of results and the store of pictures stay one concern each; both talk
+## to the same bound save.
 
 var save: LeagueSave = null
 

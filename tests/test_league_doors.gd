@@ -48,10 +48,10 @@ func _hub() -> void:
 	screen.mode = LeagueScreen.MODE_HUB
 
 func _fixture(watched: int = 0) -> Dictionary:
-	for fx in season.record.fixtures():
+	for fx in season.record.fixtures.all():
 		if str(fx["status"]) == "pending":
 			season.set_watch(str(fx["id"]), watched == 1)
-			return season.record.fixture(str(fx["id"]))
+			return season.record.fixtures.one(str(fx["id"]))
 	return {}
 
 func test_the_key_map_walks_a_sheet_without_a_window() -> void:
@@ -159,14 +159,14 @@ func test_a_fixture_row_watches_starts_or_opens_a_report() -> void:
 	_hub()
 	var fx := _fixture(0)
 	screen.click("toggle:" + str(fx["id"]))
-	assert_eq(int(season.record.fixture(str(fx["id"]))["watched"]), 1, "the toggle did not watch the fixture")
+	assert_eq(int(season.record.fixtures.one(str(fx["id"]))["watched"]), 1, "the toggle did not watch the fixture")
 	screen.click("fixture:" + str(fx["id"]))
 	assert_eq(asked, [str(fx["id"])], "a watched fixture did not start its match")
 	season.set_watch(str(fx["id"]), false)
 	screen.click("fixture:" + str(fx["id"]))
-	assert_eq(int(season.record.fixture(str(fx["id"]))["watched"]), 1, "a pending row did not flip its watch")
+	assert_eq(int(season.record.fixtures.one(str(fx["id"]))["watched"]), 1, "a pending row did not flip its watch")
 	var played := {}
-	for row in season.record.fixtures():
+	for row in season.record.fixtures.all():
 		if str(row["status"]) == "played":
 			played = row
 			break
@@ -175,7 +175,7 @@ func test_a_fixture_row_watches_starts_or_opens_a_report() -> void:
 		assert_eq(screen.mode, LeagueScreen.MODE_REPORT, "a played fixture did not open its report")
 		screen.mode = LeagueScreen.MODE_HUB
 		screen.click("toggle:" + str(played["id"]))
-		assert_eq(int(season.record.fixture(str(played["id"]))["watched"]),
+		assert_eq(int(season.record.fixtures.one(str(played["id"]))["watched"]),
 			int(played["watched"]), "a played fixture changed its watch")
 
 func test_fixture_rows_are_inert_without_a_season_and_ignore_unknown_ids() -> void:
@@ -185,19 +185,19 @@ func test_fixture_rows_are_inert_without_a_season_and_ignore_unknown_ids() -> vo
 	assert_null(screen.season, "a fixture row invented a season")
 	_hub()
 	var watched := 0
-	for row in season.record.fixtures():
+	for row in season.record.fixtures.all():
 		watched += int(row["watched"])
 	screen.click("fixture:no-such-fixture")
 	screen.click("toggle:no-such-fixture")
 	var after := 0
-	for row in season.record.fixtures():
+	for row in season.record.fixtures.all():
 		after += int(row["watched"])
 	assert_eq(after, watched, "an unknown fixture changed a watch flag")
 
 func test_a_report_row_opens_the_sheet_for_its_fixture() -> void:
 	_hub()
 	var played := ""
-	for row in season.record.fixtures():
+	for row in season.record.fixtures.all():
 		if str(row["status"]) == "played":
 			played = str(row["id"])
 			break

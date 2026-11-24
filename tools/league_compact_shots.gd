@@ -29,7 +29,7 @@ func _initialize() -> void:
 		quit()
 		return
 	var guard := 0
-	while season.record.completed_matchdays() < 6 and guard < 16:
+	while season.record.fixtures.completed_matchdays() < 6 and guard < 16:
 		season.advance()
 		guard += 1
 	league.show_season(season)

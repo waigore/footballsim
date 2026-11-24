@@ -22,7 +22,7 @@ func before_all() -> void:
 	season = LeagueSeason.create("Upcoming Season", "generated", "fixture_days", SEED)
 	assert_not_null(season, "the season was not created")
 	season.advance()
-	day_one = season.record.fixtures(1)
+	day_one = season.record.fixtures.all(1)
 
 func after_all() -> void:
 	if season != null:

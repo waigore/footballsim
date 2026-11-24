@@ -233,7 +233,7 @@ static func request_watch(screen, watch: Dictionary) -> void:
 static func toggle_fixture(screen, fixture_id: String) -> void:
 	if screen.season == null:
 		return
-	var fx: Dictionary = screen.season.record.fixture(fixture_id)
+	var fx: Dictionary = screen.season.record.fixtures.one(fixture_id)
 	if fx.is_empty() or str(fx["status"]) == "played":
 		return
 	screen.season.set_watch(fixture_id, int(fx["watched"]) != 1)
@@ -244,7 +244,7 @@ static func toggle_fixture(screen, fixture_id: String) -> void:
 static func press_fixture(screen, fixture_id: String) -> void:
 	if screen.season == null:
 		return
-	var fx: Dictionary = screen.season.record.fixture(fixture_id)
+	var fx: Dictionary = screen.season.record.fixtures.one(fixture_id)
 	if fx.is_empty():
 		return
 	if str(fx["status"]) == "played":
