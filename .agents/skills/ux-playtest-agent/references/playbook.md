@@ -11,6 +11,28 @@ tools/launch_game.sh -- --home=ARS --away=LIV   # optional direct fixture
 
 Cold start normally opens the main menu (Start Sim · Settings · Quit).
 
+## Window sizes (legibility)
+
+The non-match chrome is judged at **two** window sizes so a size that only looks
+fine when the window is small is caught:
+
+```bash
+# Default window, then a fullscreen-sized one. The game reads --resolution.
+godot --path . --resolution 1600x900 -- --menu --shots=2.5 --quit=4
+godot --path . --resolution 2560x1440 -- --menu --shots=2.5 --quit=4
+# League / encyclopedia poses: tools/league_shots.gd, or --wiki=team:MUN
+godot --path . --resolution 2560x1440 --script res://tools/league_shots.gd
+```
+
+Run both sizes for the same surface and compare the PNGs side by side. On a
+Retina Mac a "large" window is the panel's pixel size (e.g. `3024x1964`), so the
+comparison stays honest. On a running window, `xdotool windowsize` (Linux) or
+`tools/launch_game.sh --restart` with the size you need.
+
+What counts as a finding: caption/hint type under ~12 points at a normal
+distance, type that does not grow when the window does, or text that spills out
+of its panel at either size. The match HUD's own sizing is not in scope.
+
 ## Drive the window (Linux)
 
 Prefer `xdotool` against the Godot window for this project path:
