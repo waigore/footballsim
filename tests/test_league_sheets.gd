@@ -102,11 +102,20 @@ func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
 		var table: Array = book.table_layout(vp, {"table": _table(), "rules": LeagueRules.defaults()})
 		var rows := 0
+		var bottom := 0.0
 		for item in table:
 			if str(item["kind"]) == "table_row":
 				rows += 1
-				assert_lte((item["rect"] as Rect2).end.y, vp.y - 40.0, "a table row is under the footer")
+				var rect: Rect2 = item["rect"]
+				bottom = maxf(bottom, rect.end.y)
+				assert_gte(rect.size.y, 20.0, "a table row lost its readable height at %s" % vp)
+			elif str(item["id"]) == "back":
+				assert_true(bool(item.get("pinned", false)), "BACK must stay out of the scroll")
 		assert_eq(rows, 20, "the table screen lost rows")
+		if vp.y < 620.0:
+			assert_gt(bottom, vp.y - LeagueSheet.BAR_H, "a phone table must overflow so the body scrolls")
+		else:
+			assert_lte(bottom, vp.y - LeagueSheet.BAR_H, "a desktop table should fit in one window")
 		var calendar: Array = book.calendar_layout(vp, {
 			"month": "2026-10", "day": "2026-10-17",
 			"days": {"2026-10-17": {"n": 10, "played": 4}},
@@ -121,6 +130,39 @@ func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 				matches += 1
 		assert_eq(cells, 31, "October should have 31 cells")
 		assert_eq(matches, 2, "the day lost its fixtures")
+
+func test_every_phone_sheet_overflows_into_the_scroll_window() -> void:
+	var sheet := LeagueSheet.new()
+	var book := LeagueBook.new()
+	var vp := Vector2(913, 411)
+	var window := vp.y - LeagueSheet.BAR_H
+	var plan: Array = []
+	for i in range(10):
+		plan.append(_fixture(i))
+	assert_gt(_bottom(sheet.hub_layout(vp, _state(plan, _table()))), window,
+		"ten phone fixtures should scroll instead of being dropped")
+	var saves: Array = []
+	for i in range(7):
+		saves.append({"slug": "s%d" % i, "name": "Save %d" % i, "status": "in_progress",
+			"current_date": "2026-09-0%d" % (i + 1), "matchday": i + 1, "path": "", "modified": i})
+	assert_gt(_bottom(sheet.load_layout(vp, {"saves": saves})), window,
+		"a full load list should scroll on a phone")
+	var events: Array = []
+	for i in range(14):
+		events.append({"minute": i, "kind": "goal", "player_name": "P%d" % i})
+	assert_gt(_bottom(book.report_layout(vp, {"fixture": _fixture(1), "events": events, "day": "x"})),
+		window, "a long report should scroll on a phone")
+	var hub: Array = sheet.hub_layout(vp, _state(plan, _table()))
+	for item in hub:
+		if str(item["kind"]) == "button":
+			assert_true(bool(item.get("pinned", false)), "a hub door was left to scroll away")
+
+func _bottom(items: Array) -> float:
+	var bottom := 0.0
+	for item in items:
+		if not bool(item.get("pinned", false)):
+			bottom = maxf(bottom, (item["rect"] as Rect2).end.y)
+	return bottom
 
 func test_the_report_lays_out_events_and_a_roundup() -> void:
 	var book := LeagueBook.new()
@@ -142,7 +184,15 @@ func test_the_report_lays_out_events_and_a_roundup() -> void:
 func test_the_podium_lays_out_with_and_without_a_summary() -> void:
 	var book := LeagueBook.new()
 	var empty: Array = book.podium_layout(Vector2(1280, 720), {"summary": {}})
-	assert_eq(empty.size(), 2, "the podium lost its doors")
+	var doors := 0
+	var extent := 0
+	for item in empty:
+		if str(item["kind"]) == "button":
+			doors += 1
+		elif str(item["kind"]) == "extent":
+			extent += 1
+	assert_eq(doors, 2, "the podium lost its doors")
+	assert_eq(extent, 1, "the podium lost its measured summary height")
 	var summary := {
 		"champion": {"club": "Arsenal", "club_id": "ARS", "points": 90},
 		"runner_up": {"club": "Liverpool", "club_id": "LIV", "points": 88},
@@ -150,6 +200,8 @@ func test_the_podium_lays_out_with_and_without_a_summary() -> void:
 		"top_scorers": [{"name": "A. Striker", "goals": 24}],
 	}
 	assert_false(summary.is_empty(), "a podium summary should be usable")
+	assert_gt(_bottom(book.podium_layout(Vector2(1280, 720), {"summary": summary})), 0.0,
+		"a podium with a summary has no height for the scroll window")
 
 func test_month_helpers_walk_the_year() -> void:
 	assert_eq(LeagueBook.shift_month("2026-01", -1), "2025-12", "January did not step back a year")

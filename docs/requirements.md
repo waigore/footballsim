@@ -1,15 +1,15 @@
 # High-level requirements — Footballsim
 
-Score with [`rubric.md`](rubric.md). **Rules SoT:** [wiki](https://github.com/waigore/footballsim/wiki). Godot 4; desktop, phone, tablet; map to ≥1 pillar.
+Score with [`rubric.md`](rubric.md). **Rules SoT:** [wiki](https://github.com/waigore/footballsim/wiki). Godot 4; desktop, phone, tablet.
 
 ## Pillars
 
 | ID | Pillar | Intent |
 |----|--------|--------|
-| P1 | Presentation & immersion | Credible football world UI; readable chrome |
+| P1 | Presentation & immersion | Credible football UI; readable chrome |
 | P2 | Rules fidelity | Complete, correct wiki simulation rules |
 | P3 | Modular architecture | Composable, replaceable, testable sim + UI |
-| P4 | Performance & latency | Smooth, responsive play and sim steps |
+| P4 | Performance & latency | Smooth, responsive play and sim |
 | P5 | Usability & agency | Efficient god-like interventions; platform parity |
 
 ## P1 — Presentation & immersion
@@ -21,7 +21,7 @@ Score with [`rubric.md`](rubric.md). **Rules SoT:** [wiki](https://github.com/wa
 - **REQ-P1-05** — Phone, tablet, desktop; no hover-only critical UX; resolution-independent UI.
 - **REQ-P1-06** — Optional music; mute/volume; don’t obscure feedback.
 - **REQ-P1-07** — Readable UI: contrast, type, density; critical chrome legible on all targets.
-- **REQ-P1-08** — Distinct intentional icon per player-facing entity type; shared style; no placeholder/emoji/default.
+- **REQ-P1-08** — Distinct icon per player-facing entity type; shared style; no placeholder/emoji/default.
 
 ## P2 — Rules fidelity
 
@@ -49,7 +49,7 @@ Score with [`rubric.md`](rubric.md). **Rules SoT:** [wiki](https://github.com/wa
 
 ## P5 — Usability & agency
 
-P1 = look; P4 = latency; P5 = agency. Same outcomes everywhere; paths differ.
+P1 = look; P4 = latency; P5 = agency. Same outcomes, different paths.
 
 - **REQ-P5-01** — God-like interventions on main surfaces; clear critical entry.
 - **REQ-P5-02** — Choice primary; bookkeeping batched or deferred.
@@ -58,7 +58,8 @@ P1 = look; P4 = latency; P5 = agency. Same outcomes everywhere; paths differ.
 - **REQ-P5-05** — State-change ack ~1–2 frames (`REQ-P4-02`); never silent.
 - **REQ-P5-06** — Juice non-modal/skippable; no hidden outcomes (`REQ-P2-03`); no hitches (`REQ-P4-*`).
 - **REQ-P5-07** — Intent parity phone+tablet↔desktop. Allowed: OS chrome, safe areas, packaging, `scripts/platform/**`, perf—not desktop-only or weaker mobile.
+- **REQ-P5-08** — Overflow content scrolls on touch and desktop; nothing is stranded below the fold.
 
 ## Non-goals
 
-Club-manager career mode; real licensed data beyond the shipped Premier League 2025-26 snapshot (that snapshot is intentional — wiki [DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01)); photoreal/3D primary; hover-only critical UX; desktop-only that cuts mobile.
+Club-manager career mode; licensed data beyond the shipped PL 2025-26 snapshot (intentional — [DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01)); photoreal/3D primary; hover-only critical UX; desktop-only mobile.
