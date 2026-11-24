@@ -186,7 +186,7 @@ func handle_input(event: InputEvent, design_point: Vector2) -> bool:
 		_pointer_motion(design_point)
 	elif event is InputEventPanGesture:
 		# macOS reports a two-finger scroll as a pan, never as wheel buttons.
-		screen.scroll_by(event.delta.y * PAN_STEP)
+		screen.scroll_by(event.delta.y * PAN_STEP, event.delta.x * PAN_STEP)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
 		screen.scroll_by(-110.0)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
@@ -221,7 +221,7 @@ func _pointer_motion(p: Vector2) -> void:
 		if p.distance_to(press_at) < DRAG_SLOP:
 			return
 		dragged = true
-	screen.scroll_by(last_at.y - p.y)
+	screen.scroll_by(last_at.y - p.y, last_at.x - p.x)
 	last_at = p
 
 func _pointer_up() -> void:
