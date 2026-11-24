@@ -18,6 +18,9 @@ const MONTHS := ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
 	"AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"]
 
 var cache := {}
+## Dates this book painted, with the strip each one occupies (#99): the screen's
+## overlay paints the weekday for the one under the pointer.
+var hints := DateHints.new()
 ## The table pose's geometry, sorting and paint (compact/full, header sort). It
 ## lives in its own module because the book is at its method budget.
 var table := LeagueTableView.new()
@@ -162,21 +165,24 @@ static func _first_weekday(month: String) -> int:
 
 # gd-tools: no cover start
 
-func draw_table_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
-	table.draw_chrome(c, vp, fonts, view)
+func draw_table_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
+		hints: DateHints) -> void:
+	table.draw_chrome(c, vp, fonts, view, hints)
 
 func draw_table_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	table.draw_body(c, vp, fonts, items, view)
 
 # -------------------------------------------------------------- calendar ---
 
-func draw_calendar_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
+func draw_calendar_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
+		_hints: DateHints) -> void:
 	var bold: Font = fonts["bold"]
 	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
 	UiChrome.text(c, Vector2(24.0, 48.0), "CALENDAR", 12, UiChrome.C_GOLD, bold)
 	UiChrome.text(c, Vector2(24.0, HEADER + 25.0), month_label(str(view.get("month", ""))), 13, UiChrome.C_TEXT, bold)
 
 func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+	hints.clear()
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	var labels := ["S", "M", "T", "W", "T", "F", "S"]
@@ -216,14 +222,23 @@ func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 
 # ---------------------------------------------------------------- report ---
 
-func draw_report_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
+func draw_report_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
+		hints: DateHints) -> void:
 	var bold: Font = fonts["bold"]
 	var roundup: Array = view.get("roundup", [])
-	var kicker: String = "RESULTS · %s" % str(view.get("day", "")) if not roundup.is_empty() else "MATCH REPORT"
+	var date := str(view.get("day", ""))
+	var label := FixtureCalendar.day_label(date)
+	var kicker := "MATCH REPORT"
+	if not roundup.is_empty():
+		kicker = "RESULTS · %s" % (label if label != "" else date)
 	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
 	UiChrome.text(c, Vector2(24.0, 48.0), kicker, 12, UiChrome.C_GOLD, bold)
+	if not roundup.is_empty() and date != "":
+		hints.add(DateHints.strip(bold, label,
+			Vector2(24.0 + DateHints.width(bold, "RESULTS · ", 12), 48.0), 12), date)
 
 func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+	hints.clear()
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	if (view.get("roundup", []) as Array).is_empty():
@@ -231,7 +246,11 @@ func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 		UiChrome.text(c, Vector2(24.0, HEADER + 34.0),
 			"%s  %d – %d  %s" % [str(fx.get("home_name", "")), int(fx.get("home_goals", 0)),
 				int(fx.get("away_goals", 0)), str(fx.get("away_name", ""))], 22, UiChrome.C_TEXT, bold)
-		UiChrome.text(c, Vector2(24.0, HEADER + 54.0), str(view.get("day", "")), 10, UiChrome.C_DIM, med)
+		var date := str(view.get("day", ""))
+		var label := FixtureCalendar.day_label(date)
+		UiChrome.text(c, Vector2(24.0, HEADER + 54.0), label, 10, UiChrome.C_DIM, med)
+		if date != "":
+			hints.add(DateHints.strip(med, label, Vector2(24.0, HEADER + 54.0), 10), date)
 		if (view.get("events", []) as Array).is_empty():
 			UiChrome.text(c, Vector2(24.0, HEADER + 84.0), "No goals or cards.", 11, UiChrome.C_DIM, med)
 	for item in items:
@@ -284,12 +303,14 @@ func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary
 
 # ---------------------------------------------------------------- podium ---
 
-func draw_podium_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
+func draw_podium_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
+		_hints: DateHints) -> void:
 	var bold: Font = fonts["bold"]
 	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
 	UiChrome.text(c, Vector2(24.0, 48.0), "SEASON COMPLETE · %s" % str(view.get("name", "")), 12, UiChrome.C_GOLD, bold)
 
 func draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, _items: Array, view: Dictionary) -> void:
+	hints.clear()
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	var summary: Dictionary = view.get("summary", {})

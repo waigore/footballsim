@@ -24,6 +24,9 @@ var _rows: Array = []
 var _height := 0.0
 var _focus := -1
 var mouse := Vector2(-1000, -1000)
+## Date strips this page painted, in body space (#99): the screen's overlay
+## paints the weekday for the one under the pointer.
+var hints := DateHints.new()
 
 func _ready() -> void:
 	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
@@ -90,6 +93,7 @@ static func layout(blocks: Array, width: float, compact: bool = false) -> Dictio
 					"widths": widths, "cols": cols, "target": tr.get("target", {}),
 					"accent": str(tr.get("accent", "")), "index": i,
 					"text_cols": block.get("text_cols", [1]),
+					"dates": tr.get("dates", {}),
 				})
 				y += row_h
 			y += 6.0
@@ -166,6 +170,7 @@ func _content_point(p: Vector2) -> Vector2:
 func _draw() -> void:
 	if _rows.is_empty():
 		return
+	hints.clear()
 	var focus_row := row_at(mouse) if mouse.x > -500.0 else -1
 	for i in range(_rows.size()):
 		var row: Dictionary = _rows[i]
@@ -237,8 +242,12 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 		var cells: Array = row["cells"]
 		var x := rect.position.x + 6.0
 		var text_cols: Array = row.get("text_cols", [1])
+		var dates: Dictionary = row.get("dates", {})
 		for i in range(cells.size()):
 			var cw: float = (rect.size.x - 6.0) * float(widths[i])
+			# A date cell carries its weekday as a hint (#99), not in the text.
+			if dates.has(i):
+				hints.add(Rect2(x, rect.position.y + 2.0, cw, rect.size.y - 4.0), str(dates[i]))
 			var right: bool = not text_cols.has(i) and i != 0
 			if right:
 				_text_right(x + cw - 8.0, rect.position.y + 16.0, str(cells[i]), 11, Color(0.92, 0.95, 0.96), i == cells.size() - 1)
