@@ -629,7 +629,7 @@ func test_the_table_remembers_its_mode_in_the_save() -> void:
 	for item in screen().buttons:
 		if str(item["kind"]) == "head":
 			heads += 1
-	assert_eq(heads, 5, "the compact header should be #, club, P, GD and PTS")
+	assert_eq(heads, 10, "the compact header should be #, club and the whole overall record")
 	press_id("back")
 	press_id("menu")
 
