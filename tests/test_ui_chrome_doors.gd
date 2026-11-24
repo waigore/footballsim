@@ -80,17 +80,15 @@ func test_the_calendar_month_chips_still_turn_the_page() -> void:
 ## The report's ▶ is a real touch target beside a stored goal.
 func test_a_report_goal_plays_its_stored_clip() -> void:
 	var season := _season("Chrome Play")
-	# A completed season gives the hub a played fixture to read back.
-	for i in range(400):
-		var result: Dictionary = season.advance()
-		if bool(result.get("complete", false)) or str(result.get("status", "")) == "complete":
-			break
-	var played_id := ""
-	for row in season.plan():
-		if str(row.get("status", "")) == "played":
-			played_id = str(row["id"])
-			break
-	assert_ne(played_id, "", "the finished season has no played fixture to open")
+	# One settled matchday is enough for the hub to have a played fixture to
+	# read back; settling the whole 380-fixture calendar cost ~2 s a run.
+	# `report()` already reads a settled fixture's ledger, so the id alone is
+	# enough to reopen the report.
+	var settled: Array = season.advance().get("played", [])
+	assert_false(settled.is_empty(), "the season could not settle its first matchday")
+	var opened := settled[0] as Dictionary
+	var played_id := str((opened.get("fixture", {}) as Dictionary).get("id", ""))
+	assert_ne(played_id, "", "the settled matchday left no fixture to open")
 	screen().show_report(played_id)
 	assert_eq(screen().mode, LeagueScreen.MODE_REPORT, "CLICKING a result did not open its report")
 	var ids: Array = []
