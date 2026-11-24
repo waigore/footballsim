@@ -344,7 +344,7 @@ match = "scripts/ui/hud.gd*"
 domain = "hud_chrome"
 
 [[rules]]
-match = "scripts/ui/hud_commentary.gd*"
+match = "scripts/ui/hud*.gd*"
 domain = "hud_chrome"
 
 [[rules]]

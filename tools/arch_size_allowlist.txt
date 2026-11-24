@@ -1,1 +1,5 @@
-scripts/ui/hud.gd	589	31
+# Scripts allowed to exceed the soft size budget (RUB-P3-01), one per line:
+#   path<TAB>max_lines<TAB>max_methods
+# Shrink-only ratchet, at most 5 entries. Empty is the goal: split oversized
+# scripts instead of listing them here. Arch-lint (tools/lint_arch.py) parses
+# every non-comment line.
