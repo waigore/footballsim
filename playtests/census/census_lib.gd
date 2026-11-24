@@ -11,10 +11,13 @@ extends RefCounted
 ## for that goal; the suite grid alone cannot resolve it (see below).
 const VAR_TARGET := 0.10
 
-## Wall-clock budget for one full headless physics match (a 60 Hz GDScript tick
-## bottoms out near 30 s on a fast desktop; tighten with a native hot loop
-## later). CENSUS_MATCH_BUDGET_MS overrides it when measuring a slower host.
-const MATCH_BUDGET_MS := 60_000
+## Wall-clock budget for one full headless physics match. Measured on the
+## tier-2 runners (4-vCPU ubuntu-latest, Nov 2026): 40–80 s per match for the
+## same fixed seeds, so the gate sits at 120 s — it still catches a real
+## sim-cost regression (a 2× tick) without failing on runner hardware
+## variance. A native hot loop stays the way to tighten it.
+## CENSUS_MATCH_BUDGET_MS overrides it when measuring another host.
+const MATCH_BUDGET_MS := 120_000
 
 ## Two-sided 95% coverage factor for the sampling band around λ.
 const VAR_Z := 1.96

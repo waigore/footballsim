@@ -22,7 +22,7 @@ on:
       budget_ms:
         description: Wall-clock budget for one full headless match
         type: number
-        default: 60000
+        default: 120000
   workflow_dispatch:
     inputs:
       n:
@@ -32,7 +32,7 @@ on:
       budget_ms:
         description: Wall-clock budget for one full headless match
         type: number
-        default: 60000
+        default: 120000
 
 jobs:
   matches:
@@ -94,7 +94,7 @@ jobs:
             "playtests/census/test_census_${{ matrix.anchor }}.gd"
 
       - name: Upload shard rows
-        if: steps.project.outputs.ready == 'true'
+        if: ${{ always() && steps.project.outputs.ready == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: census-${{ matrix.anchor }}-${{ matrix.shard }}
@@ -105,6 +105,9 @@ jobs:
   assert:
     name: assert dispersion + budget
     needs: matches
+    # Even when a shard blows the budget, pool whatever rows exist and report:
+    # the assert is what turns a partial census into a readable failure.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

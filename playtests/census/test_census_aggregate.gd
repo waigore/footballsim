@@ -43,6 +43,10 @@ func test_pooled_census_agrees_with_poisson() -> void:
 		assert_eq(got.size(), expected_n,
 			"%s pooled %d matches across shards; the fixed grid is %d" % [anchor, got.size(), expected_n])
 		if got.size() != expected_n:
+			# Report what did arrive so a shard that failed still leaves a trail.
+			var partial := CensusLib.summarise(str(anchor), got)
+			print("CENSUS-PARTIAL %s pooled %d/%d matches  slowest %d ms" % [
+				anchor, got.size(), expected_n, partial["slowest_ms"]])
 			continue
 		var s := CensusLib.summarise(str(anchor), got)
 		assert_lte(int(s["slowest_ms"]), budget,
