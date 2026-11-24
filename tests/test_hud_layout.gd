@@ -194,6 +194,10 @@ func test_the_whistle_card_clears_the_band_at_every_size() -> void:
 			# narrowest handset squeezes into whatever band is left.
 			if card.size.y >= HudLayout.BREAK_BASE_H and not bool(m["compact"]):
 				assert_gte(card.position.y, board.end.y, "the whistle card covers the scoreboard at %s" % tag)
+			if bool(m["compact"]):
+				# Phone metrics keep the card in the scoreboard's column, so the
+				# stats card beside it stays readable.
+				assert_false(card.intersects(HudLayout.stats_rect(vp)), "the whistle card covers the stats card at %s" % tag)
 
 func test_the_whistle_card_lists_what_fits_and_counts_the_rest() -> void:
 	# The rows it draws are what it can hold: a phone lists two short entries per

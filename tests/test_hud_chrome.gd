@@ -232,27 +232,37 @@ func test_goal_and_half_time_banners_draw_on_a_phone() -> void:
 	hud.queue_free()
 
 func test_the_whistle_card_lists_its_goals_on_both_metrics() -> void:
-	# DR-20261125-04: the half/full-time card is a summary, not just a score, and
-	# it lists the goals on phone and desktop metrics alike.
-	for phone in [false, true]:
-		var eng := MatchEngine.new(36)
-		eng.score = [2, 1]
-		eng.goal_sheet = [
-			{"team": 0, "minute": 12, "scorer": "E. Haaland", "own_goal": false},
-			{"team": 1, "minute": 38, "scorer": "B. Šeško", "own_goal": false},
-			{"team": 0, "minute": 71, "scorer": "P. Foden", "own_goal": false},
-		]
-		eng.phase = "full_time"
-		var hud := _hud(eng)
-		hud.touch = phone
-		hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / (411.0 if phone else 900.0)
-		hud.queue_redraw()
-		await get_tree().process_frame
-		var vp: Vector2 = hud.design_vp()
-		var m: Dictionary = HudLayout.break_metrics(vp, 2, 1)
-		assert_gte(int(m["rows"]), 1, "the card had no room for a goal row (phone=%s)" % phone)
-		assert_lte(float(m["rect"].end.y), HudLayout.commentary_rect(vp).position.y, "the card covers the ticker (phone=%s)" % phone)
-		hud.queue_free()
+	# DR-20261125-04: the half/full-time card is a summary, not just a score. It
+	# lists the goals on phone and desktop metrics alike, counts the ones it
+	# cannot fit (`+n`) and marks an own goal.
+	var short: Array = [
+		{"team": 0, "minute": 12, "scorer": "E. Haaland", "own_goal": false},
+		{"team": 1, "minute": 38, "scorer": "B. Šeško", "own_goal": false},
+		{"team": 0, "minute": 71, "scorer": "P. Foden", "own_goal": true},
+	]
+	var long: Array = []
+	for i in range(12):
+		long.append({"team": 0, "minute": 5 + i * 6, "scorer": "E. Haaland", "own_goal": i == 11})
+	for sheet in [short, long]:
+		for phone in [false, true]:
+			var eng := MatchEngine.new(36)
+			eng.goal_sheet = sheet.duplicate(true)
+			var home := 0
+			for g in eng.goal_sheet:
+				if int(g["team"]) == 0:
+					home += 1
+			eng.score = [home, eng.goal_sheet.size() - home]
+			eng.phase = "full_time"
+			var hud := _hud(eng)
+			hud.touch = phone
+			hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / (411.0 if phone else 900.0)
+			hud.queue_redraw()
+			await get_tree().process_frame
+			var vp: Vector2 = hud.design_vp()
+			var m: Dictionary = HudLayout.break_metrics(vp, eng.score[0], eng.score[1])
+			assert_gte(int(m["rows"]), 1, "the card had no room for a goal row (phone=%s, %d goals)" % [phone, sheet.size()])
+			assert_lte(float(m["rect"].end.y), HudLayout.commentary_rect(vp).position.y, "the card covers the ticker (phone=%s, %d goals)" % [phone, sheet.size()])
+			hud.queue_free()
 
 func test_the_momentum_meter_draws_inside_the_stats_card() -> void:
 	# DR-20261125-02: the summary's momentum reading reaches the broadcast on

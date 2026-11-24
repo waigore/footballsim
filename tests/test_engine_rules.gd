@@ -170,6 +170,22 @@ func test_the_whistle_sheet_survives_a_snapshot() -> void:
 	assert_eq(str(other.goal_sheet[0]["scorer"]), str(eng.goal_sheet[0]["scorer"]), "the snapshot renamed the scorer")
 	assert_eq(int(other.goal_sheet[0]["minute"]), 15, "the snapshot lost the goal's minute")
 
+func test_a_goal_with_no_last_touch_is_still_on_the_sheet() -> void:
+	# A clearance that swings in, or a ball the engine cannot attribute: the card
+	# must still list the goal rather than quietly counting one it cannot name.
+	var eng := _eng(73)
+	_park_keepers_off_the_line(eng)
+	var goal: Vector2 = eng.target_goal_pos(0)
+	eng.ball.pos = Vector2(goal.x, 34.0)
+	eng.ball.vel = Vector2.ZERO
+	eng.ball.z = 0.4
+	eng.ball.owner_id = -1
+	eng.ball.last_touch_id = -1
+	eng.ball.last_touch_team = 0
+	eng._check_rules()
+	assert_eq(eng.goal_sheet.size(), 1, "an unattributed goal never reached the sheet")
+	assert_eq(str(eng.goal_sheet[0]["scorer"]), "Unknown", "the sheet invented a scorer")
+
 func test_goal_line_save_keeps_the_ball_out() -> void:
 	var saved := 0
 	for seed_in in range(30):

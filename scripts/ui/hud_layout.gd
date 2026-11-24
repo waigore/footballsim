@@ -151,7 +151,13 @@ static func break_metrics(vp: Vector2, home_goals: int = 0, away_goals: int = 0)
 	# handset) squeezes the card rather than letting it run over the ticker: the
 	# title and score still read, and the view drops the goal rows and the hint.
 	var rows: int = mini(maxi(needed, 0), capacity) if room else 0
+	# Phone metrics keep the card in the scoreboard's column, so it never reaches
+	# the stats card beside it; desktop centres it over the pitch as shipped.
 	var w: float = minf(BREAK_W, vp.x - 2.0 * PANEL_MARGIN)
+	var x: float = vp.x * 0.5 - w * 0.5
+	if compact:
+		x = PANEL_MARGIN
+		w = minf(scoreboard_rect(vp).size.x, vp.x - 2.0 * PANEL_MARGIN)
 	var h: float = base + step * float(rows)
 	# Centred on the pitch as shipped, then pulled inside the band only when the
 	# chosen height would not clear one of its edges.
@@ -177,7 +183,7 @@ static func break_metrics(vp: Vector2, home_goals: int = 0, away_goals: int = 0)
 		score_y = h * 0.82
 		sub_y = h + 12.0
 	return {
-		"rect": Rect2(vp.x * 0.5 - w * 0.5, y, w, h),
+		"rect": Rect2(x, y, w, h),
 		"rows": rows,
 		"capacity": capacity,
 		"per_row": per_row,
