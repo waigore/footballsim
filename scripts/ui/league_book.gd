@@ -36,7 +36,9 @@ func table_layout(vp: Vector2, view: Dictionary) -> Array:
 func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 	var month := str(view.get("month", ""))
-	var grid_top := HEADER + 34.0
+	## The month label and the month chips own the row under the header; the
+	## weekday labels start below them so neither is drawn through the other.
+	var grid_top := HEADER + 50.0
 	var cw := (vp.x - 48.0) / 7.0
 	var ch: float = 30.0 if vp.y < 620.0 else 34.0
 	var count := month_days(month)
@@ -190,19 +192,19 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) 
 
 # -------------------------------------------------------------- calendar ---
 
-func draw_calendar_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, _view: Dictionary) -> void:
+func draw_calendar_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
 	UiChrome.text(c, Vector2(24.0, 48.0), "CALENDAR", 12, UiChrome.C_GOLD, bold)
+	UiChrome.text(c, Vector2(24.0, HEADER + 25.0), month_label(str(view.get("month", ""))), 13, UiChrome.C_TEXT, bold)
 
 func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
-	UiChrome.text_r(c, vp.x - 160.0, HEADER + 25.0, month_label(str(view.get("month", ""))), 13, UiChrome.C_TEXT, bold)
 	var labels := ["S", "M", "T", "W", "T", "F", "S"]
 	for i in range(7):
 		var cw := (vp.x - 48.0) / 7.0
-		UiChrome.text_c(c, 24.0 + cw * float(i) + cw * 0.5, HEADER + 26.0, labels[i], 9, UiChrome.C_DIM, med)
+		UiChrome.text_c(c, 24.0 + cw * float(i) + cw * 0.5, HEADER + 42.0, labels[i], 9, UiChrome.C_DIM, med)
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
