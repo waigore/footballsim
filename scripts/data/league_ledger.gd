@@ -27,6 +27,15 @@ const FIXTURE_SELECT := (
 	+ "JOIN club a ON a.id = f.away_club_id "
 )
 
+## The unplayed half of the ledger: same keys as FIXTURE_SELECT, with `played`
+## 0 so a page cannot read a fixture ahead as a 0 – 0 result.
+const UPCOMING_SELECT := (
+	"SELECT f.*, h.name AS home_name, h.abbr AS home_abbr, a.name AS away_name, "
+	+ "a.abbr AS away_abbr, 0 AS played "
+	+ "FROM league_fixture f JOIN club h ON h.id = f.home_club_id "
+	+ "JOIN club a ON a.id = f.away_club_id "
+)
+
 ## Bound path and its answer, so the sqlite_master probe runs once per
 ## connection rather than on every page read.
 static var _path := ""
@@ -65,6 +74,19 @@ static func fixtures(club_id: String = "", limit: int = 8) -> Array:
 		FIXTURE_SELECT + "WHERE f.status = 'played' "
 		+ "AND (f.home_club_id = ? OR f.away_club_id = ?) "
 		+ "ORDER BY f.kickoff DESC, f.kickoff_time DESC, f.id DESC LIMIT ?;",
+		[club_id, club_id, limit])
+
+## The fixtures the clock still holds, soonest first — what a club faces next.
+## Same keys as `fixtures()`, so the page draws both readings the same way.
+static func upcoming(club_id: String = "", limit: int = 6) -> Array:
+	if club_id.is_empty():
+		return PLDatabase.rows(
+			UPCOMING_SELECT + "WHERE f.status <> 'played' "
+			+ "ORDER BY f.kickoff ASC, f.kickoff_time ASC, f.id ASC LIMIT ?;", [limit])
+	return PLDatabase.rows(
+		UPCOMING_SELECT + "WHERE f.status <> 'played' "
+		+ "AND (f.home_club_id = ? OR f.away_club_id = ?) "
+		+ "ORDER BY f.kickoff ASC, f.kickoff_time ASC, f.id ASC LIMIT ?;",
 		[club_id, club_id, limit])
 
 ## One player's season line: apps, goals, assists and cards. The season keeps

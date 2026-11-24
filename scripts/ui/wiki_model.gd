@@ -203,6 +203,41 @@ static func team_page(club_id: String) -> Dictionary:
 			"widths": [0.16, 0.84], "text_cols": [0, 1],
 			"rows": results,
 		})
+	# What comes next, from the same ledger as the results above: the season's
+	# remaining schedule, or the snapshot's. A fixture ahead is not a result, so
+	# it never carries a score (DR-20261125-10).
+	out["blocks"].append({"k": "section", "text": "NEXT FIXTURES  ·  %s" % WikiLedger.ledger_label()})
+	# Only a save's ledger carries a gameweek; the snapshot ships its schedule
+	# without one, so the column is there only when every row has a figure.
+	var with_gw := repo().season_active()
+	var next: Array = []
+	for fx in repo().upcoming(club_id, 6):
+		var opponent := str(fx["away_club_id"] if str(fx["home_club_id"]) == club_id else fx["home_club_id"])
+		var cells := [FixtureCalendar.day_label(str(fx["kickoff"]))]
+		if with_gw:
+			cells.append("GW %d" % int(fx["matchday"]))
+		cells.append("%s v %s" % [str(fx["home_abbr"]), str(fx["away_abbr"])])
+		next.append({
+			"cells": cells,
+			"target": {"page": TEAM, "id": opponent},
+			"dates": {0: str(fx["kickoff"])},
+		})
+	if next.is_empty():
+		var done := "NO FIXTURES LEFT  ·  THE SEASON IS COMPLETE" if repo().season_active() \
+			else "NO FIXTURES LEFT  ·  THE SNAPSHOT ENDS HERE"
+		out["blocks"].append({"k": "note", "text": done})
+	elif with_gw:
+		out["blocks"].append({
+			"k": "table", "cols": ["DATE", "GW", "FIXTURE"],
+			"widths": [0.20, 0.14, 0.66], "text_cols": [0, 1, 2],
+			"rows": next,
+		})
+	else:
+		out["blocks"].append({
+			"k": "table", "cols": ["DATE", "FIXTURE"],
+			"widths": [0.20, 0.80], "text_cols": [0, 1],
+			"rows": next,
+		})
 	out["blocks"].append_array(WikiLedger.club_blocks(club_id))
 	return out
 
