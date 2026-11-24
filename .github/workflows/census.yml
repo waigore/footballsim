@@ -1,0 +1,165 @@
+name: Census (Poisson agreement)
+
+# Tier-2's physics↔Poisson censuses, and the dispatchable probe for a bigger
+# grid. Parent: #31; gate record DR-20261123-02.
+#
+# A full 60 Hz GDScript match costs tens of seconds, so n = 32 matches per
+# anchor does not fit one runner. The fixed grid is therefore split across
+# shard jobs: each plays its slice, fails fast on the per-match wall-clock
+# budget and uploads its per-match rows. The assert job pools every shard and
+# gates dispersion against λ (`CensusLib.variance_tolerance`).
+#
+# Dispatch with a larger `n` for a bigger manual census, or a smaller `n` plus
+# a higher `budget_ms` to measure a new host.
+
+on:
+  workflow_call:
+    inputs:
+      n:
+        description: Matches per anchor on the fixed grid
+        type: number
+        default: 32
+      budget_ms:
+        description: Wall-clock budget for one full headless match
+        type: number
+        default: 60000
+  workflow_dispatch:
+    inputs:
+      n:
+        description: Matches per anchor on the fixed grid
+        type: number
+        default: 32
+      budget_ms:
+        description: Wall-clock budget for one full headless match
+        type: number
+        default: 60000
+
+jobs:
+  matches:
+    name: matches ${{ matrix.anchor }} shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        anchor: [mci_bur, mci_mci]
+        shard: [0, 1, 2, 3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect project ready
+        id: project
+        run: |
+          if [ -f project.godot ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "No project.godot — census no-op until Godot project is scaffolded."
+          fi
+
+      - name: Setup Python
+        if: steps.project.outputs.ready == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install gd-tools
+        if: steps.project.outputs.ready == 'true'
+        run: pip install -r .github/gd-tools-requirements.txt
+
+      - name: Setup Godot
+        if: steps.project.outputs.ready == 'true'
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        if: steps.project.outputs.ready == 'true'
+        run: godot --headless --path . --import --quit
+
+      - name: Play this shard
+        if: steps.project.outputs.ready == 'true'
+        env:
+          CENSUS_N: ${{ inputs.n }}
+          CENSUS_SHARDS: 4
+          CENSUS_SHARD: ${{ matrix.shard }}
+          CENSUS_MATCH_BUDGET_MS: ${{ inputs.budget_ms }}
+          CENSUS_OUT: .gd-tools/census-results
+        run: |
+          set -euo pipefail
+          gd-tools test --timeout 2400 --junit-xml ".gd-tools/shard-${{ matrix.anchor }}-${{ matrix.shard }}.xml" \
+            "playtests/census/test_census_${{ matrix.anchor }}.gd"
+
+      - name: Upload shard rows
+        if: steps.project.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: census-${{ matrix.anchor }}-${{ matrix.shard }}
+          path: .gd-tools/census-results/*.jsonl
+          if-no-files-found: error
+          retention-days: 7
+
+  assert:
+    name: assert dispersion + budget
+    needs: matches
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect project ready
+        id: project
+        run: |
+          if [ -f project.godot ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Python
+        if: steps.project.outputs.ready == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install gd-tools
+        if: steps.project.outputs.ready == 'true'
+        run: pip install -r .github/gd-tools-requirements.txt
+
+      - name: Setup Godot
+        if: steps.project.outputs.ready == 'true'
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        if: steps.project.outputs.ready == 'true'
+        run: godot --headless --path . --import --quit
+
+      - name: Collect shard rows
+        if: steps.project.outputs.ready == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: census-*
+          path: .gd-tools/census-results
+          merge-multiple: true
+
+      - name: Assert pooled census
+        if: steps.project.outputs.ready == 'true'
+        env:
+          CENSUS_N: ${{ inputs.n }}
+          CENSUS_MATCH_BUDGET_MS: ${{ inputs.budget_ms }}
+          CENSUS_REQUIRE: "1"
+          CENSUS_DIR: .gd-tools/census-results
+        run: |
+          set -euo pipefail
+          gd-tools test --timeout 900 --junit-xml .gd-tools/census-assert.xml \
+            playtests/census/test_census_aggregate.gd
+          echo "--- pooled census"
+          cat .gd-tools/census-summary.txt
