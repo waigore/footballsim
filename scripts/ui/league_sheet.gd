@@ -207,9 +207,9 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, 
 	if vp.x >= 760.0 and not compact(vp):
 		var places := _hub_table_places(_hub_table_box(vp))
 		var top: float = HEADER + 14.0
-		UiChrome.text(c, Vector2(float(places["club_x"]), top + 16.0), "CLUB", 9, UiChrome.C_DIM, bold)
+		UiChrome.text(c, Vector2(float(places["club_x"]), top + 16.0), "CLUB", 10, UiChrome.C_DIM, bold)
 		for col in places["cols"]:
-			UiChrome.text_r(c, float(col["right"]), top + 16.0, str(col["label"]), 9,
+			UiChrome.text_r(c, float(col["right"]), top + 16.0, str(col["label"]), 10,
 				UiChrome.C_DIM, bold)
 	if (state.get("plan", []) as Array).is_empty():
 		UiChrome.text(c, Vector2(24.0, HEADER + 44.0),
@@ -222,7 +222,7 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, 
 			if str(item["id"]) == "suggest":
 				UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, UiChrome.C_GOLD, 1)
 				UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 4.0,
-					"SUGGEST WATCHES", 9, UiChrome.C_GOLD, bold)
+					"SUGGEST WATCHES", 10, UiChrome.C_GOLD, bold)
 			else:
 				_draw_toggle(c, rect, item["fixture"], bold)
 		elif str(item["kind"]) == "table_row":
@@ -247,14 +247,14 @@ func _draw_fixture_row(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dictio
 		UiChrome.text_r(c, rect.end.x - 12.0, line_y, "%d  –  %d" % [
 			int(fx.get("home_goals", 0)), int(fx.get("away_goals", 0))], 14, UiChrome.C_TEXT, bold)
 	elif int(fx.get("suggested", 0)) == 1:
-		UiChrome.text_r(c, rect.end.x - 78.0, rect.position.y + 15.0, "TOP-6", 8, UiChrome.C_GOLD, bold)
+		UiChrome.text_r(c, rect.end.x - 78.0, rect.position.y + 15.0, "TOP-6", 10, UiChrome.C_GOLD, bold)
 
 func _draw_toggle(c: CanvasItem, rect: Rect2, fx: Dictionary, bold: Font) -> void:
 	var watch := int(fx.get("watched", 0)) == 1
 	var fill: Color = UiChrome.C_GOLD.darkened(0.15) if watch else UiChrome.C_PANEL_LIGHT
 	UiChrome.panel(c, cache, rect, fill, 5, UiChrome.C_GOLD if watch else UiChrome.C_BORDER, 1)
 	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 14.0,
-		"WATCH" if watch else "AUTO", 9, Color(0.06, 0.06, 0.05) if watch else UiChrome.C_DIM, bold)
+		"WATCH" if watch else "AUTO", 10, Color(0.06, 0.06, 0.05) if watch else UiChrome.C_DIM, bold)
 
 func _draw_table_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
 	var row: Dictionary = item["row"]
@@ -333,11 +333,11 @@ func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 			var current := str(save.get("current_date", ""))
 			var dated: String = FixtureCalendar.day_label(current)
 			var line: String = "%s · %s" % [dated, str(save.get("status", ""))] if dated != "" else str(save.get("status", ""))
-			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 32.0), line, 9,
+			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 32.0), line, 10,
 				UiChrome.C_DIM, med)
 			if current != "":
 				hints.add(DateHints.strip(med, dated,
-					Vector2(rect.position.x + 12.0, rect.position.y + 32.0), 9), current)
+					Vector2(rect.position.x + 12.0, rect.position.y + 32.0), 10), current)
 		elif str(item["kind"]) == "delete":
 			UiChrome.panel(c, cache, rect, UiChrome.C_DANGER.darkened(0.35), 5, UiChrome.C_DANGER, 1)
 			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 21.0, "X", 13, UiChrome.C_TEXT, bold)

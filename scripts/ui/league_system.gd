@@ -89,7 +89,7 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array, _vi
 				UiChrome.text(c, Vector2(rect.position.x + 14.0, rect.position.y + 20.0),
 					str(item["label"]), 14, UiChrome.C_TEXT, bold)
 				UiChrome.text(c, Vector2(rect.position.x + 14.0, rect.position.y + 36.0),
-					str(item["hint"]), 9, UiChrome.C_DIM, med)
+					str(item["hint"]), 10, UiChrome.C_DIM, med)
 			"field":
 				UiChrome.text(c, Vector2(rect.position.x, rect.position.y - 8.0),
 					str(item["label"]), 10, UiChrome.C_DIM, bold)

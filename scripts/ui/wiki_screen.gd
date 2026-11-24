@@ -205,14 +205,14 @@ func _add(id: String, r: Rect2) -> void:
 ## give that date its weekday (#99).
 func _draw_subtitle(sub_x: float, y: float) -> void:
 	var sub := str(page_data.get("subtitle", ""))
-	WikiChrome.label(self, f_med, Vector2(sub_x, y), sub, 9, WikiChrome.DIM)
+	WikiChrome.label(self, f_med, Vector2(sub_x, y), sub, 10, WikiChrome.DIM)
 	var snap := str(page_data.get("snapshot", ""))
 	if snap == "":
 		return
 	var label := FixtureCalendar.day_label(snap)
-	var at := Vector2(sub_x + DateHints.width(f_med, sub, 9), y)
-	WikiChrome.label(self, f_med, at, label, 9, WikiChrome.DIM)
-	hints.add(DateHints.strip(f_med, label, at, 9), snap)
+	var at := Vector2(sub_x + DateHints.width(f_med, sub, 10), y)
+	WikiChrome.label(self, f_med, at, label, 10, WikiChrome.DIM)
+	hints.add(DateHints.strip(f_med, label, at, 10), snap)
 
 func _draw_crumbs(y: float) -> void:
 	var trail: Array = crumb_pages()
@@ -242,13 +242,13 @@ func _draw_furniture(vp: Vector2, br: Rect2) -> void:
 		draw_rect(track, Color(1, 1, 1, 0.05))
 		draw_rect(Rect2(track.position.x, track.position.y + (track.size.y - h) * offset, 3.0, h), Color(1, 1, 1, 0.22))
 	var hint := "TAP A ROW TO OPEN  ·  DRAG OR KEYS SCROLL" if touch else "CLICK A ROW TO OPEN  ·  ESC BACK  ·  WHEEL, DRAG OR KEYS SCROLL"
-	WikiChrome.label(self, f_med, Vector2(br.position.x, vp.y - 14.0), hint, 9, WikiChrome.DIM)
+	WikiChrome.label(self, f_med, Vector2(br.position.x, vp.y - 14.0), hint, 10, WikiChrome.DIM)
 	var snap := str(WikiModel.repo().meta().get("snapshot_date", ""))
 	var label := FixtureCalendar.day_label(snap)
-	WikiChrome.label_r(self, f_med, br.end.x, vp.y - 14.0, "SNAPSHOT %s" % label, 9,
+	WikiChrome.label_r(self, f_med, br.end.x, vp.y - 14.0, "SNAPSHOT %s" % label, 10,
 		Color(0.96, 0.78, 0.30, 0.55))
 	if snap != "":
-		hints.add(DateHints.strip_right(f_med, label, br.end.x, vp.y - 14.0, 9), snap)
+		hints.add(DateHints.strip_right(f_med, label, br.end.x, vp.y - 14.0, 10), snap)
 
 func _process(_d: float) -> void:
 	if body != null:

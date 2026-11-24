@@ -188,7 +188,7 @@ func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Ar
 	var labels := ["S", "M", "T", "W", "T", "F", "S"]
 	for i in range(7):
 		var cw := (vp.x - 48.0) / 7.0
-		UiChrome.text_c(c, 24.0 + cw * float(i) + cw * 0.5, HEADER + 42.0, labels[i], 9, UiChrome.C_DIM, med)
+		UiChrome.text_c(c, 24.0 + cw * float(i) + cw * 0.5, HEADER + 42.0, labels[i], 10, UiChrome.C_DIM, med)
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
@@ -212,12 +212,12 @@ func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 	if bool(item["selected"]):
 		fill = UiChrome.C_GOLD.darkened(0.25)
 	UiChrome.panel(c, cache, rect, fill, 4, UiChrome.C_BORDER, 1)
-	UiChrome.text(c, Vector2(rect.position.x + 4.0, rect.position.y + 12.0), "%d" % int(item["day"]), 9,
+	UiChrome.text(c, Vector2(rect.position.x + 4.0, rect.position.y + 12.0), "%d" % int(item["day"]), 10,
 		UiChrome.C_TEXT if has else UiChrome.C_DIM, fonts["med"])
 	if has:
 		var done := int(info.get("played", 0))
 		var total := int(info.get("n", 0))
-		UiChrome.text_r(c, rect.end.x - 3.0, rect.end.y - 4.0, "%d/%d" % [done, total], 7,
+		UiChrome.text_r(c, rect.end.x - 3.0, rect.end.y - 4.0, "%d/%d" % [done, total], 10,
 			UiChrome.C_LIVE if done == total else UiChrome.C_GOLD, fonts["bold"])
 
 # ---------------------------------------------------------------- report ---
@@ -272,7 +272,7 @@ func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 				if str(e.get("kind", "")) == "goal":
 					names.append("%s %d'" % [str(e.get("player_name", "")), int(e.get("minute", 0))])
 			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 34.0),
-				", ".join(names) if not names.is_empty() else "no goals", 9, UiChrome.C_DIM, med)
+				", ".join(names) if not names.is_empty() else "no goals", 10, UiChrome.C_DIM, med)
 
 func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
 	var e: Dictionary = item["event"]
@@ -287,10 +287,10 @@ func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary
 	elif kind == "assist":
 		colour = UiChrome.C_SOFT
 	var name := str(e.get("player_name", e.get("detail", "")))
-	UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), "%d'" % int(e.get("minute", 0)), 9,
+	UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), "%d'" % int(e.get("minute", 0)), 10,
 		UiChrome.C_DIM, fonts["bold"])
 	UiChrome.text(c, Vector2(rect.position.x + 34.0, rect.position.y + 14.0), name, 11, colour, fonts["bold"])
-	UiChrome.text(c, Vector2(rect.position.x + 210.0, rect.position.y + 14.0), kind.to_upper(), 8, colour, fonts["med"])
+	UiChrome.text(c, Vector2(rect.position.x + 210.0, rect.position.y + 14.0), kind.to_upper(), 10, colour, fonts["med"])
 	# A goal with a stored clip reads as a broadcast moment: the commentary line
 	# sits under it and the ▶ beside it plays exactly that goal.
 	var clip: Dictionary = item.get("clip", {})
@@ -331,7 +331,7 @@ func draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, _items: Arr
 			var club := _club_row(view, str(row["zone"]))
 			var band := LeagueRules.zone(int(row["position"]), view.get("rules", {}))
 			c.draw_rect(Rect2(24.0, y + 2.0, 3.0, 12.0), LeagueSheet.zone_color(band))
-			UiChrome.text(c, Vector2(32.0, y + 12.0), "%d" % int(row["position"]), 9, UiChrome.C_DIM, med)
+			UiChrome.text(c, Vector2(32.0, y + 12.0), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
 			UiChrome.text(c, Vector2(54.0, y + 12.0), str(row["club"]), 11, UiChrome.C_TEXT, med)
 			UiChrome.text_r(c, vp.x - 24.0, y + 12.0, str(club.get("points", "")), 10, UiChrome.C_SOFT, bold)
 			y += 16.0
@@ -339,7 +339,7 @@ func draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, _items: Arr
 		UiChrome.text(c, Vector2(24.0, y), "RELEGATED", 10, UiChrome.C_DIM, bold)
 		y += 16.0
 		for row in summary["relegated"]:
-			UiChrome.text(c, Vector2(32.0, y + 12.0), "%d" % int(row["position"]), 9, UiChrome.C_DIM, med)
+			UiChrome.text(c, Vector2(32.0, y + 12.0), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
 			UiChrome.text(c, Vector2(54.0, y + 12.0), str(row["club"]), 11, UiChrome.C_DANGER, med)
 			y += 16.0
 		var scorers: Array = summary.get("top_scorers", [])

@@ -26,16 +26,23 @@ static func box(c: CanvasItem, col: Color, r: Rect2, radius: int = 10, bc: Color
 		_styles[key] = sb
 	c.draw_style_box(sb, r)
 
+## The size an encyclopedia caption paints at: the shared non-match reading floor
+## lifts anything smaller, so no page can author a hairline (#126).
+static func text_size(size_px: int) -> int:
+	return ChromeDensity.read_size(size_px)
+
 static func label(c: CanvasItem, font: Font, pos: Vector2, s: String, size_px: int, color: Color = TEXT) -> void:
-	c.draw_string(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, color)
+	c.draw_string(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size(size_px), color)
 
 static func label_c(c: CanvasItem, font: Font, center_x: float, y: float, s: String, size_px: int, color: Color = TEXT) -> void:
-	var w: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
-	c.draw_string(font, Vector2(center_x - w * 0.5, y), s, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, color)
+	var px := text_size(size_px)
+	var w: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	c.draw_string(font, Vector2(center_x - w * 0.5, y), s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, color)
 
 static func label_r(c: CanvasItem, font: Font, right_x: float, y: float, s: String, size_px: int, color: Color = TEXT) -> void:
-	var w: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
-	c.draw_string(font, Vector2(right_x - w, y), s, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, color)
+	var px := text_size(size_px)
+	var w: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	c.draw_string(font, Vector2(right_x - w, y), s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, color)
 
 ## A chrome button with a hover/pressed fill; returns nothing, the caller owns
 ## the hit rect it already has.
