@@ -22,6 +22,7 @@ Former gaps now shipped (wiki domains playable; DRs accepted):
 | Non-match type / viewport scale | DR-20261124-03 |
 | Live `tempo` on the tactics board | unused in DR-20261122-02; drives play now |
 | Woodwork, interceptions, momentum, stored rating | DR-20261125-01; momentum on the broadcast stats card (DR-20261125-02) |
+| Roundup scorers name their club, in minute order | [#125](https://github.com/waigore/footballsim/issues/125); DR-20261125-07 |
 
 ## Remaining gaps (impact order)
 
