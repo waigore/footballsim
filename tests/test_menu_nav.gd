@@ -301,10 +301,12 @@ func test_confirm_from_the_match_dims_the_pitch_and_cancels_back() -> void:
 	game.menus.shell.open_quit_confirm()
 	assert_eq(game.menus.shell.screen, AppShell.SCREEN_CONFIRM, "Esc from the match did not raise the confirm")
 	assert_eq(game.menus.shell.prev_screen, AppShell.SCREEN_NONE, "a match-side confirm thinks a menu is underneath")
+	assert_eq(game.menus.layer.layer, MenuHost.CONFIRM_LAYER, "the confirm did not move above the chrome")
 	game.menus.shell.queue_redraw()
 	await get_tree().process_frame
 	game.menus.shell.cancel_confirm()
 	assert_false(game.menus.active(), "cancelling the match-side confirm left the shell up")
+	assert_eq(game.menus.layer.layer, MenuHost.SHEET_LAYER, "the shell stayed raised after the cancel")
 	assert_true(game.hud_layer.visible, "cancelling the match-side confirm hid the pitch")
 
 func test_an_inactive_shell_swallows_nothing() -> void:

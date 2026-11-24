@@ -12,10 +12,16 @@ var shell: AppShell = null
 ## The god-mode league surface: New/Setup, Load and the season hub.
 var league: LeagueHost = null
 
+## The shell sits under the season surface (`LeagueHost.LAYER`), so a season
+## sheet can own the screen — except the quit confirmation, which must draw
+## over the sheet that raised it and answer before it (#123).
+const SHEET_LAYER := 30
+const CONFIRM_LAYER := 40
+
 func attach(main_node) -> void:
 	game = main_node
 	layer = CanvasLayer.new()
-	layer.layer = 30
+	layer.layer = SHEET_LAYER
 	main_node.add_child(layer)
 	shell = AppShell.new()
 	shell.name = "Shell"
@@ -25,10 +31,18 @@ func attach(main_node) -> void:
 	shell.resume_requested.connect(_on_resume)
 	shell.new_league_requested.connect(_on_new_league)
 	shell.load_league_requested.connect(_on_load_league)
+	shell.screen_changed.connect(_restack)
 	shell.visible = false
 	league = LeagueHost.new()
 	league.attach(main_node)
 	league.build()
+
+## Keep the shell above the season surface while the quit confirmation is the
+## sheet on screen, and back under it the moment it is dismissed.
+func _restack() -> void:
+	if layer == null or shell == null:
+		return
+	layer.layer = CONFIRM_LAYER if shell.screen == AppShell.SCREEN_CONFIRM else SHEET_LAYER
 
 func active() -> bool:
 	return (shell != null and shell.active()) or league_active() or league_holding()
@@ -108,6 +122,15 @@ func handle_input(event: InputEvent, screen_point: Vector2) -> bool:
 	if not active():
 		return false
 	var design_point: Vector2 = screen_point / maxf(shell.ui_scale, 0.001)
+	# The quit confirmation is the top modal on screen: it answers before the
+	# season surface underneath, so QUIT raised from a season sheet is never
+	# trapped behind it (#123).
+	if shell != null and shell.screen == AppShell.SCREEN_CONFIRM:
+		if event is InputEventMouse:
+			shell.handle_input(event, design_point)
+		elif event is InputEventKey:
+			shell.handle_input(event, Vector2.ZERO)
+		return true
 	if league_active() or league_holding():
 		return league.handle_input(event, design_point)
 	if event is InputEventMouse:
