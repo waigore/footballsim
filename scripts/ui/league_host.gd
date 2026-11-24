@@ -91,9 +91,9 @@ func _activate() -> void:
 	if game.sel_layer != null:
 		game.sel_layer.visible = false
 	layer.visible = true
-	screen.ui_scale = game.hud_scale
+	screen.ui_scale = game.chrome_scale
 	screen.touch = game.touch
-	layer.transform = Transform2D.IDENTITY.scaled(Vector2(game.hud_scale, game.hud_scale))
+	layer.transform = Transform2D.IDENTITY.scaled(Vector2(game.chrome_scale, game.chrome_scale))
 	screen.visible = true
 	screen.queue_redraw()
 

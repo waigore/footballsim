@@ -49,6 +49,8 @@ var audio: MatchAudio = null
 var camera: MatchCamera = null
 var batch_abort := false
 var hud_scale := 1.0
+## Reading scale for the non-match layers; the match HUD keeps HudLayout's.
+var chrome_scale := 1.0
 var token_scale := 1.0
 var pitch_shift := 0.0
 var touch := false
@@ -117,27 +119,28 @@ func build_scene() -> void:
 	camera.fit()
 	actors.game = self
 
-## Handhelds read the overlay at roughly one density point per design unit: the
-## layer is scaled up by HudLayout.overlay_scale() and every rect is derived
-## from the smaller design viewport, so type and tap targets grow with the
-## screen instead of shrinking with it.
+## Handhelds read the overlay at one density point per design unit; outside the
+## match, ChromeDensity does the same for the menus, settings and the league and
+## encyclopedia sheets. Each path scales its own layers.
 func _sync_overlay_scale() -> void:
 	hud_scale = HudLayout.overlay_scale()
 	if dev != null and dev.ui_scale > 0.0:
 		hud_scale = dev.ui_scale
 		touch = true
+	chrome_scale = maxf(hud_scale, ChromeDensity.non_match_scale())
 	token_scale = 1.5 if HudLayout.is_compact(get_viewport_rect().size / hud_scale) else 1.0
 	actors.token_scale = token_scale
 	hud.ui_scale = hud_scale
 	hud.touch = touch
-	var frame := Transform2D.IDENTITY.scaled(Vector2(hud_scale, hud_scale))
-	hud_layer.transform = frame
+	hud_layer.transform = Transform2D.IDENTITY.scaled(Vector2(hud_scale, hud_scale))
+	var frame := Transform2D.IDENTITY.scaled(Vector2(chrome_scale, chrome_scale))
 	if sel_layer != null:
 		sel_layer.transform = frame
+		selector.ui_scale = chrome_scale
 	if wiki_host != null:
 		wiki_host.sync_scale()
 	if menus != null:
-		menus.sync(frame, hud_scale, touch)
+		menus.sync(frame, chrome_scale, touch)
 
 func new_match(seed: int) -> void:
 	if engine != null and engine.event_fired.is_connected(_on_engine_event):
@@ -259,17 +262,17 @@ func _input(event: InputEvent) -> void:
 	if wiki_host != null and wiki_host.is_open():
 		wiki_host.handle_input(event)
 		return
-	if menus != null and menus.handle_input(event, _design(event.position) if event is InputEventMouse else Vector2.ZERO):
+	if menus != null and menus.handle_input(event, event.position if event is InputEventMouse else Vector2.ZERO):
 		return
 	if select_open:
 		if event is InputEventMouseMotion:
 			mouse = event.position
-			selector.mouse = _design(event.position)
+			selector.mouse = _design(event.position, chrome_scale)
 			if not touch:
 				Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if selector.button_at(selector.mouse) != "" else Input.CURSOR_ARROW)
 		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			mouse = event.position
-			selector.mouse = _design(event.position)
+			selector.mouse = _design(event.position, chrome_scale)
 			var sid: String = selector.button_at(selector.mouse)
 			if sid != "":
 				selector.click(sid)
@@ -326,10 +329,10 @@ func _input(event: InputEvent) -> void:
 			else:
 				menus.ask_quit()
 
-## Overlay widgets live in design space; pointer events arrive in logical
-## viewport units.
-func _design(p: Vector2) -> Vector2:
-	return p / maxf(hud_scale, 0.001)
+## Overlay widgets read pointers in design space; a non-match sheet passes its
+## own reading scale because the chrome layer is scaled separately.
+func _design(p: Vector2, scale := -1.0) -> Vector2:
+	return p / maxf(hud_scale if scale < 0.0 else scale, 0.001)
 
 func _click(p: Vector2) -> void:
 	var b: String = hud.button_at(_design(p))
