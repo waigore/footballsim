@@ -21,6 +21,7 @@ Canonical skill bodies live here (one folder per skill). Native facades and auth
 | [`resolve-issue-agent`](resolve-issue-agent/SKILL.md) | Take open `todo` issue; implement + wiki (incl. Design Records when required); after merge → `resolved` −`todo` |
 | [`update-pl-data-snapshot`](update-pl-data-snapshot/SKILL.md) | Refresh the PL seed snapshot from one source (ESPN/Sofifa); bump db_version; rebuild + verify the SQLite seed |
 | [`review-issue-agent`](review-issue-agent/SKILL.md) | Verify open `resolved` vs evidence/code; close or bounce to `todo` (≤150-word comments) |
+| [`ux-playtest-agent`](ux-playtest-agent/SKILL.md) | Desktop live UX playtest (league loop + ≥1 match); wiki Evidence; file issues; no code fixes |
 
 ## Scaffold
 
