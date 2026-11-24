@@ -132,13 +132,13 @@ func test_chance_quality_tracks_the_defence_faced() -> void:
 	# The same spot is a better chance against a weak back line than a strong
 	# one, and the size of that difference comes from the model's own defensive
 	# exponent — one rating source for both systems.
-	var weak := MatchEngine.new(1, "MCI", "BUR")
+	var weak := MatchEngine.new(1, "MCI", "IPS")
 	var strong := MatchEngine.new(1, "MCI", "NEW")
 	var spot: Vector2 = weak.target_goal_pos(0) + Vector2(-14.0, 5.0)
 	var vs_weak: float = weak.expected_goals(spot, 0.0, 0)
 	var vs_strong: float = strong.expected_goals(spot, 0.0, 0)
 	assert_gt(vs_weak, vs_strong, "a shot against a weak defence was not worth more")
-	var ex_weak := PoissonModel.defence_exponents("MCI", "BUR")
+	var ex_weak := PoissonModel.defence_exponents("MCI", "IPS")
 	var ex_strong := PoissonModel.defence_exponents("MCI", "NEW")
 	var expected: float = exp(MatchEngine.XG_CONTEST_ELASTICITY * (ex_weak.x - ex_strong.x))
 	assert_almost_eq(vs_weak / vs_strong, expected, 0.001,
@@ -147,14 +147,14 @@ func test_chance_quality_tracks_the_defence_faced() -> void:
 func test_contest_factor_is_bounded_and_reads_the_ratings() -> void:
 	# The contest factor is the engine's share of the model's gradient: it must
 	# move with the ratings, and stay inside a sane band for real fixtures.
-	var strong_home := MatchEngine.new(1, "MCI", "BUR")
+	var strong_home := MatchEngine.new(1, "MCI", "IPS")
 	var even := MatchEngine.new(1, "MCI", "MCI")
-	var strong_away := MatchEngine.new(1, "BUR", "MCI")
+	var strong_away := MatchEngine.new(1, "IPS", "MCI")
 	assert_gt(float(strong_home.xg_form[0]), float(even.xg_form[0]),
 		"a top side against a weak defence did not get the better contest")
 	assert_lt(float(strong_away.xg_form[0]), float(even.xg_form[0]),
 		"a weak side at home was given the same contest as an even fixture")
-	for pair in [["MCI", "BUR"], ["MCI", "MCI"], ["MCI", "ARS"], ["BUR", "MCI"], ["BUR", "ARS"]]:
+	for pair in [["MCI", "IPS"], ["MCI", "MCI"], ["MCI", "ARS"], ["IPS", "MCI"], ["IPS", "ARS"]]:
 		var e := MatchEngine.new(1, pair[0], pair[1])
 		assert_between(float(e.xg_form[0]), 0.30, 3.00,
 			"%s v %s home contest factor is out of family" % [pair[0], pair[1]])
