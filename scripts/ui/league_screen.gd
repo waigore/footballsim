@@ -2,8 +2,9 @@ class_name LeagueScreen
 extends Control
 
 ## God-mode league surface: New/Setup, Load, Continue hub, table, calendar,
-## reports and podium. Screen holds state; sheets paint; season owns the sim.
-## Input arrives in design space from `LeagueHost`.
+## reports and podium. The screen holds state and paint; the sheets draw a pose;
+## `LeagueDoors` owns the keys, presses and season actions; the season owns the
+## sim. Input arrives in design space from `LeagueHost`.
 
 signal closed
 signal match_requested(home: String, away: String, fixture_id: String)
@@ -137,6 +138,10 @@ func close() -> void:
 	mode = MODE_HUB
 	closed.emit()
 
+## Open a saved season, replacing the one on screen. The doors own the swap.
+func open_save(slug: String) -> void:
+	LeagueDoors.open_save(self, slug)
+
 # --------------------------------------------------------------- state ----
 
 func current_view() -> Dictionary:
@@ -177,204 +182,19 @@ func scroll_by(delta: float, dx: float = 0.0) -> void:
 	if body != null:
 		body.pan_by(Vector2(dx, delta))
 
-func click(id: String) -> void:
-	if id == "":
-		return
-	if id.begins_with("match:"):
-		show_report(id.substr(6))
-	elif id.begins_with("goal:"):
-		play_goal(int(id.substr(5)))
-	elif id.begins_with("club:"):
-		club_requested.emit(id.substr(5))
-	elif id == "back":
-		_back()
-	elif id.begins_with("toggle:"):
-		_toggle(id.substr(7))
-	elif id.begins_with("fixture:"):
-		_press_fixture(id.substr(8))
-	elif id.begins_with("open:"):
-		_open_save(id.substr(5))
-	elif id.begins_with("delete:"):
-		var slug := id.substr(7)
-		if season != null and season.save.slug == slug:
-			LeagueSystemActions.unload(self)
-		LeagueSave.remove(slug)
-		saves = LeagueSave.list()
-		refresh()
-	elif id.begins_with("mode:"):
-		wizard["calendar_mode"] = id.substr(5)
-		refresh()
-	elif id.begins_with("adv:"):
-		wizard["advance_mode"] = id.substr(4)
-		refresh()
-	elif id.begins_with("day:"):
-		LeagueCalendar.pick(self, id.substr(4))
-	elif id.begins_with("month:"):
-		LeagueCalendar.shift(self, int(id.substr(6)))
-	elif id == "continue":
-		_continue()
-	elif id == "suggest":
-		season.suggest()
-		refresh()
-	elif id == "table":
-		mode = MODE_TABLE
-		book.table.attach(season.save if season != null else null)
-		refresh()
-	elif id.begins_with("tbl:"):
-		if season != null and book.table.press(id, season.save):
-			refresh()
-	elif id == "calendar":
-		mode = MODE_CALENDAR
-		LeagueCalendar.open(self)
-	elif id == "podium":
-		mode = MODE_PODIUM
-		refresh()
-	elif id == "system":
-		LeagueSystemActions.open(self)
-	elif id.begins_with("sys:"):
-		LeagueSystemActions.act(self, id)
-	elif id == "menu":
-		close()
-	elif id == "create":
-		_create()
-	elif id == "name":
-		refresh()
-
-func _back() -> void:
-	if LeagueSystemActions.back(self):
-		return
-	if mode == MODE_HUB or mode == MODE_WIZARD or mode == MODE_LOAD or mode == MODE_PODIUM:
-		close()
-	else:
-		mode = MODE_HUB
-		refresh()
-
 # --------------------------------------------------------------- highlights ---
 
-## Play one goal of the report on screen. The host owns the viewer; the screen
-## only names the fixture and the goal's ordinal.
-func play_goal(index: int) -> void:
-	if mode != MODE_REPORT or not has_clip(index):
-		return
-	goal_highlight_requested.emit(str((report.get("fixture", {}) as Dictionary).get("id", "")), index)
-
+## True when the report on screen carries a stored clip for a goal ordinal.
 func has_clip(index: int) -> bool:
-	for row in report.get("highlights", []):
-		if int(row.get("goal_index", -1)) == index:
-			return true
-	return false
-
-# --------------------------------------------------------------- actions ---
-
-func _create() -> void:
-	var created := LeagueSeason.create(str(wizard["name"]), str(wizard["calendar_mode"]),
-		str(wizard["advance_mode"]), 0)
-	if created == null:
-		wizard["error"] = "The season could not be created."
-		refresh()
-		return
-	season = created
-	season_opened.emit(created)
-	mode = MODE_HUB
-	month = LeagueBook.state_month(season, month)
-	refresh()
-
-func _open_save(slug: String) -> void:
-	# Load replaces the season outright: the old save, its ledger and every cached
-	# sheet reading go before the new file is bound, so nothing leaks across.
-	LeagueSystemActions.unload(self)
-	var opened := LeagueSeason.open(slug)
-	if opened == null:
-		wizard["error"] = "That save could not be opened."
-		mode = MODE_WIZARD
-		refresh()
-		return
-	open_season(opened, str(opened.state().get("status", "")) == "complete")
-
-func _continue() -> void:
-	if season == null or season.finishing:
-		refresh()
-		return
-	var result := season.advance()
-	var played: Array = result.get("played", [])
-	if str(result.get("status", "")) == "complete" or bool(result.get("complete", false)):
-		mode = MODE_PODIUM
-		month = LeagueBook.state_month(season, month)
-		refresh()
-		return
-	# Pending watch: Continue opens it instead of settling the day (#100).
-	var pending: Array = result.get("pending", [])
-	if not pending.is_empty():
-		var watch := season.start_watch(str(pending[0]["id"]))
-		if not watch.is_empty():
-			match_requested.emit(str(watch["home"]), str(watch["away"]), str(watch["fixture_id"]))
-			return
-	if not played.is_empty():
-		show_roundup(played)
-		return
-	month = LeagueBook.state_month(season, month)
-	refresh()
-
-func _toggle(fixture_id: String) -> void:
-	if season == null:
-		return
-	var fx := season.record.fixture(fixture_id)
-	if fx.is_empty() or str(fx["status"]) == "played":
-		return
-	season.set_watch(fixture_id, int(fx["watched"]) != 1)
-	refresh()
-
-func _press_fixture(fixture_id: String) -> void:
-	if season == null:
-		return
-	var fx := season.record.fixture(fixture_id)
-	if fx.is_empty():
-		return
-	if str(fx["status"]) == "played":
-		show_report(fixture_id)
-	elif int(fx["watched"]) == 1:
-		var watch := season.start_watch(fixture_id)
-		if not watch.is_empty():
-			match_requested.emit(str(watch["home"]), str(watch["away"]), str(watch["fixture_id"]))
-	else:
-		_toggle(fixture_id)
+	return LeagueDoors.has_clip(self, index)
 
 # ---------------------------------------------------------------- input ----
 
-func key(code: int) -> bool:
-	if mode == MODE_WIZARD:
-		if LeagueSheet.type_name_into(wizard, code):
-			refresh()
-			return true
-	if mode == MODE_SYSTEM and LeagueSystemActions.type_name(self, code):
-		return true
-	if mode == MODE_REPORT and code >= KEY_1 and code <= KEY_9:
-		var want := code - KEY_1
-		if has_clip(want):
-			play_goal(want)
-			return true
-	if code == KEY_ESCAPE or code == KEY_BACKSPACE:
-		_back()
-		return true
-	if mode == MODE_HUB and (code == KEY_ENTER or code == KEY_KP_ENTER):
-		_continue()
-		return true
-	if code == KEY_UP or code == KEY_W:
-		scroll_by(-120.0)
-	elif code == KEY_DOWN or code == KEY_S:
-		scroll_by(120.0)
-	elif code == KEY_PAGEUP:
-		scroll_by(-body.size.y * 0.9)
-	elif code == KEY_PAGEDOWN:
-		scroll_by(body.size.y * 0.9)
-	elif code == KEY_HOME:
-		scroll_by(-1.0e7)
-	elif code == KEY_END:
-		scroll_by(1.0e7)
-	else:
-		return false
-	return true
+func click(id: String) -> void:
+	LeagueDoors.press(self, id)
 
+func key(code: int) -> bool:
+	return LeagueDoors.key(self, code)
 
 # ----------------------------------------------------------------- paint ---
 
