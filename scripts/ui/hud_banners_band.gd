@@ -44,7 +44,7 @@ func _break(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 	var m: Dictionary = HudLayout.break_metrics(p.vp, home_goals, away_goals)
 	var r: Rect2 = m["rect"]
 	p.panel(c, Color(0.02, 0.03, 0.04, 0.94), r, 14, Color(1, 1, 1, 0.12))
-	var cx: float = p.vp.x * 0.5
+	var cx: float = r.position.x + r.size.x * 0.5
 	var title := "HALF TIME" if engine.phase == "half_time" else "FULL TIME"
 	p.text_c(c, cx, r.position.y + float(m["title_y"]), title, int(m["title_size"]), UiChrome.C_GOLD, f_bold)
 	p.text_c(c, cx, r.position.y + float(m["score_y"]), "%d  –  %d" % [engine.score[0], engine.score[1]], int(m["score_size"]), UiChrome.C_TEXT, f_bold)
@@ -84,7 +84,7 @@ func _goals(p: HudPaint, c: CanvasItem, engine, r: Rect2, m: Dictionary, f_med: 
 			var line := "  ·  ".join(entries.slice(from, to))
 			if i == rows - 1 and entries.size() > shown:
 				line += "  +%d" % (entries.size() - shown)
-			p.text_c(c, p.vp.x * 0.5, y0 + step * float(i), line, size, UiChrome.C_TEXT, f_med)
+			p.text_c(c, r.position.x + r.size.x * 0.5, y0 + step * float(i), line, size, UiChrome.C_TEXT, f_med)
 		return
 	var home: Array = []
 	var away: Array = []
