@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_rules.gd"
+extends "res://scripts/sim/match_engine_bench.gd"
 
 ## Match lifecycle: kick-off, the tick loop, halves, and state snapshots.
 
