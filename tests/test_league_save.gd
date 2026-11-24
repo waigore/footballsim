@@ -4,8 +4,8 @@ extends GdToolsTest
 ## the shipped seed, carrying its own regulations and reading through the game's
 ## data layer — while single-match mode keeps its cached seed.
 
-const SAVE_DIR := "user://saves_test_issue58"
-const CACHE_DIR := "user://cache_test_issue58"
+var SAVE_DIR := TestScratch.dir("saves_test_issue58")
+var CACHE_DIR := TestScratch.dir("cache_test_issue58")
 
 func before_all() -> void:
 	PLDatabase.cache_dir = CACHE_DIR
@@ -176,6 +176,4 @@ func test_slugs_are_readable_and_files_stay_in_the_folder() -> void:
 
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
-		DirAccess.make_dir_recursive_absolute(folder)
-		for name in DirAccess.get_files_at(folder):
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(folder.path_join(name)))
+		TestScratch.clear(folder)

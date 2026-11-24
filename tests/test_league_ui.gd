@@ -4,9 +4,9 @@ extends GdToolsTest
 ## wizard, the planner and Continue loop, a watched fixture, the table, the
 ## calendar, reports and the podium.
 
-const SAVE_DIR := "user://saves_test_ui_issue58"
-const CACHE_DIR := "user://cache_test_ui_issue58"
-const PREFS := "user://test_league_ui_issue58.cfg"
+var SAVE_DIR := TestScratch.dir("saves_test_ui_issue58")
+var CACHE_DIR := TestScratch.dir("cache_test_ui_issue58")
+var PREFS := TestScratch.file("test_league_ui_issue58.cfg")
 
 var game = null
 
@@ -750,8 +750,6 @@ func _open_hub() -> void:
 
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
-		DirAccess.make_dir_recursive_absolute(folder)
-		for name in DirAccess.get_files_at(folder):
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(folder.path_join(name)))
+		TestScratch.clear(folder)
 	if FileAccess.file_exists(PREFS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))

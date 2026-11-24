@@ -3,7 +3,7 @@ extends GdToolsTest
 ## The shipped seed and the cache that carries it: version stamping, flush on a
 ## version bump, and the repository shapes the engine and the encyclopedia read.
 
-const CACHE_DIR := "user://cache_test_seed"
+var CACHE_DIR := TestScratch.dir("cache_test_seed")
 
 func before_all() -> void:
 	PLDatabase.cache_dir = CACHE_DIR
