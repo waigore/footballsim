@@ -137,6 +137,7 @@ suites = [
   "test_strongest_xi.gd",
   "test_league_season.gd",
   "test_league_ui.gd",
+  "test_league_system.gd",
   "test_goal_highlights.gd",
 ]
 

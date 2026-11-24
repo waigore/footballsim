@@ -49,6 +49,15 @@ static func type_name(name: String, code: int) -> Array:
 		return [true, name + (ch.to_upper() if name == "" else ch)]
 	return [false, name]
 
+## Edit the name in a wizard/field state dictionary. True when the key belonged
+## to the field, so the caller only has to repaint.
+static func type_name_into(state: Dictionary, code: int) -> bool:
+	var typed: Array = type_name(str(state.get("name", "")), code)
+	if not bool(typed[0]):
+		return false
+	state["name"] = str(typed[1])
+	return true
+
 # ------------------------------------------------------------------- hub ---
 
 func hub_layout(vp: Vector2, state: Dictionary) -> Array:
@@ -83,8 +92,8 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	if bool(state.get("can_suggest", false)):
 		items.append({"id": "suggest", "kind": "chip", "label": "SUGGEST WATCHES",
 			"rect": Rect2(24.0 + left_w - 150.0, top + 2.0, 150.0, 20.0)})
-	items.append_array(_bar_rects(vp, ["continue", "table", "calendar", "menu"],
-		["CONTINUE", "TABLE", "CALENDAR", "MENU"]))
+	items.append_array(_bar_rects(vp, ["continue", "table", "calendar", "system"],
+		["CONTINUE", "TABLE", "CALENDAR", "SYSTEM"]))
 	if bool(state.get("complete", false)):
 		items.append({"id": "podium", "kind": "button", "label": "PODIUM", "pinned": true,
 			"rect": Rect2(24.0, body_bottom - 34.0, 120.0, 28.0), "primary": false})

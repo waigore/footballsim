@@ -12,6 +12,8 @@ signal season_opened(season: LeagueSeason)
 signal club_requested(club_id: String)
 ## Goal ▶: host plays that stored clip over the broadcast.
 signal goal_highlight_requested(fixture_id: String, goal_index: int)
+## The System sheet asked the shell to close the game.
+signal quit_requested
 
 const MODE_HUB := "hub"
 const MODE_WIZARD := "wizard"
@@ -20,6 +22,8 @@ const MODE_TABLE := "table"
 const MODE_CALENDAR := "calendar"
 const MODE_REPORT := "report"
 const MODE_PODIUM := "podium"
+## The season's own save/exit dialog (#109).
+const MODE_SYSTEM := "system"
 
 var ui_scale := 1.0
 var touch := false
@@ -44,6 +48,13 @@ var buttons: Array:
 var body: LeagueBody = null
 var hub: LeagueSheet = LeagueSheet.new()
 var book: LeagueBook = LeagueBook.new()
+## The season's own save/exit dialog (#109), its own pose beside hub and book.
+var system := LeagueSystemSheet.new()
+## What the System sheet is showing: the last acknowledgement, a refusal, and
+## the Save As name field while it is open.
+var sys := {"status": "", "error": "", "naming": false, "name": ""}
+## Where the load list was opened from, so BACK returns there (menu or season).
+var load_from := "menu"
 ## Date strips: the chrome's own, and the active sheet's rows on screen (#99).
 var hints := DateHints.new()
 var rows_hints: DateHints = null
@@ -58,6 +69,7 @@ var _poses := {
 	MODE_CALENDAR: ["book", "calendar_layout", "draw_calendar_body", "draw_calendar_chrome"],
 	MODE_REPORT: ["book", "report_layout", "draw_report_body", "draw_report_chrome"],
 	MODE_PODIUM: ["book", "podium_layout", "draw_podium_body", "draw_podium_chrome"],
+	MODE_SYSTEM: ["system", "layout", "draw_body", "draw_chrome"],
 }
 
 func _ready() -> void:
@@ -90,6 +102,7 @@ func open_wizard() -> void:
 
 func open_load() -> void:
 	mode = MODE_LOAD
+	load_from = "menu"
 	saves = LeagueSave.list()
 	visible = true
 	refresh()
@@ -127,35 +140,7 @@ func close() -> void:
 # --------------------------------------------------------------- state ----
 
 func current_view() -> Dictionary:
-	if mode == MODE_WIZARD or mode == MODE_LOAD:
-		return wizard if mode == MODE_WIZARD else {"saves": saves}
-	var rules: Dictionary = season.rules if season != null else LeagueRules.defaults()
-	var state: Dictionary = season.state() if season != null else {"rules": rules}
-	if mode == MODE_TABLE:
-		return {"table": state.get("table", []), "rules": state.get("rules", rules),
-			"name": state.get("name", ""), "date": state.get("date", "")}
-	if mode == MODE_CALENDAR:
-		return {"month": month, "day": day, "days": days_cache, "day_fixtures": day_fixtures}
-	if mode == MODE_REPORT:
-		if not roundup.is_empty():
-			return {"roundup": roundup, "day": str(roundup[0]["fixture"]["kickoff"]) if roundup[0].has("fixture") else ""}
-		return {
-			"fixture": report.get("fixture", {}), "events": report.get("events", []),
-			"highlights": report.get("highlights", []),
-			"day": str((report.get("fixture", {}) as Dictionary).get("kickoff", "")),
-		}
-	if mode == MODE_PODIUM:
-		return {"summary": state.get("summary", {}), "name": state.get("name", ""),
-			"table": state.get("table", []), "rules": state.get("rules", rules)}
-	var view: Dictionary = state.duplicate()
-	if season != null:
-		view["plan"] = season.plan()
-		view["can_suggest"] = bool(view.get("can_suggest", false))
-		view["settling"] = season.finishing
-	else:
-		view["plan"] = []
-	view["screen"] = mode
-	return view
+	return LeagueView.build(self)
 
 # ---------------------------------------------------------------- layout ---
 
@@ -165,13 +150,23 @@ func refresh() -> void:
 	var pose: Array = _poses.get(mode, [])
 	if body == null or pose.is_empty():
 		return
-	var sheet: RefCounted = hub if str(pose[0]) == "hub" else book
-	rows_hints = hub.hints if str(pose[0]) == "hub" else book.hints
+	var sheet := _sheet(pose)
+	rows_hints = sheet.hints
 	var items: Array = Callable(sheet, str(pose[1])).call(vp, view)
 	var content := body.set_sheet(items, vp, mode != _last_mode)
 	body.painter = Callable(sheet, str(pose[2])).bind(vp, UiChrome.fonts(), content, view)
 	_last_mode = mode
 	queue_redraw()
+
+## The sheet that owns a pose: the hub sheets, the reading book, or the System
+## dialog (which is its own module).
+func _sheet(pose: Array) -> RefCounted:
+	match str(pose[0]):
+		"book":
+			return book
+		"system":
+			return system
+	return hub
 
 ## Hit test walks back to front so later items (e.g. a delete chip) win.
 func button_at(p: Vector2) -> String:
@@ -202,8 +197,7 @@ func click(id: String) -> void:
 	elif id.begins_with("delete:"):
 		var slug := id.substr(7)
 		if season != null and season.save.slug == slug:
-			season.close()
-			season = null
+			LeagueSystemActions.unload(self)
 		LeagueSave.remove(slug)
 		saves = LeagueSave.list()
 		refresh()
@@ -235,6 +229,10 @@ func click(id: String) -> void:
 	elif id == "podium":
 		mode = MODE_PODIUM
 		refresh()
+	elif id == "system":
+		LeagueSystemActions.open(self)
+	elif id.begins_with("sys:"):
+		LeagueSystemActions.act(self, id)
 	elif id == "menu":
 		close()
 	elif id == "create":
@@ -243,6 +241,8 @@ func click(id: String) -> void:
 		refresh()
 
 func _back() -> void:
+	if LeagueSystemActions.back(self):
+		return
 	if mode == MODE_HUB or mode == MODE_WIZARD or mode == MODE_LOAD or mode == MODE_PODIUM:
 		close()
 	else:
@@ -280,6 +280,9 @@ func _create() -> void:
 	refresh()
 
 func _open_save(slug: String) -> void:
+	# Load replaces the season outright: the old save, its ledger and every cached
+	# sheet reading go before the new file is bound, so nothing leaks across.
+	LeagueSystemActions.unload(self)
 	var opened := LeagueSeason.open(slug)
 	if opened == null:
 		wizard["error"] = "That save could not be opened."
@@ -339,7 +342,11 @@ func _press_fixture(fixture_id: String) -> void:
 # ---------------------------------------------------------------- input ----
 
 func key(code: int) -> bool:
-	if mode == MODE_WIZARD and _type_name(code):
+	if mode == MODE_WIZARD:
+		if LeagueSheet.type_name_into(wizard, code):
+			refresh()
+			return true
+	if mode == MODE_SYSTEM and LeagueSystemActions.type_name(self, code):
 		return true
 	if mode == MODE_REPORT and code >= KEY_1 and code <= KEY_9:
 		var want := code - KEY_1
@@ -368,12 +375,6 @@ func key(code: int) -> bool:
 		return false
 	return true
 
-func _type_name(code: int) -> bool:
-	var typed: Array = LeagueSheet.type_name(str(wizard["name"]), code)
-	if bool(typed[0]):
-		wizard["name"] = str(typed[1])
-		refresh()
-	return bool(typed[0])
 
 # ----------------------------------------------------------------- paint ---
 
@@ -385,7 +386,7 @@ func _draw() -> void:
 	var pose: Array = _poses.get(mode, [])
 	if pose.is_empty():
 		return
-	var sheet: RefCounted = hub if str(pose[0]) == "hub" else book
+	var sheet := _sheet(pose)
 	var fonts := UiChrome.fonts()
 	hints.clear()
 	Callable(sheet, str(pose[3])).call(self, vp, fonts, current_view(), hints)

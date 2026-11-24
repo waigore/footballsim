@@ -221,6 +221,52 @@ static func close() -> void:
 	current = null
 	PLRepository.shared().invalidate()
 
+## Quick Save: play writes to the save as it goes, so this stamps the file and
+## proves it is still bound and writable. False means the write did not land.
+func touch() -> bool:
+	if not ensure_open():
+		return false
+	var stamp := Time.get_datetime_string_from_system(true, true)
+	if not put_meta("saved_at", stamp):
+		return false
+	meta["saved_at"] = stamp
+	return true
+
+## Save As: write this save's file under another name and leave the season on its
+## own file — the copy is a named restore point. Naming the season's own save
+## rewrites it in place. Returns the copy's slug, or "" when nothing was written.
+func write_copy(name: String) -> String:
+	var typed := name.strip_edges()
+	if typed == "" or not ensure_open():
+		return ""
+	var slug := slugify(typed)
+	if slug == "" or slug == self.slug:
+		return self.slug if touch() else ""
+	DirAccess.make_dir_recursive_absolute(dir)
+	var target := dir.path_join(slug + EXT)
+	# Close the live file first: a copy taken under an open handle can miss the
+	# last commit.
+	PLDatabase.close()
+	var bytes := FileAccess.get_file_as_bytes(path)
+	var out := FileAccess.open(target, FileAccess.WRITE)
+	if out == null or bytes.is_empty():
+		last_error = "cannot write %s" % target
+		ensure_open()
+		return ""
+	out.store_buffer(bytes)
+	out.close()
+	var copy := open(target)
+	if copy == null:
+		ensure_open()
+		return ""
+	copy.put_meta("name", typed)
+	copy.put_meta("saved_at", Time.get_datetime_string_from_system(true, true))
+	# Back to the season's own file so play continues where it was.
+	ensure_open()
+	current = self
+	PLRepository.shared().invalidate()
+	return slug
+
 # ------------------------------------------------------------------- meta ---
 
 ## Every read and write goes to this save's own file, even when another save was
