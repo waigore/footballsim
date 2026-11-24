@@ -58,19 +58,78 @@ func list(fixture_id: String) -> Array:
 		[fixture_id],
 	)
 
-## One stored clip, decoded. Empty when the row or its blob is missing.
+## One stored clip, decoded. Empty when the row is missing.
+##
+## An auto-settled goal keeps its recipe, not its picture (see
+## `LeagueHighlights._generated_row`): the pack is drawn here, on the first
+## report that asks for it, and cached in the row so reopening it is one read.
 func pack(fixture_id: String, goal_index: int) -> Dictionary:
 	save.ensure_open()
 	var row := PLDatabase.row(
-		"SELECT bytes FROM goal_highlight WHERE fixture_id = ? AND goal_index = ?;",
+		"SELECT * FROM goal_highlight WHERE fixture_id = ? AND goal_index = ?;",
 		[fixture_id, goal_index],
 	)
 	if row.is_empty():
 		return {}
 	var bytes = row.get("bytes", PackedByteArray())
-	if not bytes is PackedByteArray:
+	if bytes is PackedByteArray and not (bytes as PackedByteArray).is_empty():
+		return GoalHighlight.unpack(bytes)
+	var drawn := _draw(row)
+	if drawn.is_empty():
 		return {}
-	return GoalHighlight.unpack(bytes)
+	PLDatabase.execute(
+		"UPDATE goal_highlight SET bytes = ? WHERE fixture_id = ? AND goal_index = ?;",
+		[drawn, fixture_id, goal_index],
+	)
+	return GoalHighlight.unpack(drawn)
+
+## Draw one recipe row's pack from what the save itself remembers: the club ids
+## pick the XI, the fixture's own goal rows give the scoreline at that goal, and
+## the save seed plus the goal's index give the clip its seed back. Everything
+## here is what the settling pass would have used, so the clip is the same one.
+func _draw(row: Dictionary) -> PackedByteArray:
+	var fixture_id := str(row.get("fixture_id", ""))
+	var index := int(row.get("goal_index", 0))
+	var home := str(row.get("home_club_id", ""))
+	var away := str(row.get("away_club_id", ""))
+	if fixture_id == "" or home == "" or away == "":
+		return PackedByteArray()
+	var club := str(row.get("club_id", home))
+	var fields := {
+		"fixture_id": fixture_id, "goal_index": index,
+		"minute": int(row.get("minute", 0)), "home": home, "away": away, "club_id": club,
+		"player_id": str(row.get("scorer_id", "")),
+		"player_name": str(row.get("scorer_name", "")),
+		"assist_id": str(row.get("assist_id", "")),
+		"assist_name": str(row.get("assist_name", "")),
+		"club_short": LeagueHighlights.short_name(club),
+		"opp_short": LeagueHighlights.short_name(away if club == home else home),
+		"score_after": _score_after(fixture_id, index, home, club),
+		"source": str(row.get("source", "auto")),
+		"commentary": str(row.get("commentary", "")),
+	}
+	var sides := {
+		"home": StrongestXI.pick(TeamData.get_team(home)),
+		"away": StrongestXI.pick(TeamData.get_team(away)),
+	}
+	var seed := GoalHighlight.seed_for(int(str(save.meta.get("seed", "0"))), fixture_id, index)
+	return GoalHighlight.pack(GoalHighlight.build(fields, sides, seed))
+
+## The scoreline a goal stood at, from the fixture's own goal rows in the order
+## the report prints them: the goal's own club's tally includes the goal.
+func _score_after(fixture_id: String, index: int, home: String, club: String) -> Array:
+	var score := [0, 0]
+	for row in PLDatabase.rows(
+		"SELECT goal_index, club_id FROM goal_highlight WHERE fixture_id = ? ORDER BY goal_index;",
+		[fixture_id],
+	):
+		if str(row.get("club_id", "")) == home:
+			score[0] += 1
+		else:
+			score[1] += 1
+		if int(row.get("goal_index", -1)) >= index:
+			break
+	return [int(score[0]), int(score[1])]
 
 ## Drop a fixture's clips (a re-settled fixture rewrites its own report).
 func clear(fixture_id: String) -> void:

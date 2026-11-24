@@ -255,8 +255,7 @@ func _sim_fixture(fx: Dictionary) -> Dictionary:
 	record.save_result(fixture_id, score.x, score.y)
 	record.add_events(events)
 	_add_xi_stats(events, {"home": hxi, "away": axi}, {"home": home, "away": away})
-	LeagueHighlights.store_auto(record, int(rng.seed), fixture_id, events,
-		{"home": hxi, "away": axi}, home, away)
+	LeagueHighlights.store_auto(record, int(rng.seed), fixture_id, events, home, away)
 	return report(fixture_id)
 
 ## A side's XI all played 90 minutes; goals, assists and cards come off the
@@ -360,11 +359,7 @@ func record_engine(engine) -> void:
 			},
 		})
 	record.add_player_lines(lines)
-	var sides := {"home": [], "away": []}
-	for p in engine.players:
-		var side := "home" if int(p.team) == 0 else "away"
-		sides[side].append({"id": str(p.key), "role": str(p.role)})
-	LeagueHighlights.store_watch(record, int(rng.seed), fixture_id, captured, sides,
+	LeagueHighlights.store_watch(record, int(rng.seed), fixture_id, captured,
 		str(fx["home_club_id"]), str(fx["away_club_id"]))
 	captured = []
 	PLDatabase.transaction("COMMIT;")
