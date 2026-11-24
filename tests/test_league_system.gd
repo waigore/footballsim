@@ -212,6 +212,44 @@ func test_quit_asks_the_shell_to_confirm() -> void:
 	LeagueSystemActions.unload(screen())
 	assert_null(LeagueSeason.active, "the unload kept the season")
 
+## QUIT from the season's System sheet used to raise the dialog under the
+## season layer, where it could neither be seen nor answered (#123): the
+## confirm must stack above the sheet, take Esc, and hand the sheet back.
+func test_quit_from_the_system_sheet_raises_an_answerable_confirm() -> void:
+	var season := _season("Confirm Cut")
+	_system(season)
+	press_id("sys:quit")
+	assert_eq(game.menus.shell.screen, AppShell.SCREEN_CONFIRM,
+		"Quit from the System sheet skipped the confirmation")
+	assert_gt(game.menus.layer.layer, game.menus.league.layer.layer,
+		"the quit confirmation is stacked under the season sheet")
+	_key(KEY_ESCAPE)
+	assert_eq(screen().mode, LeagueScreen.MODE_SYSTEM, "Esc left the season sheet instead of the dialog")
+	assert_false(game.menus.shell.active(), "Esc left the confirmation up")
+	assert_not_null(LeagueSeason.active, "Esc dropped the season")
+	assert_lte(game.menus.layer.layer, game.menus.league.layer.layer,
+		"the shell stayed above the season sheet after the cancel")
+	press_id("sys:quit")
+	var vp: Vector2 = game.menus.shell.design_vp()
+	_click(ConfirmPrompt.cancel_rect(vp).get_center())
+	assert_eq(screen().mode, LeagueScreen.MODE_SYSTEM, "CANCEL left the season sheet instead of the dialog")
+	assert_not_null(LeagueSeason.active, "CANCEL dropped the season")
+	_leave()
+
+func _key(code: int) -> void:
+	var ev := InputEventKey.new()
+	ev.keycode = code
+	ev.pressed = true
+	game._input(ev)
+
+func _click(at: Vector2) -> void:
+	for pressed in [true, false]:
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_LEFT
+		ev.pressed = pressed
+		ev.position = at * game.menus.shell.ui_scale
+		game._input(ev)
+
 func test_back_from_the_load_list_returns_to_the_system_sheet() -> void:
 	var season := _season("Load Back")
 	_system(season)

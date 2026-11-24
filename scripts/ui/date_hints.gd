@@ -43,13 +43,16 @@ func at(p: Vector2) -> Dictionary:
 	return {}
 
 ## The strip a label occupies, so a painter can register the date it just wrote
-## without measuring the text twice.
+## without measuring the text twice. Both the width and the strip use the size
+## the caption really paints at (the non-match reading floor), so a hover strip
+## still covers a lifted caption (#126).
 static func width(font: Font, s: String, size: int) -> float:
-	return font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	return font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, ChromeDensity.read_size(size)).x
 
 ## The strip a label drawn from `pos` occupies.
 static func strip(font: Font, s: String, pos: Vector2, size: int) -> Rect2:
-	return Rect2(pos.x, pos.y - float(size), width(font, s, size), float(size) + 4.0)
+	var px := float(ChromeDensity.read_size(size))
+	return Rect2(pos.x, pos.y - px, width(font, s, size), px + 4.0)
 
 ## The same strip for a label drawn against a right edge.
 static func strip_right(font: Font, s: String, right_x: float, y: float, size: int) -> Rect2:
@@ -69,7 +72,8 @@ static func paint(c: CanvasItem, cache: Dictionary, zone: Dictionary, vp: Vector
 	if label == "":
 		return
 	var bold: Font = fonts["bold"]
-	var w: float = bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x + PAD * 2.0
+	var size := ChromeDensity.MIN_READ
+	var w: float = bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + PAD * 2.0
 	var rect: Rect2 = zone["rect"]
 	var x: float = clampf(rect.position.x, 4.0, maxf(vp.x - w - 4.0, 4.0))
 	var y: float = rect.end.y + 2.0
@@ -77,6 +81,6 @@ static func paint(c: CanvasItem, cache: Dictionary, zone: Dictionary, vp: Vector
 		y = rect.position.y - BUBBLE_H - 3.0
 	UiChrome.panel(c, cache, Rect2(x, y, w, BUBBLE_H), UiChrome.C_PANEL_LIGHT, 4,
 		UiChrome.C_GOLD, 1)
-	UiChrome.text_c(c, x + w * 0.5, y + 12.0, label, 9, UiChrome.C_GOLD, bold)
+	UiChrome.text_c(c, x + w * 0.5, y + 12.0, label, size, UiChrome.C_GOLD, bold)
 
 # gd-tools: no cover end

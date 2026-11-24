@@ -12,6 +12,9 @@ signal start_requested
 signal resume_requested
 signal new_league_requested
 signal load_league_requested
+## The sheet on screen changed: the host re-stacks the shell so the quit
+## confirmation draws over whatever raised it (#123).
+signal screen_changed
 
 const SCREEN_MENU := "menu"
 const SCREEN_SETTINGS := "settings"
@@ -84,6 +87,7 @@ func open_menu(has_match_now: bool) -> void:
 		music.play_menu()
 	visible = true
 	queue_redraw()
+	screen_changed.emit()
 
 func open_settings() -> void:
 	screen = SCREEN_SETTINGS
@@ -92,6 +96,7 @@ func open_settings() -> void:
 		music.play_menu()
 	visible = true
 	queue_redraw()
+	screen_changed.emit()
 
 func open_quit_confirm() -> void:
 	if screen == SCREEN_CONFIRM:
@@ -100,6 +105,7 @@ func open_quit_confirm() -> void:
 	screen = SCREEN_CONFIRM
 	visible = true
 	queue_redraw()
+	screen_changed.emit()
 
 func back_to_menu() -> void:
 	open_menu(has_match)
@@ -112,6 +118,7 @@ func close(keep_music: bool = false) -> void:
 	visible = false
 	if music != null and not keep_music:
 		music.stop()
+	screen_changed.emit()
 
 func cancel_confirm() -> void:
 	if screen != SCREEN_CONFIRM:
@@ -128,6 +135,7 @@ func cancel_confirm() -> void:
 		prev_screen = SCREEN_NONE
 		visible = false
 	queue_redraw()
+	screen_changed.emit()
 
 func set_volume(v: float) -> void:
 	volume = Prefs.clamp_volume(v)

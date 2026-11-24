@@ -7,13 +7,12 @@ extends RefCounted
 ## it and starts matches.
 
 const LAYER := 32
-## Pointer travel that separates a click from a scroll drag.
-const DRAG_SLOP := 8.0
-const PAN_STEP := 60.0
 
 var game = null
 var layer: CanvasLayer = null
 var screen: LeagueScreen = null
+## The drag/wheel/click grammar the sheet shares with the encyclopedia.
+var pointer: SheetPointer = null
 var season: LeagueSeason = null
 ## A watched fixture the player left early: it is played out while the hub paints.
 var watch: LeagueWatch = null
@@ -21,10 +20,6 @@ var watch: LeagueWatch = null
 ## viewer and the hub. See LeagueResult.
 var result: LeagueResult = null
 var was_paused := false
-var pressing := false
-var dragged := false
-var press_at := Vector2.ZERO
-var last_at := Vector2.ZERO
 
 func attach(host) -> void:
 	game = host
@@ -51,6 +46,7 @@ func build() -> void:
 	screen.club_requested.connect(_on_club_requested)
 	screen.goal_highlight_requested.connect(_on_goal_highlight)
 	screen.quit_requested.connect(_on_quit_requested)
+	pointer = SheetPointer.new(screen)
 	layer.visible = false
 
 ## Open means "the layer is on screen": the hand-off to the match viewer hides
@@ -210,68 +206,17 @@ func _on_recorded(report: Dictionary) -> void:
 
 # ----------------------------------------------------------------- input ---
 
-## The sheet does its own hit testing; this converts pointers to design space
-## and forwards. Wheel notches, trackpad pans, a held drag and the keys all move
-## the season body; a press that never travels commits as a click on release.
+## The sheet does its own hit testing; pointers arrive in design space and the
+## shared pointer grammar turns a press, drag, wheel, pan or key into a scroll or
+## a press. A held FULL TIME card owns every event first (#124).
 func handle_input(event: InputEvent, design_point: Vector2) -> bool:
 	if is_holding():
 		return result.input(event)
-	if not is_open():
+	if not is_open() or pointer == null:
 		return false
-	if event is InputEventMouseMotion:
-		_pointer_motion(design_point)
-	elif event is InputEventPanGesture:
-		# macOS reports a two-finger scroll as a pan, never as wheel buttons.
-		screen.scroll_by(event.delta.y * PAN_STEP, event.delta.x * PAN_STEP)
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
-		screen.scroll_by(-110.0)
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-		screen.scroll_by(110.0)
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		_pointer_down(design_point)
-	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		_pointer_up()
-	elif event is InputEventKey and event.pressed and not event.echo:
-		screen.key(event.keycode)
-	else:
-		return event is InputEventMouse
-	return true
-
-func _pointer_down(p: Vector2) -> void:
-	pressing = true
-	dragged = false
-	press_at = p
-	last_at = p
-	screen.mouse = p
-	screen.holding = true
-
-## Hover is free; holding the button turns the pointer into a scroll drag, and
-## the travel since the last frame is charged to the body in one step.
-func _pointer_motion(p: Vector2) -> void:
-	screen.mouse = p
-	if not pressing:
-		if not game.touch:
-			Input.set_default_cursor_shape(
-				Input.CURSOR_POINTING_HAND if screen.button_at(p) != "" else Input.CURSOR_ARROW)
-		return
-	if not dragged:
-		if p.distance_to(press_at) < DRAG_SLOP:
-			return
-		dragged = true
-		screen.holding = false
-	screen.scroll_by(last_at.y - p.y, last_at.x - p.x)
-	last_at = p
-
-func _pointer_up() -> void:
-	if not pressing:
-		return
-	pressing = false
-	screen.holding = false
-	if dragged:
-		return
-	var id := screen.button_at(press_at)
-	if id != "":
-		screen.click(id)
+	if pointer.handle(event, design_point):
+		return true
+	return event is InputEventMouse
 
 # ------------------------------------------------------------- goal clips ---
 

@@ -281,6 +281,37 @@ func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 		assert_eq(cells, 31, "October should have 31 cells")
 		assert_eq(matches, 2, "the day lost its fixtures")
 
+## #126: the caption floor lifts the shortest type on the hub and the calendar to
+## ten design units. The chip label and the day-cell counter must still fit the
+## surface that carries them on a phone and on a desktop window.
+func test_the_shortest_captions_fit_after_the_floor() -> void:
+	var bold: Font = UiChrome.fonts()["bold"]
+	var sheet := LeagueSheet.new()
+	var plan: Array = [_fixture(1, 0, 1)]
+	var chip_w := -1.0
+	for item in sheet.hub_layout(Vector2(1600, 900), _state(plan, _table())):
+		if str(item["id"]).begins_with("toggle:"):
+			chip_w = (item["rect"] as Rect2).size.x
+	assert_gt(chip_w, 0.0, "the hub laid out no AUTO/WATCH chip")
+	for label in ["AUTO", "WATCH"]:
+		assert_lte(UiChrome.text_width(bold, label, ChromeDensity.MIN_READ), chip_w - 6.0,
+			"the %s caption no longer fits its chip" % label)
+	var book := LeagueBook.new()
+	var counter := UiChrome.text_width(bold, "10/10", ChromeDensity.MIN_READ)
+	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
+		var cells := 0
+		for item in book.calendar_layout(vp, {
+			"month": "2026-10", "day": "", "days": {}, "day_fixtures": [],
+		}):
+			if str(item["kind"]) != "cell":
+				continue
+			cells += 1
+			var rect: Rect2 = item["rect"]
+			# Counter right-aligned 3 units in, day number 4 units from the left.
+			assert_gte(rect.size.x, counter + 20.0,
+				"the 10/10 counter overruns its cell at %s" % vp)
+		assert_eq(cells, 31, "October should still have 31 cells at %s" % vp)
+
 func test_every_phone_sheet_overflows_into_the_scroll_window() -> void:
 	var sheet := LeagueSheet.new()
 	var book := LeagueBook.new()

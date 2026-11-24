@@ -158,6 +158,15 @@ suites = [
   "test_touch_flow.gd",
 ]
 
+# The pointer grammar the league and encyclopedia sheets share: a change moves
+# both modal surfaces' press/drag/wheel suites.
+[domains.sheet_pointer]
+suites = [
+  "test_sheet_pointer.gd",
+  "test_league_ui.gd",
+  "test_wiki_render.gd",
+]
+
 # The one date form and its weekday hint (#99): the league sheets and the
 # encyclopedia both paint it, so the formatter and the overlay ride together.
 [domains.dates]
@@ -375,6 +384,11 @@ domain = "hud_chrome"
 [[rules]]
 match = "scripts/ui/wiki_*.gd*"
 domain = "wiki"
+
+# The drag/wheel/click grammar the league and wiki hosts both delegate to.
+[[rules]]
+match = "scripts/ui/sheet_pointer.gd*"
+domain = "sheet_pointer"
 
 [[rules]]
 match = "scripts/ui/league_*.gd*"
