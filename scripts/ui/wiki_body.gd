@@ -119,7 +119,10 @@ func max_scroll() -> float:
 	return maxf(0.0, _height - size.y)
 
 func scroll_by(delta: float) -> void:
-	scroll = clampf(scroll + delta, 0.0, max_scroll())
+	scroll_to(scroll + delta)
+
+func scroll_to(at: float) -> void:
+	scroll = clampf(at, 0.0, max_scroll())
 	queue_redraw()
 
 func rows() -> Array:
@@ -130,7 +133,9 @@ func content_height() -> float:
 
 ## First row whose target sits under a body-local point (hover/tap).
 func hit(p: Vector2) -> Dictionary:
-	var local := p - position
+	var local := _content_point(p)
+	if local.x < 0.0:
+		return {}
 	for row in _rows:
 		var rect: Rect2 = row["rect"]
 		if rect.has_point(local) and not (row.get("target", {}) as Dictionary).is_empty():
@@ -138,11 +143,23 @@ func hit(p: Vector2) -> Dictionary:
 	return {}
 
 func row_at(p: Vector2) -> int:
-	var local := p - position
+	var local := _content_point(p)
+	if local.x < 0.0:
+		return -1
 	for i in range(_rows.size()):
 		if (_rows[i]["rect"] as Rect2).has_point(local):
 			return i
 	return -1
+
+## A body-local point in content space. Scrolling already moved the pixels, so
+## hit tests must move with them — and a point outside the sheet (in the header,
+## the footer, or clipped below the fold) comes back as a miss.
+func _content_point(p: Vector2) -> Vector2:
+	var local := p - position
+	if not Rect2(Vector2.ZERO, size).has_point(local):
+		return Vector2(-1.0, -1.0)
+	local.y += scroll
+	return local
 
 # ------------------------------------------------------------------ drawing --
 

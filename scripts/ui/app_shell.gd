@@ -10,6 +10,8 @@ extends Control
 
 signal start_requested
 signal resume_requested
+signal new_league_requested
+signal load_league_requested
 
 const SCREEN_MENU := "menu"
 const SCREEN_SETTINGS := "settings"
@@ -168,6 +170,12 @@ func _menu_click(p: Vector2) -> bool:
 	elif id == "resume":
 		close(false)
 		resume_requested.emit()
+	elif id == "new_league":
+		close(true)
+		new_league_requested.emit()
+	elif id == "load_league":
+		close(true)
+		load_league_requested.emit()
 	elif id == "settings":
 		open_settings()
 	elif id == "quit":
@@ -217,6 +225,12 @@ func _menu_key(code: int) -> bool:
 	if code == KEY_ENTER or code == KEY_KP_ENTER:
 		close(true)
 		start_requested.emit()
+	elif code == KEY_N:
+		close(true)
+		new_league_requested.emit()
+	elif code == KEY_L:
+		close(true)
+		load_league_requested.emit()
 	elif code == KEY_S:
 		open_settings()
 	else:

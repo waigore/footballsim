@@ -60,11 +60,14 @@ static func ken_rect(vp: Vector2, index: int, t: float) -> Rect2:
 # ----------------------------------------------------------------- layout ---
 
 ## Doors on the menu, in reading order: Start Sim is always primary; Resume only
-## exists while a match is waiting behind the menu.
+## exists while a match is waiting behind the menu; the two league doors open
+## the god-mode season surfaces.
 static func door_ids(has_match_now: bool) -> Array:
 	var ids: Array = ["start"]
 	if has_match_now:
 		ids.append("resume")
+	ids.append("new_league")
+	ids.append("load_league")
 	ids.append("settings")
 	ids.append("quit")
 	return ids
@@ -73,17 +76,20 @@ static func door_rects(vp: Vector2, has_match_now: bool) -> Array:
 	var compact: bool = vp.y < 620.0
 	var mx: float = clampf(vp.x * 0.07, 24.0, 96.0)
 	var ids := door_ids(has_match_now)
-	var gap: float = 10.0 if compact else 12.0
+	var n: float = float(ids.size())
 	var w: float = minf(340.0, vp.x - 2.0 * mx)
 	var bottom_pad: float = 18.0 if compact else 60.0
 	var top: float = vp.y * (0.40 if compact else 0.50)
 	# Never trade a door for the title: on a short design viewport (a 720p
 	# handset) the column slides up until every door stays on screen at tap size.
-	var stacked: float = 44.0 * float(ids.size()) + gap * float(ids.size() - 1)
+	var stacked: float = 44.0 * n + 10.0 * (n - 1.0)
 	if compact:
 		top = clampf(minf(top, vp.y - bottom_pad - stacked), 8.0, vp.y)
 	var avail: float = maxf(vp.y - top - bottom_pad, 0.0)
-	var h: float = clampf((avail - gap * float(ids.size() - 1)) / float(ids.size()), 44.0, 56.0)
+	# Gaps take what is left after the minimum tap height, never a fixed guess:
+	# six doors must still fit a landscape phone.
+	var gap: float = clampf((avail - 44.0 * n) / maxf(n - 1.0, 1.0), 0.0, 12.0)
+	var h: float = clampf((avail - gap * (n - 1.0)) / n, 44.0, 56.0)
 	var out: Array = []
 	for i in range(ids.size()):
 		out.append({"id": ids[i], "rect": Rect2(mx, top + float(i) * (h + gap), w, h)})
@@ -127,9 +133,9 @@ func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, has_match_now: bool, vo
 func _draw_doors(c: CanvasItem, vp: Vector2, fonts: Dictionary, has_match_now: bool, touch: bool) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
-	var hints := {"start": "", "resume": "", "settings": "", "quit": ""}
+	var hints := {"start": "", "resume": "", "new_league": "", "load_league": "", "settings": "", "quit": ""}
 	if not touch:
-		hints = {"start": "ENTER", "resume": "", "settings": "S", "quit": "ESC"}
+		hints = {"start": "ENTER", "resume": "", "new_league": "N", "load_league": "L", "settings": "S", "quit": "ESC"}
 	for b in door_rects(vp, has_match_now):
 		var r: Rect2 = b["rect"]
 		var id: String = str(b["id"])
@@ -152,6 +158,10 @@ func _hint(c: CanvasItem, r: Rect2, s: String, font: Font, col: Color) -> void:
 func _label(id: String) -> String:
 	if id == "resume":
 		return "RESUME MATCH"
+	if id == "new_league":
+		return "NEW LEAGUE"
+	if id == "load_league":
+		return "LOAD LEAGUE"
 	if id == "settings":
 		return "SETTINGS"
 	if id == "quit":

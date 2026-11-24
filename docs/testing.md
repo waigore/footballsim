@@ -46,7 +46,7 @@ Tier 2 measures **shipped game code**: `scripts/`, `scenes/`, `ui/`, `autoload/`
 | Excluded | Why |
 |----------|-----|
 | `tools/` | Dev probes, reporting scripts, old suite copies — nothing a player runs (`gd-tools.toml` `coverage.exclude`) |
-| `scripts/view/pitch_view.gd` | Stadium painting: only runs when a frame renders, and the suite is headless (`# gd-tools: no cover`) |
+| `scripts/view/pitch_view.gd`, league sheet paint | Painting only runs on a rendered frame; the suite is headless (`# gd-tools: no cover`). League layout stays measured |
 
 Two gd-tools instrumentation rules shape the source:
 
