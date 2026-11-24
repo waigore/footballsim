@@ -60,15 +60,6 @@ static func type_name_into(state: Dictionary, code: int) -> bool:
 
 # ------------------------------------------------------------------- hub ---
 
-## Followed clubs as a set for the paint: a followed club's name is gold wherever
-## the season lists it, so the player can see why its game is always on Watch
-## (#104). The ids arrive in the view; the sheet never reads the save.
-static func interest_set(ids: Array) -> Dictionary:
-	var out := {}
-	for id in ids:
-		out[str(id)] = true
-	return out
-
 ## True when today's plan still holds an unplayed watch, which is exactly when
 ## CONTINUE's caption has something to promise (#100). A played fixture stops
 ## counting the moment its result lands, whatever watch flag it kept (#124).
@@ -83,7 +74,7 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	var plan: Array = state.get("plan", [])
 	var top: float = HEADER + (14.0 if not compact(vp) else 8.0)
 	var body_bottom := vp.y - BAR_H - 6.0
-	var interest := interest_set(state.get("interests", []))
+	var interest := LeagueInterestMark.set_of(state.get("interests", []))
 	var wide := vp.x >= 760.0 and not compact(vp)
 	var left_w: float = (vp.x - 72.0) * 0.58 if wide else vp.x - 48.0
 	var y := top + 24.0
@@ -98,8 +89,7 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 			# A followed club's game is on Watch because of the shortlist, not
 			# because of this chip: it states the rule and carries no door of its
 			# own, so a press falls through to the row and opens the match (#104).
-			var followed: bool = (interest.has(str(fx.get("home_club_id", "")))
-				or interest.has(str(fx.get("away_club_id", ""))))
+			var followed := LeagueInterestMark.follows(interest, fx)
 			items.append({"id": "" if followed else "toggle:" + str(fx["id"]), "kind": "chip",
 				"rect": chip, "fixture": fx, "followed": followed})
 		y += ROW_H + ROW_GAP
@@ -242,7 +232,7 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, 
 				UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 4.0,
 					"SUGGEST WATCHES", 10, UiChrome.C_GOLD, bold)
 			elif bool(item.get("followed", false)):
-				_draw_followed_chip(c, rect, bold)
+				LeagueInterestMark.chip(c, cache, rect, bold)
 			else:
 				_draw_toggle(c, rect, item["fixture"], bold)
 		elif str(item["kind"]) == "table_row":
@@ -257,8 +247,8 @@ func _draw_fixture_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dict
 	var played := str(fx.get("status", "")) == "played"
 	# A followed club carries the interest mark: its name is the yellow the
 	# planner and the tables share (#104).
-	var home_ink: Color = UiChrome.C_GOLD if interest.has(str(fx.get("home_club_id", ""))) else UiChrome.C_TEXT
-	var away_ink: Color = UiChrome.C_GOLD if interest.has(str(fx.get("away_club_id", ""))) else UiChrome.C_TEXT
+	var home_ink := LeagueInterestMark.ink(interest, str(fx.get("home_club_id", "")))
+	var away_ink := LeagueInterestMark.ink(interest, str(fx.get("away_club_id", "")))
 	var line_y := rect.position.y + 17.0
 	var time := str(fx.get("kickoff_time", ""))
 	if time != "" or played:
@@ -274,13 +264,6 @@ func _draw_fixture_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dict
 			int(fx.get("home_goals", 0)), int(fx.get("away_goals", 0))], 14, UiChrome.C_TEXT, bold)
 	elif int(fx.get("suggested", 0)) == 1:
 		UiChrome.text_r(c, rect.end.x - 78.0, rect.position.y + 15.0, "TOP-6", 10, UiChrome.C_GOLD, bold)
-
-## The chip of a followed club's game: it states the rule instead of pretending
-## to be a switch, so a press that the shortlist would undo is never offered.
-func _draw_followed_chip(c: CanvasItem, rect: Rect2, bold: Font) -> void:
-	UiChrome.panel(c, cache, rect, UiChrome.C_GOLD.darkened(0.15), 5, UiChrome.C_GOLD, 1)
-	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 14.0, "FOLLOWED", 9,
-		Color(0.06, 0.06, 0.05), bold)
 
 func _draw_toggle(c: CanvasItem, rect: Rect2, fx: Dictionary, bold: Font) -> void:
 	var watch := int(fx.get("watched", 0)) == 1

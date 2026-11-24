@@ -124,7 +124,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 	var places := _places(Rect2(24.0, 0.0, row_w, ROW_H))
 	var top: float = LeagueSheet.HEADER + (HEAD_TWO if reading == FULL else HEAD_ONE)
 	var items := _header(places)
-	var interest := LeagueSheet.interest_set(view.get("interests", []))
+	var interest := LeagueInterestMark.set_of(view.get("interests", []))
 	for i in range(rows.size()):
 		items.append({
 			"id": "club:" + str(rows[i]["club_id"]), "kind": "table_row", "row": rows[i],
