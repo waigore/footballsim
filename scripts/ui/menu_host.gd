@@ -93,11 +93,14 @@ func sync(frame: Transform2D, scale: float, touch: bool) -> void:
 	shell.queue_redraw()
 
 ## Swallow every event while a sheet is up: nothing may reach the paused match.
-func handle_input(event: InputEvent, design_point: Vector2) -> bool:
-	if league_active():
-		return league.handle_input(event, design_point)
+## The scene reports pointer positions in window space; the shell reads its own
+## design space, so the host divides by the chrome scale it handed the layer.
+func handle_input(event: InputEvent, screen_point: Vector2) -> bool:
 	if not active():
 		return false
+	var design_point: Vector2 = screen_point / maxf(shell.ui_scale, 0.001)
+	if league_active():
+		return league.handle_input(event, design_point)
 	if event is InputEventMouse:
 		shell.handle_input(event, design_point)
 	elif event is InputEventKey:
