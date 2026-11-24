@@ -17,7 +17,7 @@ extends RefCounted
 
 ## Build and store a clip for every goal of a settled fixture.
 static func store_auto(record: LeagueRecord, save_seed: int, fixture_id: String,
-		events: Array, sides: Dictionary, home: String, away: String) -> void:
+		events: Array, home: String, away: String) -> void:
 	if record == null:
 		return
 	var orders := goal_rows(events)
@@ -30,7 +30,7 @@ static func store_auto(record: LeagueRecord, save_seed: int, fixture_id: String,
 		else:
 			score[1] += 1
 		rows.append(_generated_row(save_seed, fixture_id, e, i, [int(score[0]), int(score[1])],
-			sides, home, away, 0))
+			home, away, 0))
 	record.clips.add(rows)
 
 ## The goal rows of a match report, in the order the report prints them: by
@@ -59,7 +59,7 @@ static func goal_rows(events: Array) -> Array:
 ## half-time, a fast-forwarded session) falls back to a generated clip so the
 ## report still offers a ▶.
 static func store_watch(record: LeagueRecord, save_seed: int, fixture_id: String,
-		captured: Array, sides: Dictionary, home: String, away: String) -> void:
+		captured: Array, home: String, away: String) -> void:
 	if record == null or fixture_id == "":
 		return
 	var score := [0, 0]
@@ -79,7 +79,7 @@ static func store_watch(record: LeagueRecord, save_seed: int, fixture_id: String
 		var picked := _match_capture(captured, used, int(e.get("minute", 0)), str(e.get("player_id", "")))
 		if picked.is_empty():
 			rows.append(_generated_row(save_seed, fixture_id, e, i, [int(score[0]), int(score[1])],
-				sides, home, away, event_id))
+				home, away, event_id))
 			continue
 		var row := _captured_row(picked, fixture_id, e, i, [int(score[0]), int(score[1])])
 		row["match_event_id"] = event_id
@@ -140,10 +140,13 @@ static func _captured_row(pack: Dictionary, fixture_id: String, event: Dictionar
 
 # ------------------------------------------------------------------- rows ---
 
-## A generated clip's row: the commentary line and the pack, stored together so
-## reopening a save reads the same words beside the same pitch.
+## A generated clip's row: the line and the fields its pack is drawn from, but
+## not the pack. A settled gameweek draws a dozen clips nobody opens, and a pack
+## is ~10 kB of JSON and gzip apiece — the single largest cost of a settled
+## matchday. The row keeps its recipe, and `LeagueClips.pack` draws the picture
+## the first time a report asks for it, then caches it in the row.
 static func _generated_row(save_seed: int, fixture_id: String, event: Dictionary,
-		index: int, score_after: Array, sides: Dictionary, home: String, away: String,
+		index: int, score_after: Array, home: String, away: String,
 		event_id: int) -> Dictionary:
 	var seed := GoalHighlight.seed_for(save_seed, fixture_id, index)
 	var fields := _goal_fields({
@@ -155,7 +158,6 @@ static func _generated_row(save_seed: int, fixture_id: String, event: Dictionary
 	fields["seed"] = seed
 	fields["source"] = "auto"
 	fields["commentary"] = GoalHighlight.commentary(fields, seed)
-	var clip := GoalHighlight.build(fields, sides, seed)
 	return {
 		"fixture_id": fixture_id, "goal_index": index, "match_event_id": event_id,
 		"minute": int(fields["minute"]), "club_id": str(fields["club_id"]),
@@ -164,7 +166,7 @@ static func _generated_row(save_seed: int, fixture_id: String, event: Dictionary
 		"commentary": str(fields["commentary"]), "source": "auto",
 		"codec": GoalHighlight.CODEC, "version": GoalHighlight.VERSION,
 		"home_club_id": home, "away_club_id": away,
-		"bytes": GoalHighlight.pack(clip),
+		"bytes": PackedByteArray(),
 	}
 
 ## The fields a clip and its line are built from: the report's own scorer,
