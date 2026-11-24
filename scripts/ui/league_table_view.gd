@@ -156,9 +156,11 @@ func _reading(vp: Vector2) -> String:
 	return mode
 
 ## Rows in the player's chosen order, each keeping its official position. Ties
-## fall back to the official place so a re-sort is never arbitrary.
+## fall back to the official place so a re-sort is never arbitrary. A sort on a
+## column the current reading does not show is left for the reading that does:
+## the compact strip never sorts by a number the player cannot see.
 func ordered(rows: Array) -> Array:
-	if sort == "" or rows.size() < 2:
+	if sort == "" or rows.size() < 2 or not _shown(sort):
 		return rows
 	var out := rows.duplicate()
 	var key := sort
@@ -177,6 +179,12 @@ func ordered(rows: Array) -> Array:
 		return int(a["position"]) < int(b["position"])
 	)
 	return out
+
+func _shown(key: String) -> bool:
+	for col in columns(mode):
+		if str(col["key"]) == key:
+			return true
+	return false
 
 ## Column rails for a row at this width. Compact keeps `LeagueColumns`, the
 ## measured layout #71 settled; the full sheet walks the columns from the club

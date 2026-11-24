@@ -386,6 +386,30 @@ func test_a_mode_press_flips_the_reading_and_a_header_press_sorts() -> void:
 	assert_false(view.press("tbl:sort:position", null), "the place column is not sortable")
 	assert_false(view.press("nope", null), "an unknown door was taken")
 
+## A sort is only worth honouring in a reading that shows the column: the
+## compact strip keeps the player's full-table sort stored for when they come
+## back to it, but lists the official order while it is hidden.
+func test_a_hidden_sort_column_leaves_the_compact_strip_in_place() -> void:
+	var rows: Array = _table()
+	rows[0]["home_gf"] = 3
+	rows[1]["home_gf"] = 30
+	rows[2]["home_gf"] = 10
+	var view := LeagueTableView.new()
+	view.mode = LeagueTableView.COMPACT
+	view.sort = "home_gf"
+	view.dir = -1
+	var positions: Array = []
+	for item in view.layout(Vector2(913, 411), {"table": rows, "rules": LeagueRules.defaults()}):
+		if str(item["kind"]) == "table_row":
+			positions.append(int((item["row"] as Dictionary)["position"]))
+	assert_eq(positions[0], 1, "the compact strip sorted by a column it does not show")
+	view.mode = LeagueTableView.FULL
+	var by_home: Array = []
+	for item in view.layout(Vector2(1600, 900), {"table": rows, "rules": LeagueRules.defaults()}):
+		if str(item["kind"]) == "table_row":
+			by_home.append(int((item["row"] as Dictionary)["home_gf"]))
+	assert_eq(by_home[0], 30, "the full reading lost the sort it was given")
+
 func test_attach_clears_a_reading_without_a_save() -> void:
 	var view := LeagueTableView.new()
 	view.mode = LeagueTableView.FULL
