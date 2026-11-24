@@ -447,6 +447,9 @@ func test_a_scorer_with_no_known_club_still_reads() -> void:
 		"12' A. Striker", "a clubless goal invented a club")
 	assert_eq(LeagueRoundup.entry(fixture, {"minute": 12, "club_id": "ZZ", "player_name": "A. Striker"}),
 		"12' A. Striker", "a stranger's goal took the home club's label")
+	# An engine row names its scorer in `detail`; the run reads that too.
+	assert_eq(LeagueRoundup.entry(fixture, {"minute": 12, "detail": "A. Striker"}),
+		"12' A. Striker", "a row with no player_name lost its scorer")
 
 func _bottom(items: Array) -> float:
 	var bottom := 0.0
