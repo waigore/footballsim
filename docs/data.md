@@ -19,7 +19,7 @@ stats (accepted: the sim ledger belongs to one snapshot).
 ## Tool
 
 ```bash
-python tools/pl_snapshot.py fetch --source espn --season 2025 --bump-version
+python tools/pl_snapshot.py fetch --source espn --season 2026 --bump-version
 python tools/pl_snapshot.py build
 python tools/pl_snapshot.py verify
 ```
@@ -44,7 +44,7 @@ project skill. Design rationale and the source policy: wiki
 | `metadata` | `db_version`, `schema_version`, `season_label`, `snapshot_date`, `source`, `ratings_source` |
 | `competition`, `club` | League identity; club identity, kit colours, formation, style profile |
 | `player` | Identity, shirt number, role, ratings, keeper stats, `squad` (`starter`/`bench`), `ord` |
-| `table_row`, `fixture` | Final 2025-26 table and every fixture/result |
+| `table_row`, `fixture` | The 2026-27 table at snapshot date and every fixture; `played` marks the results already in |
 | `season_stat`, `career_stat` | Real-world season and career figures (`-1` = not in the snapshot) |
 | `sim_player_stat`, `sim_club_stat` | Footballsim's own record, written after full time |
 

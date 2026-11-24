@@ -168,16 +168,20 @@ func test_a_report_play_door_plays_the_stored_clip_and_comes_back() -> void:
 func test_the_number_keys_play_report_goals() -> void:
 	var season := LeagueSeason.active
 	var fixture := ""
+	# The report with the fewest goals: the key beyond the last one must find
+	# nothing, whatever the season's high scores look like.
+	var fewest := 1 << 30
 	for row in season.record.fixtures():
-		if not season.record.clips.list(str(row["id"])).is_empty():
+		var goals := season.record.clips.list(str(row["id"])).size()
+		if goals > 0 and goals < fewest:
+			fewest = goals
 			fixture = str(row["id"])
-			break
 	game.menus.league.show_season(season)
 	screen().show_report(fixture)
 	assert_eq(screen().mode, LeagueScreen.MODE_REPORT, "the report did not open")
 	assert_true(screen().key(KEY_1), "the first goal key was not taken")
 	assert_not_null(game.replay, "the key did not start a clip")
-	assert_false(screen().has_clip(7), "a goal beyond the report claims a clip")
+	assert_false(screen().has_clip(fewest), "a goal beyond the report claims a clip")
 	game._skip()
 	assert_null(game.replay, "the clip did not end")
 	screen().open_season(season)

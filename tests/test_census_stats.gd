@@ -102,15 +102,15 @@ func test_rows_round_trip_and_pool_dedupes() -> void:
 	CensusLib.write_rows(RESULTS_DIR, "mci_mci", 2, rows)
 	var pooled := CensusLib.pool_by_anchor(CensusLib.read_rows(RESULTS_DIR))
 	assert_eq(pooled["mci_mci"].size(), 2, "pooling double-counted a re-run shard")
-	assert_false(pooled.has("mci_bur"), "pooling invented an anchor")
+	assert_false(pooled.has("mci_ips"), "pooling invented an anchor")
 
 func test_summarise_reports_the_gate_numbers() -> void:
 	var rows: Array = []
 	for i in range(4):
-		rows.append({"anchor": "mci_bur", "seed": 7000 + i * 13, "home_goals": 3 + i % 2,
+		rows.append({"anchor": "mci_ips", "seed": 7000 + i * 13, "home_goals": 3 + i % 2,
 			"away_goals": 1, "ms": 500 + i * 100, "xg_home": 2.4, "xg_away": 0.7,
 			"shots_home": 15, "shots_away": 6})
-	var s := CensusLib.summarise("mci_bur", rows)
+	var s := CensusLib.summarise("mci_ips", rows)
 	assert_eq(int(s["n"]), 4, "summarise lost matches")
 	assert_almost_eq(s["mean_home"], 3.5, 0.0001, "home mean drifted")
 	assert_almost_eq(s["var_home"], 1.0 / 3.0, 0.0001, "home variance drifted")
@@ -118,4 +118,4 @@ func test_summarise_reports_the_gate_numbers() -> void:
 	assert_almost_eq(s["tol_home"], CensusLib.variance_tolerance(s["lambda_home"], 4), 0.0001,
 		"the band was not sized from the pooled n")
 	var line := CensusLib.summary_line(s)
-	assert_true(line.begins_with("CENSUS mci_bur n=4"), "the summary line is not readable")
+	assert_true(line.begins_with("CENSUS mci_ips n=4"), "the summary line is not readable")

@@ -252,7 +252,7 @@ static func player_page(player_id: String) -> Dictionary:
 		for pair in [["pac", "PACE"], ["sho", "SHOOTING"], ["pas", "PASSING"], ["dri", "DRIBBLING"], ["def", "DEFENDING"], ["phy", "PHYSICAL"]]:
 			bars.append([str(pair[1]), float(p[pair[0]]) / 100.0])
 	out["blocks"].append({"k": "bars", "items": bars})
-	out["blocks"].append({"k": "section", "text": "SEASON  ·  %s SNAPSHOT" % str(season.get("season_label", "2025-26"))})
+	out["blocks"].append({"k": "section", "text": "SEASON  ·  %s SNAPSHOT" % str(season.get("season_label", ""))})
 	if int(season.get("matches", 0)) > 0:
 		out["blocks"].append({
 			"k": "kv",
