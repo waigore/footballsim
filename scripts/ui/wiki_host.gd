@@ -18,6 +18,9 @@ var game = null
 var screen = null
 var layer: CanvasLayer = null
 var from_select := false
+## The encyclopedia was opened from inside a league season: closing it puts the
+## season sheet back exactly where it was, not the match chrome.
+var from_league := false
 var was_paused := false
 
 var pressing := false
@@ -48,16 +51,27 @@ func is_open() -> bool:
 ## Open a page over the broadcast, or over the fixture picker when that is what
 ## the player is looking at. Either way the surface underneath comes back.
 func open_page(page: String, id: String) -> void:
+	_open(page, id, bool(game.select_open), false)
+
+## A league season opened the page: closing it hands the season sheet back
+## instead of the match chrome, so a club row is a look-up, not an exit.
+func open_page_over_league(page: String, id: String) -> void:
+	_open(page, id, false, true)
+
+func _open(page: String, id: String, over_select: bool, over_league: bool) -> void:
 	if layer == null:
 		build()
 	reset_pointer()
-	from_select = bool(game.select_open)
+	from_select = over_select
+	from_league = over_league
 	was_paused = bool(game.paused)
 	game.paused = true
 	if game.hud_layer != null:
 		game.hud_layer.visible = false
 	if from_select and game.sel_layer != null:
 		game.sel_layer.visible = false
+	if from_league and game.menus != null and game.menus.league != null:
+		game.menus.league.hide_for_wiki()
 	layer.visible = true
 	screen.mouse = Vector2(-1000, -1000)
 	screen.touch = game.touch
@@ -74,6 +88,13 @@ func close() -> void:
 func _on_screen_closed() -> void:
 	if layer != null:
 		layer.visible = false
+	if from_league:
+		# The season never left: paint it again under the pointer, paused.
+		from_league = false
+		from_select = false
+		if game.menus != null and game.menus.league != null:
+			game.menus.league.show_after_wiki()
+		return
 	if from_select:
 		if game.sel_layer != null:
 			game.sel_layer.visible = true
