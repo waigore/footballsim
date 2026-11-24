@@ -23,6 +23,8 @@ const TABLE_FIELDS := [
 var save: LeagueSave = null
 ## The goal clips stored beside the ledger (see `LeagueClips`).
 var clips: LeagueClips = null
+## Teams of Interest inside this save (#104): the shortlist and its Watch rule.
+var interest: LeagueInterest = null
 
 const FIXTURE_SELECT := (
 	"SELECT f.*, h.name AS home_name, h.abbr AS home_abbr, h.color AS home_color, "
@@ -34,6 +36,7 @@ const FIXTURE_SELECT := (
 func _init(owner: LeagueSave) -> void:
 	save = owner
 	clips = LeagueClips.new(owner)
+	interest = LeagueInterest.new(owner)
 
 # --------------------------------------------------------------- fixtures ---
 

@@ -124,11 +124,13 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 	var places := _places(Rect2(24.0, 0.0, row_w, ROW_H))
 	var top: float = LeagueSheet.HEADER + (HEAD_TWO if reading == FULL else HEAD_ONE)
 	var items := _header(places)
+	var interest := LeagueSheet.interest_set(view.get("interests", []))
 	for i in range(rows.size()):
 		items.append({
 			"id": "club:" + str(rows[i]["club_id"]), "kind": "table_row", "row": rows[i],
 			"zone": LeagueRules.zone(int(rows[i]["position"]), view.get("rules", {})),
 			"rect": Rect2(24.0, top + float(i) * ROW_H, row_w, ROW_H - 1.0), "places": places,
+			"interested": interest.has(str(rows[i]["club_id"])),
 		})
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
 		"rect": Rect2(24.0, vp.y - LeagueSheet.BAR_H + 6.0, 110.0, LeagueSheet.BAR_H - 14.0),
@@ -364,10 +366,13 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) 
 	var y := rect.position.y + rect.size.y * 0.5 + 4.0
 	UiChrome.text(c, Vector2(float(places["pos_x"]), y), "%d" % int(row["position"]), 10,
 		UiChrome.C_DIM, fonts["med"])
+	# A followed club's name is gold here too: the shortlist is the season's, and
+	# the table is where a club is found (#104).
 	UiChrome.text(c, Vector2(float(places["club_x"]), y),
 		LeagueColumns.fit_name(str(row["club_name"]), fonts["bold"],
 			12 if mode == COMPACT else 11, float(places["club_w"])),
-		12 if mode == COMPACT else 11, UiChrome.C_TEXT, fonts["bold"])
+		12 if mode == COMPACT else 11,
+		UiChrome.C_GOLD if bool(item.get("interested", false)) else UiChrome.C_TEXT, fonts["bold"])
 	for col in places["cols"]:
 		var key := str(col["key"])
 		var points := key == "points"
