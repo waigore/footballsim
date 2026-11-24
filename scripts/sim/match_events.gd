@@ -64,11 +64,19 @@ static func side(seed: int, fixture_id: String, club_id: String, xi: Array, goal
 		var scorer := pick(xi, GOAL_SHARE, "sho", rng)
 		if scorer.is_empty():
 			continue
-		out.append(_row(fixture_id, minute, "goal", scorer, club_id))
+		var row := _row(fixture_id, minute, "goal", scorer, club_id)
+		var assist_row := {}
 		if rng.randf() < ASSIST_CHANCE:
 			var helper := pick(xi, ASSIST_SHARE, "pas", rng, str(scorer["id"]))
 			if not helper.is_empty():
-				out.append(_row(fixture_id, minute, "assist", helper, club_id))
+				# The goal row carries its assist's identity so a report clip can
+				# script the final ball without pairing rows back together.
+				row["assist_id"] = str(helper["id"])
+				row["assist_name"] = str(helper.get("name", ""))
+				assist_row = _row(fixture_id, minute, "assist", helper, club_id)
+		out.append(row)
+		if not assist_row.is_empty():
+			out.append(assist_row)
 	var yellows := clampi(int(round(YELLOWS_PER_SIDE + (rng.randf() - 0.5) * 2.0)), 0, 6)
 	for i in range(yellows):
 		var booked := pick(xi, CARD_SHARE, "def", rng)

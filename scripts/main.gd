@@ -25,9 +25,10 @@ var replay_banner := 0.0
 var seeded := 1000
 
 var accumulator := 0.0
-var history: Array = []
-var hist_timer := 0.0
-var shown_triggers := {}
+## The broadcast ring and the goal captures it makes (see HighlightDirector).
+var highlights: HighlightDirector = null
+## A stored goal clip being played over the pitch, or null.
+var replay: GoalReplay = null
 var half_time_timer := -1.0
 var focus_id := -1
 var hover_id := -1
@@ -74,6 +75,7 @@ var result_recorded := false
 func _ready() -> void:
 	build_scene()
 	setup_audio()
+	highlights = HighlightDirector.new(self)
 	_parse_fixture_args()
 	new_match(seeded)
 	dev = DevCapture.new()
@@ -143,6 +145,9 @@ func _sync_overlay_scale() -> void:
 		menus.sync(frame, chrome_scale, touch)
 
 func new_match(seed: int) -> void:
+	if replay != null:
+		replay.finish(false)
+		replay = null
 	if engine != null and engine.event_fired.is_connected(_on_engine_event):
 		engine.event_fired.disconnect(_on_engine_event)
 	engine = MatchEngine.new(seed, home_id, away_id)
@@ -152,8 +157,6 @@ func new_match(seed: int) -> void:
 	actors.engine = engine
 	actors.ball_trail.clear()
 	hud.engine = engine
-	history.clear()
-	shown_triggers.clear()
 	batch_abort = false
 	focus_id = -1
 	hover_id = -1
@@ -163,7 +166,6 @@ func new_match(seed: int) -> void:
 	paused = false
 	speed = 1.0
 	accumulator = 0.0
-	hist_timer = 0.0
 	half_time_timer = -1.0
 	replay_banner = 0.0
 	last_event_notice = 0.0
@@ -171,7 +173,7 @@ func new_match(seed: int) -> void:
 	cam.position = Vector2(L * 0.5, W * 0.5 + pitch_shift)
 	cam.zoom = Vector2(base_zoom, base_zoom)
 	result_recorded = false
-	_snapshot()
+	highlights.restart()
 
 # --------------------------------------------------------------- fixture ----
 
@@ -394,6 +396,11 @@ func _toggle_mode() -> void:
 			highlight_until = -1.0
 
 func _skip() -> void:
+	if replay != null:
+		# Skip inside a stored clip ends it and hands the report back.
+		replay.finish(true)
+		replay = null
+		return
 	if mode == "highlights":
 		if in_highlight:
 			_end_highlight()
@@ -445,6 +452,12 @@ func _process(delta: float) -> void:
 	if not dev.apply_hover(self):
 		_update_hover()
 
+	if replay != null:
+		# A stored clip owns the broadcast until it ends: the pack drives the
+		# bodies, so nothing here may tick the engine.
+		if replay.step(delta):
+			replay = null
+		return
 	if engine.phase == "full_time":
 		if not result_recorded:
 			result_recorded = PLSimStats.record_match(engine)
@@ -456,8 +469,7 @@ func _process(delta: float) -> void:
 		if half_time_timer <= 0.0 and not paused:
 			engine.begin_second_half()
 			half_time_timer = -1.0
-			history.clear()
-			_snapshot()
+			highlights.restart()
 		return
 	if paused:
 		return
@@ -483,10 +495,7 @@ func _advance_ticks(n: int) -> void:
 			batch_abort = false
 			break
 		engine.tick()
-		hist_timer += 1.0 / 60.0
-		if hist_timer >= 0.45:
-			hist_timer = 0.0
-			_snapshot()
+		highlights.sample()
 		if Time.get_ticks_usec() > budget and i > 2:
 			break
 
@@ -508,35 +517,20 @@ func _end_highlight() -> void:
 		fast_mode = true
 
 func _snapshot() -> void:
-	history.append(engine.to_dict())
-	if history.size() > 40:
-		history.pop_front()
+	highlights.snapshot()
 
-func _rewind_for(trigger_clock: float) -> bool:
-	if history.is_empty():
-		return false
-	var target := trigger_clock - 7.0
-	var best: Dictionary = history[0]
-	for s in history:
-		if float(s["clock"]) <= target:
-			best = s
-		else:
-			break
-	if float(best["clock"]) > trigger_clock - 1.0:
-		best = history[0]
-	var trimmed := []
-	for s2 in history:
-		if float(s2["clock"]) <= float(best["clock"]) + 0.01:
-			trimmed.append(s2)
-	history = trimmed
-	engine.from_dict(best)
-	actors.ball_trail.clear()
-	batch_abort = true
-	return true
+## Play one stored goal clip on the broadcast. The league hands the pack back
+## with `on_done`, which puts its report sheet back on screen when the clip ends.
+func play_goal_clip(pack: Dictionary, on_done := Callable()) -> void:
+	if replay != null:
+		replay.finish(false)
+		replay = null
+	replay = GoalReplay.open(self, pack, on_done)
+	if replay == null and on_done.is_valid():
+		on_done.call()
 
 func _on_engine_event(e: Dictionary) -> void:
 	var kind: String = e.get("type", "")
-	var key := "%d|%s|%d" % [int(float(e.get("clock", 0.0)) * 60.0), kind, int(e.get("player_id", -1))]
 	if kind == "goal":
 		last_event_notice = 3.0
 		audio.play("goal_roar", -4.0)
@@ -547,32 +541,7 @@ func _on_engine_event(e: Dictionary) -> void:
 		audio.play("whistle", -14.0, randf_range(0.97, 1.03))
 	elif kind == "miss":
 		audio.play("ooh", -12.0)
-	if mode != "highlights":
-		return
-	if shown_triggers.has(key):
-		return
-	var important: bool = kind in ["shot", "goal", "penalty", "penalty_taken", "card", "corner"]
-	if not important:
-		return
-	if in_highlight:
-		# extend the live window around goals and late chances
-		highlight_until = maxf(highlight_until, engine.clock + (5.0 if kind == "goal" else 3.0))
-		return
-	if kind in ["shot", "penalty", "corner"]:
-		shown_triggers[key] = true
-		if _rewind_for(engine.clock):
-			in_highlight = true
-			fast_mode = false
-			highlight_until = engine.clock + 12.0
-			replay_banner = 2.2
-			accumulator = 0.0
-	elif kind == "goal" or kind == "card":
-		shown_triggers[key] = true
-		if _rewind_for(engine.clock):
-			in_highlight = true
-			fast_mode = false
-			highlight_until = engine.clock + 12.0
-			replay_banner = 2.2
+	highlights.on_event(e)
 
 # ---------------------------------------------------------------- camera ----
 

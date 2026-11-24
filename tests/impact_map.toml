@@ -119,6 +119,7 @@ suites = [
   "test_strongest_xi.gd",
   "test_league_season.gd",
   "test_league_ui.gd",
+  "test_goal_highlights.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -208,6 +209,24 @@ domain = "league"
 
 [[rules]]
 match = "scripts/sim/strongest_xi.gd*"
+domain = "league"
+
+# Per-goal report clips: the pack generator, the store and the viewer that
+# plays one back. They all belong to the season theme.
+[[rules]]
+match = "scripts/sim/goal_highlight.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/league_highlights.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/view/goal_replay.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/view/highlight_director.gd*"
 domain = "league"
 
 [[rules]]

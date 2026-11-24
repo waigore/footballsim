@@ -204,6 +204,53 @@ func test_every_phone_sheet_overflows_into_the_scroll_window() -> void:
 		if str(item["kind"]) == "button":
 			assert_true(bool(item.get("pinned", false)), "a hub door was left to scroll away")
 
+func test_a_goal_with_a_clip_gets_a_thumb_sized_play_door() -> void:
+	var book := LeagueBook.new()
+	var events := [
+		{"minute": 12, "kind": "goal", "player_name": "A. Striker"},
+		{"minute": 30, "kind": "yellow", "player_name": "C. Pivot"},
+		{"minute": 61, "kind": "goal", "player_name": "B. Winger"},
+	]
+	var clips := [
+		{"fixture_id": "gw01-A1-B1", "goal_index": 0, "minute": 12, "commentary": "GOAL! A. Striker scores."},
+	]
+	var vp := Vector2(1280, 720)
+	var items: Array = book.report_layout(vp, {
+		"fixture": _fixture(1), "events": events, "highlights": clips, "day": "2026-08-15",
+	})
+	var doors := {}
+	var rows := {}
+	for item in items:
+		if str(item["kind"]) == "play":
+			doors[str(item["id"])] = item["rect"]
+		elif str(item["kind"]) == "event":
+			rows[str(item["event"]["player_name"])] = item
+	assert_eq(doors.size(), 1, "a goal without a clip was given a play door")
+	assert_true(doors.has("goal:0"), "the play door is not on the first goal")
+	var rect: Rect2 = doors["goal:0"]
+	assert_gte(rect.size.x, 24.0, "the play door is too narrow for a thumb")
+	assert_gte(rect.size.y, 24.0, "the play door is too short for a thumb")
+	assert_true(rect.position.x + rect.size.x <= vp.x - 20.0, "the play door runs off the sheet")
+	# The commentary line needs the room the door does not take.
+	var goal_row: Dictionary = rows["A. Striker"]
+	var other_row: Dictionary = rows["C. Pivot"]
+	assert_gt((goal_row["rect"] as Rect2).size.y, (other_row["rect"] as Rect2).size.y,
+		"the goal row is no taller than a plain event")
+	assert_false(str(goal_row.get("clip", {}).get("commentary", "")) == "",
+		"the goal row did not carry its commentary")
+	assert_true((other_row.get("clip", {}) as Dictionary).is_empty(),
+		"a card row was given a clip")
+	assert_true((goal_row["rect"] as Rect2).encloses(rect), "the play door sits outside its goal row")
+
+func test_a_roundup_offers_no_play_doors() -> void:
+	var book := LeagueBook.new()
+	var items: Array = book.report_layout(Vector2(1280, 720), {
+		"roundup": [{"fixture": _fixture(1), "events": [
+			{"minute": 12, "kind": "goal", "player_name": "A. Striker"}], "score": [1, 0], "played": true}],
+	})
+	for item in items:
+		assert_ne(str(item["kind"]), "play", "a roundup row offered a play door")
+
 func _bottom(items: Array) -> float:
 	var bottom := 0.0
 	for item in items:

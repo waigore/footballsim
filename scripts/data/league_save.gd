@@ -49,8 +49,19 @@ const SCHEMA := [
 	+ "club_id TEXT NOT NULL, apps INTEGER NOT NULL DEFAULT 0, "
 	+ "goals INTEGER NOT NULL DEFAULT 0, assists INTEGER NOT NULL DEFAULT 0, "
 	+ "yellow INTEGER NOT NULL DEFAULT 0, red INTEGER NOT NULL DEFAULT 0);",
+	"CREATE TABLE IF NOT EXISTS goal_highlight (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+	+ "fixture_id TEXT NOT NULL, goal_index INTEGER NOT NULL, "
+	+ "match_event_id INTEGER NOT NULL DEFAULT 0, minute INTEGER NOT NULL DEFAULT 0, "
+	+ "club_id TEXT NOT NULL DEFAULT '', scorer_id TEXT NOT NULL DEFAULT '', "
+	+ "scorer_name TEXT NOT NULL DEFAULT '', assist_id TEXT NOT NULL DEFAULT '', "
+	+ "assist_name TEXT NOT NULL DEFAULT '', commentary TEXT NOT NULL DEFAULT '', "
+	+ "source TEXT NOT NULL DEFAULT 'auto', codec TEXT NOT NULL DEFAULT '', "
+	+ "version INTEGER NOT NULL DEFAULT 0, home_club_id TEXT NOT NULL DEFAULT '', "
+	+ "away_club_id TEXT NOT NULL DEFAULT '', bytes BLOB, "
+	+ "UNIQUE(fixture_id, goal_index));",
 	"CREATE INDEX IF NOT EXISTS league_fixture_kickoff_idx ON league_fixture (kickoff);",
 	"CREATE INDEX IF NOT EXISTS match_event_fixture_idx ON match_event (fixture_id);",
+	"CREATE INDEX IF NOT EXISTS goal_highlight_fixture_idx ON goal_highlight (fixture_id);",
 ]
 
 ## Save directory this run uses (tests point it at a scratch folder).
@@ -146,9 +157,7 @@ static func create(name: String, rules: Dictionary, seed: int = 0) -> LeagueSave
 	if not PLDatabase.open_path(save.path):
 		last_error = "cannot open %s" % save.path
 		return null
-	for sql in SCHEMA:
-		PLDatabase.execute(sql)
-	PLDatabase.execute(LeagueRules.CREATE_SQL)
+	migrate()
 	save.rules = LeagueRules.normalize(rules)
 	LeagueRules.write(save.rules)
 	save.meta = {}
@@ -175,6 +184,7 @@ static func open(slug_or_path: String) -> LeagueSave:
 	if not PLDatabase.open_path(file):
 		return null
 	PLRepository.shared().invalidate()
+	migrate()
 	var save := LeagueSave.new()
 	save.path = file
 	save.slug = file.get_file().trim_suffix(EXT)
@@ -186,6 +196,14 @@ static func open(slug_or_path: String) -> LeagueSave:
 	save.ensure_schema()
 	current = save
 	return save
+
+## Lay every season table onto whichever file is bound. Every statement is
+## `IF NOT EXISTS`, so this is both the create path and the migration that gives
+## a save written by an older build the tables it is missing (goal clips).
+static func migrate() -> void:
+	for sql in SCHEMA:
+		PLDatabase.execute(sql)
+	PLDatabase.execute(LeagueRules.CREATE_SQL)
 
 static func remove(slug: String) -> bool:
 	var file := dir.path_join(slug + EXT)
