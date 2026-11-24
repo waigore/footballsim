@@ -109,6 +109,7 @@ func _draw_compact(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, eng
 		["PASSES", "%d/%d" % [st["passes_ok"], st["passes"]]],
 		["SHOTS", str(st["shots"])],
 		["TACKLES", str(st["tackles"])],
+		["INTS", str(st["interceptions"])],
 		["RATING", "%.1f" % rating(p)],
 	]
 	var nw: float = (w - 34.0) / float(cells.size())
@@ -151,20 +152,22 @@ func _draw_column(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, engi
 	var st: Dictionary = p.stats
 	var cells := [
 		["PASSES", "%d/%d" % [st["passes_ok"], st["passes"]]], ["SHOTS", str(st["shots"])],
-		["TACKLES", str(st["tackles"])], ["TOUCHES", str(st["touches"])],
+		["TACKLES", str(st["tackles"])], ["INTS", str(st["interceptions"])],
+		["TOUCHES", str(st["touches"])],
 		["DIST", "%.1f km" % (st["distance"] / 1000.0)], ["RATING", "%.1f" % rating(p)],
 	]
 	var cw: float = (w - 28.0) / 3.0
+	var rows: int = int(ceil(float(cells.size()) / 3.0))
 	for i in range(cells.size()):
 		var cx: float = x + 14.0 + float(i % 3) * cw
 		var cy: float = ay + float(i / 3) * 34.0
 		_label(c, Vector2(cx, cy), str(cells[i][0]), 8, dim, f_bold)
 		_label(c, Vector2(cx, cy + 16), str(cells[i][1]), 15, ink, f_bold)
-	ay += 76.0
+	ay += 34.0 * float(rows) + 8.0
 	_label(c, Vector2(x + 14, ay), "MATCH INVOLVEMENTS", 9, dim, f_bold)
 	ay += 8.0
 	var list: Array = p.involvements
-	var start := maxi(0, list.size() - 7)
+	var start := maxi(0, list.size() - (9 - rows))
 	for i in range(start, list.size()):
 		var inv: Dictionary = list[i]
 		var ty: float = ay + 16.0 + float(i - start) * 17.0
@@ -186,12 +189,10 @@ func _value(p, key: String) -> float:
 	return float(p.gk[key]) if p.is_gk else float(p.attr[key])
 
 func rating(p) -> float:
-	var st: Dictionary = p.stats
-	var r := 6.0
-	r += st["goals"] * 1.2 + st["assists"] * 0.7 + st["shots"] * 0.12
-	r += st["passes_ok"] * 0.006 + st["tackles"] * 0.12
-	r -= st["fouls"] * 0.05
-	return clampf(r, 4.0, 10.0)
+	# One formula, shared with the in-sim ledger and the stored match summary
+	# (DR-20261125-01): the card must never print a different number from the
+	# encyclopedia for the same match.
+	return PLSimStats.rating(p.stats)
 
 func _label(c: CanvasItem, pos: Vector2, s: String, size: int, color: Color, font: Font) -> void:
 	c.draw_string(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)

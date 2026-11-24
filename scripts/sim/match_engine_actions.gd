@@ -24,7 +24,16 @@ func _try_control(p, d: float) -> void:
 	if speed > 11.0 and p.team == possession_team:
 		p.stats["touches"] += 1
 
+## A pass an opponent takes before it reaches a team-mate is an interception:
+## the other side kicked it, nobody has touched it since, it is still a pass
+## (no shot), and it is still travelling. A ball that has been loose long enough
+## to slow down is a scramble, and a scramble is nobody's interception
+## (DR-20261125-01).
 func _claim_ball(p) -> void:
+	var intercepted: bool = p.team != ball.last_touch_team and ball.last_touch_team >= 0 \
+		and ball.shot_team < 0 and ball.assist_id >= 0 and ball.last_touch_id == ball.assist_id \
+		and ball.vel.length() >= MatchStats.INTERCEPTION_SPEED \
+		and clock - ball.assist_time <= MatchStats.INTERCEPTION_WINDOW
 	# Pass completion for the passer.
 	if ball.assist_id >= 0 and ball.last_touch_team == p.team and p.id != ball.assist_id:
 		var passer = by_id.get(ball.assist_id, null)
@@ -35,6 +44,10 @@ func _claim_ball(p) -> void:
 	if p.team != ball.last_touch_team:
 		ball.assist_id = -1
 		ball.shot_team = -1
+	if intercepted:
+		p.stats["interceptions"] += 1
+		stats[p.team]["interceptions"] += 1
+		_add_involvement(p, "interception", "Interception", p.pos)
 	ball.owner_id = p.id
 	ball.pos = p.pos + p.facing * 0.45
 	ball.pos.x = clampf(ball.pos.x, 0.35, L - 0.35)
@@ -195,17 +208,34 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	# the keeper gets to is steered onto him, which keeps the save honest.
 	ball.planned_goal = false
 	ball.planned_save = false
+	# A priced-out chance can be struck at the frame instead of at the keeper:
+	# the shot beats the keeper and hits the post. It still cannot convert (the
+	# keeper is the backstop if it drifts inside), so the frame stays a read of
+	# where the shot went rather than a second dice (DR-20261125-01).
+	var frame_aim := ""
+	var ty: float = goal.y + aim_y
 	if kind != "penalty" and rng.randf() < clampf(FINISH_EFFICIENCY * xg_est, 0.02, 0.92):
 		# This chance is converted: put it inside a post, low and without swerve,
 		# so a goal is always a shot that beat the keeper and the goal-line save
 		# cannot veto it. The conversion rate is then exactly xG, independent of
 		# shot accuracy.
 		var side := 1.0 if rng.randf() < 0.5 else -1.0
-		var ty: float = goal.y + side * minf(GOAL_W * 0.5 - 0.12, rng.randf_range(2.1, 3.45))
+		ty = goal.y + side * minf(GOAL_W * 0.5 - 0.12, rng.randf_range(2.1, 3.45))
 		ang = atan2(ty - p.pos.y, goal.x - p.pos.x)
 		dir = Vector2(cos(ang), sin(ang))
 		on_target = true
 		ball.planned_goal = true
+	elif on_target and gkk != null and rng.randf() < MatchStats.WOODWORK_P:
+		var frame_side: float = 1.0 if rng.randf() < 0.5 else -1.0
+		if rng.randf() < 0.25:
+			frame_aim = "bar"
+			ty = goal.y + frame_side * rng.randf_range(0.6, GOAL_W * 0.5 - 0.2)
+		else:
+			frame_aim = "post"
+			ty = goal.y + frame_side * (GOAL_W * 0.5 + 0.07)
+		ang = atan2(ty - p.pos.y, goal.x - p.pos.x)
+		dir = Vector2(cos(ang), sin(ang))
+		ball.planned_save = true
 	elif on_target and gkk != null:
 		# A chance that will not be converted is smothered: aim it at the keeper,
 		# and mark it so the goal-line check keeps it out rather than rolling a
@@ -218,11 +248,15 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	var zt = clampf(aim_z + rng.randf_range(-0.35, 0.35), 0.12, 2.6)
 	if ball.planned_goal:
 		zt = clampf(zt, 0.15, 1.9)  # a converted chance must not clear the bar
+	elif frame_aim == "bar":
+		zt = GOAL_H + 0.07
+	elif frame_aim == "post":
+		zt = clampf(rng.randf_range(0.35, 1.5), 0.15, GOAL_H - 0.2)
 	ball.vz = (zt - 0.11) / flight + 0.5 * 9.81 * flight
 	ball.vz = clampf(ball.vz, -1.0, 9.0)
 	ball.vel = dir * speed
 	ball.z = 0.11
-	ball.spin = 0.0 if ball.planned_goal else rng.randf_range(-1.6, 1.6)
+	ball.spin = 0.0 if ball.planned_goal or frame_aim != "" else rng.randf_range(-1.6, 1.6)
 	ball.owner_id = -1
 	ball.last_touch_id = p.id
 	ball.last_touch_team = p.team
@@ -300,6 +334,9 @@ func clear_ball(p, point: Vector2) -> void:
 	ball.last_touch_team = p.team
 	ball.planned_goal = false
 	ball.planned_save = false
+	# A clearance is not a pass: nothing that follows may be read as a pass
+	# being intercepted or completed.
+	ball.assist_id = -1
 	p.has_ball = false
 	p.cooldown = 0.35
 	p.state = "clear"

@@ -44,6 +44,7 @@ func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) 
 			stoppage_events += 1
 		"corner":
 			stats[team]["corners"] += 1
+			MatchStats.bump(momentum, team, "corner")
 			d = 3.2
 			stoppage_events += 1
 		"goal_kick":

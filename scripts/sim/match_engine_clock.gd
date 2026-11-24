@@ -165,6 +165,11 @@ func begin_second_half() -> void:
 func _end_match() -> void:
 	phase = "full_time"
 	finished = true
+	# The summary carries the rating it is read by. One formula, the same one the
+	# player card and the in-sim ledger use, computed once at the final whistle
+	# (DR-20261125-01) instead of three times from three copies.
+	for p in players:
+		p.stats["rating"] = PLSimStats.rating(p.stats)
 	var line = Commentary.full_time(rng, teams[0]["data"]["short"], score[0], teams[1]["data"]["short"], score[1])
 	_emit("full_time", line, -1, null)
 

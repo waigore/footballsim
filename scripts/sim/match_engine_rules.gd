@@ -67,6 +67,16 @@ func _check_rules() -> void:
 				return
 			_score_goal(goal_team)
 			return
+		# The frame: a ball that beats the keeper but strikes a post or the bar
+		# comes back into play. A chance the finishing roll priced as a goal is
+		# never denied here — the frame is a read of where the shot went, not a
+		# second dice on whether it goes in.
+		if not ball.planned_goal:
+			var cross: Vector2 = MatchStats.goal_plane_point(
+				ball.pos, ball.vel, ball.z, ball.vz, 0.0 if at_left else L)
+			var frame: String = MatchStats.frame_hit(W * 0.5, GOAL_W, GOAL_H, cross.x, cross.y)
+			if frame != "" and _woodwork(goal_team, frame):
+				return
 		_goal_line_out(goal_team)
 		return
 	if ball.pos.y <= 0.0 or ball.pos.y >= W:
@@ -128,6 +138,41 @@ func _score_goal(conceding_team: int) -> void:
 		_add_involvement(scorer, "goal", "Goal", scorer.pos)
 	ball.assist_id = -1
 
+## A ball off the frame: the shooting side is credited with the woodwork, the
+## ball rebounds into play and the match carries on. Not a goal, not a save, and
+## no restart — a post is the one miss that stays live.
+func _woodwork(goal_team: int, frame: String) -> bool:
+	var shooting: int = 1 - goal_team
+	var shooter = by_id.get(ball.last_touch_id, null)
+	if ball.last_touch_team != shooting:
+		return false
+	stats[shooting]["woodwork"] += 1
+	var at_left: bool = ball.pos.x <= 0.0
+	# Put the ball back in play on the field side of the line, then send it away
+	# from the goal: into the field and, for a post, across the face of goal.
+	ball.pos = Vector2((0.55 if at_left else L - 0.55), clampf(ball.pos.y, 1.0, W - 1.0))
+	var into_play: float = 1.0 if at_left else -1.0
+	if frame == "bar":
+		ball.z = maxf(ball.z, GOAL_H * 0.5)
+		ball.vz = -absf(ball.vz) * 0.45 - 1.2
+		ball.vel = Vector2(-ball.vel.x * 0.45, ball.vel.y * 0.45)
+	else:
+		ball.z = minf(ball.z, 1.2)
+		ball.vz = 0.5
+		var across: float = 1.0 if ball.pos.y >= W * 0.5 else -1.0
+		ball.vel = Vector2(into_play * absf(ball.vel.x) * 0.55, across * rng.randf_range(1.5, 4.0))
+	ball.shot_team = -1
+	ball.shot_saved = false
+	ball.planned_goal = false
+	ball.planned_save = false
+	ball.loose_t = 0.0
+	if shooter != null:
+		_add_involvement(shooter, "woodwork", "Off the %s" % frame, shooter.pos)
+	_emit("woodwork", Commentary.woodwork(rng, shooter.name if shooter != null else "The shot", frame),
+		shooting, shooter)
+	_flash(0.6)
+	return true
+
 func _goal_line_out(defending_team: int) -> void:
 	var last_team = ball.last_touch_team
 	var y = clampf(ball.pos.y, 0.5, W - 0.5)
@@ -161,6 +206,11 @@ func _update_possession(dt: float) -> void:
 		possession_loose = true
 	stats[0]["possession"] += dt if possession_team == 0 else 0.0
 	stats[1]["possession"] += dt if possession_team == 1 else 0.0
+	# Momentum fades as play goes on: what a side did five minutes ago matters
+	# less than what it is doing now (DR-20261125-01).
+	var fade: float = MatchStats.decay(dt)
+	momentum[0] = float(momentum[0]) * fade
+	momentum[1] = float(momentum[1]) * fade
 
 func _update_trails(dt: float) -> void:
 	for p in players:
