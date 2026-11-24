@@ -46,6 +46,7 @@ func build() -> void:
 	screen.season_opened.connect(_on_season_opened)
 	screen.club_requested.connect(_on_club_requested)
 	screen.goal_highlight_requested.connect(_on_goal_highlight)
+	screen.quit_requested.connect(_on_quit_requested)
 	layer.visible = false
 
 ## Open means "the layer is on screen": the hand-off to the match viewer hides
@@ -173,6 +174,12 @@ func _on_match_requested(home: String, away: String, _fixture_id: String) -> voi
 	game.paused = false
 	if game.hud_layer != null:
 		game.hud_layer.visible = true
+
+## Quit from the System sheet: the shell owns the quit confirmation, so the
+## season sheet asks it rather than closing the game itself.
+func _on_quit_requested() -> void:
+	if game != null and game.menus != null:
+		game.menus.ask_quit()
 
 ## A watched match reached full time and the season recorded it: pause again and
 ## show the hub with the new clock. A result that lands while the main menu is
