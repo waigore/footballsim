@@ -221,6 +221,10 @@ match = "scripts/sim/match_engine.gd*"
 domain = "match_engine"
 
 [[rules]]
+match = "scripts/sim/match_restarts.gd*"
+domain = "match_engine"
+
+[[rules]]
 match = "scripts/sim/match_engine_core.gd*"
 domain = "match_engine"
 
