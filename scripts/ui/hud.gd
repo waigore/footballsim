@@ -94,7 +94,7 @@ func _draw() -> void:
 		if card.player(engine, game) != null:
 			chrome.add_button("profile", card.profile_rect(vp), "PROFILE", "")
 	roster_band.tooltip(p, self, engine, game, f_bold, f_med)
-	banners_band.events(p, self, engine, f_bold, f_med)
+	banners_band.events(p, self, engine, game, f_bold, f_med)
 	banners_band.intro(p, self, engine, game, f_bold, f_med)
 	banners_band.paused(p, self, engine, game, f_bold, f_med)
 	banners_band.vignette(p, self)

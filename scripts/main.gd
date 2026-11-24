@@ -76,6 +76,9 @@ var match_started := false
 var wiki_host: WikiHost = null
 ## A finished match is written to the cached seed exactly once.
 var result_recorded := false
+## A league watch keeps its FULL TIME card until the player taps it away (#124);
+## LeagueHost owns the flag, the broadcast only reads it.
+var result_hold := false
 
 func _ready() -> void:
 	build_scene()

@@ -17,6 +17,9 @@ var screen: LeagueScreen = null
 var season: LeagueSeason = null
 ## A watched fixture the player left early: it is played out while the hub paints.
 var watch: LeagueWatch = null
+## The watched fixture's whistle (#124): the held FULL TIME card between the
+## viewer and the hub. See LeagueResult.
+var result: LeagueResult = null
 var was_paused := false
 var pressing := false
 var dragged := false
@@ -26,6 +29,7 @@ var last_at := Vector2.ZERO
 func attach(host) -> void:
 	game = host
 	watch = LeagueWatch.new(self)
+	result = LeagueResult.new(self)
 
 func build() -> void:
 	if layer != null or game == null:
@@ -53,6 +57,12 @@ func build() -> void:
 ## the layer but keeps the screen around, and the scene must play during it.
 func is_open() -> bool:
 	return layer != null and layer.visible and screen != null and screen.is_open()
+
+## The broadcast is holding a watched fixture's full-time card and the hub is
+## waiting behind it. The scene keeps the pitch on screen; this host still owns
+## input, so no match control can restart the finished game (#124).
+func is_holding() -> bool:
+	return result != null and result.holding
 
 func sync(frame: Transform2D, scale: float, touch: bool) -> void:
 	if layer == null:
@@ -128,12 +138,13 @@ func _on_club_requested(club_id: String) -> void:
 
 ## Stand the season sheet down while the encyclopedia covers it, then put it
 ## back on the pose it left — the season object never closes.
-func hide_for_wiki() -> void:
-	if layer != null:
+func cover_for_wiki(hidden: bool) -> void:
+	if layer == null:
+		return
+	if hidden:
 		layer.visible = false
-
-func show_after_wiki() -> void:
-	if layer == null or screen == null:
+		return
+	if screen == null:
 		return
 	game.paused = true
 	layer.visible = true
@@ -146,6 +157,8 @@ func detach_season() -> void:
 		season.match_recorded.disconnect(_on_recorded)
 	if season != null:
 		season.finishing = false
+	if result != null:
+		result.clear()
 	if watch != null:
 		watch.clear()
 	if screen != null:
@@ -166,6 +179,8 @@ func _on_season_opened(opened: LeagueSeason) -> void:
 func _on_match_requested(home: String, away: String, _fixture_id: String) -> void:
 	if layer != null:
 		layer.visible = false
+	if result != null:
+		result.clear()
 	game.home_id = home
 	game.away_id = away
 	game.seeded += randi_range(1, 9999)
@@ -181,20 +196,17 @@ func _on_quit_requested() -> void:
 	if game != null and game.menus != null:
 		game.menus.ask_quit()
 
-## A watched match reached full time and the season recorded it: pause again and
-## show the hub with the new clock. A result that lands while the main menu is
-## open (a left-behind watch finishing) stays behind it — the hub is there when
-## the menu closes.
-func _on_recorded(_report: Dictionary) -> void:
+## A watched match reached full time and the season recorded it. When the
+## broadcast is still on that pitch the FULL TIME card stays up until the player
+## dismisses it (#124); otherwise pause again and show the hub with the new
+## clock. A result that lands while the main menu is open (a left-behind watch
+## finishing) stays behind it — the hub is there when the menu closes.
+func _on_recorded(report: Dictionary) -> void:
 	if screen == null:
 		return
-	game.paused = true
-	if game.hud_layer != null:
-		game.hud_layer.visible = false
-	if game.menus == null or game.menus.shell == null or not game.menus.shell.active():
-		layer.visible = true
-	screen.open_season(season)
-	screen.refresh()
+	if result.take(report):
+		return
+	result.reveal()
 
 # ----------------------------------------------------------------- input ---
 
@@ -202,6 +214,8 @@ func _on_recorded(_report: Dictionary) -> void:
 ## and forwards. Wheel notches, trackpad pans, a held drag and the keys all move
 ## the season body; a press that never travels commits as a click on release.
 func handle_input(event: InputEvent, design_point: Vector2) -> bool:
+	if is_holding():
+		return result.input(event)
 	if not is_open():
 		return false
 	if event is InputEventMouseMotion:

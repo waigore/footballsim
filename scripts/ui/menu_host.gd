@@ -31,10 +31,15 @@ func attach(main_node) -> void:
 	league.build()
 
 func active() -> bool:
-	return (shell != null and shell.active()) or league_active()
+	return (shell != null and shell.active()) or league_active() or league_holding()
 
 func league_active() -> bool:
 	return league != null and league.is_open()
+
+## A watched fixture's full-time card is up: no sheet is on screen, but the
+## season still owns input until the player dismisses it (#124).
+func league_holding() -> bool:
+	return league != null and league.is_holding()
 
 func open_league_menu() -> void:
 	if league != null:
@@ -103,7 +108,7 @@ func handle_input(event: InputEvent, screen_point: Vector2) -> bool:
 	if not active():
 		return false
 	var design_point: Vector2 = screen_point / maxf(shell.ui_scale, 0.001)
-	if league_active():
+	if league_active() or league_holding():
 		return league.handle_input(event, design_point)
 	if event is InputEventMouse:
 		shell.handle_input(event, design_point)

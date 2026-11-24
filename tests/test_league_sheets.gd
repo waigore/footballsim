@@ -51,6 +51,33 @@ func test_the_hub_lays_out_a_full_plan_wide_and_compact() -> void:
 		assert_true(kinds.has("chip"), "the plan laid out no AUTO/WATCH chips")
 		assert_true(kinds.has("button"), "the hub laid out no doors")
 
+## #124: a played row is a result, not a plan — it keeps its row on the hub and
+## loses the AUTO/WATCH chip, so the score sits where the chip was.
+func test_a_played_fixture_loses_its_watch_chip() -> void:
+	var sheet := LeagueSheet.new()
+	var played := _fixture(1, 1)
+	played["status"] = "played"
+	played["home_goals"] = 2
+	played["away_goals"] = 1
+	var pending := _fixture(2, 1, 0)
+	var plan := [played, pending]
+	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
+		var items: Array = sheet.hub_layout(vp, _state(plan, _table()))
+		var chips: Array = []
+		var rows := 0
+		for item in items:
+			if str(item["kind"]) == "row":
+				rows += 1
+			if str(item["kind"]) == "chip" and str(item["id"]).begins_with("toggle:"):
+				chips.append(str(item["id"]))
+		assert_eq(rows, 2, "a played row left the hub at %s" % vp)
+		assert_false(chips.has("toggle:" + str(played["id"])), "a played row offers a watch chip at %s" % vp)
+		assert_true(chips.has("toggle:" + str(pending["id"])), "a pending row lost its watch chip at %s" % vp)
+	# CONTINUE's caption only promises a hand-off while a watch is still unplayed.
+	assert_false(LeagueSheet.watch_pending([played]), "a played watch still claims CONTINUE opens it")
+	assert_true(LeagueSheet.watch_pending(plan), "an unplayed watch lost its CONTINUE caption")
+	assert_false(LeagueSheet.watch_pending([]), "an empty day claims a pending watch")
+
 func test_the_hub_lays_out_an_empty_day_and_no_table() -> void:
 	var sheet := LeagueSheet.new()
 	var items: Array = sheet.hub_layout(Vector2(1600, 900), _state([], _table()))

@@ -71,7 +71,7 @@ func _open(page: String, id: String, over_select: bool, over_league: bool) -> vo
 	if from_select and game.sel_layer != null:
 		game.sel_layer.visible = false
 	if from_league and game.menus != null and game.menus.league != null:
-		game.menus.league.hide_for_wiki()
+		game.menus.league.cover_for_wiki(true)
 	layer.visible = true
 	screen.mouse = Vector2(-1000, -1000)
 	screen.touch = game.touch
@@ -93,7 +93,7 @@ func _on_screen_closed() -> void:
 		from_league = false
 		from_select = false
 		if game.menus != null and game.menus.league != null:
-			game.menus.league.show_after_wiki()
+			game.menus.league.cover_for_wiki(false)
 		return
 	if from_select:
 		if game.sel_layer != null:

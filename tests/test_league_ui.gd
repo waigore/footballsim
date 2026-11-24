@@ -56,6 +56,12 @@ func press(p: Vector2) -> void:
 	up.position = p * game.menus.shell.ui_scale
 	game._input(up)
 
+func key(code: int) -> void:
+	var ev := InputEventKey.new()
+	ev.keycode = code
+	ev.pressed = true
+	game._input(ev)
+
 func screen():
 	return game.menus.league.screen
 
@@ -120,20 +126,48 @@ func test_the_hub_plans_and_toggles_a_fixture() -> void:
 
 func test_watching_a_fixture_hands_it_to_the_viewer_and_back() -> void:
 	var plan: Array = screen().current_view()["plan"]
-	var toggle_id := "toggle:" + str(plan[0]["id"])
-	press_id(toggle_id)
-	press_id("fixture:" + str(plan[0]["id"]))
+	var fixture_id := str(plan[0]["id"])
+	var day := str(LeagueSeason.active.state()["date"])
+	press_id("toggle:" + fixture_id)
+	press_id("fixture:" + fixture_id)
 	assert_false(game.paused, "the watched match did not start")
 	assert_eq(str(game.home_id), str(plan[0]["home_club_id"]), "the viewer started another fixture")
 	game.engine.score[0] = 3
 	game.engine.score[1] = 0
 	game.engine.phase = "full_time"
 	game._process(0.016)
-	assert_true(game.menus.league_active(), "the hub did not come back after full time")
+	# #124: the whistle keeps the broadcast on its FULL TIME card; the season is
+	# one tap behind it, with the result already saved.
+	assert_false(game.menus.league_active(), "the hub took the screen before the card was read")
+	assert_true(game.menus.league_holding(), "the finished broadcast was not held")
+	assert_true(bool(game.hud_layer.visible), "the FULL TIME card was hidden with the whistle")
+	assert_true(bool(game.result_hold), "the broadcast was not told to hold")
+	# The card owns the ended game: a match control does nothing to it, and a
+	# report for another fixture is not this hold.
+	key(KEY_R)
+	assert_true(game.menus.league_holding(), "a key dismissed the card by accident")
+	assert_eq(str(game.engine.phase), "full_time", "R restarted a fixture already in the ledger")
+	assert_false(game.menus.league.result.take({}), "an unrelated report took the held card")
+	key(KEY_SPACE)
+	assert_true(game.menus.league_active(), "the dismissed card did not hand the hub back")
+	assert_false(bool(game.result_hold), "the broadcast is still holding the card")
+	assert_false(bool(game.hud_layer.visible), "the broadcast stayed over the hub")
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "the result did not land on the hub")
-	var stored := LeagueSeason.active.report(str(plan[0]["id"]))
+	var stored := LeagueSeason.active.report(fixture_id)
 	assert_true(bool(stored["played"]), "the watched result is not on the save")
 	assert_eq((stored["score"] as Array)[0], 3, "the watched score is wrong")
+	# The played day stays on the hub, its row reading as a result: FT, the score
+	# where the chip was, and no watch door left to press.
+	assert_eq(str(LeagueSeason.active.state()["date"]), day, "the hub left the day it just played")
+	var row := {}
+	for fx in screen().current_view()["plan"]:
+		if str(fx["id"]) == fixture_id:
+			row = fx
+	assert_false(row.is_empty(), "the played fixture left the hub")
+	assert_eq(str(row["status"]), "played", "the hub row is not marked played")
+	assert_eq(int(row["home_goals"]), 3, "the hub row lost the score")
+	for item in screen().buttons:
+		assert_ne(str(item["id"]), "toggle:" + fixture_id, "a played row still offers AUTO/WATCH")
 
 func test_continue_plays_the_autos_and_shows_the_roundup() -> void:
 	var before := int(LeagueSeason.active.record.played())
@@ -161,7 +195,10 @@ func test_continue_opens_the_pending_watch() -> void:
 	game.engine.score[1] = 1
 	game.engine.phase = "full_time"
 	game._process(0.016)
-	assert_true(game.menus.league_active(), "the hub did not come back after the watch")
+	# #124: the whistle holds the full-time card; a tap hands the hub back.
+	assert_true(game.menus.league_holding(), "Continue's watch skipped its full-time card")
+	press(Vector2(400.0, 200.0))
+	assert_true(game.menus.league_active(), "the hub did not come back after the card")
 	var stored := LeagueSeason.active.report(held)
 	assert_true(bool(stored["played"]), "Continue's watch was not saved")
 	assert_eq(int((stored["score"] as Array)[0]), 2, "the watched score was not stored")

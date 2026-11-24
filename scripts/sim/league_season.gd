@@ -368,7 +368,8 @@ func record_engine(engine) -> void:
 		str(fx["home_club_id"]), str(fx["away_club_id"]))
 	captured = []
 	PLDatabase.transaction("COMMIT;")
-	roll_clock()
+	# The clock stays on the day just played so the hub can show its result, and
+	# the next Continue moves on (#124); `open()` still rolls a played day forward.
 	state_changed.emit()
 	match_recorded.emit(report(fixture_id))
 
