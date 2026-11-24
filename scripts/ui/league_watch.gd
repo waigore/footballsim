@@ -27,7 +27,9 @@ func settling() -> bool:
 ## events are unhooked first: the leftover goals must not cut clips or replay
 ## the broadcast behind the season sheet.
 func leave() -> bool:
-	var season = host.season if host != null else null
+	if host == null:
+		return false
+	var season: LeagueSeason = host.season
 	if engine != null or season == null or season.watching_fixture == "":
 		return false
 	if host.game == null or host.game.engine == null:
@@ -44,14 +46,22 @@ func leave() -> bool:
 ## One frame of the leftover match. At full time the result goes through
 ## `PLSimStats`, the same path a watched full time takes.
 func tick() -> void:
-	var season = host.season if host != null else null
-	if engine == null or season == null or not season.finishing:
+	if host == null:
+		return
+	var season: LeagueSeason = host.season
+	if engine == null:
+		return
+	if season == null or not season.finishing:
+		# The season was closed or replaced under the leftover match: drop it
+		# rather than let it land somewhere it does not belong.
+		engine = null
 		return
 	if not engine.run_to_full_time(BUDGET_USEC):
 		return
 	var done = engine
 	engine = null
-	host.game.result_recorded = PLSimStats.record_match(done)
+	if not host.game.result_recorded:
+		host.game.result_recorded = PLSimStats.record_match(done)
 
 ## Forget the leftover match without saving it (a new match took the scene).
 func clear() -> void:
