@@ -30,6 +30,7 @@ code, open PRs, or edit Simulation rules.
 | Session | One **league-loop** playtest: main menu → league/fixture surfaces → **≥1 match** simulated in-client **to full time** |
 | Filing | Full autonomy — no draft or duplicate confirm with a human |
 | Evidence | Wiki page; issues **link** it |
+| Legibility | Judge non-match chrome at more than one window size (see below); the match HUD's own sizing is not a finding |
 | Out of scope | Code fixes, PRs, wiki rule edits, pure sim “wrong score” unless it shows as UX |
 
 Highlights mode + speed keys are fine so wall-clock stays reasonable. Do not
@@ -83,6 +84,26 @@ Minimum path:
 **Judge by looking at the screen** (Read captured PNGs). Do not treat headless
 `tools/sim_round.gd` as the playtest.
 
+### 2b. Legibility pass (non-match chrome)
+
+Read the type, not just the layout. Capture every non-match surface — main menu,
+settings, quit confirm, league hub, table, fixtures/calendar, match report,
+full-time summary, encyclopedia and fixture picker — **twice**: at the default
+window and at a large fullscreen-sized window (see
+[`references/playbook.md`](references/playbook.md)). Then judge:
+
+- Captions, hints and secondary copy read comfortably at a normal desktop
+  distance; nothing is a hairline.
+- Growing the window enlarges the type and chrome; it must not leave fixed-size
+  text on a large sheet.
+- Text stays inside its panels and rows at both sizes (no clipping, no overlap).
+- Scope is the **tightened `RUB-P1-07`** and the wiki Design Record for non-match
+  type legibility. The match overlay's own sizing is **not** in scope: never file
+  a finding that asks the broadcast HUD to grow.
+
+A failing finding names the surface, the window size, and what looked small —
+screenshot proof from both sizes belongs on the run page.
+
 ### 3. Capture evidence
 
 For each finding worth filing: screenshot (or ≤20s clip if motion-only). Stage
@@ -111,7 +132,8 @@ played, commit SHA. Quit or leave the game; do not babysit fixes.
 
 ## Done when
 
-- Live desktop playtest covered league chrome + ≥1 match to FT
+- Live desktop playtest covered every non-match surface at two window sizes and league chrome + ≥1 match to FT
+- Non-match type judged comfortable and viewport-scaled (`RUB-P1-07`); match HUD size not filed as a defect
 - Wiki run page published (even if zero findings — note a clean pass)
-- New issues filed or duplicates commented with evidence links
+- New issues filed or duplicates commented with evidence links — each citing the surface, window size and Design Record when it is a legibility finding
 - No game code or Simulation-rules wiki edits
