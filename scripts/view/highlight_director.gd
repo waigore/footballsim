@@ -79,11 +79,13 @@ func rewind(trigger_clock: float) -> bool:
 ## build-up the report clip needs — then decide whether to replay it live.
 func on_event(e: Dictionary) -> void:
 	var kind: String = e.get("type", "")
-	if kind == "goal":
+	var key := "%d|%s|%d" % [int(float(e.get("clock", 0.0)) * 60.0), kind, int(e.get("player_id", -1))]
+	# A rewound goal fires again when the replay reaches it: only the first pass
+	# may cut a clip, or the season would hold the same goal twice.
+	if kind == "goal" and not shown.has(key):
 		capture(e)
 	if host.mode != "highlights":
 		return
-	var key := "%d|%s|%d" % [int(float(e.get("clock", 0.0)) * 60.0), kind, int(e.get("player_id", -1))]
 	if shown.has(key):
 		return
 	var important: bool = kind in ["shot", "goal", "penalty", "penalty_taken", "card", "corner"]

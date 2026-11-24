@@ -151,6 +151,15 @@ func test_the_viewer_interpolates_between_frames() -> void:
 
 # --------------------------------------------------------------- commentary ---
 
+func test_an_away_goal_line_reads_from_the_scoring_side() -> void:
+	var goal := _goal(51, "MCI")
+	goal["score_after"] = [1, 2]
+	goal["club_short"] = "MCI"
+	goal["opp_short"] = "MUN"
+	var line := GoalHighlight.commentary(goal, 12)
+	assert_true(line.contains("MCI 2-1 MUN"), "the line read the scoreline from the home side")
+	assert_true(line.contains("lead"), "the away side's lead was not named")
+
 func test_the_line_names_the_report_scorer_and_score() -> void:
 	var goal := _goal(34)
 	var line := GoalHighlight.commentary(goal, 77)
@@ -204,6 +213,22 @@ func test_a_live_goal_is_cut_from_the_ring() -> void:
 	assert_gte((pack["frames"] as Array).size(), 4, "the capture is too short to play")
 	assert_false(GoalHighlight.unpack(GoalHighlight.pack(pack)).is_empty(), "the capture will not decode")
 
+func test_a_replayed_goal_is_not_captured_twice() -> void:
+	var ring := _ring_host(505)
+	var host: FakeHost = ring[0]
+	var director: HighlightDirector = ring[1]
+	var engine = ring[2]
+	host.mode = "highlights"
+	var fx := str((season.plan()[0] as Dictionary)["id"])
+	season.start_watch(fx)
+	var before := season.captured.size()
+	var event := {"type": "goal", "clock": float(engine.clock), "minute": 2,
+		"player_id": -1, "team": 0, "text": "GOAL!"}
+	director.on_event(event)
+	assert_eq(season.captured.size(), before + 1, "the goal was not captured")
+	director.on_event(event)
+	assert_eq(season.captured.size(), before + 1, "a rewound goal was captured twice")
+
 func test_a_capture_needs_a_watch_and_a_ring() -> void:
 	var fx := str((season.plan()[0] as Dictionary)["id"])
 	season.watching_fixture = ""
@@ -233,6 +258,47 @@ func test_a_shot_rewinds_the_live_picture_once() -> void:
 	host.in_highlight = false
 	director.on_event({"type": "shot", "clock": trigger, "player_id": -1})
 	assert_false(host.in_highlight, "the same shot was replayed twice")
+
+func test_a_watch_goal_keeps_the_captured_clip() -> void:
+	# A watched fixture the engine has just finished: its goal rows are written,
+	# one goal has a live capture and the other does not.
+	var fx := str((season.record.fixtures(2)[0] as Dictionary)["id"])
+	var row := season.record.fixture(fx)
+	var home := str(row["home_club_id"])
+	var away := str(row["away_club_id"])
+	var home_id := str(StrongestXI.pick(TeamData.get_team(home))[9]["id"])
+	var away_id := str(StrongestXI.pick(TeamData.get_team(away))[9]["id"])
+	season.record.add_events([
+		{"fixture_id": fx, "minute": 10, "kind": "goal", "player_id": home_id, "club_id": home, "detail": "A"},
+		{"fixture_id": fx, "minute": 55, "kind": "goal", "player_id": away_id, "club_id": away, "detail": "B"},
+	])
+	var snaps: Array = []
+	var engine = MatchEngine.new(909, home, away)
+	for i in range(24):
+		engine.tick()
+		if i % 4 == 0:
+			snaps.append(engine.to_dict())
+	var captured := GoalHighlight.from_snapshots(snaps, {
+		"seed": 909, "fixture_id": fx, "home": home, "away": away, "minute": 10,
+		"club_id": home, "scorer_id": home_id, "scorer_name": "Live Scorer",
+		"assist_id": "", "assist_name": "", "commentary": "", "score_after": [1, 0],
+	})
+	assert_eq(str(captured.get("commentary", "")), "", "the capture invented a line")
+	var sides := {"home": StrongestXI.pick(TeamData.get_team(home)),
+		"away": StrongestXI.pick(TeamData.get_team(away))}
+	LeagueHighlights.store_watch(season.record, SEED, fx, [captured], sides, home, away)
+	var rows := season.record.clips.list(fx)
+	assert_eq(rows.size(), 2, "a watched goal has no stored clip")
+	assert_eq(str(rows[0]["source"]), "watch", "the captured goal is not marked live")
+	assert_true(int(rows[0]["match_event_id"]) > 0, "the clip is not linked to its goal row")
+	assert_true(str(rows[0]["commentary"]) != "", "the capture was stored without a line")
+	assert_eq(str(rows[1]["source"]), "auto", "a goal with no capture was not filled in")
+	var live := season.record.clips.pack(fx, 0)
+	assert_eq((live["frames"] as Array).size(), (captured["frames"] as Array).size(),
+		"the captured clip lost frames on the way in")
+	assert_eq(int(live["score"][0]), 1, "the captured clip lost its scoreline")
+	season.record.clips.clear(fx)
+	assert_true(season.record.clips.list(fx).is_empty(), "clearing a fixture left clip rows")
 
 func test_a_settled_matchday_stores_a_clip_for_every_goal() -> void:
 	var result := season.advance()

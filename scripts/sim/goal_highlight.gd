@@ -48,22 +48,19 @@ static func seed_for(save_seed: int, fixture_id: String, goal_index: int) -> int
 
 ## The one line a report shows for a goal. It reuses the broadcast voice but is
 ## drawn from a fresh, seeded RNG so it never disturbs the season's own stream.
+## The scoreline always reads from the *scoring* club's side, exactly like the
+## live engine's goal line, so an away goal never reads as a lead for the hosts.
 static func commentary(goal: Dictionary, seed: int) -> String:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
-	var short_a := str(goal.get("club_short", "HOM"))
-	var short_b := str(goal.get("opp_short", "AWY"))
 	var score: Array = goal.get("score_after", [0, 0])
-	var before_for := maxi(int(score[0]) - 1, 0)
-	var before_against := int(score[1])
-	if str(goal.get("club_id", "")) != str(goal.get("home", "")):
-		before_for = maxi(int(score[1]) - 1, 0)
-		before_against = int(score[0])
-		short_a = str(goal.get("opp_short", "AWY"))
-		short_b = str(goal.get("club_short", "HOM"))
+	var scoring_home := str(goal.get("club_id", "")) == str(goal.get("home", ""))
+	var goals_for := int(score[0]) if scoring_home else int(score[1])
+	var goals_against := int(score[1]) if scoring_home else int(score[0])
 	return Commentary.goal(rng, str(goal.get("player_name", "Unknown")),
-		str(goal.get("assist_name", "")), false, short_a, short_b,
-		before_for, before_against, int(goal.get("minute", 0)))
+		str(goal.get("assist_name", "")), false, str(goal.get("club_short", "")),
+		str(goal.get("opp_short", "")), maxi(goals_for - 1, 0), goals_against,
+		int(goal.get("minute", 0)))
 
 # ------------------------------------------------------------------ build ---
 
