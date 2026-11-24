@@ -145,6 +145,7 @@ suites = [
   "test_league_ui.gd",
   "test_league_doors.gd",
   "test_league_system.gd",
+  "test_league_interest.gd",
   "test_goal_highlights.gd",
 ]
 
@@ -153,6 +154,7 @@ suites = [
 suites = [
   "test_wiki_model.gd",
   "test_wiki_screen.gd",
+  "test_wiki_interest.gd",
   "test_wiki_entry.gd",
   "test_wiki_render.gd",
   "test_wiki_season.gd",
@@ -211,6 +213,10 @@ match = "scripts/sim/match_engine_rules.gd*"
 domain = "match_laws"
 
 [[rules]]
+match = "scripts/sim/match_engine_bench.gd*"
+domain = "match_laws"
+
+[[rules]]
 match = "scripts/sim/match_stats.gd*"
 domain = "match_stats"
 
@@ -259,6 +265,11 @@ domain = "tactics"
 # Season clock, calendar, synthetic events and the strongest XI: one theme.
 [[rules]]
 match = "scripts/sim/league_season.gd*"
+domain = "league"
+
+# The planner's suggested watches read the table and flag fixtures.
+[[rules]]
+match = "scripts/sim/league_planner.gd*"
 domain = "league"
 
 [[rules]]

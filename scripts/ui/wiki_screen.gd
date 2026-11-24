@@ -6,6 +6,9 @@ extends Control
 ## Chrome follows team_select: same palette, same type, same tap targets.
 
 signal closed()
+## The team page's follow door (#104): the club whose page is on screen. The
+## host answers it against the open season; the sheet never writes the save.
+signal interest_toggled(club_id: String)
 
 var ui_scale := 1.0
 var touch := false
@@ -102,6 +105,8 @@ func click(id: String) -> void:
 	elif id.begins_with("crumb:"):
 		stack = stack.slice(0, int(id.substr(6)) + 1)
 		_refresh()
+	elif id.begins_with("interest:"):
+		interest_toggled.emit(id.substr(9))
 
 ## A tap anywhere in a table row or chip opens its page.
 func tap(p: Vector2) -> bool:
@@ -191,6 +196,11 @@ func _draw() -> void:
 	_add("back", back_rect)
 	WikiChrome.button(self, f_bold, close_rect, "✕", close_rect.has_point(mouse))
 	_add("close", close_rect)
+	var follow := WikiInterest.door(current(), LeagueSeason.active, vp, back_rect, close_rect)
+	if not follow.is_empty():
+		WikiInterest.draw(self, f_bold, follow["rect"], str(follow["text"]),
+			bool(follow["followed"]), (follow["rect"] as Rect2).has_point(mouse))
+		_add(str(follow["id"]), follow["rect"])
 	WikiChrome.label(self, f_bold, Vector2(x, title_y - (32.0 if compact else 38.0)), str(page_data.get("eyebrow", "")), 10, accent.lightened(0.35))
 	draw_rect(Rect2(x, title_y - 28.0, 3, 28), accent)
 	WikiChrome.label(self, f_bold, Vector2(x + 12, title_y), str(page_data.get("title", "")), 26 if compact else 34)
@@ -202,6 +212,7 @@ func _draw() -> void:
 
 func _add(id: String, r: Rect2) -> void:
 	buttons.append({"id": id, "rect": r})
+
 
 ## The identity line, with the snapshot date as its own label so the overlay can
 ## give that date its weekday (#99).
