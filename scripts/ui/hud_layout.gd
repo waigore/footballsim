@@ -19,11 +19,15 @@ const COMPACT_STATS_W := 240.0
 const CONTROL_W := 108.0
 const CONTROL_GAP := 6.0
 const CONTROL_H := 46.0
-const CONTROL_COUNT := 6
-const CONTROL_COUNT_TOUCH := 7
+## Desktop bar: pause, speed, mode, skip, camera, league, restart, menu.
+const CONTROL_COUNT := 8
+## Touch/compact adds the teams door, because the fixture panel that carries it
+## on desktop is not drawn there.
+const CONTROL_COUNT_TOUCH := 9
 
 ## Touch builds get one extra door (teams) because the fixture panel that
-## carries it on desktop is not drawn in compact.
+## carries it on desktop is not drawn in compact. The league door rides the bar
+## on every platform so the encyclopedia is always one tap away.
 static func is_compact(vp: Vector2) -> bool:
 	return vp.y < COMPACT_H
 
@@ -47,16 +51,34 @@ static func overlay_scale() -> float:
 static func control_count(vp: Vector2, touch := false) -> int:
 	return CONTROL_COUNT_TOUCH if (touch or is_compact(vp)) else CONTROL_COUNT
 
-static func control_width(vp: Vector2, touch := false) -> float:
+## Doors per row: a narrow design space (a square-ish handset) wraps the bar
+## instead of shrinking every door below the 44-unit tap floor.
+static func controls_per_row(vp: Vector2, touch := false) -> int:
 	var n := control_count(vp, touch)
-	var avail: float = vp.x - 2.0 * PANEL_MARGIN - CONTROL_GAP * float(n - 1)
-	return minf(CONTROL_W, avail / float(n))
+	var k := n
+	while k > 1:
+		var avail: float = vp.x - 2.0 * PANEL_MARGIN - CONTROL_GAP * float(k - 1)
+		if avail / float(k) >= 44.0:
+			break
+		k -= 1
+	return k
+
+static func control_rows(vp: Vector2, touch := false) -> int:
+	var per := controls_per_row(vp, touch)
+	return int(ceil(float(control_count(vp, touch)) / float(per)))
+
+static func control_width(vp: Vector2, touch := false) -> float:
+	var per := controls_per_row(vp, touch)
+	var avail: float = vp.x - 2.0 * PANEL_MARGIN - CONTROL_GAP * float(per - 1)
+	return minf(CONTROL_W, avail / float(per))
 
 static func controls_rect(vp: Vector2, touch := false) -> Rect2:
-	var n := control_count(vp, touch)
+	var per := controls_per_row(vp, touch)
 	var w := control_width(vp, touch)
-	var total: float = w * float(n) + CONTROL_GAP * float(n - 1)
-	return Rect2(vp.x * 0.5 - total * 0.5, vp.y - 66.0, total, CONTROL_H)
+	var rows := control_rows(vp, touch)
+	var total: float = w * float(mini(per, control_count(vp, touch))) + CONTROL_GAP * float(mini(per, control_count(vp, touch)) - 1)
+	var h: float = CONTROL_H * float(rows) + CONTROL_GAP * float(rows - 1)
+	return Rect2(vp.x * 0.5 - total * 0.5, vp.y - 20.0 - h, total, h)
 
 static func commentary_rect(vp: Vector2) -> Rect2:
 	return Rect2(PANEL_MARGIN, vp.y - 126.0, minf(620.0, vp.x - 2.0 * PANEL_MARGIN), 52.0)

@@ -25,6 +25,7 @@ suites = [
 [domains.match_laws]
 suites = [
   "test_match_laws.gd",
+  "test_engine_rules.gd",
 ]
 
 [domains.restart]
@@ -41,6 +42,7 @@ suites = [
 suites = [
   "test_hud_chrome.gd",
   "test_touch_flow.gd",
+  "test_wiki_entry.gd",
 ]
 
 [domains.tactics]
@@ -55,6 +57,15 @@ suites = [
   "test_manager_subs.gd",
 ]
 
+# Menu shell: cold start, settings + BGM, quit confirm, HUD doors.
+[domains.shell]
+suites = [
+  "test_menu_nav.gd",
+  "test_prefs.gd",
+  "test_hud_layout.gd",
+  "test_touch_flow.gd",
+]
+
 # Shared engine spine: laws + finishing + restart + managers when a core file moves.
 [domains.match_engine]
 suites = [
@@ -65,6 +76,9 @@ suites = [
   "test_tactics_ai.gd",
   "test_managers.gd",
   "test_manager_subs.gd",
+  "test_attributes.gd",
+  "test_engine_contact.gd",
+  "test_engine_rules.gd",
 ]
 
 [domains.teams]
@@ -73,6 +87,47 @@ suites = [
   "test_kits.gd",
   "test_tactics.gd",
   "test_tactics_ai.gd",
+  "test_team_data.gd",
+]
+
+# Snapshot storage and the repository the engine reads: the seed itself, the
+# in-sim ledger, and every consumer of squad data.
+[domains.pl_data]
+suites = [
+  "test_pl_seed.gd",
+  "test_pl_stats.gd",
+  "test_poisson_model.gd",
+  "test_kits.gd",
+  "test_tactics.gd",
+  "test_tactics_ai.gd",
+  "test_managers.gd",
+  "test_manager_subs.gd",
+]
+
+# God-mode season: saves, rules, calendar, season clock, synthetic events, the
+# chosen XI and the league surfaces. One group, because a change in any layer
+# can move the season loop.
+[domains.league]
+suites = [
+  "test_league_rules.gd",
+  "test_league_save.gd",
+  "test_fixture_calendar.gd",
+  "test_match_events.gd",
+  "test_strongest_xi.gd",
+  "test_league_season.gd",
+  "test_league_ui.gd",
+]
+
+# Encyclopedia screens: page data, the sheet itself and every door into it.
+[domains.wiki]
+suites = [
+  "test_wiki_model.gd",
+  "test_wiki_screen.gd",
+  "test_wiki_entry.gd",
+  "test_wiki_render.gd",
+  "test_hud_layout.gd",
+  "test_hud_chrome.gd",
+  "test_touch_flow.gd",
 ]
 
 # Lightest suite for tooling / project / addons / map edits.
@@ -120,6 +175,10 @@ match = "scripts/sim/match_engine_core.gd*"
 domain = "match_engine"
 
 [[rules]]
+match = "scripts/sim/match_engine_pitch.gd*"
+domain = "match_engine"
+
+[[rules]]
 match = "scripts/sim/match_engine_presentation.gd*"
 domain = "match_engine"
 
@@ -130,6 +189,23 @@ domain = "match_engine"
 [[rules]]
 match = "scripts/sim/tactics.gd*"
 domain = "tactics"
+
+# Season clock, calendar, synthetic events and the strongest XI: one theme.
+[[rules]]
+match = "scripts/sim/league_season.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/fixture_calendar.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/match_events.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/strongest_xi.gd*"
+domain = "league"
 
 [[rules]]
 match = "scripts/sim/match_manager.gd*"
@@ -145,35 +221,60 @@ domain = "match_engine"
 
 # ---------------------------------------------------------------- data ---
 
+# League saves own their own schema and ledger; keep them on the season suites
+# even though they live beside the snapshot modules.
 [[rules]]
-match = "scripts/data/managers.gd*"
-domain = "managers"
+match = "scripts/data/league_*.gd*"
+domain = "league"
 
+# Every other data module (clubs, squads, snapshot storage, in-sim ledger)
+# shares the same suites; the old per-shard rules are gone because the shards
+# are gone.
 [[rules]]
-match = "scripts/data/teams.gd*"
-domain = "teams"
-
-[[rules]]
-match = "scripts/data/teams_core.gd*"
-domain = "teams"
-
-[[rules]]
-match = "scripts/data/teams_pl1.gd*"
-domain = "teams"
-
-[[rules]]
-match = "scripts/data/teams_pl2.gd*"
-domain = "teams"
-
-[[rules]]
-match = "scripts/data/teams_pl3.gd*"
-domain = "teams"
+match = "scripts/data/**"
+domain = "pl_data"
 
 # ------------------------------------------------------------------ ui ---
 
 [[rules]]
 match = "scripts/ui/hud_layout.gd*"
 domain = "hud_layout"
+
+[[rules]]
+match = "scripts/ui/app_shell.gd*"
+domain = "shell"
+
+[[rules]]
+match = "scripts/ui/menu_host.gd*"
+domain = "shell"
+
+[[rules]]
+match = "scripts/ui/menu_screen.gd*"
+domain = "shell"
+
+[[rules]]
+match = "scripts/ui/settings_screen.gd*"
+domain = "shell"
+
+[[rules]]
+match = "scripts/ui/confirm_prompt.gd*"
+domain = "shell"
+
+[[rules]]
+match = "scripts/ui/ui_chrome.gd*"
+domain = "shell"
+
+[[rules]]
+match = "scripts/audio/**"
+domain = "shell"
+
+[[rules]]
+match = "scripts/view/fixture_args.gd*"
+domain = "shell"
+
+[[rules]]
+match = "scripts/data/prefs.gd*"
+domain = "shell"
 
 [[rules]]
 match = "scripts/ui/hud.gd*"
@@ -196,6 +297,14 @@ match = "scripts/ui/hud_player_card.gd*"
 domain = "hud_chrome"
 
 [[rules]]
+match = "scripts/ui/wiki_*.gd*"
+domain = "wiki"
+
+[[rules]]
+match = "scripts/ui/league_*.gd*"
+domain = "league"
+
+[[rules]]
 match = "scripts/view/actor_layer.gd*"
 domain = "hud_chrome"
 
@@ -205,6 +314,14 @@ domain = "hud_chrome"
 
 [[rules]]
 match = "scripts/view/dev_capture.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/view/match_audio.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/view/match_camera.gd*"
 domain = "hud_chrome"
 
 [[rules]]
@@ -224,6 +341,13 @@ domain = "hud_chrome"
 # SceneTree helper (not a GdTools suite); keep on poisson.
 [[rules]]
 match = "tests/check_poisson_agreement.gd*"
+domain = "poisson"
+
+# Tier-2 census drives (playtests/census): heavy full-match grids that must
+# never ride the PR tier-1 budget. Editing them re-runs the fast poisson
+# suite; the census itself runs in the tier-2 workflow only.
+[[rules]]
+match = "playtests/census/**"
 domain = "poisson"
 
 [[rules]]
