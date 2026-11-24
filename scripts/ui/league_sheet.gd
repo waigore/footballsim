@@ -12,6 +12,11 @@ const ROW_H := 26.0
 const ROW_GAP := 5.0
 const BAR_H := 52.0
 const HEADER := 58.0
+## The hub's side table shows the club abbreviation, not the full name, so its
+## club column needs far less room than the TABLE sheet's (#102). The record
+## spreads across the lane instead of leaving a dead gap before points.
+const HUB_CLUB_MIN := 46.0
+const HUB_CLUB_SHARE := 0.14
 
 var cache := {}
 ## Dates this sheet painted, with the strip each one occupies (#99): the screen's
@@ -61,8 +66,8 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 		items.append({"id": "toggle:" + str(fx["id"]), "kind": "chip", "rect": chip, "fixture": fx})
 		y += ROW_H + ROW_GAP
 	if wide:
-		var tx := 24.0 + left_w + 22.0
-		var tw := vp.x - tx - 24.0
+		var box := _hub_table_box(vp)
+		var places := _hub_table_places(box)
 		var rows: Array = state.get("table", [])
 		var ty := top + 24.0
 		for i in range(mini(rows.size(), 20)):
@@ -71,7 +76,8 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 			var band := LeagueRules.zone(int(rows[i]["position"]), state.get("rules", {}))
 			items.append({
 				"id": "club:" + str(rows[i]["club_id"]), "kind": "table_row",
-				"rect": Rect2(tx, ty, tw, 19.0), "row": rows[i], "zone": band,
+				"rect": Rect2(box.position.x, ty, box.size.x, 19.0), "row": rows[i],
+				"zone": band, "places": places,
 			})
 			ty += 19.0
 	if bool(state.get("can_suggest", false)):
@@ -136,6 +142,18 @@ func _bar_rects(vp: Vector2, ids: Array, labels: Array) -> Array:
 		})
 	return out
 
+## The lane the wide hub's side table occupies, beside the fixture list.
+func _hub_table_box(vp: Vector2) -> Rect2:
+	var left_w := (vp.x - 72.0) * 0.58
+	var tx := 24.0 + left_w + 22.0
+	return Rect2(tx, 0.0, vp.x - tx - 24.0, 19.0)
+
+## The side table's column rail: the same compact set the TABLE sheet paints,
+## spread across the whole lane so the numbers fill it (a club abbreviation needs
+## far less room than a club name).
+func _hub_table_places(box: Rect2) -> Dictionary:
+	return LeagueColumns.of(box, LeagueColumns.COMPACT_COLS, HUB_CLUB_MIN, HUB_CLUB_SHARE)
+
 # gd-tools: no cover start
 
 func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dictionary,
@@ -144,6 +162,9 @@ func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dicti
 	var label: String = FixtureCalendar.day_label(date) if date != "" else str(state.get("day", ""))
 	var rest := " · GW %d · %d OF %d PLAYED" % [int(state.get("matchday", 1)),
 		int(state.get("played", 0)), int(state.get("total", 0))]
+	# A left-behind watch is still being played out: the result lands on its own.
+	if bool(state.get("settling", false)):
+		rest += " · FINISHING THE WATCHED MATCH"
 	_heading(c, vp, fonts, str(state.get("name", "LEAGUE")), label + rest)
 	if date != "":
 		var bold: Font = fonts["bold"]
@@ -155,17 +176,21 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, 
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	## The plan hint rides the caption: the first fixture row starts right under
-	## it, so a second line would print through the row.
+	## it, so a second line would print through the row. A day that still holds
+	## watches says what CONTINUE does with them (#100).
 	var hint := " · TAP A GAME TO SWITCH AUTO / WATCH" if bool(state.get("can_suggest", false)) else ""
+	for fx in state.get("plan", []):
+		if int(fx.get("watched", 0)) == 1:
+			hint = " · CONTINUE OPENS THE NEXT WATCH"
+			break
 	UiChrome.text(c, Vector2(24.0, HEADER + 18.0), "TODAY'S FIXTURES" + hint, 11, UiChrome.C_DIM, bold)
 	if vp.x >= 760.0 and not compact(vp):
-		var left_w := (vp.x - 72.0) * 0.58
-		var tx := 24.0 + left_w + 22.0
+		var places := _hub_table_places(_hub_table_box(vp))
 		var top: float = HEADER + 14.0
-		UiChrome.text(c, Vector2(tx + 32.0, top + 16.0), "CLUB", 9, UiChrome.C_DIM, bold)
-		UiChrome.text(c, Vector2(tx + 82.0, top + 16.0), "P", 9, UiChrome.C_DIM, bold)
-		UiChrome.text(c, Vector2(tx + 112.0, top + 16.0), "GD", 9, UiChrome.C_DIM, bold)
-		UiChrome.text_r(c, vp.x - 32.0, top + 16.0, "PTS", 9, UiChrome.C_DIM, bold)
+		UiChrome.text(c, Vector2(float(places["club_x"]), top + 16.0), "CLUB", 9, UiChrome.C_DIM, bold)
+		for col in places["cols"]:
+			UiChrome.text_r(c, float(col["right"]), top + 16.0, str(col["label"]), 9,
+				UiChrome.C_DIM, bold)
 	if (state.get("plan", []) as Array).is_empty():
 		UiChrome.text(c, Vector2(24.0, HEADER + 44.0),
 			"No fixtures on this day — CONTINUE moves the clock.", 12, UiChrome.C_SOFT, med)
@@ -210,11 +235,18 @@ func _draw_table_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictio
 		c.draw_rect(Rect2(rect.position.x, rect.position.y + 2.0, 3.0, rect.size.y - 4.0), zone_color(band))
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
-	UiChrome.text(c, Vector2(rect.position.x + 9.0, rect.position.y + 14.0), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
-	UiChrome.text(c, Vector2(rect.position.x + 32.0, rect.position.y + 14.0), str(row["club_abbr"]), 12, UiChrome.C_TEXT, bold)
-	UiChrome.text(c, Vector2(rect.position.x + 82.0, rect.position.y + 14.0), "%d" % int(row["played"]), 10, UiChrome.C_SOFT, med)
-	UiChrome.text(c, Vector2(rect.position.x + 112.0, rect.position.y + 14.0), "%+d" % (int(row["gf"]) - int(row["ga"])), 10, UiChrome.C_SOFT, med)
-	UiChrome.text_r(c, rect.end.x - 8.0, rect.position.y + 14.0, "%d" % int(row["points"]), 11, UiChrome.C_TEXT, bold)
+	var places: Dictionary = item["places"]
+	var y := rect.position.y + 14.0
+	UiChrome.text(c, Vector2(float(places["pos_x"]), y), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
+	UiChrome.text(c, Vector2(float(places["club_x"]), y),
+		LeagueColumns.fit_name(str(row["club_abbr"]), bold, 12, float(places["club_w"])),
+		12, UiChrome.C_TEXT, bold)
+	for col in places["cols"]:
+		var key := str(col["key"])
+		var points := key == "points"
+		UiChrome.text_r(c, float(col["right"]), y, LeagueColumns.text(row, key),
+			11 if points else 10, UiChrome.C_TEXT if points else UiChrome.C_SOFT,
+			bold if points else med)
 
 # ---------------------------------------------------------------- wizard ---
 

@@ -5,7 +5,7 @@ extends SceneTree
 func _init() -> void:
 	var args := OS.get_cmdline_user_args()
 	var seed_i := 8008
-	var home := "WOL"
+	var home := "IPS"
 	var away := "LEE"
 	if args.size() >= 3:
 		seed_i = int(args[0])

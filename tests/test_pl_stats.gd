@@ -71,7 +71,7 @@ func test_a_seed_version_bump_drops_the_ledger() -> void:
 	PLSimStats.record(_summary(["MUN-b-fernandes"], [1, 0]))
 	assert_eq(int(PLRepository.shared().sim_club("MUN")["played"]), 1, "no ledger to flush")
 	# The cache is keyed by db_version: a new seed opens a fresh copy.
-	var stale := CACHE_DIR.path_join("pl_seed_v1.sqlite")
+	var stale := CACHE_DIR.path_join("pl_seed_v%d.sqlite" % PLDatabase.seed_version())
 	assert_true(FileAccess.file_exists(stale), "the current cache copy is missing")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(stale))
 	PLDatabase.reset()

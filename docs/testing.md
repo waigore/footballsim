@@ -24,7 +24,7 @@ Budget **≤4 min**; it exits at full time (or added time) and fails fast if the
 
 ## Poisson-agreement census (tier 2)
 
-`playtests/census` plays fixed-seed full matches for the anchors (MCI v BUR, MCI v MCI) and hard-gates goal dispersion vs Poisson λ: the **10% target** plus a two-sided **95% sampling allowance** at the grid's n (`CensusLib.variance_tolerance`; ≈±67% at n=32), and **≤120 s** per match (40–80 s on CI). Matches cost tens of seconds; `.github/workflows/census.yml` shards the grid: runners play a slice, `test_census_aggregate.gd` pools the rows and asserts. Tier-2 only; census edits run the poisson suite on PRs. Numbers: wiki poisson-model.
+`playtests/census` plays fixed-seed full matches for the anchors (MCI v IPS, MCI v MCI) and hard-gates goal dispersion vs Poisson λ: the **10% target** plus a two-sided **95% sampling allowance** at the grid's n (`CensusLib.variance_tolerance`; ≈±67% at n=32), and **≤120 s** per match (40–80 s on CI). Matches cost tens of seconds; `.github/workflows/census.yml` shards the grid: runners play a slice, `test_census_aggregate.gd` pools the rows and asserts. Tier-2 only; census edits run the poisson suite on PRs. Numbers: wiki poisson-model.
 
 Census locally:
 

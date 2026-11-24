@@ -93,6 +93,36 @@ func test_a_watch_holds_the_clock_until_the_match_is_played() -> void:
 	assert_true(str(season.state()["date"]) > date, "the clock did not move after the watch")
 	assert_eq(season.watching_fixture, "", "the season is still waiting for that watch")
 
+## #100: a watch the player walks out of is played out on the physical engine —
+## both halves, no presentation — and lands on the save like full time does.
+func test_leaving_a_watch_early_finishes_it_on_the_engine() -> void:
+	var fixtures := season.plan()
+	var held := str(fixtures[fixtures.size() - 1]["id"])
+	season.set_watch(held, true)
+	var blocked := season.advance()
+	var pending: Array = blocked["pending"]
+	assert_eq(pending.size(), 1, "the watch did not hold the clock")
+	assert_true(int(pending[0]["watched"]) == 1, "the pending fixture is not a watch")
+	assert_eq(str(pending[0]["id"]), held, "Continue would open another fixture")
+	var watch := season.start_watch(held)
+	assert_eq(str(watch["fixture_id"]), held, "the watch did not take the fixture")
+	var engine := MatchEngine.new(SEED + 3, str(watch["home"]), str(watch["away"]))
+	engine.half = 2
+	engine.clock = 5390.0
+	engine.added[1] = 0.0
+	season.finishing = true
+	assert_false(season.set_watch(held, false), "a finishing watch took a planner flag")
+	assert_true(season.start_watch(held).is_empty(), "a finishing watch started a second match")
+	assert_false(engine.run_to_full_time(0), "a zero budget played the rest out")
+	assert_true(engine.run_to_full_time(), "the rest of the match was not played out")
+	assert_eq(engine.phase, "full_time", "the engine never reached full time")
+	PLSimStats.record_match(engine)
+	var stored := season.report(held)
+	assert_true(bool(stored["played"]), "the left-behind watch was not saved")
+	assert_eq(int((stored["score"] as Array)[0]), int(engine.score[0]), "the saved score is not the engine's")
+	assert_false(season.finishing, "the season still thinks it is finishing")
+	assert_eq(season.watching_fixture, "", "the season still waits for that watch")
+
 func test_suggestions_start_after_five_rounds() -> void:
 	while season.record.completed_matchdays() < 5:
 		season.advance()

@@ -67,6 +67,41 @@ func test_the_hub_lays_out_an_empty_day_and_no_table() -> void:
 	for item in compact:
 		assert_eq(str(item["kind"]) != "table_row", true, "a phone hub tried to draw the table")
 
+## #102: the hub's side table carries the same compact record as the TABLE
+## sheet (`#`, club, P W D L GF GA GD PTS). It paints the abbreviation, so the
+## club column gives the numbers more of the lane, and every column stays inside
+## the row it belongs to.
+func test_the_hub_side_table_carries_the_compact_record() -> void:
+	var sheet := LeagueSheet.new()
+	var keys: Array = []
+	for col in LeagueColumns.COMPACT_COLS:
+		if bool(col["num"]):
+			keys.append(str(col["key"]))
+	assert_eq(keys, ["played", "won", "drawn", "lost", "gf", "ga", "gd", "points"],
+		"the compact column order moved")
+	for vp in [Vector2(760, 640), Vector2(1280, 720), Vector2(1600, 900)]:
+		var item := {}
+		for candidate in sheet.hub_layout(vp, _state([], _table())):
+			if str(candidate["kind"]) == "table_row":
+				item = candidate
+				break
+		assert_false(item.is_empty(), "the wide hub laid out no table at %s" % vp)
+		var places: Dictionary = item["places"]
+		var rect: Rect2 = item["rect"]
+		var rail := places["cols"] as Array
+		assert_eq(rail.size(), 8, "the hub side table lost a column at %s" % vp)
+		assert_eq(rail.map(func(c): return str(c["key"])), keys,
+			"the hub side table paints another column set at %s" % vp)
+		assert_gt(float(places["club_x"]), float(places["pos_x"]), "# and club overlap at %s" % vp)
+		var previous := float(places["club_x"]) + float(places["club_w"])
+		for col in rail:
+			assert_gt(float(col["right"]) - float(col["w"]), previous - 0.01,
+				"%s overlaps the club abbreviation at %s" % [col["label"], vp])
+			previous = float(col["right"])
+		assert_lte(previous, rect.end.x + 0.01, "PTS is drawn outside the hub row at %s" % vp)
+		assert_gte(float(places["club_w"]), LeagueSheet.HUB_CLUB_MIN - 0.01,
+			"the abbreviation column is too narrow at %s" % vp)
+
 func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 	var sheet := LeagueSheet.new()
 	for mode in ["real", "generated"]:
@@ -100,33 +135,74 @@ func test_the_load_list_lays_out_zero_and_many_saves() -> void:
 	assert_eq(open_doors, 7, "the load list should show seven rows")
 	assert_eq(delete_doors, 7, "every shown save needs a delete door")
 
-## The compact column set (#, club, P, GD, PTS) has to fit inside the row at
-## every width the handheld overlay scale can produce: the numbers ride one rail
-## measured from the row's own right edge, and the club column keeps whatever is
-## left, so a long name is shortened instead of painted over P and GD.
+## The compact column set (#, club, P W D L GF GA GD PTS) has to fit inside the
+## row at every width the handheld overlay scale can produce: the numbers ride
+## one rail measured from the row's own right edge, and the club column keeps
+## whatever is left, so a long name is shortened instead of painted over the
+## record.
 func test_the_table_columns_fit_a_phone_and_a_desktop_sheet() -> void:
-	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(873, 393), Vector2(360, 780), Vector2(320, 480)]:
+	var cols := LeagueTableView.COMPACT_COLS
+	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(873, 393)]:
 		var row := Rect2(24.0, 80.0, vp.x - 48.0, 18.0)
-		var cols: Dictionary = LeagueColumns.of(row)
-		assert_gt(float(cols["club_x"]), float(cols["pos_x"]), "# and CLUB overlap at %s" % vp)
-		assert_lte(float(cols["club_x"]) + float(cols["club_w"]), float(cols["p_r"]) - LeagueColumns.NUM_GAP + 0.01,
-			"the club name may run into P at %s" % vp)
-		assert_lt(float(cols["p_r"]), float(cols["gd_r"]), "P and GD share an edge at %s" % vp)
-		assert_lt(float(cols["gd_r"]), float(cols["pts_r"]), "GD and PTS share an edge at %s" % vp)
-		assert_lte(float(cols["pts_r"]), row.end.x, "PTS is drawn outside the row at %s" % vp)
-		assert_gte(float(cols["club_w"]), 100.0, "the club column is unreadable at %s" % vp)
+		var places: Dictionary = LeagueColumns.of(row, cols)
+		assert_eq((places["cols"] as Array).size(), 8,
+			"compact should paint every overall column at %s" % vp)
+		assert_gt(float(places["club_x"]), float(places["pos_x"]), "# and CLUB overlap at %s" % vp)
+		var previous := float(places["club_x"]) + float(places["club_w"])
+		for col in places["cols"]:
+			assert_gt(float(col["right"]) - float(col["w"]), previous - 0.01,
+				"%s overlaps the club name at %s" % [col["label"], vp])
+			previous = float(col["right"])
+		assert_lte(float(places["club_w"]), row.size.x * 0.5,
+			"the club column took more than half the row at %s" % vp)
+		assert_lte(previous, row.end.x + 0.01, "PTS is drawn outside the row at %s" % vp)
+		assert_gte(float(places["club_w"]), 100.0, "the club column is unreadable at %s" % vp)
+		var first: Dictionary = (places["cols"] as Array)[0]
+		var last: Dictionary = (places["cols"] as Array)[7]
+		assert_gte(float(last["right"]) - float(first["right"]) + float(last["w"]), 400.0,
+			"the record is still bunched in a corner at %s" % vp)
 
-## Columns must track the sheet, not sit on desktop-only offsets: a phone-shrunk
-## row moves the whole rail left and gives the slack to the club column.
+## A portrait phone is laid out narrow by the handheld overlay scale. Where the
+## window can hold the whole record at the rail's floor it all fits; where it
+## cannot, the row keeps that floor and the sheet pans sideways, so the numbers
+## never crowd the club name or each other.
+func test_the_compact_rail_tightens_on_a_portrait_phone() -> void:
+	var cols := LeagueTableView.COMPACT_COLS
+	var floor_w: float = LeagueColumns.min_row(cols)
+	for vp in [Vector2(1280, 780), Vector2(360, 780), Vector2(320, 480)]:
+		var row_w := maxf(vp.x - 48.0, floor_w)
+		var places: Dictionary = LeagueColumns.of(Rect2(24.0, 80.0, row_w, 18.0), cols)
+		var previous := float(places["club_x"]) + float(places["club_w"])
+		for col in places["cols"]:
+			assert_gt(float(col["right"]) - float(col["w"]), previous - 0.01,
+				"%s overlaps the club name at %s" % [col["label"], vp])
+			assert_gte(float(col["w"]), LeagueColumns.MIN_NUM_W - 0.01,
+				"the %s box is too narrow to read at %s" % [col["label"], vp])
+			previous = float(col["right"])
+		assert_lte(previous, row_w + 24.0 + 0.01, "PTS is drawn outside the row at %s" % vp)
+		assert_gte(float(places["club_w"]), LeagueColumns.MIN_CLUB_W,
+			"the club column is unreadable at %s" % vp)
+		if vp.x - 48.0 >= floor_w:
+			assert_eq(row_w, vp.x - 48.0, "a sheet that fits was widened anyway at %s" % vp)
+		else:
+			assert_gt(row_w, vp.x - 48.0, "a sheet too narrow for the record did not pan at %s" % vp)
+
+## Columns must track the sheet, not sit on desktop-only offsets: a wider row
+## moves the whole rail right with it.
 func test_the_number_rail_follows_the_row_width() -> void:
-	var wide: Dictionary = LeagueColumns.of(Rect2(24.0, 80.0, 1552.0, 20.0))
-	var phone: Dictionary = LeagueColumns.of(Rect2(24.0, 80.0, 825.0, 20.0))
-	assert_almost_eq(float(wide["pts_r"]) - float(phone["pts_r"]), 727.0, 0.01,
-		"PTS did not track the sheet width")
-	assert_almost_eq(float(wide["club_w"]) - float(phone["club_w"]), 727.0, 0.01,
-		"the club column did not take the slack the numbers gave up")
+	var cols := LeagueTableView.COMPACT_COLS
+	var wide: Dictionary = LeagueColumns.of(Rect2(24.0, 80.0, 1552.0, 20.0), cols)
+	var phone: Dictionary = LeagueColumns.of(Rect2(24.0, 80.0, 825.0, 20.0), cols)
+	var wide_last: float = float((wide["cols"] as Array)[7]["right"])
+	var phone_last: float = float((phone["cols"] as Array)[7]["right"])
+	assert_almost_eq(wide_last - phone_last, 727.0, 0.01, "PTS did not track the sheet width")
+	var wide_first: float = float((wide["cols"] as Array)[0]["right"])
+	var phone_first: float = float((phone["cols"] as Array)[0]["right"])
+	assert_gt(wide_first, phone_first, "the whole rail did not move with the sheet")
+	assert_lte(float(wide["club_w"]), 1552.0 * 0.5,
+		"a wide sheet left the record in the corner")
 
-## A name wider than its column must be shortened, not painted over P and GD.
+## A name wider than its column must be shortened, not painted over the record.
 ## Headless text metrics are real (a dummy server would measure every string as
 ## zero width and this case would pass without testing anything).
 func test_a_long_club_name_is_shortened_instead_of_overlapping() -> void:
@@ -349,15 +425,37 @@ func test_the_full_header_names_its_three_groups() -> void:
 
 func test_the_table_defaults_to_compact_on_a_phone_and_full_on_desktop() -> void:
 	var phone := LeagueTableView.new()
-	var heads := 0
+	var heads: Array = []
 	for item in phone.layout(Vector2(913, 411), {"table": _table(), "rules": LeagueRules.defaults()}):
 		if str(item["kind"]) == "head":
-			heads += 1
+			heads.append(str(item["id"]))
 	assert_eq(phone.mode, LeagueTableView.COMPACT, "a phone did not open the compact table")
-	assert_eq(heads, 5, "the compact header should be #, club, P, GD and PTS")
+	assert_eq(heads.size(), 10, "the compact header should be #, club and the whole overall record")
+	for key in ["played", "won", "drawn", "lost", "gf", "ga", "gd", "points"]:
+		assert_true(heads.has("tbl:sort:" + key),
+			"compact does not offer a %s column to sort by (#102)" % key)
 	var desktop := LeagueTableView.new()
 	desktop.layout(Vector2(1600, 900), {"table": _table(), "rules": LeagueRules.defaults()})
 	assert_eq(desktop.mode, LeagueTableView.FULL, "a desktop did not open the full table")
+
+## #102: a column Compact now shows is a column Compact sorts by — the whole
+## overall record behaves like any other visible field.
+func test_the_compact_strip_sorts_by_the_overall_columns_it_shows() -> void:
+	var rows: Array = _table()
+	rows[0]["gf"] = 3
+	rows[1]["gf"] = 30
+	rows[2]["gf"] = 10
+	var view := LeagueTableView.new()
+	view.mode = LeagueTableView.COMPACT
+	for key in ["won", "drawn", "lost", "gf", "ga"]:
+		assert_true(view.press("tbl:sort:" + key, null), "compact did not take a %s sort" % key)
+	view.sort = "gf"
+	view.dir = -1
+	var goals: Array = []
+	for item in view.layout(Vector2(913, 411), {"table": rows, "rules": LeagueRules.defaults()}):
+		if str(item["kind"]) == "table_row":
+			goals.append(int((item["row"] as Dictionary)["gf"]))
+	assert_eq(goals[0], 30, "the compact strip did not sort by goals scored")
 
 ## A full table is wider than a portrait phone: the body offers the sideways
 ## pan and every column is reachable by dragging.

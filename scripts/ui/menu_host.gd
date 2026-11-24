@@ -41,6 +41,10 @@ func open_league_menu() -> void:
 		league.open_wizard()
 
 func open_menu() -> void:
+	# MENU while a season fixture is being watched hands the season back: the
+	# rest of the match plays out at max speed and is saved (#100).
+	if league != null and league.watch != null and league.watch.leave():
+		return
 	if game.wiki_host != null and game.wiki_host.is_open():
 		game.wiki_host.close()
 	if league != null and league.is_open():

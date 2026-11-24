@@ -4,7 +4,7 @@ extends GdToolsTest
 ## hard-gates the agreement between the physics engine and the Poisson model.
 ## Parent: #31 (physics↔Poisson variance agreement), gate record DR-20261123-02.
 ##
-## For every gated anchor (MCI v BUR, MCI v MCI) it requires the whole fixed grid
+## For every gated anchor (MCI v IPS, MCI v MCI) it requires the whole fixed grid
 ## (CENSUS_N matches per anchor, default 32), then asserts:
 ##
 ##   1. Goal dispersion: |sample_var − λ| / λ ≤ tolerance(λ, n), the 10%

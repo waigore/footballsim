@@ -4,11 +4,11 @@ extends RefCounted
 ## The two ways a league save gets its fixture list.
 ##
 ## **Real** copies the shipped snapshot's calendar — the pairings and the dates
-## of the 2025-26 Premier League season — and clears the results, so a new save
-## starts at gameweek one on real dates. **Generated** builds a PL-like schedule
-## from the saved regulations: a double round robin (every club home and away
-## against every other), mostly weekends from late August to May with the
-## regulated number of midweek rounds.
+## of the season it was taken from (2026-27) — and clears the results, so a new
+## save starts at gameweek one on real dates. **Generated** builds a PL-like
+## schedule from the saved regulations: a double round robin (every club home
+## and away against every other), mostly weekends from late August to May with
+## the regulated number of midweek rounds.
 ##
 ## Both modes produce the same rows, so everything downstream (planner, table,
 ## calendar) is mode-blind.
@@ -31,8 +31,9 @@ static func build(mode: String, rules: Dictionary, seed: int) -> Array:
 
 # ------------------------------------------------------------------ real ---
 
-## Pairings and dates from the shipped snapshot. The snapshot carries a whole
-## finished season, so results are deliberately left behind; the calendar and
+## Pairings and dates from the shipped snapshot. The snapshot is a reading of a
+## live season, so some fixtures already carry results; a new save starts
+## unplayed, so the results are deliberately left behind and the calendar and
 ## its dates are what a real-mode save inherits.
 ##
 ## The snapshot stores no round number, and real fixtures move for cups and
