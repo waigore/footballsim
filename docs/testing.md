@@ -25,7 +25,16 @@ time (or added time) is reached and fails fast if the match stalls.
 
 ## Poisson-agreement census (tier 2)
 
-`playtests/census` runs fixed-seed full matches for the anchors (MCI v BUR, MCI v MCI) and hard-gates goal dispersion vs Poisson λ: the **10% target** plus a two-sided **95% sampling allowance** at the grid's n (`CensusLib.variance_tolerance`; ≈±67% at n=32, since a bare 10% band sits under its own ±27% noise) and a **≤60 s** budget per match. Tier-2 only; census edits run the fast poisson suite on PRs. Seeds, power and numbers: wiki poisson-model.
+`playtests/census` plays fixed-seed full matches for the anchors (MCI v BUR, MCI v MCI) and hard-gates goal dispersion vs Poisson λ: the **10% target** plus a two-sided **95% sampling allowance** at the grid's n (`CensusLib.variance_tolerance`; ≈±67% at n=32), and **≤60 s** per match. Matches cost tens of seconds, so `.github/workflows/census.yml` shards the grid: runners play a slice and upload rows, `test_census_aggregate.gd` pools them and asserts. Tier-2 only; census edits run the fast poisson suite on PRs. Numbers: wiki poisson-model.
+
+Local census:
+
+```bash
+godot --headless --path . --import --quit
+CENSUS_SHARDS=1 gd-tools test playtests/census/test_census_mci_bur.gd
+CENSUS_SHARDS=1 gd-tools test playtests/census/test_census_mci_mci.gd
+CENSUS_REQUIRE=1 gd-tools test playtests/census/test_census_aggregate.gd
+```
 
 ## Local
 

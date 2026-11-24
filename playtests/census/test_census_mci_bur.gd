@@ -1,68 +1,38 @@
 extends GdToolsTest
 
-## Tier-2 census: physics engine vs Poisson model on the MCI v BUR anchor.
-## Parent: #31 (physics↔Poisson variance agreement). Runs N seeded full
-## physics matches on a fixed grid and hard-gates two things:
+## Tier-2 census runner: physics engine vs Poisson model on the MCI v BUR
+## anchor. Parent: #31 (physics↔Poisson variance agreement).
 ##
-##   1. Goal dispersion: |sample_var − λ| / λ ≤ tolerance(λ, N), the 10%
-##      agreement target plus the two-sided 95% sampling allowance at this n
-##      (CensusLib.variance_tolerance). Poisson is the source of truth. A bare
-##      10% band would sit under the census's own noise (~27% relative sd of S²
-##      at n = 32) and fail a correctly calibrated engine nearly every run, so
-##      the grid asks the only question n = 32 can answer honestly: is the
-##      engine's dispersion drifting by more than sampling explains? The 10%
-##      target itself is evidenced by the big-n manual census (wiki
-##      poisson-model).
-##   2. Sim cost: every full match must finish within the wall-clock budget.
+## A full 60 Hz GDScript match costs tens of seconds, so the fixed n = 32 grid
+## does not fit one CI job: this suite plays one shard of the grid (CENSUS_SHARD
+## of CENSUS_SHARDS, default 0 of 1) and fails fast when a full match breaks the
+## wall-clock budget. It writes its per-match rows for
+## `test_census_aggregate.gd`, which pools every shard and owns the dispersion
+## assert (the 10% agreement target plus the 95% sampling allowance at this n,
+## `CensusLib.variance_tolerance`).
 ##
-## Means and xG are logged for diagnosis but deliberately not gated.
-##
-## The grid is fixed (SEED0 + i * STRIDE) so the gate is deterministic: a
-## failure means the engine's agreement or per-match cost moved, not CI noise.
-## Sampling uncertainty of the variance statistic at this n is documented on
-## the wiki poisson-model page next to the latest census numbers.
-## Tier-2 only: never selected by PR tier-1 (impact map keeps census drives on
-## the fast poisson suite).
+## Means and xG are logged for diagnosis but deliberately not gated. The grid is
+## fixed (SEED0 + i·STRIDE) so the gate is deterministic: a failure means the
+## engine's agreement or per-match cost moved, not CI noise. Tier-2 only — never
+## selected by PR tier-1 (the impact map keeps census edits on the fast poisson
+## suite).
 
-const HOME := "MCI"
-const AWAY := "BUR"
+const ANCHOR := "mci_bur"
 
-const N := 32         # matches on the fixed grid
-const SEED0 := 7000
-const STRIDE := 13
-
-func test_census_variance_and_match_budget() -> void:
-	var model := PoissonModel.new(SEED0, HOME, AWAY)
-	var goals_h: Array = []
-	var goals_a: Array = []
-	var xg_h := 0.0
-	var xg_a := 0.0
-	var slowest_ms := 0
-	for i in range(N):
-		var r := CensusLib.run_match(HOME, AWAY, SEED0 + i * STRIDE)
-		goals_h.append(r["home_goals"])
-		goals_a.append(r["away_goals"])
-		xg_h += float(r["xg_home"])
-		xg_a += float(r["xg_away"])
-		slowest_ms = maxi(slowest_ms, int(r["ms"]))
-		# Per-match sim-cost budget: a full headless match may not exceed it.
-		assert_lte(int(r["ms"]), CensusLib.MATCH_BUDGET_MS,
-			"full match %d took %d ms (budget %d ms)" % [r["seed"], r["ms"], CensusLib.MATCH_BUDGET_MS])
-	var var_h := CensusLib.sample_variance(goals_h)
-	var var_a := CensusLib.sample_variance(goals_a)
-	var tol_h := CensusLib.variance_tolerance(model.lambda_home, N)
-	var tol_a := CensusLib.variance_tolerance(model.lambda_away, N)
-	var gap_h := CensusLib.rel_gap(var_h, model.lambda_home)
-	var gap_a := CensusLib.rel_gap(var_a, model.lambda_away)
-	print("CENSUS %s v %s n=%d seed0=%d stride=%d  goals %.2f-%.2f (λ %.2f-%.2f)  var %.2f-%.2f (band %.0f%%/%.0f%%)  xG %.2f-%.2f  slowest %d ms" % [
-		HOME, AWAY, N, SEED0, STRIDE,
-		CensusLib.mean(goals_h), CensusLib.mean(goals_a),
-		model.lambda_home, model.lambda_away, var_h, var_a,
-		tol_h * 100.0, tol_a * 100.0,
-		xg_h / N, xg_a / N, slowest_ms])
-	assert_lte(gap_h, tol_h,
-		"home goal variance %.2f is %.0f%% off λ %.2f (band %.0f%% at n=%d: 10%% goal + 95%% sampling allowance)" % [
-			var_h, gap_h * 100.0, model.lambda_home, tol_h * 100.0, N])
-	assert_lte(gap_a, tol_a,
-		"away goal variance %.2f is %.0f%% off λ %.2f (band %.0f%% at n=%d: 10%% goal + 95%% sampling allowance)" % [
-			var_a, gap_a * 100.0, model.lambda_away, tol_a * 100.0, N])
+func test_census_shard_runs_the_grid() -> void:
+	var n := CensusLib.env_int("CENSUS_N", CensusLib.GRID_N)
+	var shards := maxi(1, CensusLib.env_int("CENSUS_SHARDS", 1))
+	var shard := clampi(CensusLib.env_int("CENSUS_SHARD", 0), 0, shards - 1)
+	var budget := CensusLib.env_int("CENSUS_MATCH_BUDGET_MS", CensusLib.MATCH_BUDGET_MS)
+	var rows := CensusLib.run_shard(ANCHOR, n, shard, shards)
+	var worst := CensusLib.slowest(rows)
+	# Per-match sim-cost budget: a full headless match may not exceed it.
+	assert_gte(rows.size(), 1, "shard %d of %d played no matches" % [shard, shards])
+	assert_lte(int(worst["ms"]), budget,
+		"full match %d took %d ms (budget %d ms)" % [worst["seed"], worst["ms"], budget])
+	var dir := OS.get_environment("CENSUS_OUT").strip_edges()
+	var path := CensusLib.write_rows(
+		dir if not dir.is_empty() else CensusLib.DEFAULT_RESULTS_DIR, ANCHOR, shard, rows)
+	assert_false(path.is_empty(), "shard results could not be written to %s" % dir)
+	print("CENSUS-SHARD %s shard %d/%d matches %d slowest %d ms -> %s" % [
+		ANCHOR, shard, shards, rows.size(), int(worst["ms"]), path])
