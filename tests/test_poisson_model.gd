@@ -51,6 +51,24 @@ func test_rating_gap_drives_expected_goals() -> void:
 
 # ------------------------------------------------------------ distribution --
 
+func test_exponent_terms_feed_both_consumers() -> void:
+	# λ's exponent is published as its two halves so the physics engine's shot
+	# contest can read the defensive half without deriving ratings again.
+	var terms := PoissonModel.exponent_terms(HOME, AWAY)
+	var attack: Vector2 = terms["attack"]
+	var defence: Vector2 = terms["defence"]
+	var ex := PoissonModel.side_exponents(HOME, AWAY)
+	assert_almost_eq(ex.x, PoissonModel.ATTACK_ELASTICITY * attack.x + PoissonModel.DEFENCE_ELASTICITY * defence.x,
+		0.0001, "home exponent is not the sum of its terms")
+	assert_almost_eq(ex.y, PoissonModel.ATTACK_ELASTICITY * attack.y + PoissonModel.DEFENCE_ELASTICITY * defence.y,
+		0.0001, "away exponent is not the sum of its terms")
+	var def_ex := PoissonModel.defence_exponents(HOME, AWAY)
+	assert_almost_eq(def_ex.x, defence.x, 0.0001, "defence_exponents disagrees with exponent_terms")
+	assert_almost_eq(def_ex.y, defence.y, 0.0001, "defence_exponents disagrees with exponent_terms")
+	# Facing BUR's back line is a break; facing ARS's is not.
+	assert_gt(def_ex.x, 0.0, "BUR's defence was not read as below the league")
+	assert_lt(PoissonModel.defence_exponents(HOME, "ARS").x, 0.0, "ARS's defence was not read as above the league")
+
 func test_distribution_is_normalised() -> void:
 	var m := _model()
 	var total := 0.0

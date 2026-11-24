@@ -24,6 +24,7 @@ func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) 
 	ball.z = 0.0
 	ball.spin = 0.0
 	ball.planned_goal = false
+	ball.planned_save = false
 	ball.pos = pos
 	for q in players:
 		q.offside_flag = false
@@ -323,10 +324,14 @@ func _take_penalty(taker, team: int) -> void:
 	var aim_y = side * rng.randf_range(1.6, 3.3)
 	var aim_z = rng.randf_range(0.3, 1.5)
 	var conversion = 0.76 + float(taker.attr["sho"]) * 0.0018
-	if rng.randf() > conversion:
+	var scored: bool = rng.randf() <= conversion
+	if not scored:
 		aim_y = side * rng.randf_range(3.7, 4.6)
 	shoot_ball(taker, aim_y, aim_z, 0.92, "penalty")
-	stats[team]["xg"] += 0.76
+	# A scored penalty is a converted chance like any other: the line cannot get
+	# a second dice at it. The stats record the probability it was taken with.
+	ball.planned_goal = scored
+	stats[team]["xg"] += conversion
 	stats[team]["shots"] += 1
 	stats[team]["on_target"] += 1
 	ball.pos = restart["pos"]

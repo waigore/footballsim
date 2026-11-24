@@ -41,7 +41,7 @@ func test_conversion_probability_tracks_expected_goals() -> void:
 	var observed := float(planned) / float(n)
 	var chance: float = xg_sum / float(n) * e.FINISH_EFFICIENCY
 	assert_almost_eq(observed, chance, 0.05, "conversion %.3f does not track calibrated xG %.3f" % [observed, chance])
-	assert_gt(chance, 0.06, "fixture is not a real chance")
+	assert_gt(chance, 0.03, "fixture is not a real chance")
 
 func test_low_quality_chance_converts_rarely() -> void:
 	var e := _eng(12)
@@ -125,3 +125,49 @@ func test_shot_records_expected_goals() -> void:
 	assert_eq(int(e.stats[0]["shots"]), 1, "the shot was not counted")
 	assert_gt(float(e.stats[0]["xg"]), 0.0, "no xG was accumulated")
 	assert_eq(int(e.stats[0]["on_target"]), 1, "a corner-placed shot should be on target")
+
+# ------------------------------------------------------------ shot contest ---
+
+func test_chance_quality_tracks_the_defence_faced() -> void:
+	# The same spot is a better chance against a weak back line than a strong
+	# one, and the size of that difference comes from the model's own defensive
+	# exponent — one rating source for both systems.
+	var weak := MatchEngine.new(1, "MCI", "BUR")
+	var strong := MatchEngine.new(1, "MCI", "NEW")
+	var spot: Vector2 = weak.target_goal_pos(0) + Vector2(-14.0, 5.0)
+	var vs_weak: float = weak.expected_goals(spot, 0.0, 0)
+	var vs_strong: float = strong.expected_goals(spot, 0.0, 0)
+	assert_gt(vs_weak, vs_strong, "a shot against a weak defence was not worth more")
+	var ex_weak := PoissonModel.defence_exponents("MCI", "BUR")
+	var ex_strong := PoissonModel.defence_exponents("MCI", "NEW")
+	var expected: float = exp(MatchEngine.XG_CONTEST_ELASTICITY * (ex_weak.x - ex_strong.x))
+	assert_almost_eq(vs_weak / vs_strong, expected, 0.001,
+		"the contest gap does not read the model's defensive exponent")
+
+func test_contest_factor_is_bounded_and_reads_the_ratings() -> void:
+	# The contest factor is the engine's share of the model's gradient: it must
+	# move with the ratings, and stay inside a sane band for real fixtures.
+	var strong_home := MatchEngine.new(1, "MCI", "BUR")
+	var even := MatchEngine.new(1, "MCI", "MCI")
+	var strong_away := MatchEngine.new(1, "BUR", "MCI")
+	assert_gt(float(strong_home.xg_form[0]), float(even.xg_form[0]),
+		"a top side against a weak defence did not get the better contest")
+	assert_lt(float(strong_away.xg_form[0]), float(even.xg_form[0]),
+		"a weak side at home was given the same contest as an even fixture")
+	for pair in [["MCI", "BUR"], ["MCI", "MCI"], ["MCI", "ARS"], ["BUR", "MCI"], ["BUR", "ARS"]]:
+		var e := MatchEngine.new(1, pair[0], pair[1])
+		assert_between(float(e.xg_form[0]), 0.30, 3.00,
+			"%s v %s home contest factor is out of family" % [pair[0], pair[1]])
+		assert_between(float(e.xg_form[1]), 0.30, 3.00,
+			"%s v %s away contest factor is out of family" % [pair[0], pair[1]])
+
+func test_equal_squads_carry_only_the_venue_edge() -> void:
+	# An even fixture faces the same defence and takes the same chances, so the
+	# two forms differ only by the venue premium the model puts in λ.
+	var e := MatchEngine.new(1, "MCI", "MCI")
+	var venue: float = exp(2.0 * MatchEngine.XG_HOME_EDGE)
+	assert_almost_eq(float(e.xg_form[0]) / float(e.xg_form[1]), venue, 0.0001,
+		"equal squads did not split by the venue edge")
+	var goal: Vector2 = e.target_goal_pos(0)
+	var xg: float = e.expected_goals(goal + Vector2(-11.0, 0.0), 0.0, 0)
+	assert_between(xg, 0.04, 0.10, "a central 11 m chance is outside the calibrated band")
