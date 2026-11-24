@@ -83,6 +83,13 @@ func test_the_teams_door_opens_the_sheet_and_back_closes_it() -> void:
 	game.selector.click("back")
 	assert_false(game.select_open, "back did not close the sheet")
 
+func test_the_phone_bar_has_a_menu_door() -> void:
+	game.hud.queue_redraw()
+	await get_tree().process_frame
+	var door := _door("menu")
+	assert_gt(door.size.x, 44.0, "the phone bar has no tappable menu door")
+	assert_lte(door.end.x, game.hud.design_vp().x, "the menu door runs off the phone bar")
+
 func test_the_size_change_notification_re_fits_the_overlay() -> void:
 	game._notification(Node.NOTIFICATION_WM_SIZE_CHANGED)
 	assert_gt(game.hud_scale, 1.5, "a resize dropped the forced phone scale")

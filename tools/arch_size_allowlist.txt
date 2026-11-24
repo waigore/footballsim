@@ -1,4 +1,4 @@
+scripts/main.gd	582	32
 # path<TAB>max_lines<TAB>max_methods — ratchet; ≤5 entries; shrink or remove only (never raise). Soft max 400/25.
-scripts/main.gd	599	33
 scripts/ui/hud.gd	589	31
 scripts/sim/match_ai.gd	594	16

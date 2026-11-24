@@ -41,15 +41,10 @@ func intercept_point(p) -> Vector2:
 
 func offside_line(t: int) -> float:
 	# Attacking-x of the second-last defender of the opposing team.
-	var xs = []
-	for q in e.players:
-		if q.team == t or q.sent_off:
-			continue
-		xs.append(e.attacking_x(t, q.pos))
-	xs.sort()
+	var xs: Array = e.offside_xs(t)
 	if xs.size() < 2:
 		return e.L * 0.85
-	return xs[xs.size() - 2]
+	return xs[1]
 
 func defensive_line(t: int) -> Vector2:
 	# World position of the deepest outfield defender (for line discipline).

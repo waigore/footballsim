@@ -1,8 +1,8 @@
 extends RefCounted
 
 ## Match state, geometry and squad construction — the base of the MatchEngine
-## chain. Each split file adds one layer: presentation, actions, play, rules,
-## clock, then the restarts leaf in match_engine.gd.
+## chain. Each split file adds one layer: pitch geometry, presentation,
+## actions, play, rules, clock, then the restarts leaf in match_engine.gd.
 
 signal event_fired(e: Dictionary)
 signal ball_kicked(strength: float)
@@ -48,50 +48,63 @@ const FINISH_EFFICIENCY := 1.0
 const XG_SCALE := 0.70
 
 class Player:
-	var id = 0
-	var team = 0
-	var name = ""
-	var number = 0
-	var role = ""
-	var pos_label = ""
-	var attr = {}
-	var gk = {}
-	var base = Vector2.ZERO            # normalized formation slot in attacking frame
-	var pos = Vector2.ZERO
-	var vel = Vector2.ZERO
-	var facing = Vector2.RIGHT
-	var target = Vector2.ZERO
-	var speed_scale = 1.0
-	var stamina = 1.0
-	var z = 0.0
-	var state = "idle"
-	var action_t = 0.0
-	var cooldown = 0.0
-	var has_ball = false
-	var yellow = 0
-	var red = false
-	var sent_off = false
-	var injured = false
-	var is_gk = false
-	var dive = Vector2.ZERO
-	var dive_t = 0.0
-	var jump_t = 0.0
-	var celebrate = 0.0
-	var offside_flag = false
-	var mark_id = -1
-	var run_until = 0.0
-	var run_to = Vector2.ZERO
-	var stats = {
+	var id := 0
+	## Stable snapshot key ("MUN-b-fernandes"): survives a re-slot and is what
+	## in-sim stats are stored against.
+	var key := ""
+	var team := 0
+	var name := ""
+	var number := 0
+	var role := ""
+	var pos_label := ""
+	var attr := {}
+	var gk := {}
+	var base := Vector2.ZERO       # normalized formation slot in attacking frame
+	var pos := Vector2.ZERO
+	var vel := Vector2.ZERO
+	var facing := Vector2.RIGHT
+	var target := Vector2.ZERO
+	var speed_scale := 1.0
+	var stamina := 1.0
+	var z := 0.0
+	var state := "idle"
+	var action_t := 0.0
+	var cooldown := 0.0
+	var has_ball := false
+	var yellow := 0
+	var red := false
+	var sent_off := false
+	var injured := false
+	var is_gk := false
+	var dive := Vector2.ZERO
+	var dive_t := 0.0
+	var jump_t := 0.0
+	var celebrate := 0.0
+	var offside_flag := false
+	var mark_id := -1
+	var run_until := 0.0
+	var run_to := Vector2.ZERO
+	var stats := {
 		"passes": 0, "passes_ok": 0, "shots": 0, "on_target": 0, "goals": 0,
 		"assists": 0, "tackles": 0, "interceptions": 0, "fouls": 0, "saves": 0,
 		"touches": 0, "distance": 0.0, "rating": 6.0,
 	}
-	var involvements = []
-	var trail = []
-	var trail_t = 0.0
-	var last_action = ""
-	var active = true
-	var _surname = ""
+	var involvements := []
+	var trail := []
+	var trail_t := 0.0
+	var last_action := ""
+	var active := true
+	var _surname := ""
+
+	# Derived-attribute cache, filled once at squad build (Attrs math is fixed
+	# per player). Keeps per-tick movement free of dictionary lookups and pow().
+	var spd_max := 0.0        # Attrs.max_speed
+	var acc := 0.0            # Attrs.accel
+	var dri_speed := 0.0      # Attrs.dribble_speed
+	var ctrl_radius := 0.0    # Attrs.control_radius
+	var drain_phy := 0.0      # (1.25 - phy/100 * 0.45) factor of Attrs.stamina_drain
+	var aerial := 0.0         # Attrs.aerial
+	var _sep_idx := 0         # index in the engine's flat separation arrays
 
 	## Last word of the name, upper-cased. Cached: the overlay draws 22 tokens
 	## every frame and splitting a string 22 times a frame is phone-garbage.
@@ -102,24 +115,24 @@ class Player:
 		return _surname
 
 class Ball:
-	var pos = Vector2(52.5, 34.0)
-	var vel = Vector2.ZERO
-	var z = 0.0
-	var vz = 0.0
-	var spin = 0.0
-	var owner_id = -1
-	var last_touch_id = -1
-	var last_touch_team = -1
-	var last_kick_id = -1
-	var assist_id = -1
-	var assist_time = -10.0
-	var shot_team = -1
-	var shot_time = -10.0
-	var shot_xg = 0.0
-	var last_touch_time = -10.0
-	var shot_saved = false
-	var planned_goal = false   # this on-target shot has already beaten the keeper
-	var loose_t = 0.0
+	var pos := Vector2(52.5, 34.0)
+	var vel := Vector2.ZERO
+	var z := 0.0
+	var vz := 0.0
+	var spin := 0.0
+	var owner_id := -1
+	var last_touch_id := -1
+	var last_touch_team := -1
+	var last_kick_id := -1
+	var assist_id := -1
+	var assist_time := -10.0
+	var shot_team := -1
+	var shot_time := -10.0
+	var shot_xg := 0.0
+	var last_touch_time := -10.0
+	var shot_saved := false
+	var planned_goal := false  # this on-target shot has already beaten the keeper
+	var loose_t := 0.0
 
 ## The match official. Presentation only: laws are decided by the engine, but
 ## the referee has a body on the pitch, a position that follows play and a
@@ -177,6 +190,47 @@ var verbose := false
 var shot_buckets := {}
 var gk_debug := []
 
+# Flat separation arrays (float64 to keep position arithmetic exact), rebuilt
+# once per _move_players pass; see match_engine_play.gd.
+var _sep_x := PackedFloat64Array()
+var _sep_y := PackedFloat64Array()
+var _sep_count := 0
+
+# Squad revision: bumped whenever the players array or a sent-off flag changes,
+# so per-tick caches derived from the squad can invalidate themselves.
+var _squad_rev := 0
+var _team_cache := [[], []]
+var _team_cache_rev := -1
+
+# Sorted descending attacking-x per side, cached per sim tick: state lives in
+# the pitch layer (match_engine_pitch.gd) next to attacking_x.
+
+## Per-player derived-attribute cache: the Attrs mappings are fixed once the
+## attributes exist, so pay the dictionary reads and pow() once per squad.
+func _fill_attr_cache(p: Player) -> void:
+	var phy: float = float(p.attr["phy"])
+	p.spd_max = Attrs.max_speed(p)
+	p.acc = Attrs.accel(p)
+	p.dri_speed = Attrs.dribble_speed(p)
+	p.ctrl_radius = Attrs.control_radius(p)
+	p.drain_phy = 1.25 - phy / 100.0 * 0.45
+	p.aerial = Attrs.aerial(p)
+
+## Active (on-pitch) players of one side, cached per squad revision.
+## Callers must treat the returned array as read-only.
+func team_players(t: int) -> Array:
+	if _team_cache_rev != _squad_rev:
+		_team_cache[0].clear()
+		_team_cache[1].clear()
+		for q in players:
+			if not q.sent_off:
+				_team_cache[q.team].append(q)
+		_team_cache_rev = _squad_rev
+	return _team_cache[t]
+
+func _touch_squad() -> void:
+	_squad_rev += 1
+
 ## Home advantage, expressed as a multiplier on technical execution.
 ## >1 means less error for the home side; <1 slightly more for the visitors.
 func home_factor(p) -> float:
@@ -225,10 +279,12 @@ func _build_squads() -> void:
 			players.append(p)
 			by_id[p.id] = p
 			i += 1
+	_touch_squad()
 
 func _make_player(pd: Dictionary, t: int, id_in: int) -> Player:
 	var p = Player.new()
 	p.id = id_in
+	p.key = str(pd.get("id", ""))
 	p.team = t
 	p.name = pd["name"]
 	p.number = pd["number"]
@@ -242,40 +298,10 @@ func _make_player(pd: Dictionary, t: int, id_in: int) -> Player:
 	p.is_gk = p.role == "GK"
 	p.base = TeamData.formation_slot(teams[t]["data"], p.role)
 	p.target = Vector2.ZERO
+	_fill_attr_cache(p)
 	return p
 
-# ---------------------------------------------------------------- geometry --
-
-func attacking_dir(t: int) -> int:
-	return teams[t]["dir"]
-
-func own_goal_pos(t: int) -> Vector2:
-	return Vector2(0.0 if teams[t]["dir"] == 1 else L, W * 0.5)
-
-func target_goal_pos(t: int) -> Vector2:
-	return Vector2(L if teams[t]["dir"] == 1 else 0.0, W * 0.5)
-
-func to_world(t: int, norm: Vector2) -> Vector2:
-	if teams[t]["dir"] == 1:
-		return Vector2(norm.x * L, norm.y * W)
-	return Vector2((1.0 - norm.x) * L, norm.y * W)
-
-func to_norm(t: int, world: Vector2) -> Vector2:
-	if teams[t]["dir"] == 1:
-		return Vector2(world.x / L, world.y / W)
-	return Vector2(1.0 - world.x / L, world.y / W)
-
-func attacking_x(t: int, world: Vector2) -> float:
-	return world.x if teams[t]["dir"] == 1 else L - world.x
-
-func in_penalty_box(pos: Vector2, defending_team: int) -> bool:
-	if teams[defending_team]["dir"] == 1:
-		return pos.x <= BOX_D and absf(pos.y - W * 0.5) <= BOX_W * 0.5
-	return pos.x >= L - BOX_D and absf(pos.y - W * 0.5) <= BOX_W * 0.5
-
-func is_attacking_third(t: int, pos: Vector2) -> bool:
-	var ax = attacking_x(t, pos)
-	return ax > L * 0.66
+# ------------------------------------------------------------ pitch caches --
 
 func ball_owner():
 	if ball.owner_id < 0:
@@ -283,17 +309,16 @@ func ball_owner():
 	return by_id.get(ball.owner_id, null)
 
 func teammates_of(p) -> Array:
-	var out = []
-	for q in players:
-		if q.team == p.team and q.id != p.id and not q.sent_off:
+	var out := []
+	for q in team_players(p.team):
+		if q.id != p.id:
 			out.append(q)
 	return out
 
 func opponents_of(p) -> Array:
-	var out = []
-	for q in players:
-		if q.team != p.team and not q.sent_off:
-			out.append(q)
+	var out := []
+	for q in team_players(1 - p.team):
+		out.append(q)
 	return out
 
 func nearest_opponent(pos: Vector2, t: int):
@@ -323,17 +348,6 @@ func pressure_on(p) -> float:
 		if d < 6.0:
 			pressure += (1.0 - d / 6.0)
 	return clampf(pressure, 0.0, 2.5)
-
-func opponent_goal_angle(p) -> float:
-	# 0..1: how much of the goal mouth is visible from the player's position.
-	var g = target_goal_pos(p.team)
-	var to_goal = g - p.pos
-	if to_goal.length() < 0.001:
-		return 1.0
-	var half_w = GOAL_W * 0.5
-	var dx = absf(g.x - p.pos.x)
-	var angles = absf(atan2(half_w, maxf(dx, 0.4)))
-	return clampf(angles / 0.9, 0.0, 1.0)
 
 # ---------------------------------------------------------------- lifecycle --
 

@@ -102,12 +102,20 @@ static func is_gk(role: String) -> bool:
 	return role == "GK"
 
 ## Attacking x-position weight used by the AI when choosing passes.
+## Block bodies (not `"ST": return 1.0`) keep every arm on its own line so the
+## coverage injector can place a tracker inside the arm.
 static func role_push(role: String) -> float:
 	match role:
-		"ST": return 1.0
-		"RW", "LW": return 0.8
-		"CAM": return 0.7
-		"CM", "RDM", "LDM", "CDM": return 0.35
-		"RB", "LB": return 0.3
-		"CB", "RCB", "LCB": return 0.05
+		"ST":
+			return 1.0
+		"RW", "LW":
+			return 0.8
+		"CAM":
+			return 0.7
+		"CM", "RDM", "LDM", "CDM":
+			return 0.35
+		"RB", "LB":
+			return 0.3
+		"CB", "RCB", "LCB":
+			return 0.05
 	return 0.3

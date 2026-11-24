@@ -30,7 +30,7 @@ Code paths (`tests`/`build`/`e2e-smoke`/`skills-isolation`): `scenes/`, `scripts
 
 **Tier 2** ([ci-tier2](../.github/workflows/tier2.yml)): every **8h** on `main` — full suite + overall 80% when project exists. Not a PR check. Sticky `ci-tier2` → fix-tests agent.
 
-Budgets ([testing.md](testing.md)): PR `tests` **≤5 min**; smoke **≤2 min**. Merge: **squash only**; delete branches; auto-merge on.
+Budgets ([testing.md](testing.md)): PR `tests` **≤5 min**; smoke **≤4 min**. Merge: **squash only**; delete branches; auto-merge on.
 
 ### Respecting checks
 

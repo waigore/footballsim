@@ -1,9 +1,10 @@
-# The Manchester Derby
+# Football Sim
 
 A broadcast-style, top-down 2D football simulator in Godot 4.7. Every player is an
 individual agent driven by EA SPORTS FC 26 attributes; the ball is simulated in 3D
-(x, y, height, spin), so lofted passes and shots carry real depth. The default fixture is Manchester United v Manchester City; any of
-the 20 Premier League clubs can play.
+(x, y, height, spin), so lofted passes and shots carry real depth. Cold start opens
+the main menu (Start Sim · Settings · Quit); the default fixture is Manchester
+United v Manchester City and any of the 20 Premier League clubs can play.
 
 ## Run
 
@@ -30,6 +31,8 @@ godot --path . -- --focus=8                    # open with a player pinned
 | S | Skip the current highlight (or jump 10s in Full) |
 | R | Restart with a new seed |
 | T | Change teams (fixture picker) |
+| M | Back to the main menu |
+| Esc | Confirm before quitting |
 | N | Toggle player names |
 | C | Toggle Wide / Follow camera |
 | Mouse wheel | Zoom |
@@ -48,9 +51,7 @@ godot --path . -- --focus=8                    # open with a player pinned
 * **Goalkeepers** – arc positioning, sweeping, dives, catch/parry, distribution.
 * **Team shape** – formations, zonal defending, man-marking, pressing, offside
   line, through-balls, crosses, switches, dribble carries.
-* **Home advantage** – a tunable 5% edge: tighter passing/shooting, +0.02 on
-  tackle duels, slower stamina drain. Set
-  `home_advantage` to 0.0 for a neutral match.
+* **Home advantage** – a tunable 5% edge (set `home_advantage` to 0 for neutral).
 * **Match story** – commentary, xG, shots, possession, corners, fouls, cards,
   live player card and full-time summary.
 
@@ -63,11 +64,9 @@ godot --path . -- --focus=8                    # open with a player pinned
 ## Data
 
 Squad ratings are EA SPORTS FC 26 (OVR / PAC / SHO / PAS / DRI / DEF / PHY) for
-all 20 Premier League clubs. Manchester United and City use OVRBase's FC 26 club
-pages; the other 18 use real 2025-26 squads with
-estimated ratings. Goalkeeper DIV/HAN/KIC/REF/SPD derive
-from OVR and role. Line-ups are the strongest XI in a 4-2-3-1; benches
-are real squad members for second-half subs.
+all 20 Premier League clubs from OVRBase club pages or estimated 2025-26 squads;
+keepers' DIV/HAN/KIC/REF/SPD derive from OVR and role. Line-ups are the strongest
+XI in a 4-2-3-1.
 
 ## Project layout
 
@@ -79,22 +78,21 @@ scripts/sim/match_ai.gd      team shape, pressing, marking, on-ball decisions
 scripts/view/pitch_view.gd   Old Trafford: stands, crowd, pitch, goals
 scripts/view/actor_layer.gd  players, ball, shadows, trails
 scripts/ui/hud.gd            broadcast overlay, tooltips, player card
+scripts/ui/app_shell.gd      main menu, settings, quit confirm, menu music
 scripts/main.gd              playback controller, highlight rewind, camera, audio
 tools/sim_test.gd            headless 90-minute match harness
 tools/sim_round.gd           full 20-club Premier League round simulator
 ```
-
-Headless checks:
 
 ```bash
 godot --headless --path . --script tools/sim_test.gd -- 5 1000
 godot --headless --path . --script tools/sim_round.gd -- 1 5000
 ```
 
-`sim_test` prints per-match stats and averages; `sim_round` prints a 10-match round
-table plus goals, shots, xG, offsides, corners, fouls and saves.
-
 ## Audio
 
-`audio/` ships procedurally generated crowd ambience, whistle, kick, goal roar
-and a near-miss "ooh" (`tools/make_audio.py` regenerates them).
+`audio/` ships procedural crowd ambience, whistle, kick, goal roar and a
+near-miss "ooh" (`tools/make_audio.py` regenerates them), plus a ~2:40 looping
+techno menu theme (`audio/menu_theme.ogg`, ElevenLabs Music) that plays on the
+menu and settings only. Settings saves menu-music volume in
+`user://prefs.cfg`; `--clear-cache` wipes it.

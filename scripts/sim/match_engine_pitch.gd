@@ -1,0 +1,72 @@
+extends "res://scripts/sim/match_engine_core.gd"
+
+## Pitch geometry over live match state: attacking frames, box tests, the
+## goal-mouth angle and the per-tick offside list. One layer up from the core
+## state so callers (AI, actions, HUD) inherit it without core depending on
+## geometry. Positions do not move inside a tick, so the offside cache reads
+## once per tick.
+
+func attacking_dir(t: int) -> int:
+	return teams[t]["dir"]
+
+func own_goal_pos(t: int) -> Vector2:
+	return Vector2(0.0 if teams[t]["dir"] == 1 else L, W * 0.5)
+
+func target_goal_pos(t: int) -> Vector2:
+	return Vector2(L if teams[t]["dir"] == 1 else 0.0, W * 0.5)
+
+func to_world(t: int, norm: Vector2) -> Vector2:
+	if teams[t]["dir"] == 1:
+		return Vector2(norm.x * L, norm.y * W)
+	return Vector2((1.0 - norm.x) * L, norm.y * W)
+
+func to_norm(t: int, world: Vector2) -> Vector2:
+	if teams[t]["dir"] == 1:
+		return Vector2(world.x / L, world.y / W)
+	return Vector2(1.0 - world.x / L, world.y / W)
+
+func attacking_x(t: int, world: Vector2) -> float:
+	return world.x if teams[t]["dir"] == 1 else L - world.x
+
+func in_penalty_box(pos: Vector2, defending_team: int) -> bool:
+	if teams[defending_team]["dir"] == 1:
+		return pos.x <= BOX_D and absf(pos.y - W * 0.5) <= BOX_W * 0.5
+	return pos.x >= L - BOX_D and absf(pos.y - W * 0.5) <= BOX_W * 0.5
+
+func is_attacking_third(t: int, pos: Vector2) -> bool:
+	var ax = attacking_x(t, pos)
+	return ax > L * 0.66
+
+func opponent_goal_angle(p) -> float:
+	# 0..1: how much of the goal mouth is visible from the player's position.
+	var g = target_goal_pos(p.team)
+	var to_goal = g - p.pos
+	if to_goal.length() < 0.001:
+		return 1.0
+	var half_w = GOAL_W * 0.5
+	var dx = absf(g.x - p.pos.x)
+	var angles = absf(atan2(half_w, maxf(dx, 0.4)))
+	return clampf(angles / 0.9, 0.0, 1.0)
+
+# ------------------------------------------------------------- offside cache --
+
+# Sorted descending attacking-x per side, cached per sim tick. Several AI
+# reads (offside line, would-be-offside) want the same list within one tick
+# and positions do not move inside a tick.
+var _offside_xs := [[], []]
+var _offside_xs_tick := [-1, -1]
+var _offside_xs_rev := [-1, -1]
+
+func offside_xs(t: int) -> Array:
+	if _offside_xs_tick[t] != sim_tick or _offside_xs_rev[t] != _squad_rev:
+		var xs: Array = _offside_xs[t]
+		xs.clear()
+		for q in players:
+			if q.team == t or q.sent_off:
+				continue
+			xs.append(attacking_x(t, q.pos))
+		xs.sort()
+		xs.reverse()
+		_offside_xs_tick[t] = sim_tick
+		_offside_xs_rev[t] = _squad_rev
+	return _offside_xs[t]
