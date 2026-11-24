@@ -18,7 +18,7 @@ func test_seed_asset_is_versioned() -> void:
 	var version := PLDatabase.seed_version()
 	assert_gte(version, 1, "the seed carries no db_version")
 	var meta := PLDatabase.row("SELECT value FROM metadata WHERE key = 'season_label';")
-	assert_eq(str(meta.get("value", "")), "2025-26", "the snapshot season drifted")
+	assert_eq(str(meta.get("value", "")), "2026-27", "the snapshot season drifted")
 	var source := PLDatabase.row("SELECT value FROM metadata WHERE key = 'source';")
 	assert_eq(str(source.get("value", "")), "ESPN", "the snapshot does not name its source")
 
@@ -52,28 +52,61 @@ func test_repository_serves_the_engine_shape() -> void:
 		assert_has(team["style"], "possession", "%s has no style profile" % id)
 		assert_true(TeamData.FORMATIONS.has(str(team["formation"])), "%s prefers an unknown formation" % id)
 
-func test_league_table_is_a_finished_season() -> void:
+## The snapshot is one date in a season, not the season's end: every club has
+## played the same number of games and the table is ordered by points.
+func test_league_table_is_the_snapshot_reading() -> void:
 	var rows := PLRepository.shared().table()
 	assert_eq(rows.size(), 20, "the table is short")
+	var played := -1
 	var points: Array = []
 	for i in range(rows.size()):
 		assert_eq(int(rows[i]["position"]), i + 1, "the table is not ordered by position")
-		assert_eq(int(rows[i]["played"]), 38, "%s did not play a full season" % rows[i]["club_id"])
+		if played < 0:
+			played = int(rows[i]["played"])
+		assert_eq(int(rows[i]["played"]), played, "%s played a different number of games" % rows[i]["club_id"])
 		points.append(int(rows[i]["points"]))
+	assert_gte(played, 0, "the snapshot table carries no played games")
 	var sorted_points := points.duplicate()
 	sorted_points.sort()
 	sorted_points.reverse()
 	assert_eq(points, sorted_points, "the table is not sorted by points")
 
+## The shipped calendar is the whole 2026-27 season; results lag the fixture
+## list because the snapshot is taken mid-season.
 func test_fixtures_cover_the_season() -> void:
-	var all := PLRepository.shared().fixtures("", 500)
+	var all := PLDatabase.rows("SELECT * FROM fixture;")
 	assert_eq(all.size(), 380, "a twenty-club double round robin is 380 fixtures")
 	var per_club := {}
+	var played_per_club := {}
+	var first := ""
+	var last := ""
 	for fx in all:
-		per_club[str(fx["home_club_id"])] = int(per_club.get(str(fx["home_club_id"]), 0)) + 1
-		per_club[str(fx["away_club_id"])] = int(per_club.get(str(fx["away_club_id"]), 0)) + 1
+		var home := str(fx["home_club_id"])
+		var away := str(fx["away_club_id"])
+		per_club[home] = int(per_club.get(home, 0)) + 1
+		per_club[away] = int(per_club.get(away, 0)) + 1
+		if int(fx["played"]) == 1:
+			played_per_club[home] = int(played_per_club.get(home, 0)) + 1
+			played_per_club[away] = int(played_per_club.get(away, 0)) + 1
+		var kickoff := str(fx["kickoff"])
+		if first.is_empty() or kickoff < first:
+			first = kickoff
+		if kickoff > last:
+			last = kickoff
 	for id in per_club:
 		assert_eq(int(per_club[id]), 38, "%s does not have 38 fixtures" % id)
+	assert_true(first.begins_with("2026-08"), "the calendar does not open in August 2026 (%s)" % first)
+	assert_true(last.begins_with("2027-05"), "the calendar does not close in May 2027 (%s)" % last)
+	var played := 0
+	for id in played_per_club:
+		assert_eq(int(played_per_club[id]), int(played_per_club.values()[0]),
+			"%s has a different number of results than the rest of the league" % id)
+		played += int(played_per_club[id])
+	played = played / 2
+	assert_eq(played, PLRepository.shared().fixtures("", 500).size(),
+		"the results list does not match the played fixtures")
+	assert_lt(played, 380, "the snapshot claims a finished season")
+	assert_eq(played % 10, 0, "results do not come in whole gameweeks")
 
 func test_player_dossier_carries_snapshot_and_career() -> void:
 	var p := PLRepository.shared().player("MUN-b-fernandes")

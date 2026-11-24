@@ -35,25 +35,31 @@ func _check_rules() -> void:
 				var gd: float = gk.pos.distance_to(gpos)
 				var reach: float = Attrs.gk_dive_reach(gk) + 1.05
 				gk_debug.append("GOALCHECK gkdist=%.1f reach=%.1f z=%.1f speed=%.1f" % [gd, reach, ball.z, ball.vel.length()])
-				if gd < reach + 3.2:
-					var save_p: float = 0.91 + (reach - gd) * 0.06 + (Attrs.gk_handling(gk) - 0.8) * 0.25 - ball.vel.length() * 0.003
-					save_p = clampf(save_p, 0.18, 0.985)
-					if rng.randf() < save_p and not ball.planned_goal:
-						# A goal-line save.
-						var push: Vector2 = Vector2(teams[goal_team]["dir"], rng.randf_range(-1.0, 1.0)).normalized()
-						ball.pos = Vector2(0.7 if own_goal_pos(goal_team).x < 1.0 else L - 0.7, clampf(ball.pos.y, 1.0, W - 1.0))
-						ball.vel = push * rng.randf_range(7.0, 13.0)
-						ball.z = 0.3
-						ball.vz = 1.8
-						ball.shot_team = -1
-						ball.shot_saved = true
-						gk.cooldown = 0.5
-						if was_shot:
-							gk.stats["saves"] += 1
-							stats[goal_team]["saves"] += 1
-							_emit("save", Commentary.save(rng, gk.name, _shot_credit(gk), "goal_line", ball.shot_xg), goal_team, gk)
-							_flash(1.0)
-						return
+				var save_p: float = 0.91 + (reach - gd) * 0.06 + (Attrs.gk_handling(gk) - 0.8) * 0.25 - ball.vel.length() * 0.003
+				save_p = clampf(save_p, 0.18, 0.985)
+				# A chance the finishing roll priced out is kept out here, so a
+				# match's goals stay equal to its expected goals; a converted
+				# chance still cannot be vetoed at the line.
+				var kept_out: bool = ball.planned_save
+				if not kept_out and gd < reach + 3.2:
+					kept_out = rng.randf() < save_p
+				if kept_out and not ball.planned_goal:
+					# A goal-line save.
+					var push: Vector2 = Vector2(teams[goal_team]["dir"], rng.randf_range(-1.0, 1.0)).normalized()
+					ball.pos = Vector2(0.7 if own_goal_pos(goal_team).x < 1.0 else L - 0.7, clampf(ball.pos.y, 1.0, W - 1.0))
+					ball.vel = push * rng.randf_range(7.0, 13.0)
+					ball.z = 0.3
+					ball.vz = 1.8
+					ball.shot_team = -1
+					ball.shot_saved = true
+					ball.planned_save = false
+					gk.cooldown = 0.5
+					if was_shot:
+						gk.stats["saves"] += 1
+						stats[goal_team]["saves"] += 1
+						_emit("save", Commentary.save(rng, gk.name, _shot_credit(gk), "goal_line", ball.shot_xg), goal_team, gk)
+						_flash(1.0)
+					return
 			var lt = by_id.get(ball.last_touch_id, null)
 			if lt != null and lt.team == goal_team and lt.is_gk:
 				# A keeper touching it over his own line is a save that stayed out of reach: corner.
@@ -100,6 +106,7 @@ func _score_goal(conceding_team: int) -> void:
 	phase = "goal"
 	goal_timer = 3.4
 	ball.planned_goal = false
+	ball.planned_save = false
 	ball.owner_id = -1
 	ball.vel *= 0.2
 	ball.vz = 0.0

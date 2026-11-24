@@ -5,7 +5,7 @@ extends GdToolsTest
 ## weather/modifier knobs.
 
 const HOME := "MCI"
-const AWAY := "BUR"
+const AWAY := "IPS"
 
 func _model(seed: int = 1, h: String = HOME, a: String = AWAY, weather: String = "clear",
 		mods: Dictionary = {}) -> PoissonModel:
@@ -21,10 +21,10 @@ func test_league_means_cover_every_club() -> void:
 
 func test_strength_reads_roles_not_just_overall() -> void:
 	var mci := PoissonModel.team_strength(TeamData.get_team("MCI"))
-	var bur := PoissonModel.team_strength(TeamData.get_team("BUR"))
-	assert_gt(float(mci["attack"]), float(bur["attack"]), "the stronger attack was not read as such")
-	assert_gt(float(mci["defence"]), float(bur["defence"]), "the stronger defence was not read as such")
-	assert_gt(float(mci["midfield"]), float(bur["midfield"]), "the stronger midfield was not read as such")
+	var ips := PoissonModel.team_strength(TeamData.get_team("IPS"))
+	assert_gt(float(mci["attack"]), float(ips["attack"]), "the stronger attack was not read as such")
+	assert_gt(float(mci["defence"]), float(ips["defence"]), "the stronger defence was not read as such")
+	assert_gt(float(mci["midfield"]), float(ips["midfield"]), "the stronger midfield was not read as such")
 	assert_between(float(mci["midfield"]), float(mci["attack"]) - 12.0, float(mci["attack"]) + 12.0,
 		"midfield reading is out of family with the rest of the squad")
 
@@ -43,13 +43,31 @@ func test_rating_gap_drives_expected_goals() -> void:
 	# Monotone in the gap: the closer the opponent, the fewer the home goals.
 	var vs_ars := _model(1, "MCI", "ARS")
 	var vs_mun := _model(1, "MCI", "MUN")
-	var vs_bur := _model(1, "MCI", "BUR")
-	assert_gt(vs_bur.lambda_home, vs_mun.lambda_home, "λ is not monotone in opponent strength")
+	var vs_ips := _model(1, "MCI", "IPS")
+	assert_gt(vs_ips.lambda_home, vs_mun.lambda_home, "λ is not monotone in opponent strength")
 	assert_gt(vs_mun.lambda_home, vs_ars.lambda_home, "λ is not monotone in opponent strength")
-	assert_lt(vs_bur.lambda_away, vs_mun.lambda_away, "the weaker side was given too many goals")
+	assert_lt(vs_ips.lambda_away, vs_mun.lambda_away, "the weaker side was given too many goals")
 	assert_lt(vs_mun.lambda_away, vs_ars.lambda_away, "the opponent's λ is not monotone in their rating")
 
 # ------------------------------------------------------------ distribution --
+
+func test_exponent_terms_feed_both_consumers() -> void:
+	# λ's exponent is published as its two halves so the physics engine's shot
+	# contest can read the defensive half without deriving ratings again.
+	var terms := PoissonModel.exponent_terms(HOME, AWAY)
+	var attack: Vector2 = terms["attack"]
+	var defence: Vector2 = terms["defence"]
+	var ex := PoissonModel.side_exponents(HOME, AWAY)
+	assert_almost_eq(ex.x, PoissonModel.ATTACK_ELASTICITY * attack.x + PoissonModel.DEFENCE_ELASTICITY * defence.x,
+		0.0001, "home exponent is not the sum of its terms")
+	assert_almost_eq(ex.y, PoissonModel.ATTACK_ELASTICITY * attack.y + PoissonModel.DEFENCE_ELASTICITY * defence.y,
+		0.0001, "away exponent is not the sum of its terms")
+	var def_ex := PoissonModel.defence_exponents(HOME, AWAY)
+	assert_almost_eq(def_ex.x, defence.x, 0.0001, "defence_exponents disagrees with exponent_terms")
+	assert_almost_eq(def_ex.y, defence.y, 0.0001, "defence_exponents disagrees with exponent_terms")
+	# Facing BUR's back line is a break; facing ARS's is not.
+	assert_gt(def_ex.x, 0.0, "BUR's defence was not read as below the league")
+	assert_lt(PoissonModel.defence_exponents(HOME, "ARS").x, 0.0, "ARS's defence was not read as above the league")
 
 func test_distribution_is_normalised() -> void:
 	var m := _model()
@@ -86,7 +104,7 @@ func test_outcome_markets_are_consistent() -> void:
 	assert_lte(float(o["over_2_5"]), 1.0, "over 2.5 above one")
 	assert_gte(float(o["btts"]), 0.0, "negative both-teams-to-score")
 	var strong: Dictionary = m.outcomes()
-	var weak: Dictionary = _model(1, "BUR", "MCI").outcomes()
+	var weak: Dictionary = _model(1, "IPS", "MCI").outcomes()
 	assert_gt(float(strong["home"]), float(weak["home"]), "the stronger side was not favoured at home")
 	assert_gt(float(weak["away"]), float(weak["home"]), "the stronger side was not favoured away")
 
@@ -153,6 +171,6 @@ func test_modifiers_apply_per_side_and_in_total() -> void:
 	assert_almost_eq(cagey.lambda_away, base.lambda_away * 0.5, 0.001, "total modifier ignored")
 
 func test_expected_goals_are_capped() -> void:
-	var m := _model(1, "MCI", "BUR", "clear", {"home": 9.0})
+	var m := _model(1, "MCI", "IPS", "clear", {"home": 9.0})
 	assert_lte(m.lambda_home, 6.5, "λ was not clamped")
 	assert_gte(m.lambda_home, 0.05, "λ was not clamped")
