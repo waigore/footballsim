@@ -536,6 +536,100 @@ func test_the_body_clamps_its_scroll_to_the_content() -> void:
 	assert_almost_eq(body.scroll, 300.0, 0.5, "the body did not stop at its last row")
 	body.free()
 
+# ------------------------------------------------------------- table view ---
+
+## #74: the table opens on the device default, the mode door switches it, and
+## the choice is written to the save so reopening the season brings it back.
+func test_the_table_remembers_its_mode_in_the_save() -> void:
+	_open_scroll_hub()
+	var slug := str(LeagueSeason.active.save.slug)
+	press_id("table")
+	var view = screen().book.table
+	assert_eq(view.mode, LeagueTableView.FULL, "a desktop sheet did not open the full table")
+	var heads := 0
+	for item in screen().buttons:
+		if str(item["kind"]) == "head":
+			heads += 1
+	assert_eq(heads, 22, "the full header lost a column")
+	press_id("tbl:mode:compact")
+	assert_eq(view.mode, LeagueTableView.COMPACT, "the mode door did not switch to compact")
+	var stored: Dictionary = LeagueSeason.active.save.read_meta()
+	assert_eq(str(stored.get("table_mode", "")), "compact", "the mode was not written to the save")
+	press_id("back")
+	LeagueSeason.active.close()
+	var reopened := LeagueSeason.open(slug)
+	assert_not_null(reopened, "the save did not reopen")
+	screen().open_season(reopened)
+	press_id("table")
+	assert_eq(view.mode, LeagueTableView.COMPACT, "the reopened season forgot its table reading")
+	heads = 0
+	for item in screen().buttons:
+		if str(item["kind"]) == "head":
+			heads += 1
+	assert_eq(heads, 5, "the compact header should be #, club, P, GD and PTS")
+	press_id("back")
+	press_id("menu")
+
+## A header sorts the player's list; the place numbers and their bands stay the
+## league's. The second tap reverses, and the choice survives a re-open.
+func test_a_table_header_sorts_and_keeps_the_official_place() -> void:
+	_open_scroll_hub()
+	press_id("continue")
+	if screen().mode == LeagueScreen.MODE_REPORT:
+		press_id("back")
+	press_id("table")
+	press_id("tbl:sort:club")
+	var names: Array = []
+	for item in screen().buttons:
+		if str(item["kind"]) == "table_row":
+			var row: Dictionary = item["row"]
+			names.append(str(row["club_name"]))
+			assert_eq(str(item["zone"]), LeagueRules.zone(int(row["position"]), LeagueRules.defaults()),
+				"a zone band left its official place")
+	assert_eq(names.size(), 20, "the sorted table lost rows")
+	var expected := names.duplicate()
+	expected.sort()
+	assert_eq(names, expected, "the rows are not in club order")
+	press_id("tbl:sort:club")
+	var reversed: Array = []
+	for item in screen().buttons:
+		if str(item["kind"]) == "table_row":
+			reversed.append(str((item["row"] as Dictionary)["club_name"]))
+	expected.reverse()
+	assert_eq(reversed, expected, "the second tap did not reverse the sort")
+	var stored: Dictionary = LeagueSeason.active.save.read_meta()
+	assert_eq(str(stored.get("table_sort", "")), "club", "the sort was not written to the save")
+	assert_eq(str(stored.get("table_dir", "")), "desc", "the direction was not written to the save")
+	press_id("back")
+	press_id("table")
+	assert_eq(screen().book.table.sort, "club", "the table forgot its sort")
+	assert_eq(screen().book.table.dir, -1, "the table forgot its direction")
+	press_id("back")
+	press_id("menu")
+
+## The full table is wider than a phone in portrait; a sideways drag reaches the
+## far columns and the compact reading fits again.
+func test_the_full_table_pans_sideways_on_a_phone() -> void:
+	_open_scroll_hub()
+	var saved: float = screen().ui_scale
+	_phone_scale()
+	press_id("table")
+	var view = screen().book.table
+	assert_eq(view.mode, LeagueTableView.COMPACT, "a phone did not open the compact table")
+	press_id("tbl:mode:full")
+	assert_eq(view.mode, LeagueTableView.FULL, "the mode door did not switch to full")
+	assert_gt(screen().body.max_hscroll(), 0.0, "the full table should be wider than the phone")
+	_drag(Vector2(500.0, 250.0), Vector2(300.0, 250.0))
+	assert_gt(screen().body.hscroll, 0.0, "a sideways drag did not pan the table")
+	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "the sideways drag clicked through a row")
+	press_id("tbl:mode:compact")
+	assert_eq(view.mode, LeagueTableView.COMPACT, "the mode door did not come back to compact")
+	assert_eq(screen().body.max_hscroll(), 0.0, "the compact table should fit the phone")
+	press_id("back")
+	screen().ui_scale = saved
+	screen().refresh()
+	press_id("menu")
+
 ## The scroll tests create their own season: earlier cases are free to delete
 ## every save in the list.
 func _open_scroll_hub() -> void:

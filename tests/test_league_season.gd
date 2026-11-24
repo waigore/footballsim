@@ -58,6 +58,12 @@ func test_continue_settles_the_autos_and_moves_the_clock() -> void:
 	for row in after["table"]:
 		points += int(row["points"])
 		assert_eq(int(row["played"]), 1, "the table did not count the first gameweek")
+		assert_eq(int(row["home_played"]) + int(row["away_played"]), 1,
+			"the side records did not count the first gameweek")
+		assert_eq(int(row["home_gf"]) + int(row["away_gf"]), int(row["gf"]),
+			"the side goals do not add up to the overall goals")
+		assert_eq(int(row["home_ga"]) + int(row["away_ga"]), int(row["ga"]),
+			"the side goals against do not add up")
 	assert_gte(points, 20, "the table paid no points")
 
 func test_a_watch_holds_the_clock_until_the_match_is_played() -> void:
@@ -142,6 +148,14 @@ func test_the_season_walks_to_a_complete_round_robin() -> void:
 	for row in table:
 		played += int(row["played"])
 		assert_eq(int(row["played"]), 38, "%s did not play 38 games" % row["club_id"])
+		assert_eq(int(row["home_played"]), 19, "%s did not play 19 at home" % row["club_id"])
+		assert_eq(int(row["away_played"]), 19, "%s did not play 19 away" % row["club_id"])
+		assert_eq(int(row["home_won"]) + int(row["away_won"]), int(row["won"]),
+			"%s lost a win in the side split" % row["club_id"])
+		assert_eq(int(row["home_drawn"]) + int(row["away_drawn"]), int(row["drawn"]),
+			"%s lost a draw in the side split" % row["club_id"])
+		assert_eq(int(row["home_lost"]) + int(row["away_lost"]), int(row["lost"]),
+			"%s lost a defeat in the side split" % row["club_id"])
 	assert_eq(played, 760, "the table does not hold two appearances per fixture")
 
 func test_the_podium_reads_the_saved_rules() -> void:
@@ -197,6 +211,51 @@ func test_engine_finish_without_watching_is_a_no_op() -> void:
 
 func test_an_unknown_date_falls_back_to_the_saved_gameweek() -> void:
 	assert_eq(season._matchday_of("1999-01-01"), season.save.matchday(), "an empty day lost the gameweek")
+
+## The full table is only worth reading if its home and away splits are the
+## fixture ledger itself.
+func test_every_side_total_matches_the_fixture_ledger() -> void:
+	var rows: Array = season.record.table()
+	assert_eq(rows.size(), 20, "the table is short")
+	var home := {}
+	for row in PLDatabase.rows(
+		"SELECT home_club_id AS club, COUNT(*) AS n, SUM(home_goals) AS gf, "
+		+ "SUM(away_goals) AS ga FROM league_fixture WHERE status = 'played' "
+		+ "GROUP BY home_club_id;"
+	):
+		home[str(row["club"])] = row
+	assert_eq(home.size(), 20, "not every club has a home record")
+	for row in rows:
+		var club := str(row["club_id"])
+		assert_true(home.has(club), "%s is missing from the fixture ledger" % club)
+		var h: Dictionary = home[club]
+		assert_eq(int(row["home_played"]), int(h["n"]), "%s lost home games" % club)
+		assert_eq(int(row["home_gf"]), int(h["gf"]), "%s lost home goals" % club)
+		assert_eq(int(row["home_ga"]), int(h["ga"]), "%s lost home goals against" % club)
+		assert_eq(int(row["home_played"]) + int(row["away_played"]), int(row["played"]),
+			"%s side games do not add up" % club)
+		assert_eq(int(row["home_gf"]) + int(row["away_gf"]), int(row["gf"]),
+			"%s side goals do not add up" % club)
+		assert_eq(int(row["home_ga"]) + int(row["away_ga"]), int(row["ga"]),
+			"%s side goals against do not add up" % club)
+
+## Recompute is the repair path an older save takes: a row that drifted comes
+## back to the ledger, home and away included.
+func test_recompute_restores_a_drifted_side_record() -> void:
+	var before: Array = season.record.table()
+	var row: Dictionary = before[0]
+	PLDatabase.execute(
+		"UPDATE league_table SET home_gf = 999, away_played = 0, points = 0 "
+		+ "WHERE club_id = ?;", [str(row["club_id"])])
+	season.record.recompute_table()
+	var found := {}
+	for r in season.record.table():
+		if str(r["club_id"]) == str(row["club_id"]):
+			found = r
+	assert_false(found.is_empty(), "the drifted club vanished from the table")
+	assert_eq(int(found["home_gf"]), int(row["home_gf"]), "the recompute lost the home goals")
+	assert_eq(int(found["away_played"]), int(row["away_played"]), "the recompute lost the away games")
+	assert_eq(int(found["points"]), int(row["points"]), "the recompute lost the points")
 
 func _play_until(rounds: int) -> void:
 	var guard := 0
