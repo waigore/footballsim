@@ -30,7 +30,7 @@ func _initialize() -> void:
 	season.advance()
 	league.show_season(season)
 	var fixture := ""
-	for fx in season.record.fixtures():
+	for fx in season.record.fixtures.all():
 		if season.record.clips.list(str(fx["id"])).size() > 1:
 			fixture = str(fx["id"])
 			break

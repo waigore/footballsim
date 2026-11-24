@@ -133,9 +133,9 @@ func test_leaving_a_watch_early_finishes_it_on_the_engine() -> void:
 	assert_eq(season.watching_fixture, "", "the season still waits for that watch")
 
 func test_suggestions_start_after_five_rounds() -> void:
-	while season.record.completed_matchdays() < 5:
+	while season.record.fixtures.completed_matchdays() < 5:
 		season.advance()
-	assert_gte(season.record.completed_matchdays(), 5, "five rounds never completed")
+	assert_gte(season.record.fixtures.completed_matchdays(), 5, "five rounds never completed")
 	var ids := season.suggest()
 	var top := {}
 	for row in season.state()["table"]:
@@ -143,7 +143,7 @@ func test_suggestions_start_after_five_rounds() -> void:
 			top[str(row["club_id"])] = true
 	assert_eq(top.size(), 6, "the table has no top six")
 	for id in ids:
-		var fx := season.record.fixture(str(id))
+		var fx := season.record.fixtures.one(str(id))
 		assert_true(top.has(str(fx["home_club_id"])), "a suggested game is not a top-six clash")
 		assert_true(top.has(str(fx["away_club_id"])), "a suggested game is not a top-six clash")
 	var flagged := 0
@@ -156,7 +156,7 @@ func test_the_calendar_keeps_rolling_through_midwinter() -> void:
 	# Later rounds are played in batches so no single test blows the per-test
 	# budget: the season is one shared object across the suite.
 	_play_until(14)
-	assert_gte(season.record.completed_matchdays(), 14, "the season stalled before round 14")
+	assert_gte(season.record.fixtures.completed_matchdays(), 14, "the season stalled before round 14")
 	assert_eq(season.matches_remaining(), 380 - int(season.state()["played"]), "the ledger is short")
 
 func test_a_second_watch_mid_season_records_and_rolls_on() -> void:
@@ -225,7 +225,7 @@ func test_the_encyclopedia_reads_the_live_table() -> void:
 	assert_eq(rows.size(), 20, "the repository table is short while a save is open")
 	assert_eq(int(rows[0]["position"]), 1, "the live table has no positions")
 	assert_true(rows[0].has("club_name"), "the live table lost its club labels")
-	var mine := season.record.table()
+	var mine := season.record.standings.table()
 	assert_eq(str(rows[0]["club_id"]), str(mine[0]["club_id"]), "the repository is not reading the save")
 
 func test_a_lonely_season_object_is_safe() -> void:
@@ -240,12 +240,12 @@ func test_a_lonely_season_object_is_safe() -> void:
 	lonely.close()
 
 func test_engine_finish_without_watching_is_a_no_op() -> void:
-	var before := season.record.played()
+	var before := season.record.fixtures.played()
 	var engine := MatchEngine.new(SEED, "MUN", "MCI")
 	engine.score[0] = 1
 	engine.score[1] = 1
 	LeagueSeason.engine_finished(engine)
-	assert_eq(season.record.played(), before, "an unrelated match reached the season")
+	assert_eq(season.record.fixtures.played(), before, "an unrelated match reached the season")
 	assert_eq(season.watching_fixture, "", "the season is waiting for a match nobody started")
 
 func test_an_unknown_date_falls_back_to_the_saved_gameweek() -> void:
@@ -254,7 +254,7 @@ func test_an_unknown_date_falls_back_to_the_saved_gameweek() -> void:
 ## The full table is only worth reading if its home and away splits are the
 ## fixture ledger itself.
 func test_every_side_total_matches_the_fixture_ledger() -> void:
-	var rows: Array = season.record.table()
+	var rows: Array = season.record.standings.table()
 	assert_eq(rows.size(), 20, "the table is short")
 	var home := {}
 	for row in PLDatabase.rows(
@@ -288,7 +288,7 @@ func test_opening_a_save_rebuilds_its_side_totals() -> void:
 	season.close()
 	var reopened := LeagueSeason.open(slug)
 	assert_not_null(reopened, "the save did not reopen")
-	var rows: Array = reopened.record.table()
+	var rows: Array = reopened.record.standings.table()
 	assert_eq(int(rows[0]["home_played"]), 19, "opening the save did not rebuild the home record")
 	var home := 0
 	var goals := 0
@@ -304,14 +304,14 @@ func test_opening_a_save_rebuilds_its_side_totals() -> void:
 ## Recompute is the repair path an older save takes: a row that drifted comes
 ## back to the ledger, home and away included.
 func test_recompute_restores_a_drifted_side_record() -> void:
-	var before: Array = season.record.table()
+	var before: Array = season.record.standings.table()
 	var row: Dictionary = before[0]
 	PLDatabase.execute(
 		"UPDATE league_table SET home_gf = 999, away_played = 0, points = 0 "
 		+ "WHERE club_id = ?;", [str(row["club_id"])])
-	season.record.recompute_table()
+	season.record.standings.recompute()
 	var found := {}
-	for r in season.record.table():
+	for r in season.record.standings.table():
 		if str(r["club_id"]) == str(row["club_id"]):
 			found = r
 	assert_false(found.is_empty(), "the drifted club vanished from the table")
@@ -321,7 +321,7 @@ func test_recompute_restores_a_drifted_side_record() -> void:
 
 func _play_until(rounds: int) -> void:
 	var guard := 0
-	while season.record.completed_matchdays() < rounds and guard < 40:
+	while season.record.fixtures.completed_matchdays() < rounds and guard < 40:
 		season.advance()
 		guard += 1
 

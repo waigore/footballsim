@@ -260,13 +260,13 @@ func test_a_shot_rewinds_the_live_picture_once() -> void:
 func test_a_watch_goal_keeps_the_captured_clip() -> void:
 	# A watched fixture the engine has just finished: its goal rows are written,
 	# one goal has a live capture and the other does not.
-	var fx := str((season.record.fixtures(2)[0] as Dictionary)["id"])
-	var row := season.record.fixture(fx)
+	var fx := str((season.record.fixtures.all(2)[0] as Dictionary)["id"])
+	var row := season.record.fixtures.one(fx)
 	var home := str(row["home_club_id"])
 	var away := str(row["away_club_id"])
 	var home_id := str(StrongestXI.pick(TeamData.get_team(home))[9]["id"])
 	var away_id := str(StrongestXI.pick(TeamData.get_team(away))[9]["id"])
-	season.record.add_events([
+	season.record.report.add_events([
 		{"fixture_id": fx, "minute": 10, "kind": "goal", "player_id": home_id, "club_id": home, "detail": "A"},
 		{"fixture_id": fx, "minute": 55, "kind": "goal", "player_id": away_id, "club_id": away, "detail": "B"},
 	])
@@ -326,7 +326,7 @@ func test_a_settled_matchday_stores_a_clip_for_every_goal() -> void:
 func test_a_settled_clip_is_drawn_from_its_recipe() -> void:
 	var fixture := ""
 	var row := {}
-	for candidate in season.record.fixtures():
+	for candidate in season.record.fixtures.all():
 		for r in season.record.clips.list(str(candidate["id"])):
 			if str(r.get("source", "")) == "auto":
 				fixture = str(candidate["id"])
@@ -336,7 +336,7 @@ func test_a_settled_clip_is_drawn_from_its_recipe() -> void:
 			break
 	assert_false(row.is_empty(), "no settled clip to draw")
 	var index := int(row["goal_index"])
-	var fx := season.record.fixture(fixture)
+	var fx := season.record.fixtures.one(fixture)
 	var home := str(fx["home_club_id"])
 	var away := str(fx["away_club_id"])
 	var club := str(row["club_id"])
@@ -383,7 +383,7 @@ func test_a_settled_clip_is_drawn_from_its_recipe() -> void:
 		"a missing clip decoded to a picture")
 
 func test_a_clip_records_the_assist_it_was_built_with() -> void:
-	var rows := season.record.clips.list(str((season.record.fixtures()[0] as Dictionary)["id"]))
+	var rows := season.record.clips.list(str((season.record.fixtures.all()[0] as Dictionary)["id"]))
 	for row in rows:
 		var name := str(row.get("assist_name", ""))
 		var pack := season.record.clips.pack(str(row["fixture_id"]), int(row["goal_index"]))
@@ -395,7 +395,7 @@ func test_reopening_the_save_replays_the_same_clip() -> void:
 	var fixture := ""
 	var index := 0
 	var before := PackedByteArray()
-	for fx in season.record.fixtures():
+	for fx in season.record.fixtures.all():
 		var rows := season.record.clips.list(str(fx["id"]))
 		if rows.is_empty():
 			continue

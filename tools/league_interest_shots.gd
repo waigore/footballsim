@@ -31,7 +31,7 @@ func _initialize() -> void:
 	league.show_season(season)
 	# Follow the club, then make sure the day it plays is the day on screen.
 	season.set_interest(CLUB, true)
-	season.save.set_date(season.record.fixtures(3)[0]["kickoff"])
+	season.save.set_date(season.record.fixtures.all(3)[0]["kickoff"])
 	season.save.set_matchday(3)
 	league.screen.refresh()
 	await _shot("interest_hub")

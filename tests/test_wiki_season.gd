@@ -23,8 +23,8 @@ func before_all() -> void:
 	season = LeagueSeason.create("Encyclopedia Season", "generated", "fixture_days", SEED)
 	assert_not_null(season, "the season was not created")
 	season.advance()
-	first = season.record.fixtures(1)[0]
-	scorers = season.record.top_scorers(5)
+	first = season.record.fixtures.all(1)[0]
+	scorers = season.record.report.top_scorers(5)
 
 func after_all() -> void:
 	if season != null:
@@ -59,7 +59,7 @@ func test_the_club_page_reads_the_live_row() -> void:
 	assert_true(text.contains("SEASON  ·  IN PLAY"), "the season block is not labelled as the season in play")
 	assert_false(text.contains("RESULTS  ·  SNAPSHOT"), "the club page still shows the snapshot's results")
 	assert_eq(_kv_value(page, "PLAYED"), "1", "the club page shows the snapshot's played count, not the season's")
-	var row: Dictionary = season.record.table()[_place_of(club_id)]
+	var row: Dictionary = season.record.standings.table()[_place_of(club_id)]
 	assert_eq(_kv_value(page, "POINTS"), str(int(row["points"])), "the club page disagrees with the season table")
 	assert_eq(_kv_value(page, "POSITION"), str(int(row["position"])), "the club page shows the wrong league place")
 	var results := _rows_below(page, "RESULTS  ·  SEASON")
@@ -133,7 +133,7 @@ func _kv_value(page: Dictionary, label: String, from_last: bool = false) -> Stri
 	return ""
 
 func _place_of(club_id: String) -> int:
-	var rows := season.record.table()
+	var rows := season.record.standings.table()
 	for i in range(rows.size()):
 		if str(rows[i]["club_id"]) == club_id:
 			return i

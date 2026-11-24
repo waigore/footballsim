@@ -67,7 +67,7 @@ func test_a_club_the_save_does_not_know_is_refused() -> void:
 	assert_true(season.record.interest.interests().is_empty(), "an unknown club reached the shortlist")
 
 func test_marking_a_club_puts_all_its_games_on_watch() -> void:
-	var club_id := str(season.record.table()[0]["club_id"])
+	var club_id := str(season.record.standings.table()[0]["club_id"])
 	var open := _open_fixtures(club_id).size()
 	assert_eq(open, 38, "a generated season does not give the club 38 games")
 	assert_true(season.set_interest(club_id, true), "the club was not marked")
@@ -83,14 +83,14 @@ func test_unmarking_reverts_to_auto_unless_the_opponent_is_followed() -> void:
 	assert_false(other.is_empty(), "the season has no game against a third club")
 	season.set_interest(home, true)
 	season.set_interest(away, true)
-	assert_eq(int(season.record.fixture(str(fx["id"]))["watched"]), 1, "the shared fixture is not on Watch")
+	assert_eq(int(season.record.fixtures.one(str(fx["id"]))["watched"]), 1, "the shared fixture is not on Watch")
 	season.set_interest(home, false)
-	assert_eq(int(season.record.fixture(str(fx["id"]))["watched"]), 1,
+	assert_eq(int(season.record.fixtures.one(str(fx["id"]))["watched"]), 1,
 		"unmarking one side dropped a fixture the other side still follows")
-	assert_eq(int(season.record.fixture(str(other["id"]))["watched"]), 0,
+	assert_eq(int(season.record.fixtures.one(str(other["id"]))["watched"]), 0,
 		"the unmarked club kept its other games on Watch")
 	season.set_interest(away, false)
-	assert_eq(int(season.record.fixture(str(fx["id"]))["watched"]), 0,
+	assert_eq(int(season.record.fixtures.one(str(fx["id"]))["watched"]), 0,
 		"both sides unmarked and the fixture stayed on Watch")
 
 ## One of the club's games whose opponent is nobody on the shortlist.
@@ -102,12 +102,12 @@ func _fixture_against_neither(club_id: String, followed: String) -> Dictionary:
 	return {}
 
 func test_a_followed_club_s_game_cannot_be_switched_to_auto() -> void:
-	var club_id := str(season.record.table()[0]["club_id"])
+	var club_id := str(season.record.standings.table()[0]["club_id"])
 	season.set_interest(club_id, true)
 	var open := _open_fixtures(club_id)
 	var fixture_id := str(open[0]["id"])
 	assert_false(season.set_watch(fixture_id, false), "a followed fixture was switched to Auto")
-	assert_eq(int(season.record.fixture(fixture_id)["watched"]), 1, "the refusal still wrote the flag")
+	assert_eq(int(season.record.fixtures.one(fixture_id)["watched"]), 1, "the refusal still wrote the flag")
 
 func test_continue_holds_the_clock_for_a_followed_club() -> void:
 	var today: Array = season.plan()
@@ -119,13 +119,13 @@ func test_continue_holds_the_clock_for_a_followed_club() -> void:
 	assert_eq(pending.size(), 1, "the followed game was not held for the viewer")
 	assert_eq(str(pending[0]["home_club_id"]), club_id, "the wrong game was held")
 	assert_eq((result.get("played", []) as Array).size(), 9, "the other games were not settled")
-	assert_eq(str(season.record.fixture(str(pending[0]["id"]))["status"]), "pending",
+	assert_eq(str(season.record.fixtures.one(str(pending[0]["id"]))["status"]), "pending",
 		"the followed game was auto-simmed")
 
 # ------------------------------------------------------------------- save ---
 
 func test_the_shortlist_survives_a_reopen() -> void:
-	var club_id := str(season.record.table()[0]["club_id"])
+	var club_id := str(season.record.standings.table()[0]["club_id"])
 	season.set_interest(club_id, true)
 	var slug := season.save.slug
 	season.close()
@@ -135,7 +135,7 @@ func test_the_shortlist_survives_a_reopen() -> void:
 	assert_eq(_watched(club_id), 38, "the reopened save left the followed club's games on Auto")
 
 func test_a_save_written_before_interest_opens_with_an_empty_shortlist() -> void:
-	var club_id := str(season.record.table()[0]["club_id"])
+	var club_id := str(season.record.standings.table()[0]["club_id"])
 	season.set_interest(club_id, true)
 	var path := season.save.path
 	var slug := season.save.slug
@@ -174,7 +174,7 @@ func test_the_hub_and_the_table_mark_a_followed_club() -> void:
 		{"table": view["table"], "rules": view["rules"], "interests": view["interests"]})
 	var full_row := _item_with(table_items, "table_row", club_id)
 	assert_true(bool(full_row.get("interested", false)), "the full table does not mark the followed club")
-	var other := _item_with(table_items, "table_row", str(season.record.table()[1]["club_id"]))
+	var other := _item_with(table_items, "table_row", str(season.record.standings.table()[1]["club_id"]))
 	assert_false(bool(other.get("interested", true)), "an unfollowed club is marked too")
 
 func _hub_chip(items: Array, fixture_id: String) -> Dictionary:

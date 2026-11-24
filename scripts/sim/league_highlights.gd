@@ -66,7 +66,7 @@ static func store_watch(record: LeagueRecord, save_seed: int, fixture_id: String
 	var used := {}
 	var rows: Array = []
 	var goals: Array = []
-	for e in record.events(fixture_id):
+	for e in record.report.events(fixture_id):
 		if str(e.get("kind", "")) == "goal":
 			goals.append(e)
 	for i in range(goals.size()):

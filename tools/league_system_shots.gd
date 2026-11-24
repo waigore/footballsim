@@ -28,7 +28,7 @@ func _initialize() -> void:
 		quit()
 		return
 	var guard := 0
-	while season.record.completed_matchdays() < 3 and guard < 10:
+	while season.record.fixtures.completed_matchdays() < 3 and guard < 10:
 		season.advance()
 		guard += 1
 	league.show_season(season)
