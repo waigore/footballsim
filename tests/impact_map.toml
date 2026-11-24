@@ -134,6 +134,14 @@ suites = [
   "test_touch_flow.gd",
 ]
 
+# The one date form and its weekday hint (#99): the league sheets and the
+# encyclopedia both paint it, so the formatter and the overlay ride together.
+[domains.dates]
+suites = [
+  "test_date_labels.gd",
+  "test_wiki_render.gd",
+]
+
 # Lightest suite for tooling / project / addons / map edits.
 [domains.misc]
 suites = [
@@ -329,6 +337,10 @@ domain = "wiki"
 [[rules]]
 match = "scripts/ui/league_*.gd*"
 domain = "league"
+
+[[rules]]
+match = "scripts/ui/date_*.gd*"
+domain = "dates"
 
 [[rules]]
 match = "scripts/view/actor_layer.gd*"

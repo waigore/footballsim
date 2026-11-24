@@ -287,13 +287,22 @@ func _store(save: LeagueSave, key: String, value: String) -> void:
 
 # ------------------------------------------------------------------- paint ---
 
-func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
+func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
+		hints: DateHints) -> void:
 	var bold: Font = fonts["bold"]
 	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
 	UiChrome.text(c, Vector2(24.0, 48.0), "LEAGUE TABLE", 12, UiChrome.C_GOLD, bold)
-	UiChrome.text_r(c, vp.x - 24.0, 30.0,
-		"%s · %s" % [str(view.get("name", "")), str(view.get("date", ""))], 10,
+	var date := str(view.get("date", ""))
+	var label := FixtureCalendar.day_label(date)
+	var parts: Array = []
+	if str(view.get("name", "")) != "":
+		parts.append(str(view.get("name", "")))
+	if label != "":
+		parts.append(label)
+	UiChrome.text_r(c, vp.x - 24.0, 30.0, " · ".join(PackedStringArray(parts)), 10,
 		UiChrome.C_DIM, bold)
+	if date != "":
+		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 30.0, 10), date)
 	var y := vp.y - LeagueSheet.BAR_H + 24.0
 	# The legend shares the bar with the two reading doors on a wide sheet; a
 	# phone sheet has no room there, so it moves up beside the title.
