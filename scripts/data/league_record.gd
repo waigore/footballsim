@@ -12,6 +12,8 @@ extends RefCounted
 ## handful of round trips, not hundreds.
 
 var save: LeagueSave = null
+## The goal clips stored beside the ledger (see `LeagueClips`).
+var clips: LeagueClips = null
 
 const FIXTURE_SELECT := (
 	"SELECT f.*, h.name AS home_name, h.abbr AS home_abbr, h.color AS home_color, "
@@ -22,6 +24,7 @@ const FIXTURE_SELECT := (
 
 func _init(owner: LeagueSave) -> void:
 	save = owner
+	clips = LeagueClips.new(owner)
 
 # --------------------------------------------------------------- fixtures ---
 
@@ -37,6 +40,7 @@ func install(fixtures: Array) -> bool:
 	PLDatabase.execute("DELETE FROM league_table;")
 	PLDatabase.execute("DELETE FROM match_event;")
 	PLDatabase.execute("DELETE FROM league_player_stat;")
+	PLDatabase.execute("DELETE FROM goal_highlight;")
 	var values: Array = []
 	var bindings: Array = []
 	for fx in fixtures:

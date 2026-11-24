@@ -279,6 +279,12 @@ func draw_button(c: CanvasItem, rect: Rect2, label: String, bold: Font, primary:
 		UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0, label, 12,
 			UiChrome.C_TEXT, bold)
 
+## The ▶ beside a goal on a match report: a bordered gold chip, sized by the
+## caller so the door stays thumb-sized on every platform.
+static func draw_play(c: CanvasItem, cache: Dictionary, rect: Rect2, bold: Font) -> void:
+	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, Color(0.96, 0.78, 0.30, 0.55), 1)
+	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 18.0, "▶ PLAY", 10, UiChrome.C_GOLD, bold)
+
 ## Month doors and other small fixed chips on a sheet header.
 func draw_chip(c: CanvasItem, rect: Rect2, label: String, bold: Font) -> void:
 	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 5)

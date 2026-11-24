@@ -38,6 +38,7 @@ func build() -> void:
 	screen.match_requested.connect(_on_match_requested)
 	screen.season_opened.connect(_on_season_opened)
 	screen.club_requested.connect(_on_club_requested)
+	screen.goal_highlight_requested.connect(_on_goal_highlight)
 	layer.visible = false
 
 ## Open means "the layer is on screen": the hand-off to the match viewer hides
@@ -233,3 +234,29 @@ func _pointer_up() -> void:
 	var id := screen.button_at(press_at)
 	if id != "":
 		screen.click(id)
+
+# ------------------------------------------------------------- goal clips ---
+
+## ▶ on a report: play that goal's stored clip on the broadcast, then put the
+## report back on screen. The season stays open throughout, so no state moves.
+func _on_goal_highlight(fixture_id: String, goal_index: int) -> void:
+	if season == null or fixture_id == "":
+		return
+	var pack := season.goal_clip(fixture_id, goal_index)
+	if pack.is_empty():
+		return
+	if layer != null:
+		layer.visible = false
+	if game.hud_layer != null:
+		game.hud_layer.visible = true
+	game.play_goal_clip(pack, _on_goal_clip_done)
+
+func _on_goal_clip_done() -> void:
+	if game == null or screen == null:
+		return
+	game.paused = true
+	if game.hud_layer != null:
+		game.hud_layer.visible = false
+	if layer != null:
+		layer.visible = true
+	screen.refresh()

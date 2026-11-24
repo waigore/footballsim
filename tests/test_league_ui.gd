@@ -135,6 +135,65 @@ func test_continue_plays_the_autos_and_shows_the_roundup() -> void:
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Continue did not settle on the hub")
 	assert_gte(int(LeagueSeason.active.record.played()), before, "the ledger went backwards")
 
+func test_a_report_play_door_plays_the_stored_clip_and_comes_back() -> void:
+	var season := LeagueSeason.active
+	var fixture := ""
+	for row in season.record.fixtures():
+		if not season.record.clips.list(str(row["id"])).is_empty():
+			fixture = str(row["id"])
+			break
+	assert_true(fixture != "", "no fixture has a stored clip")
+	game.menus.league.show_season(season)
+	screen().show_report(fixture)
+	assert_eq(screen().mode, LeagueScreen.MODE_REPORT, "the report did not open")
+	var door := ""
+	for item in screen().buttons:
+		if str(item["id"]).begins_with("goal:"):
+			door = str(item["id"])
+			break
+	assert_true(door != "", "the report offers no play door")
+	press_id(door)
+	assert_not_null(game.replay, "the play door did not start a clip")
+	assert_false(bool(game.menus.league.layer.visible), "the report stayed over the pitch")
+	assert_true(str(game.home_id) != "" and str(game.away_id) != "", "the viewer has no clubs")
+	var clock_before := float(game.engine.clock)
+	for i in range(24):
+		game._process(0.1)
+	assert_gt(float(game.engine.clock), clock_before, "the clip is not playing")
+	game._skip()
+	assert_eq(screen().mode, LeagueScreen.MODE_REPORT, "skipping did not return to the report")
+	assert_true(bool(game.menus.league.layer.visible), "the report did not come back")
+	screen().open_season(season)
+
+func test_the_number_keys_play_report_goals() -> void:
+	var season := LeagueSeason.active
+	var fixture := ""
+	for row in season.record.fixtures():
+		if not season.record.clips.list(str(row["id"])).is_empty():
+			fixture = str(row["id"])
+			break
+	game.menus.league.show_season(season)
+	screen().show_report(fixture)
+	assert_eq(screen().mode, LeagueScreen.MODE_REPORT, "the report did not open")
+	assert_true(screen().key(KEY_1), "the first goal key was not taken")
+	assert_not_null(game.replay, "the key did not start a clip")
+	assert_false(screen().has_clip(7), "a goal beyond the report claims a clip")
+	game._skip()
+	assert_null(game.replay, "the clip did not end")
+	screen().open_season(season)
+
+func test_the_report_still_reads_a_goal_less_match() -> void:
+	var season := LeagueSeason.active
+	game.menus.league.show_season(season)
+	screen().report = {"fixture": {"id": "", "home_name": "Home", "away_name": "Away"}, "events": [], "highlights": []}
+	screen().mode = LeagueScreen.MODE_REPORT
+	screen().refresh()
+	assert_false(screen().has_clip(0), "an empty report claims a clip")
+	screen().click("goal:0")
+	assert_null(game.replay, "an empty report started a clip")
+	assert_eq(screen().mode, LeagueScreen.MODE_REPORT, "the empty report left")
+	screen().open_season(LeagueSeason.active)
+
 func test_the_table_shows_the_saved_bands() -> void:
 	press_id("table")
 	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "the table did not open")

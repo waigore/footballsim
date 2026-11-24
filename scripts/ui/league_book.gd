@@ -12,6 +12,9 @@ extends RefCounted
 const HEADER := 58.0
 const BAR_H := 52.0
 const ROW_H := 22.0
+## The ▶ hit target beside a goal: thumb-sized, never hover-only.
+const PLAY_W := 44.0
+const PLAY_H := 26.0
 const MONTHS := ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
 	"AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"]
 
@@ -74,10 +77,24 @@ func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 func report_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 	var y := HEADER + 70.0
+	var clips := {}
+	for row in view.get("highlights", []):
+		clips[int(row.get("goal_index", -1))] = row
+	var goal := 0
 	for e in view.get("events", []):
-		items.append({"id": "", "kind": "event", "event": e,
-			"rect": Rect2(24.0, y, vp.x - 48.0, 20.0)})
-		y += 21.0
+		var is_goal := str(e.get("kind", "")) == "goal"
+		var clip: Dictionary = clips.get(goal, {}) if is_goal else {}
+		var index := goal
+		if is_goal:
+			goal += 1
+		var h := ROW_H + 19.0 if not clip.is_empty() else ROW_H - 1.0
+		items.append({"id": "", "kind": "event", "event": e, "clip": clip,
+			"rect": Rect2(24.0, y, vp.x - 48.0, h)})
+		if not clip.is_empty():
+			# ▶ is a real touch target beside the goal, never a hover-only door.
+			items.append({"id": "goal:%d" % index, "kind": "play", "clip": clip,
+				"rect": Rect2(vp.x - 24.0 - PLAY_W, y + 1.0, PLAY_W, PLAY_H)})
+		y += h + 1.0
 	for report in view.get("roundup", []):
 		items.append({"id": "match:" + str(report["fixture"]["id"]), "kind": "result",
 			"report": report, "rect": Rect2(24.0, y, vp.x - 48.0, 44.0)})
@@ -270,7 +287,9 @@ func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
 		if kind == "event":
-			_draw_event(c, rect, item["event"], fonts)
+			_draw_event(c, rect, item, fonts)
+		elif kind == "play":
+			LeagueSheet.draw_play(c, cache, rect, fonts["bold"])
 		elif kind == "result":
 			var report: Dictionary = item["report"]
 			var fx: Dictionary = report["fixture"]
@@ -285,7 +304,8 @@ func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 34.0),
 				", ".join(names) if not names.is_empty() else "no goals", 9, UiChrome.C_DIM, med)
 
-func _draw_event(c: CanvasItem, rect: Rect2, e: Dictionary, fonts: Dictionary) -> void:
+func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
+	var e: Dictionary = item["event"]
 	var kind := str(e.get("kind", ""))
 	var colour := UiChrome.C_TEXT
 	if kind == "goal":
@@ -301,6 +321,15 @@ func _draw_event(c: CanvasItem, rect: Rect2, e: Dictionary, fonts: Dictionary) -
 		UiChrome.C_DIM, fonts["bold"])
 	UiChrome.text(c, Vector2(rect.position.x + 34.0, rect.position.y + 14.0), name, 11, colour, fonts["bold"])
 	UiChrome.text(c, Vector2(rect.position.x + 210.0, rect.position.y + 14.0), kind.to_upper(), 8, colour, fonts["med"])
+	# A goal with a stored clip reads as a broadcast moment: the commentary line
+	# sits under it and the ▶ beside it plays exactly that goal.
+	var clip: Dictionary = item.get("clip", {})
+	if not clip.is_empty():
+		var line := str(clip.get("commentary", ""))
+		if line != "":
+			var room := maxi(int((rect.size.x - 90.0) / 5.4), 12)
+			UiChrome.text(c, Vector2(rect.position.x + 34.0, rect.position.y + 32.0),
+				line.substr(0, room), 10, UiChrome.C_SOFT, fonts["med"])
 
 # ---------------------------------------------------------------- podium ---
 
