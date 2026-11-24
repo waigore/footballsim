@@ -151,7 +151,12 @@ def save(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def get_json(url: str, tries: int = 4) -> dict:
+def get_json(url: str, tries: int = 4, missing_ok: bool = False) -> dict:
+    """GET a JSON payload; a 404 is an empty payload when `missing_ok`.
+
+    ESPN has no statistics resource for an athlete who has not featured, so a
+    mid-season refresh must read "no line" rather than fail the whole run.
+    """
     context = ssl.create_default_context()
     try:  # macOS framework Pythons often ship without a system CA bundle.
         import certifi
@@ -164,6 +169,12 @@ def get_json(url: str, tries: int = 4) -> dict:
             req = urllib.request.Request(url, headers={"User-Agent": "footballsim-seed/1.0"})
             with urllib.request.urlopen(req, timeout=30, context=context) as resp:
                 return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            if missing_ok and exc.code == 404:
+                return {}
+            if attempt == tries - 1:
+                raise SystemExit(f"fetch failed: {url}: {exc}") from exc
+            time.sleep(1.5 * (attempt + 1))
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             if attempt == tries - 1:
                 raise SystemExit(f"fetch failed: {url}: {exc}") from exc
@@ -269,10 +280,16 @@ def _stat_map(payload: dict) -> dict[str, float]:
 def _player_stats(athlete_id: str, season: int) -> dict:
     season_stats = _stat_map(
         get_json(
-            f"{ESPN_CORE}/sports/soccer/leagues/{LEAGUE}/seasons/{season}/types/1/athletes/{athlete_id}/statistics/0"
+            f"{ESPN_CORE}/sports/soccer/leagues/{LEAGUE}/seasons/{season}/types/1/athletes/{athlete_id}/statistics/0",
+            missing_ok=True,
         )
     )
-    career = _stat_map(get_json(f"{ESPN_CORE}/sports/soccer/leagues/{LEAGUE}/athletes/{athlete_id}/statistics/0"))
+    career = _stat_map(
+        get_json(
+            f"{ESPN_CORE}/sports/soccer/leagues/{LEAGUE}/athletes/{athlete_id}/statistics/0",
+            missing_ok=True,
+        )
+    )
     return {
         "season": {
             "matches": int(season_stats.get("appearances", 0)),

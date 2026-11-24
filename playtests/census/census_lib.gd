@@ -37,7 +37,7 @@ const DEFAULT_RESULTS_DIR := ".gd-tools/census-results"
 
 ## The gated anchors: a rating-gap fixture and an even-strength one.
 const ANCHORS := {
-	"mci_bur": {"home": "MCI", "away": "BUR"},
+	"mci_ips": {"home": "MCI", "away": "IPS"},
 	"mci_mci": {"home": "MCI", "away": "MCI"},
 }
 

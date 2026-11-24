@@ -64,7 +64,7 @@ godot --path . -- --focus=8                    # open with a player pinned
 ## Data
 
 Squad ratings are EA SPORTS FC 26 (OVR / PAC / SHO / PAS / DRI / DEF / PHY) for
-all 20 Premier League clubs from OVRBase club pages or estimated 2025-26 squads;
+all 20 Premier League clubs from OVRBase club pages or estimated 2026-27 squads;
 keepers' DIV/HAN/KIC/REF/SPD derive from OVR and role. Line-ups are the strongest
 XI in a 4-2-3-1.
 

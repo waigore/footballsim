@@ -42,7 +42,8 @@ A broadcast-style, top-down 2D football match simulator built in Godot 4.
 
 Squad ratings are EA SPORTS FC 26 club ratings (OVR / PAC / SHO / PAS / DRI / DEF / PHY) for
 all 20 Premier League clubs. Manchester United and City come from OVRBase's FC 26 club pages
-(Nov 2026); the other 18 use real 2025-26 squads with ratings estimated from role and overall.
+(Nov 2026); the other 17 use real 2026-27 squads (Coventry, Hull, Ipswich promoted) with ratings
+estimated from role and overall.
 Goalkeeper sub-ratings (DIV/HAN/KIC/REF/SPD) are derived from the keeper's OVR and role. Lineups
 are the strongest available XI in a 4-2-3-1; benches are real squad members. Attribute→simulation
 mappings live in `scripts/sim/attributes.gd`.

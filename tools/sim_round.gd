@@ -6,7 +6,7 @@ extends SceneTree
 
 const FIXTURES := [
 	["ARS", "CHE"], ["LIV", "MUN"], ["MCI", "TOT"], ["NEW", "AVL"], ["BHA", "CRY"],
-	["FUL", "BRE"], ["BOU", "EVE"], ["WHU", "NFO"], ["WOL", "LEE"], ["BUR", "SUN"],
+	["FUL", "BRE"], ["BOU", "EVE"], ["COV", "NFO"], ["HUL", "LEE"], ["IPS", "SUN"],
 ]
 
 func _init() -> void:
