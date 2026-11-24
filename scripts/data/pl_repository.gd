@@ -152,7 +152,7 @@ func player_by_name(club_id: String, name: String) -> Dictionary:
 	return player(str(row["id"])) if not row.is_empty() else {}
 
 ## League table: the save's live standings while a league season owns the
-## connection, otherwise the snapshot's finished table.
+## connection, otherwise the snapshot's table as of its snapshot date.
 func table() -> Array:
 	if _live_table_exists():
 		return _live_table()

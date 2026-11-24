@@ -10,8 +10,16 @@ signal closed()
 var ui_scale := 1.0
 var touch := false
 var mouse := Vector2(-1000, -1000)
+## The pointer's button is down. Touch has no hover, so a held press is what
+## reveals a date's weekday there (#99).
+var holding := false
 var buttons: Array = []
 var body: WikiBody = null
+## Snapshot dates the chrome painted, and the page's own date cells (#99): the
+## overlay paints the weekday for the one under the pointer.
+var hints := DateHints.new()
+var rows_hints: DateHints = null
+var tooltip: DateOverlay = null
 
 var stack: Array = []
 var page_data: Dictionary = {}
@@ -29,6 +37,8 @@ func _ready() -> void:
 	body.name = "Body"
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(body)
+	rows_hints = body.hints
+	tooltip = DateOverlay.attach(self, body, true)
 
 # -------------------------------------------------------------------- pages --
 
@@ -163,6 +173,7 @@ func body_rect(vp: Vector2) -> Rect2:
 func _draw() -> void:
 	var vp := design_vp()
 	buttons.clear()
+	hints.clear()
 	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.012, 0.020, 0.026, 0.985))
 	draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
 	draw_rect(Rect2(0, vp.y - 3, vp.x, 3), Color(0, 0, 0, 0.5))
@@ -181,7 +192,7 @@ func _draw() -> void:
 	WikiChrome.label(self, f_bold, Vector2(x, title_y - (32.0 if compact else 38.0)), str(page_data.get("eyebrow", "")), 10, accent.lightened(0.35))
 	draw_rect(Rect2(x, title_y - 28.0, 3, 28), accent)
 	WikiChrome.label(self, f_bold, Vector2(x + 12, title_y), str(page_data.get("title", "")), 26 if compact else 34)
-	WikiChrome.label(self, f_med, Vector2(x + 12, title_y + 18.0), str(page_data.get("subtitle", "")), 9, WikiChrome.DIM)
+	_draw_subtitle(x + 12.0, title_y + 18.0)
 	_draw_crumbs(body_rect(vp).position.y - 16.0)
 	var br := body_rect(vp)
 	draw_line(Vector2(br.position.x, br.position.y - 8.0), Vector2(br.position.x + br.size.x, br.position.y - 8.0), Color(1, 1, 1, 0.07), 1)
@@ -189,6 +200,19 @@ func _draw() -> void:
 
 func _add(id: String, r: Rect2) -> void:
 	buttons.append({"id": id, "rect": r})
+
+## The identity line, with the snapshot date as its own label so the overlay can
+## give that date its weekday (#99).
+func _draw_subtitle(sub_x: float, y: float) -> void:
+	var sub := str(page_data.get("subtitle", ""))
+	WikiChrome.label(self, f_med, Vector2(sub_x, y), sub, 9, WikiChrome.DIM)
+	var snap := str(page_data.get("snapshot", ""))
+	if snap == "":
+		return
+	var label := FixtureCalendar.day_label(snap)
+	var at := Vector2(sub_x + DateHints.width(f_med, sub, 9), y)
+	WikiChrome.label(self, f_med, at, label, 9, WikiChrome.DIM)
+	hints.add(DateHints.strip(f_med, label, at, 9), snap)
 
 func _draw_crumbs(y: float) -> void:
 	var trail: Array = crumb_pages()
@@ -219,8 +243,12 @@ func _draw_furniture(vp: Vector2, br: Rect2) -> void:
 		draw_rect(Rect2(track.position.x, track.position.y + (track.size.y - h) * offset, 3.0, h), Color(1, 1, 1, 0.22))
 	var hint := "TAP A ROW TO OPEN  ·  DRAG OR KEYS SCROLL" if touch else "CLICK A ROW TO OPEN  ·  ESC BACK  ·  WHEEL, DRAG OR KEYS SCROLL"
 	WikiChrome.label(self, f_med, Vector2(br.position.x, vp.y - 14.0), hint, 9, WikiChrome.DIM)
-	var source := "SNAPSHOT %s" % str(WikiModel.repo().meta().get("snapshot_date", "")).to_upper()
-	WikiChrome.label_r(self, f_med, br.end.x, vp.y - 14.0, source, 9, Color(0.96, 0.78, 0.30, 0.55))
+	var snap := str(WikiModel.repo().meta().get("snapshot_date", ""))
+	var label := FixtureCalendar.day_label(snap)
+	WikiChrome.label_r(self, f_med, br.end.x, vp.y - 14.0, "SNAPSHOT %s" % label, 9,
+		Color(0.96, 0.78, 0.30, 0.55))
+	if snap != "":
+		hints.add(DateHints.strip_right(f_med, label, br.end.x, vp.y - 14.0, 9), snap)
 
 func _process(_d: float) -> void:
 	if body != null:

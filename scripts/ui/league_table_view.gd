@@ -1,9 +1,9 @@
 class_name LeagueTableView
 extends RefCounted
 
-## The league table in its two readings (#72/#74): a compact standings strip
-## (#, club, P, GD, PTS) and the full sheet with the overall record plus the
-## home and away splits, sorted by any column.
+## The league table in its two readings (#72/#74/#102): a compact standings
+## strip with the whole overall record (#, club, P W D L GF GA GD PTS) and the
+## full sheet that adds the home and away splits, sorted by any column.
 ##
 ## Sorting never renumbers the league: every row keeps the official `position`
 ## the save computed, so the `#` column and the zone bands always show the real
@@ -40,13 +40,9 @@ const HEAD_TWO := 34.0
 
 ## `num` boxes sit on a right-aligned rail; `group` names the caption band the
 ## full sheet paints above them. `position` is never sortable: `#` is the league.
-const COMPACT_COLS := [
-	{"key": "position", "label": "#", "num": false},
-	{"key": "club", "label": "CLUB", "num": false},
-	{"key": "played", "label": "P", "num": true},
-	{"key": "gd", "label": "GD", "num": true},
-	{"key": "points", "label": "PTS", "num": true},
-]
+## Compact is the whole overall record on one line (#102); the full sheet adds
+## the home and away splits under it.
+const COMPACT_COLS := LeagueColumns.COMPACT_COLS
 
 const FULL_COLS := [
 	{"key": "position", "label": "#", "num": false},
@@ -123,9 +119,8 @@ static func numeric(cols: Array) -> int:
 
 func layout(vp: Vector2, view: Dictionary) -> Array:
 	var reading := _reading(vp)
-	var cols := columns(reading)
 	var rows := ordered(view.get("table", []))
-	var row_w := maxf(vp.x - 48.0, POS_W + CLUB_MIN + float(numeric(cols)) * (NUM_W + NUM_GAP))
+	var row_w := maxf(vp.x - 48.0, _min_row_w(reading))
 	var places := _places(Rect2(24.0, 0.0, row_w, ROW_H))
 	var top: float = LeagueSheet.HEADER + (HEAD_TWO if reading == FULL else HEAD_ONE)
 	var items := _header(places)
@@ -186,22 +181,21 @@ func _shown(key: String) -> bool:
 			return true
 	return false
 
+## The narrowest row a reading needs. Compact walks the measured rail
+## (`LeagueColumns`), which keeps the whole overall record and a readable club
+## name inside a phone sheet; the full sheet walks its own 22 columns from the
+## club's right edge.
+func _min_row_w(reading: String) -> float:
+	if reading == COMPACT:
+		return LeagueColumns.min_row(COMPACT_COLS)
+	return POS_W + CLUB_MIN + float(numeric(FULL_COLS)) * (NUM_W + NUM_GAP)
+
 ## Column rails for a row at this width. Compact keeps `LeagueColumns`, the
 ## measured layout #71 settled; the full sheet walks the columns from the club
 ## column's right edge so the whole record fits a phone in landscape.
 func _places(row: Rect2) -> Dictionary:
 	if mode == COMPACT:
-		var fit := LeagueColumns.of(row)
-		var rail: Array = [
-			{"key": "played", "label": "P", "right": float(fit["p_r"]),
-				"w": LeagueColumns.NUM_W, "group": ""},
-			{"key": "gd", "label": "GD", "right": float(fit["gd_r"]),
-				"w": LeagueColumns.NUM_W, "group": ""},
-			{"key": "points", "label": "PTS", "right": float(fit["pts_r"]),
-				"w": LeagueColumns.NUM_W, "group": ""},
-		]
-		return {"pos_x": float(fit["pos_x"]), "club_x": float(fit["club_x"]),
-			"club_w": float(fit["club_w"]), "cols": rail}
+		return LeagueColumns.of(row, COMPACT_COLS)
 	var club_x := row.position.x + POS_W
 	var club_w := row.size.x - POS_W - float(numeric(FULL_COLS)) * (NUM_W + NUM_GAP)
 	var out := {"pos_x": row.position.x, "club_x": club_x, "club_w": club_w, "cols": []}
@@ -287,13 +281,22 @@ func _store(save: LeagueSave, key: String, value: String) -> void:
 
 # ------------------------------------------------------------------- paint ---
 
-func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
+func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
+		hints: DateHints) -> void:
 	var bold: Font = fonts["bold"]
 	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
 	UiChrome.text(c, Vector2(24.0, 48.0), "LEAGUE TABLE", 12, UiChrome.C_GOLD, bold)
-	UiChrome.text_r(c, vp.x - 24.0, 30.0,
-		"%s · %s" % [str(view.get("name", "")), str(view.get("date", ""))], 10,
+	var date := str(view.get("date", ""))
+	var label := FixtureCalendar.day_label(date)
+	var parts: Array = []
+	if str(view.get("name", "")) != "":
+		parts.append(str(view.get("name", "")))
+	if label != "":
+		parts.append(label)
+	UiChrome.text_r(c, vp.x - 24.0, 30.0, " · ".join(PackedStringArray(parts)), 10,
 		UiChrome.C_DIM, bold)
+	if date != "":
+		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 30.0, 10), date)
 	var y := vp.y - LeagueSheet.BAR_H + 24.0
 	# The legend shares the bar with the two reading doors on a wide sheet; a
 	# phone sheet has no room there, so it moves up beside the title.
@@ -368,12 +371,7 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) 
 	for col in places["cols"]:
 		var key := str(col["key"])
 		var points := key == "points"
-		UiChrome.text_r(c, float(col["right"]), y, _text(row, key), 10 if points else 9,
+		UiChrome.text_r(c, float(col["right"]), y, LeagueColumns.text(row, key), 10 if points else 9,
 			UiChrome.C_TEXT if points else UiChrome.C_SOFT, fonts["bold"] if points else fonts["med"])
-
-static func _text(row: Dictionary, key: String) -> String:
-	if key == "gd":
-		return "%+d" % cell(row, key)
-	return "%d" % cell(row, key)
 
 # gd-tools: no cover end

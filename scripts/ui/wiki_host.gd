@@ -143,6 +143,8 @@ func handle_input(event: InputEvent) -> void:
 func reset_pointer() -> void:
 	pressing = false
 	dragged = false
+	if screen != null:
+		screen.holding = false
 
 func _point(event: InputEvent) -> Vector2:
 	return event.position / maxf(game.chrome_scale, 0.001)
@@ -153,6 +155,7 @@ func _pointer_down(p: Vector2) -> void:
 	press_at = p
 	last_at = p
 	screen.mouse = p
+	screen.holding = true
 
 ## Hover is free; holding the button turns the pointer into a scroll drag, and
 ## the travel since the last frame is charged to the body in one step.
@@ -167,6 +170,7 @@ func _pointer_motion(p: Vector2) -> void:
 		if p.distance_to(press_at) < DRAG_SLOP:
 			return
 		dragged = true
+		screen.holding = false
 	screen.wheel(last_at.y - p.y)
 	last_at = p
 
@@ -174,6 +178,7 @@ func _pointer_up() -> void:
 	if not pressing:
 		return
 	pressing = false
+	screen.holding = false
 	if dragged:
 		return
 	var id: String = screen.button_at(press_at)

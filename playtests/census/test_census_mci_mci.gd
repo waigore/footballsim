@@ -1,7 +1,7 @@
 extends GdToolsTest
 
 ## Tier-2 census runner on the even-strength anchor (MCI v MCI). Parent: #31.
-## Same contract as the MCI v BUR runner: play one shard of the fixed grid,
+## Same contract as the MCI v IPS runner: play one shard of the fixed grid,
 ## fail fast when a full match breaks the wall-clock budget, and write the
 ## per-match rows for `test_census_aggregate.gd`, which pools every shard and
 ## owns the dispersion assert. Means and xG are logged, not gated. Tier-2 only.

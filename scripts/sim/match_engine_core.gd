@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## Match state, geometry and squad construction — the base of the MatchEngine
-## chain. Each split file adds one layer: pitch geometry, presentation,
+## chain. Each split file adds one layer: pitch geometry, presentation, duels,
 ## actions, play, rules, clock, then the restarts leaf in match_engine.gd.
 
 signal event_fired(e: Dictionary)
@@ -48,7 +48,24 @@ const SUB_LIMIT := 5
 ## model's λ) instead of the old keeper-steer hack.
 const FINISH_EFFICIENCY := 1.0
 ## Positional xG is calibrated down to real-football levels.
-const XG_SCALE := 0.70
+const XG_SCALE := 0.43
+## A shot is also worth more when the defence facing it is weak and when the
+## side taking it is strong — the same combined rating gradient the model puts
+## into λ, read from one source (`PoissonModel.exponent_terms`). The engine's
+## positional xG knows only distance, angle and aim, so without this a good back
+## line and keeper move *where* chances happen but never how good a chance is.
+## Elasticity is per 10 rating points of that derived gap; it sits below the
+## model's 1.15 because the engine's chance creation already carries part of the
+## gradient. Fitted to the tier-2 census (wiki poisson-model).
+const XG_CONTEST_ELASTICITY := 0.95
+## Venue premium in chance quality, in log terms: the model builds the home edge
+## into HOME_XG / AWAY_XG, and the engine's chance locations do not, so the
+## finishing calibration carries the same split (home × e^edge, away ÷ e^edge).
+const XG_HOME_EDGE := 0.02
+## Per-side shot-contest multiplier, exp(XG_CONTEST_ELASTICITY · the side's
+## share of the model's rating gradient ± XG_HOME_EDGE). Rebuilt by
+## `_calibrate_finishing`.
+var xg_form: Array = [1.0, 1.0]
 
 class Player:
 	var id := 0
@@ -135,6 +152,7 @@ class Ball:
 	var last_touch_time := -10.0
 	var shot_saved := false
 	var planned_goal := false  # this on-target shot has already beaten the keeper
+	var planned_save := false  # this chance will not convert: the keeper stops it
 	var loose_t := 0.0
 
 ## The match official. Presentation only: laws are decided by the engine, but
@@ -218,6 +236,18 @@ func _fill_attr_cache(p: Player) -> void:
 	p.ctrl_radius = Attrs.control_radius(p)
 	p.drain_phy = 1.25 - phy / 100.0 * 0.45
 	p.aerial = Attrs.aerial(p)
+
+## Reads each side's share of the model's rating gradient once per match, so the
+## same shot is a better chance for a strong attack against a weak defence than
+## for a weak one against a strong defence. Cheap: one squad reading per side,
+## then a per-shot multiply.
+func _calibrate_finishing() -> void:
+	var terms := PoissonModel.exponent_terms(str(teams[0]["id"]), str(teams[1]["id"]))
+	var attack: Vector2 = terms["attack"]
+	var defence: Vector2 = terms["defence"]
+	var venue: float = exp(XG_HOME_EDGE)
+	xg_form[0] = exp(XG_CONTEST_ELASTICITY * (attack.x + defence.x)) * venue
+	xg_form[1] = exp(XG_CONTEST_ELASTICITY * (attack.y + defence.y)) / venue
 
 ## Active (on-pitch) players of one side, cached per squad revision.
 ## Callers must treat the returned array as read-only.

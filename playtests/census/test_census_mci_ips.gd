@@ -1,6 +1,6 @@
 extends GdToolsTest
 
-## Tier-2 census runner: physics engine vs Poisson model on the MCI v BUR
+## Tier-2 census runner: physics engine vs Poisson model on the MCI v IPS
 ## anchor. Parent: #31 (physics↔Poisson variance agreement).
 ##
 ## A full 60 Hz GDScript match costs tens of seconds, so the fixed n = 32 grid
@@ -17,7 +17,7 @@ extends GdToolsTest
 ## selected by PR tier-1 (the impact map keeps census edits on the fast poisson
 ## suite).
 
-const ANCHOR := "mci_bur"
+const ANCHOR := "mci_ips"
 
 func test_census_shard_runs_the_grid() -> void:
 	var n := CensusLib.env_int("CENSUS_N", CensusLib.GRID_N)
