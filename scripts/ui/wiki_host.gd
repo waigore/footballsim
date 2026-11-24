@@ -7,26 +7,17 @@ extends RefCounted
 ## main.gd only has to say "open this page".
 
 const LAYER := 30
-## Pointer travel that separates a click from a drag. Below it the press is still
-## a tap, so a shaky hand never turns a row click into a scroll.
-const DRAG_SLOP := 8.0
-## A trackpad pan arrives in tiny unnamed units; this turns one into the same
-## handful of design units a wheel notch moves.
-const PAN_STEP := 60.0
 
 var game = null
 var screen = null
 var layer: CanvasLayer = null
+## The drag/wheel/click grammar the sheet shares with the league surface.
+var pointer: SheetPointer = null
 var from_select := false
 ## The encyclopedia was opened from inside a league season: closing it puts the
 ## season sheet back exactly where it was, not the match chrome.
 var from_league := false
 var was_paused := false
-
-var pressing := false
-var dragged := false
-var press_at := Vector2.ZERO
-var last_at := Vector2.ZERO
 
 func _init(host) -> void:
 	game = host
@@ -43,6 +34,7 @@ func build() -> void:
 	screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(screen)
 	screen.closed.connect(_on_screen_closed)
+	pointer = SheetPointer.new(screen)
 	layer.visible = false
 
 func is_open() -> bool:
@@ -115,74 +107,22 @@ func sync_scale() -> void:
 	screen.touch = game.touch
 
 ## The sheet does its own hit testing; this only converts pointers to design
-## space and forwards. Wheel notches, macOS trackpad pan gestures, drags and keys
-## all move the body; a press that never travels commits as a click on release.
+## space and hands them to the shared grammar. Wheel notches, macOS trackpad pan
+## gestures, drags and keys all move the body; a press that never travels commits
+## as a click or a tap on release.
 func handle_input(event: InputEvent) -> void:
-	if screen == null:
+	if screen == null or pointer == null:
 		return
-	if event is InputEventMouseMotion:
-		_pointer_motion(_point(event))
-	elif event is InputEventPanGesture:
-		# A trackpad scrolls with pan gestures rather than wheel buttons, so a
-		# sheet that only listened for wheels read as frozen on a laptop.
-		screen.wheel(event.delta.y * PAN_STEP)
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
-		screen.wheel(-110.0)
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-		screen.wheel(110.0)
-	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			_pointer_down(_point(event))
-		else:
-			_pointer_up()
-	elif event is InputEventKey and event.pressed and not event.echo:
-		screen.key(event.keycode)
+	# Only a pointer event carries a window position; keys and pan gestures do
+	# not need one, and reading `position` off a key would be a runtime error.
+	var point: Vector2 = _point(event) if event is InputEventMouse else Vector2.ZERO
+	pointer.handle(event, point)
 
 ## A fresh page starts with no pointer history: a press belongs to the sheet that
 ## was on screen when it happened.
 func reset_pointer() -> void:
-	pressing = false
-	dragged = false
-	if screen != null:
-		screen.holding = false
+	if pointer != null:
+		pointer.reset()
 
 func _point(event: InputEvent) -> Vector2:
 	return event.position / maxf(game.chrome_scale, 0.001)
-
-func _pointer_down(p: Vector2) -> void:
-	pressing = true
-	dragged = false
-	press_at = p
-	last_at = p
-	screen.mouse = p
-	screen.holding = true
-
-## Hover is free; holding the button turns the pointer into a scroll drag, and
-## the travel since the last frame is charged to the body in one step.
-func _pointer_motion(p: Vector2) -> void:
-	screen.mouse = p
-	if not pressing:
-		if not game.touch:
-			var over: bool = screen.button_at(p) != ""
-			Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if over else Input.CURSOR_ARROW)
-		return
-	if not dragged:
-		if p.distance_to(press_at) < DRAG_SLOP:
-			return
-		dragged = true
-		screen.holding = false
-	screen.wheel(last_at.y - p.y)
-	last_at = p
-
-func _pointer_up() -> void:
-	if not pressing:
-		return
-	pressing = false
-	screen.holding = false
-	if dragged:
-		return
-	var id: String = screen.button_at(press_at)
-	if id != "":
-		screen.click(id)
-	else:
-		screen.tap(press_at)
