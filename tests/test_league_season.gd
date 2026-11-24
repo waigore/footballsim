@@ -239,6 +239,29 @@ func test_every_side_total_matches_the_fixture_ledger() -> void:
 		assert_eq(int(row["home_ga"]) + int(row["away_ga"]), int(row["ga"]),
 			"%s side goals against do not add up" % club)
 
+## An older save (or one whose side columns were never filled) gets its home and
+## away totals rebuilt from the played fixtures when the season opens.
+func test_opening_a_save_rebuilds_its_side_totals() -> void:
+	var slug := str(season.save.slug)
+	PLDatabase.execute(
+		"UPDATE league_table SET home_played = 0, home_gf = 0, away_played = 0, "
+		+ "away_gf = 0, away_ga = 0;")
+	season.close()
+	var reopened := LeagueSeason.open(slug)
+	assert_not_null(reopened, "the save did not reopen")
+	var rows: Array = reopened.record.table()
+	assert_eq(int(rows[0]["home_played"]), 19, "opening the save did not rebuild the home record")
+	var home := 0
+	var goals := 0
+	for row in rows:
+		home += int(row["home_played"])
+		goals += int(row["home_gf"]) + int(row["away_gf"])
+	assert_eq(home, 380, "the rebuilt home records do not add up to the fixture ledger")
+	var total := PLDatabase.row(
+		"SELECT SUM(home_goals) + SUM(away_goals) AS n FROM league_fixture WHERE status = 'played';")
+	assert_eq(goals, int(total["n"]), "the rebuilt side goals are not the fixture ledger")
+	season = reopened
+
 ## Recompute is the repair path an older save takes: a row that drifted comes
 ## back to the ledger, home and away included.
 func test_recompute_restores_a_drifted_side_record() -> void:
