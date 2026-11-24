@@ -64,7 +64,6 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	var items: Array = []
 	var plan: Array = state.get("plan", [])
 	var top: float = HEADER + (14.0 if not compact(vp) else 8.0)
-	var body_bottom := vp.y - BAR_H - 6.0
 	var wide := vp.x >= 760.0 and not compact(vp)
 	var left_w: float = (vp.x - 72.0) * 0.58 if wide else vp.x - 48.0
 	var y := top + 24.0
@@ -92,11 +91,12 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	if bool(state.get("can_suggest", false)):
 		items.append({"id": "suggest", "kind": "chip", "label": "SUGGEST WATCHES",
 			"rect": Rect2(24.0 + left_w - 150.0, top + 2.0, 150.0, 20.0)})
-	items.append_array(_bar_rects(vp, ["continue", "table", "calendar", "system"],
-		["CONTINUE", "TABLE", "CALENDAR", "SYSTEM"]))
-	if bool(state.get("complete", false)):
-		items.append({"id": "podium", "kind": "button", "label": "PODIUM", "pinned": true,
-			"rect": Rect2(24.0, body_bottom - 34.0, 120.0, 28.0), "primary": false})
+	# Chrome: BACK top-left, CONTINUE top-right. The bottom door bar is gone;
+	# every other destination lives in the left panel.
+	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
+		"rect": LeagueExtra.back_rect()})
+	items.append({"id": "continue", "kind": "button", "label": "CONTINUE", "primary": true,
+		"pinned": true, "rect": Rect2(vp.x - 24.0 - 140.0, 12.0, 140.0, 32.0)})
 	return items
 
 func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -118,8 +118,8 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	y += 54.0
 	items.append({"id": "create", "kind": "button", "label": "CREATE SEASON",
 		"rect": Rect2(24.0, y, minf(240.0, w), 46.0), "primary": true})
-	items.append({"id": "back", "kind": "button", "label": "BACK",
-		"rect": Rect2(24.0 + minf(240.0, w) + 12.0, y, 110.0, 46.0), "primary": false})
+	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
+		"rect": LeagueExtra.back_rect()})
 	return items
 
 func load_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -136,20 +136,8 @@ func load_layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(row.end.x - 96.0, row.position.y + 5.0, 34.0, 30.0), "slug": str(save["slug"])})
 		y += 46.0
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 110.0, BAR_H - 14.0), "primary": false})
+		"rect": LeagueExtra.back_rect()})
 	return items
-
-func _bar_rects(vp: Vector2, ids: Array, labels: Array) -> Array:
-	var out: Array = []
-	var margin := 24.0
-	var gap := 8.0
-	var w := (vp.x - 2.0 * margin - gap * float(ids.size() - 1)) / float(ids.size())
-	for i in range(ids.size()):
-		out.append({
-			"id": str(ids[i]), "kind": "button", "label": str(labels[i]), "primary": i == 0,
-			"pinned": true, "rect": Rect2(margin + float(i) * (w + gap), vp.y - BAR_H + 6.0, w, BAR_H - 14.0),
-		})
-	return out
 
 ## The lane the wide hub's side table occupies, beside the fixture list.
 func _hub_table_box(vp: Vector2) -> Rect2:
@@ -157,46 +145,48 @@ func _hub_table_box(vp: Vector2) -> Rect2:
 	var tx := 24.0 + left_w + 22.0
 	return Rect2(tx, 0.0, vp.x - tx - 24.0, 19.0)
 
-## The side table's column rail: the same compact set the TABLE sheet paints,
-## spread across the whole lane so the numbers fill it (a club abbreviation needs
-## far less room than a club name).
+## The side table's column rail: the material compact set the TABLE sheet paints,
+## spread across the lane so a club abbreviation's spare room goes to the numbers.
 func _hub_table_places(box: Rect2) -> Dictionary:
 	return LeagueColumns.of(box, LeagueColumns.COMPACT_COLS, HUB_CLUB_MIN, HUB_CLUB_SHARE)
 
 # gd-tools: no cover start
 
 func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dictionary,
-		hints: DateHints) -> void:
-	var date := str(state.get("date", ""))
-	var label: String = FixtureCalendar.day_label(date) if date != "" else str(state.get("day", ""))
-	var rest := " · GW %d · %d OF %d PLAYED" % [int(state.get("matchday", 1)),
-		int(state.get("played", 0)), int(state.get("total", 0))]
-	# A left-behind watch is still being played out: the result lands on its own.
-	if bool(state.get("settling", false)):
-		rest += " · FINISHING THE WATCHED MATCH"
-	_heading(c, vp, fonts, str(state.get("name", "LEAGUE")), label + rest)
-	if date != "":
-		var bold: Font = fonts["bold"]
-		var whole: float = DateHints.width(bold, label + rest, 10)
-		hints.add(Rect2(vp.x - 24.0 - whole, 20.0, DateHints.width(bold, label, 10), 14.0), date)
+		_hints: DateHints) -> void:
+	# CONTINUE owns the top-right, so a long save name is shortened to the room
+	# between it and the header title position.
+	var room: float = maxf(vp.x - 24.0 - 140.0 - 136.0 - 10.0, 48.0)
+	var title := LeagueColumns.fit_name(str(state.get("name", "LEAGUE")).to_upper(),
+		fonts["bold"], 16, room)
+	LeagueExtra.header(c, vp, fonts, title)
 
 func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, state: Dictionary) -> void:
 	hints.clear()
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
-	## The plan hint rides the caption: the first fixture row starts right under
-	## it, so a second line would print through the row. A day that still holds
-	## watches says what CONTINUE does with them (#100).
-	var hint := " · TAP A GAME TO SWITCH AUTO / WATCH" if bool(state.get("can_suggest", false)) else ""
-	for fx in state.get("plan", []):
-		if int(fx.get("watched", 0)) == 1:
-			hint = " · CONTINUE OPENS THE NEXT WATCH"
-			break
-	UiChrome.text(c, Vector2(24.0, HEADER + 18.0), "TODAY'S FIXTURES" + hint, 11, UiChrome.C_DIM, bold)
+	var date := str(state.get("date", ""))
+	var label: String = FixtureCalendar.day_label(date) if date != "" else str(state.get("day", ""))
+	var caption := "TODAY'S FIXTURES"
+	if label != "":
+		caption += " · " + label.to_upper()
+	caption += " · GW %d · %d OF %d PLAYED" % [int(state.get("matchday", 1)),
+		int(state.get("played", 0)), int(state.get("total", 0))]
+	if bool(state.get("settling", false)):
+		caption += " · FINISHING THE WATCHED MATCH"
+	else:
+		for fx in state.get("plan", []):
+			if int(fx.get("watched", 0)) == 1:
+				caption += " · CONTINUE OPENS THE NEXT WATCH"
+				break
+	UiChrome.text(c, Vector2(24.0, HEADER + 18.0), caption, 10, UiChrome.C_DIM, bold)
+	if date != "":
+		hints.add(DateHints.strip(bold, caption, Vector2(24.0, HEADER + 18.0), 10), date)
 	if vp.x >= 760.0 and not compact(vp):
 		var places := _hub_table_places(_hub_table_box(vp))
 		var top: float = HEADER + 14.0
-		UiChrome.text(c, Vector2(float(places["club_x"]), top + 16.0), "CLUB", 9, UiChrome.C_DIM, bold)
+		UiChrome.text(c, Vector2(float(places["club_x"]), top + 16.0), "CLUB", 9,
+			UiChrome.C_DIM, bold)
 		for col in places["cols"]:
 			UiChrome.text_r(c, float(col["right"]), top + 16.0, str(col["label"]), 9,
 				UiChrome.C_DIM, bold)
@@ -224,9 +214,11 @@ func _draw_fixture_row(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dictio
 	var time := str(fx.get("kickoff_time", ""))
 	if time != "":
 		UiChrome.text(c, Vector2(rect.position.x + 8.0, rect.position.y + 17.0), time, 10, UiChrome.C_DIM, med)
-	UiChrome.text(c, Vector2(rect.position.x + 60.0, rect.position.y + 17.0), str(fx["home_abbr"]), 13, UiChrome.C_TEXT, bold)
+	var home_ink: Color = UiChrome.C_GOLD if LeagueInterest.marked(str(fx.get("home_club_id", ""))) else UiChrome.C_TEXT
+	var away_ink: Color = UiChrome.C_GOLD if LeagueInterest.marked(str(fx.get("away_club_id", ""))) else UiChrome.C_TEXT
+	UiChrome.text(c, Vector2(rect.position.x + 60.0, rect.position.y + 17.0), str(fx["home_abbr"]), 13, home_ink, bold)
 	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 46.0, rect.position.y + 17.0), "v", 10, UiChrome.C_DIM, med)
-	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 66.0, rect.position.y + 17.0), str(fx["away_abbr"]), 13, UiChrome.C_TEXT, bold)
+	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 66.0, rect.position.y + 17.0), str(fx["away_abbr"]), 13, away_ink, bold)
 	if int(fx.get("suggested", 0)) == 1:
 		UiChrome.text_r(c, rect.end.x - 78.0, rect.position.y + 15.0, "TOP-6", 8, UiChrome.C_GOLD, bold)
 
@@ -246,10 +238,12 @@ func _draw_table_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictio
 	var med: Font = fonts["med"]
 	var places: Dictionary = item["places"]
 	var y := rect.position.y + 14.0
-	UiChrome.text(c, Vector2(float(places["pos_x"]), y), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
+	UiChrome.text(c, Vector2(float(places["pos_x"]), y), "%d" % int(row["position"]), 10,
+		UiChrome.C_DIM, med)
+	var ink: Color = UiChrome.C_GOLD if LeagueInterest.marked(str(row["club_id"])) else UiChrome.C_TEXT
 	UiChrome.text(c, Vector2(float(places["club_x"]), y),
 		LeagueColumns.fit_name(str(row["club_abbr"]), bold, 12, float(places["club_w"])),
-		12, UiChrome.C_TEXT, bold)
+		12, ink, bold)
 	for col in places["cols"]:
 		var key := str(col["key"])
 		var points := key == "points"
@@ -261,9 +255,9 @@ func _draw_table_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictio
 
 func draw_wizard_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	_heading(c, vp, fonts, "NEW LEAGUE", "GOD-MODE SEASON SETUP")
+	LeagueExtra.header(c, vp, fonts, "NEW LEAGUE", "GOD-MODE SEASON SETUP")
 	if str(view.get("error", "")) != "":
-		UiChrome.text(c, Vector2(24.0, vp.y - BAR_H - 10.0), str(view["error"]), 12, UiChrome.C_DANGER, fonts["med"])
+		UiChrome.text(c, Vector2(24.0, vp.y - 18.0), str(view["error"]), 12, UiChrome.C_DANGER, fonts["med"])
 
 func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, _view: Dictionary) -> void:
 	hints.clear()
@@ -293,9 +287,10 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 
 # ------------------------------------------------------------------ load ---
 
-func draw_load_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, _view: Dictionary,
+func draw_load_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	_heading(c, vp, fonts, "LOAD LEAGUE", "NAMED SEASONS")
+	var caption := "OPENING A SAVE UNLOADS THIS SEASON" if bool(view.get("from_season", false)) else "NAMED SEASONS"
+	LeagueExtra.header(c, vp, fonts, "LOAD LEAGUE", caption)
 
 func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()
@@ -349,11 +344,5 @@ static func draw_play(c: CanvasItem, cache: Dictionary, rect: Rect2, bold: Font)
 func draw_chip(c: CanvasItem, rect: Rect2, label: String, bold: Font) -> void:
 	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 5)
 	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 17.0, label, 13, UiChrome.C_TEXT, bold)
-
-func _heading(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String, caption: String) -> void:
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, fonts["bold"])
-	UiChrome.text(c, Vector2(24.0, 48.0), title.to_upper(), 12, UiChrome.C_GOLD, fonts["bold"])
-	UiChrome.text_r(c, vp.x - 24.0, 30.0, caption, 10, UiChrome.C_DIM, fonts["bold"])
-	c.draw_rect(Rect2(24.0, HEADER - 8.0, vp.x - 48.0, 1.0), Color(1, 1, 1, 0.08))
 
 # gd-tools: no cover end

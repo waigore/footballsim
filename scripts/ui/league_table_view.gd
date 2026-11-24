@@ -131,8 +131,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(24.0, top + float(i) * ROW_H, row_w, ROW_H - 1.0), "places": places,
 		})
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": Rect2(24.0, vp.y - LeagueSheet.BAR_H + 6.0, 110.0, LeagueSheet.BAR_H - 14.0),
-		"primary": true})
+		"rect": LeagueExtra.back_rect()})
 	# Two doors rather than one toggle: the gold one is the reading on screen,
 	# so the player never has to guess what a press will do.
 	items.append({"id": "tbl:mode:" + COMPACT, "kind": "button", "label": "COMPACT",
@@ -284,19 +283,14 @@ func _store(save: LeagueSave, key: String, value: String) -> void:
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
 	var bold: Font = fonts["bold"]
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), "LEAGUE TABLE", 12, UiChrome.C_GOLD, bold)
 	var date := str(view.get("date", ""))
 	var label := FixtureCalendar.day_label(date)
-	var parts: Array = []
-	if str(view.get("name", "")) != "":
-		parts.append(str(view.get("name", "")))
+	var caption: String = str(view.get("name", ""))
 	if label != "":
-		parts.append(label)
-	UiChrome.text_r(c, vp.x - 24.0, 30.0, " · ".join(PackedStringArray(parts)), 10,
-		UiChrome.C_DIM, bold)
+		caption = "%s · %s" % [caption, label] if caption != "" else label
+	LeagueExtra.header(c, vp, fonts, "LEAGUE TABLE", caption)
 	if date != "":
-		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 30.0, 10), date)
+		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 34.0, 10), date)
 	var y := vp.y - LeagueSheet.BAR_H + 24.0
 	# The legend shares the bar with the two reading doors on a wide sheet; a
 	# phone sheet has no room there, so it moves up beside the title.
@@ -364,10 +358,11 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) 
 	var y := rect.position.y + rect.size.y * 0.5 + 4.0
 	UiChrome.text(c, Vector2(float(places["pos_x"]), y), "%d" % int(row["position"]), 10,
 		UiChrome.C_DIM, fonts["med"])
+	var name_ink: Color = UiChrome.C_GOLD if LeagueInterest.marked(str(row["club_id"])) else UiChrome.C_TEXT
 	UiChrome.text(c, Vector2(float(places["club_x"]), y),
 		LeagueColumns.fit_name(str(row["club_name"]), fonts["bold"],
 			12 if mode == COMPACT else 11, float(places["club_w"])),
-		12 if mode == COMPACT else 11, UiChrome.C_TEXT, fonts["bold"])
+		12 if mode == COMPACT else 11, name_ink, fonts["bold"])
 	for col in places["cols"]:
 		var key := str(col["key"])
 		var points := key == "points"

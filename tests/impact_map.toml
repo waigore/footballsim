@@ -136,8 +136,12 @@ suites = [
   "test_match_events.gd",
   "test_strongest_xi.gd",
   "test_league_season.gd",
+  "test_league_interest.gd",
+  "test_league_panel_ui.gd",
+  "test_interest_surfaces.gd",
   "test_league_ui.gd",
   "test_league_system.gd",
+  "test_league_sheets.gd",
   "test_goal_highlights.gd",
 ]
 
@@ -146,6 +150,7 @@ suites = [
 suites = [
   "test_wiki_model.gd",
   "test_wiki_screen.gd",
+  "test_interest_surfaces.gd",
   "test_wiki_entry.gd",
   "test_wiki_render.gd",
   "test_hud_layout.gd",
@@ -234,6 +239,11 @@ domain = "tactics"
 # Season clock, calendar, synthetic events and the strongest XI: one theme.
 [[rules]]
 match = "scripts/sim/league_season.gd*"
+domain = "league"
+
+# Season helpers split out of the season loop to keep its P3 size ratchet.
+[[rules]]
+match = "scripts/sim/league_*.gd*"
 domain = "league"
 
 [[rules]]
@@ -365,6 +375,11 @@ domain = "wiki"
 
 [[rules]]
 match = "scripts/ui/league_*.gd*"
+domain = "league"
+
+# Teams of Interest: the shared long-press menu and the HUD/picker entry points.
+[[rules]]
+match = "scripts/ui/interest_*.gd*"
 domain = "league"
 
 [[rules]]

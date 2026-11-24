@@ -1,9 +1,10 @@
 class_name LeagueScreen
 extends Control
 
-## God-mode league surface: New/Setup, Load, Continue hub, table, calendar,
-## reports and podium. Screen holds state; sheets paint; season owns the sim.
-## Input arrives in design space from `LeagueHost`.
+## God-mode league surface: New/Setup, Load, Continue hub with its left panel,
+## table, calendar, reports, Stats, Teams of Interest, System and podium. Screen
+## holds state; sheets paint; season owns the sim. Input arrives in design space
+## from `LeagueHost`; presses and keys are routed by `LeagueActions`.
 
 signal closed
 signal match_requested(home: String, away: String, fixture_id: String)
@@ -24,6 +25,16 @@ const MODE_REPORT := "report"
 const MODE_PODIUM := "podium"
 ## The season's own save/exit dialog (#109).
 const MODE_SYSTEM := "system"
+## The panel's own readings (#103): matchday reports + podium, and the shortlist.
+const MODE_STATS := "stats"
+const MODE_INTEREST := "interest"
+
+## Panel destination (LeaguePanel.pose) for each pose on screen.
+const POSE_NAMES := {
+	MODE_HUB: "fixtures", MODE_TABLE: "table", MODE_CALENDAR: "calendar",
+	MODE_INTEREST: "interest", MODE_STATS: "stats", MODE_SYSTEM: "system",
+	MODE_REPORT: "fixtures", MODE_PODIUM: "stats",
+}
 
 var ui_scale := 1.0
 var touch := false
@@ -50,11 +61,21 @@ var hub: LeagueSheet = LeagueSheet.new()
 var book: LeagueBook = LeagueBook.new()
 ## The season's own save/exit dialog (#109), its own pose beside hub and book.
 var system := LeagueSystemSheet.new()
+## Stats and Teams of Interest, the panel's two new readings (#103).
+var sheet_extra := LeagueExtra.new()
 ## What the System sheet is showing: the last acknowledgement, a refusal, and
 ## the Save As name field while it is open.
 var sys := {"status": "", "error": "", "naming": false, "name": ""}
 ## Where the load list was opened from, so BACK returns there (menu or season).
 var load_from := "menu"
+## Long-press interest menu, the left slide panel and the layer that paints them.
+var menu := InterestMenu.new()
+var panel := LeaguePanel.new()
+var overlay: LeagueOverlay = null
+var actions: LeagueActions = null
+## The shortlist search field, and where BACK from a report returns (#103).
+var interest_query := ""
+var report_back := MODE_HUB
 ## Date strips: the chrome's own, and the active sheet's rows on screen (#99).
 var hints := DateHints.new()
 var rows_hints: DateHints = null
@@ -70,6 +91,8 @@ var _poses := {
 	MODE_REPORT: ["book", "report_layout", "draw_report_body", "draw_report_chrome"],
 	MODE_PODIUM: ["book", "podium_layout", "draw_podium_body", "draw_podium_chrome"],
 	MODE_SYSTEM: ["system", "layout", "draw_body", "draw_chrome"],
+	MODE_STATS: ["extra", "stats_layout", "draw_stats_body", "draw_stats_chrome"],
+	MODE_INTEREST: ["extra", "interest_layout", "draw_interest_body", "draw_interest_chrome"],
 }
 
 func _ready() -> void:
@@ -80,7 +103,21 @@ func _ready() -> void:
 	body.name = "Body"
 	add_child(body)
 	tooltip = DateOverlay.attach(self, body, false)
+	overlay = LeagueOverlay.new()
+	overlay.name = "Overlay"
+	overlay.ui_scale = ui_scale
+	overlay.panel = panel
+	overlay.menu = menu
+	overlay.fonts = UiChrome.fonts()
+	add_child(overlay)
+	actions = LeagueActions.new(self)
 	resized.connect(refresh)
+
+## The slide animates on its own clock; a settled panel costs nothing and never
+## blocks input.
+func _process(delta: float) -> void:
+	if visible and panel.update(delta):
+		overlay.queue_redraw()
 
 func design_vp() -> Vector2:
 	var vp: Vector2 = size / maxf(ui_scale, 0.001)
@@ -97,6 +134,10 @@ func open_wizard() -> void:
 	mode = MODE_WIZARD
 	wizard = {"name": "League %d" % (saves.size() + 1), "calendar_mode": "generated",
 		"advance_mode": "fixture_days", "error": ""}
+	interest_query = ""
+	menu.hide()
+	panel.close()
+	panel.settle()
 	visible = true
 	refresh()
 
@@ -104,6 +145,9 @@ func open_load() -> void:
 	mode = MODE_LOAD
 	load_from = "menu"
 	saves = LeagueSave.list()
+	menu.hide()
+	panel.close()
+	panel.settle()
 	visible = true
 	refresh()
 
@@ -114,6 +158,11 @@ func open_season(target: LeagueSeason, show_podium: bool = false) -> void:
 		mode = MODE_PODIUM
 	else:
 		mode = MODE_HUB
+	interest_query = ""
+	report_back = MODE_HUB
+	menu.hide()
+	panel.close()
+	panel.settle()
 	month = LeagueBook.state_month(season, month)
 	visible = true
 	refresh()
@@ -124,17 +173,22 @@ func show_report(fixture_id: String) -> void:
 	report = season.report(fixture_id)
 	roundup = []
 	mode = MODE_REPORT
+	report_back = MODE_STATS if report_back == MODE_STATS else MODE_HUB
 	refresh()
 
 func show_roundup(reports: Array) -> void:
 	report = {}
 	roundup = reports
 	mode = MODE_REPORT
+	report_back = MODE_HUB
 	refresh()
 
 func close() -> void:
 	visible = false
 	mode = MODE_HUB
+	menu.hide()
+	panel.close()
+	panel.settle()
 	closed.emit()
 
 # --------------------------------------------------------------- state ----
@@ -153,23 +207,41 @@ func refresh() -> void:
 	var sheet := _sheet(pose)
 	rows_hints = sheet.hints
 	var items: Array = Callable(sheet, str(pose[1])).call(vp, view)
-	var content := body.set_sheet(items, vp, mode != _last_mode)
+	var content := body.set_sheet(items, vp, mode != _last_mode, _bottom_bar())
 	body.painter = Callable(sheet, str(pose[2])).bind(vp, UiChrome.fonts(), content, view)
+	panel.active = str(POSE_NAMES.get(mode, ""))
+	overlay.active_pose = panel.active
+	overlay.ui_scale = ui_scale
 	_last_mode = mode
+	overlay.queue_redraw()
 	queue_redraw()
 
-## The sheet that owns a pose: the hub sheets, the reading book, or the System
-## dialog (which is its own module).
+## Bottom chrome the pose reserves: the table keeps its chips.
+func _bottom_bar() -> float:
+	return LeagueSheet.BAR_H if mode == MODE_TABLE else 0.0
+
+## The sheet that owns a pose: the hub sheets, the reading book, the System
+## dialog (its own module) or the panel's two extra readings.
 func _sheet(pose: Array) -> RefCounted:
 	match str(pose[0]):
 		"book":
 			return book
 		"system":
 			return system
+		"extra":
+			return sheet_extra
 	return hub
 
-## Hit test walks back to front so later items (e.g. a delete chip) win.
+## Hit test walks back to front so later items (e.g. a delete chip) win. The
+## panel and the interest menu sit above the body and take the press first.
 func button_at(p: Vector2) -> String:
+	var over_panel: String = panel.hit(p, design_vp())
+	if over_panel != "":
+		return over_panel
+	if menu.open:
+		var hit: String = menu.hit(p, design_vp())
+		if hit != "":
+			return hit
 	return body.hit(p) if body != null else ""
 
 ## Wheel, trackpad, drag and keys; wide tables also pan sideways.
@@ -178,76 +250,78 @@ func scroll_by(delta: float, dx: float = 0.0) -> void:
 		body.pan_by(Vector2(dx, delta))
 
 func click(id: String) -> void:
-	if id == "":
-		return
-	if id.begins_with("match:"):
-		show_report(id.substr(6))
-	elif id.begins_with("goal:"):
-		play_goal(int(id.substr(5)))
-	elif id.begins_with("club:"):
-		club_requested.emit(id.substr(5))
-	elif id == "back":
-		_back()
-	elif id.begins_with("toggle:"):
-		_toggle(id.substr(7))
-	elif id.begins_with("fixture:"):
-		_press_fixture(id.substr(8))
-	elif id.begins_with("open:"):
-		_open_save(id.substr(5))
-	elif id.begins_with("delete:"):
-		var slug := id.substr(7)
-		if season != null and season.save.slug == slug:
-			LeagueSystemActions.unload(self)
-		LeagueSave.remove(slug)
-		saves = LeagueSave.list()
-		refresh()
-	elif id.begins_with("mode:"):
-		wizard["calendar_mode"] = id.substr(5)
-		refresh()
-	elif id.begins_with("adv:"):
-		wizard["advance_mode"] = id.substr(4)
-		refresh()
-	elif id.begins_with("day:"):
-		LeagueCalendar.pick(self, id.substr(4))
-	elif id.begins_with("month:"):
-		LeagueCalendar.shift(self, int(id.substr(6)))
-	elif id == "continue":
-		_continue()
-	elif id == "suggest":
-		season.suggest()
-		refresh()
-	elif id == "table":
-		mode = MODE_TABLE
-		book.table.attach(season.save if season != null else null)
-		refresh()
-	elif id.begins_with("tbl:"):
-		if season != null and book.table.press(id, season.save):
-			refresh()
-	elif id == "calendar":
-		mode = MODE_CALENDAR
-		LeagueCalendar.open(self)
-	elif id == "podium":
-		mode = MODE_PODIUM
-		refresh()
-	elif id == "system":
-		LeagueSystemActions.open(self)
-	elif id.begins_with("sys:"):
-		LeagueSystemActions.act(self, id)
-	elif id == "menu":
-		close()
-	elif id == "create":
-		_create()
-	elif id == "name":
-		refresh()
+	actions.click(id)
 
-func _back() -> void:
-	if LeagueSystemActions.back(self):
-		return
-	if mode == MODE_HUB or mode == MODE_WIZARD or mode == MODE_LOAD or mode == MODE_PODIUM:
-		close()
-	else:
-		mode = MODE_HUB
+func key(code: int) -> bool:
+	return actions.key(code)
+
+func open_save_now(slug: String) -> void:
+	# Load replaces the season outright: the old save, its ledger and every cached
+	# sheet reading go before the new file is bound, so nothing leaks across.
+	LeagueSystemActions.unload(self)
+	var opened := LeagueSeason.open(slug)
+	if opened == null:
+		wizard["error"] = "That save could not be opened."
+		mode = MODE_WIZARD
 		refresh()
+		return
+	open_season(opened, str(opened.state().get("status", "")) == "complete")
+
+## Drop every reading the unloaded season owned, so the next save never paints
+## the previous one's table, report or month.
+func reset_season() -> void:
+	season = null
+	report = {}
+	roundup = []
+	day = ""
+	day_fixtures = []
+	days_cache = {}
+	interest_query = ""
+	report_back = MODE_HUB
+	book.table.attach(null)
+	LeagueSystemActions.reset(self)
+	menu.hide()
+	panel.close()
+	panel.settle()
+	mode = MODE_WIZARD
+	refresh()
+
+# --------------------------------------------------------------- interest ---
+
+## The club painted under a point, read from the rows the body hit-tests.
+func team_at(p: Vector2) -> String:
+	if body == null or panel.is_open() or menu.open:
+		return ""
+	for item in body.button_rects():
+		var rect: Rect2 = item["rect"]
+		if not rect.has_point(p):
+			continue
+		if item.has("club_id"):
+			return str(item["club_id"])
+		if item.has("club"):
+			return str((item["club"] as Dictionary).get("id", ""))
+		var row: Dictionary = item.get("row", {})
+		if row.has("club_id"):
+			return str(row["club_id"])
+		var fx: Dictionary = item.get("fixture", {})
+		if fx.is_empty() and item.has("report"):
+			fx = (item["report"] as Dictionary).get("fixture", {})
+		if fx.is_empty():
+			continue
+		var kind := str(item.get("kind", ""))
+		var pivot: float = rect.position.x + (100.0 if kind == "fixture" else 118.0)
+		if kind == "result":
+			pivot = rect.get_center().x
+		return str(fx["home_club_id"]) if p.x < pivot else str(fx["away_club_id"])
+	return ""
+
+## A long-press landed here: raise the interest menu for the club under it.
+func open_interest_at(p: Vector2) -> void:
+	var club := team_at(p)
+	if club == "" or season == null:
+		return
+	menu.show_at(club, str(PLRepository.shared().club(club).get("name", club)), p)
+	overlay.queue_redraw()
 
 # --------------------------------------------------------------- highlights ---
 
@@ -263,118 +337,6 @@ func has_clip(index: int) -> bool:
 		if int(row.get("goal_index", -1)) == index:
 			return true
 	return false
-
-# --------------------------------------------------------------- actions ---
-
-func _create() -> void:
-	var created := LeagueSeason.create(str(wizard["name"]), str(wizard["calendar_mode"]),
-		str(wizard["advance_mode"]), 0)
-	if created == null:
-		wizard["error"] = "The season could not be created."
-		refresh()
-		return
-	season = created
-	season_opened.emit(created)
-	mode = MODE_HUB
-	month = LeagueBook.state_month(season, month)
-	refresh()
-
-func _open_save(slug: String) -> void:
-	# Load replaces the season outright: the old save, its ledger and every cached
-	# sheet reading go before the new file is bound, so nothing leaks across.
-	LeagueSystemActions.unload(self)
-	var opened := LeagueSeason.open(slug)
-	if opened == null:
-		wizard["error"] = "That save could not be opened."
-		mode = MODE_WIZARD
-		refresh()
-		return
-	open_season(opened, str(opened.state().get("status", "")) == "complete")
-
-func _continue() -> void:
-	if season == null or season.finishing:
-		refresh()
-		return
-	var result := season.advance()
-	var played: Array = result.get("played", [])
-	if str(result.get("status", "")) == "complete" or bool(result.get("complete", false)):
-		mode = MODE_PODIUM
-		month = LeagueBook.state_month(season, month)
-		refresh()
-		return
-	# Pending watch: Continue opens it instead of settling the day (#100).
-	var pending: Array = result.get("pending", [])
-	if not pending.is_empty():
-		var watch := season.start_watch(str(pending[0]["id"]))
-		if not watch.is_empty():
-			match_requested.emit(str(watch["home"]), str(watch["away"]), str(watch["fixture_id"]))
-			return
-	if not played.is_empty():
-		show_roundup(played)
-		return
-	month = LeagueBook.state_month(season, month)
-	refresh()
-
-func _toggle(fixture_id: String) -> void:
-	if season == null:
-		return
-	var fx := season.record.fixture(fixture_id)
-	if fx.is_empty() or str(fx["status"]) == "played":
-		return
-	season.set_watch(fixture_id, int(fx["watched"]) != 1)
-	refresh()
-
-func _press_fixture(fixture_id: String) -> void:
-	if season == null:
-		return
-	var fx := season.record.fixture(fixture_id)
-	if fx.is_empty():
-		return
-	if str(fx["status"]) == "played":
-		show_report(fixture_id)
-	elif int(fx["watched"]) == 1:
-		var watch := season.start_watch(fixture_id)
-		if not watch.is_empty():
-			match_requested.emit(str(watch["home"]), str(watch["away"]), str(watch["fixture_id"]))
-	else:
-		_toggle(fixture_id)
-
-# ---------------------------------------------------------------- input ----
-
-func key(code: int) -> bool:
-	if mode == MODE_WIZARD:
-		if LeagueSheet.type_name_into(wizard, code):
-			refresh()
-			return true
-	if mode == MODE_SYSTEM and LeagueSystemActions.type_name(self, code):
-		return true
-	if mode == MODE_REPORT and code >= KEY_1 and code <= KEY_9:
-		var want := code - KEY_1
-		if has_clip(want):
-			play_goal(want)
-			return true
-	if code == KEY_ESCAPE or code == KEY_BACKSPACE:
-		_back()
-		return true
-	if mode == MODE_HUB and (code == KEY_ENTER or code == KEY_KP_ENTER):
-		_continue()
-		return true
-	if code == KEY_UP or code == KEY_W:
-		scroll_by(-120.0)
-	elif code == KEY_DOWN or code == KEY_S:
-		scroll_by(120.0)
-	elif code == KEY_PAGEUP:
-		scroll_by(-body.size.y * 0.9)
-	elif code == KEY_PAGEDOWN:
-		scroll_by(body.size.y * 0.9)
-	elif code == KEY_HOME:
-		scroll_by(-1.0e7)
-	elif code == KEY_END:
-		scroll_by(1.0e7)
-	else:
-		return false
-	return true
-
 
 # ----------------------------------------------------------------- paint ---
 

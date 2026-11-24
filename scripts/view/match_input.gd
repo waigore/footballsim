@@ -7,6 +7,10 @@ extends RefCounted
 ## out of main.gd so the scene stays inside its P3 size budget.
 
 var game = null
+## Milliseconds the current press has been down, and the hold that raises the
+## interest menu instead of committing a click.
+var press_ms := 0
+var hold_ms := InterestMenu.HOLD_MS
 
 func _init(host) -> void:
 	game = host
@@ -25,7 +29,7 @@ func handle(event: InputEvent) -> bool:
 	if event is InputEventMouseMotion:
 		game.mouse = event.position
 		game.view.hover(game.mouse)
-	elif event is InputEventMouseButton and event.pressed:
+	elif event is InputEventMouseButton and (event.pressed or event.button_index == MOUSE_BUTTON_LEFT):
 		_pointer(event)
 	elif event is InputEventKey and event.pressed and not event.echo:
 		_key(event.keycode)
@@ -39,9 +43,21 @@ func _select(event: InputEvent) -> void:
 		sheet.mouse = game.view.design(event.position, game.chrome_scale)
 		if not game.touch:
 			Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if sheet.button_at(sheet.mouse) != "" else Input.CURSOR_ARROW)
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		game.mouse = event.position
 		sheet.mouse = game.view.design(event.position, game.chrome_scale)
+		if event.pressed:
+			press_ms = Time.get_ticks_msec()
+			return
+		if game.interest != null and game.interest.open:
+			if game.interest.hit(sheet.mouse, sheet.design_vp()) == "interest:toggle":
+				game.interest.apply()
+			else:
+				game.interest.hide()
+			return
+		if Time.get_ticks_msec() - press_ms >= hold_ms \
+				and InterestEntry.show(game, InterestEntry.picker_club(sheet)):
+			return
 		var sid: String = sheet.button_at(sheet.mouse)
 		if sid != "":
 			sheet.click(sid)
@@ -57,6 +73,21 @@ func _pointer(event: InputEventMouseButton) -> void:
 		game._apply_camera(true)
 	elif event.button_index == MOUSE_BUTTON_LEFT:
 		game.mouse = event.position
+		# A press starts the hold clock; the release either commits the click or
+		# raises the interest menu on a team name.
+		if event.pressed:
+			press_ms = Time.get_ticks_msec()
+			return
+		var design_vp: Vector2 = game.get_viewport().get_visible_rect().size / maxf(game.hud_scale, 0.001)
+		if game.interest != null and game.interest.open:
+			if game.interest.hit(game.view.design(event.position), design_vp) == "interest:toggle":
+				game.interest.apply()
+			else:
+				game.interest.hide()
+			return
+		if Time.get_ticks_msec() - press_ms >= hold_ms \
+				and InterestEntry.show(game, InterestEntry.hud_club(game)):
+			return
 		game._click(event.position)
 
 # if/elif rather than match: the coverage injector cannot instrument a match

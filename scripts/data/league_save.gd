@@ -126,6 +126,15 @@ static func list() -> Array:
 	return out
 
 static func _peek(file: String) -> Dictionary:
+	var handle := FileAccess.open(file, FileAccess.READ)
+	if handle == null:
+		return {}
+	var size := handle.get_length()
+	handle.close()
+	# An empty file is a failed copy, not a save: opening it would create a new
+	# database and read a phantom entry.
+	if size < 512:
+		return {}
 	var db := SQLite.new()
 	db.path = file
 	if not db.open_db():
@@ -333,6 +342,10 @@ func matchday() -> int:
 
 func set_matchday(value: int) -> void:
 	put_meta("matchday", str(maxi(value, 1)))
+
+## When the file was last stamped, for the ack line and the load list.
+func saved_at() -> String:
+	return str(meta.get("saved_at", ""))
 
 func reload() -> void:
 	if not ensure_open():

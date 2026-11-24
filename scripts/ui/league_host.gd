@@ -22,6 +22,10 @@ var pressing := false
 var dragged := false
 var press_at := Vector2.ZERO
 var last_at := Vector2.ZERO
+## Milliseconds the current press has been down. A press held past `hold_ms`
+## raises the interest menu instead of committing as a click.
+var press_ms := 0
+var hold_ms := InterestMenu.HOLD_MS
 
 func attach(host) -> void:
 	game = host
@@ -74,7 +78,8 @@ func open_load() -> void:
 
 func open_save(slug: String) -> void:
 	_activate()
-	screen._open_save(slug)
+	unload_season()
+	screen.open_save_now(slug)
 
 ## Show a season that already exists (a resumed save, a dev/evidence pose).
 func show_season(season_in: LeagueSeason, podium: bool = false) -> void:
@@ -84,6 +89,20 @@ func show_season(season_in: LeagueSeason, podium: bool = false) -> void:
 func close() -> void:
 	if screen != null and screen.is_open():
 		screen.close()
+
+## Tear the open season out of memory: the signal, the screen's cursors, the
+## season object, the SQLite handle and the repository cache. Load and Main Menu
+## both go through here, so the next save can never read a stale row.
+func unload_season() -> void:
+	if season != null and season.match_recorded.is_connected(_on_recorded):
+		season.match_recorded.disconnect(_on_recorded)
+	season = null
+	if screen != null:
+		screen.reset_season()
+	if LeagueSeason.active != null:
+		LeagueSeason.active.close()
+	LeagueSave.close()
+	PLRepository.shared().invalidate()
 
 func _activate() -> void:
 	if layer == null:
@@ -107,12 +126,11 @@ func _activate() -> void:
 	screen.queue_redraw()
 
 ## Leaving the league always lands on the main menu it was opened from — never
-## on a finished match's HUD.
+## on a finished match's HUD. The season stays as the menu's resume point; only
+## Load (or resuming another save) takes it out of memory.
 func _on_closed() -> void:
 	if layer != null:
 		layer.visible = false
-	if screen != null and screen.season == null:
-		season = null
 	game.paused = true
 	if game.hud_layer != null:
 		game.hud_layer.visible = false
@@ -214,7 +232,13 @@ func handle_input(event: InputEvent, design_point: Vector2) -> bool:
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 		screen.scroll_by(110.0)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		_pointer_down(design_point)
+		pressing = true
+		dragged = false
+		press_at = design_point
+		last_at = design_point
+		press_ms = Time.get_ticks_msec()
+		screen.mouse = design_point
+		screen.holding = true
 	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_pointer_up()
 	elif event is InputEventKey and event.pressed and not event.echo:
@@ -222,14 +246,6 @@ func handle_input(event: InputEvent, design_point: Vector2) -> bool:
 	else:
 		return event is InputEventMouse
 	return true
-
-func _pointer_down(p: Vector2) -> void:
-	pressing = true
-	dragged = false
-	press_at = p
-	last_at = p
-	screen.mouse = p
-	screen.holding = true
 
 ## Hover is free; holding the button turns the pointer into a scroll drag, and
 ## the travel since the last frame is charged to the body in one step.
@@ -255,6 +271,12 @@ func _pointer_up() -> void:
 	screen.holding = false
 	if dragged:
 		return
+	# A hold on a team name raises the interest menu; a tap keeps the sheet's
+	# own behaviour. The panel and the menu are never re-targeted by a hold.
+	if Time.get_ticks_msec() - press_ms >= hold_ms and not screen.menu.open and not screen.panel.is_open():
+		if screen.team_at(press_at) != "":
+			screen.open_interest_at(press_at)
+			return
 	var id := screen.button_at(press_at)
 	if id != "":
 		screen.click(id)

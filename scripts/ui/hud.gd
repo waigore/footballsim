@@ -98,6 +98,10 @@ func _draw() -> void:
 	banners_band.intro(p, self, engine, game, f_bold, f_med)
 	banners_band.paused(p, self, engine, game, f_bold, f_med)
 	banners_band.vignette(p, self)
+	# The interest menu is the last thing painted: it sits over every band.
+	if game.interest != null and game.interest.open:
+		game.interest.draw(self, vp, {"bold": f_bold, "med": f_med},
+			LeagueInterest.marked(game.interest.club_id))
 
 ## The manager card is a whole-card dismiss target and sits in front of the bar.
 func button_at(p: Vector2) -> String:

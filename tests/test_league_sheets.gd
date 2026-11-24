@@ -345,7 +345,8 @@ func test_the_report_lays_out_events_and_a_roundup() -> void:
 	var single: Array = book.report_layout(Vector2(1280, 720), {
 		"fixture": _fixture(1), "events": events, "day": "2026-08-15",
 	})
-	assert_eq(single.size(), 5, "the report lost an event or the back door")
+	# Four events, the score line's two long-press halves and the back door.
+	assert_eq(single.size(), 7, "the report lost an event or the back door")
 	var roundup: Array = book.report_layout(Vector2(1280, 720), {
 		"roundup": [{"fixture": _fixture(1), "events": events, "score": [1, 0], "played": true}],
 	})

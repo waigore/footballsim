@@ -345,3 +345,19 @@ func top_scorers(limit: int = 5) -> Array:
 		+ "ORDER BY s.goals DESC, s.assists DESC, p.name LIMIT ?;",
 		[limit],
 	)
+
+## One row per played date, newest first: the Stats sheet's matchday reports.
+func played_days() -> Array:
+	save.ensure_open()
+	var out: Array = []
+	for row in PLDatabase.rows(
+		"SELECT kickoff AS date, MIN(matchday) AS matchday, COUNT(*) AS played "
+		+ "FROM league_fixture WHERE status = 'played' GROUP BY kickoff "
+		+ "ORDER BY kickoff DESC;"
+	):
+		var date := str(row["date"])
+		out.append({
+			"date": date, "matchday": int(row["matchday"]), "played": int(row["played"]),
+			"label": FixtureCalendar.day_label(date),
+		})
+	return out

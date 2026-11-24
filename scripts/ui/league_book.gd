@@ -65,7 +65,7 @@ func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append({"id": "month:1", "kind": "chip", "label": ">", "pinned": true,
 		"rect": Rect2(vp.x - 24.0 - 28.0, HEADER + 8.0, 28.0, 24.0)})
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
+		"rect": LeagueExtra.back_rect()})
 	return items
 
 func report_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -93,8 +93,16 @@ func report_layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": "match:" + str(report["fixture"]["id"]), "kind": "result",
 			"report": report, "rect": Rect2(24.0, y, vp.x - 48.0, 44.0)})
 		y += 50.0
+	# The score line's two names are long-press targets even though a tap on the
+	# line does nothing: `team_at` reads these invisible halves.
+	var fx: Dictionary = view.get("fixture", {})
+	if (view.get("roundup", []) as Array).is_empty() and not fx.is_empty():
+		items.append({"id": "", "kind": "team_hit", "club_id": str(fx.get("home_club_id", "")),
+			"rect": Rect2(24.0, HEADER + 12.0, vp.x * 0.5 - 24.0, 36.0)})
+		items.append({"id": "", "kind": "team_hit", "club_id": str(fx.get("away_club_id", "")),
+			"rect": Rect2(vp.x * 0.5, HEADER + 12.0, vp.x * 0.5 - 24.0, 36.0)})
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
+		"rect": LeagueExtra.back_rect()})
 	return items
 
 func podium_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -105,8 +113,8 @@ func podium_layout(vp: Vector2, view: Dictionary) -> Array:
 		"rect": Rect2(24.0, HEADER, vp.x - 48.0, frame_height(view))})
 	items.append({"id": "table", "kind": "button", "label": "TABLE", "primary": false, "pinned": true,
 		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 130.0, BAR_H - 14.0)})
-	items.append({"id": "menu", "kind": "button", "label": "MAIN MENU", "primary": true, "pinned": true,
-		"rect": Rect2(24.0 + 142.0, vp.y - BAR_H + 6.0, 170.0, BAR_H - 14.0)})
+	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
+		"rect": LeagueExtra.back_rect()})
 	return items
 
 ## How tall the podium summary paints below the header, so the body can size to
@@ -176,12 +184,9 @@ func draw_table_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 
 func draw_calendar_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	var bold: Font = fonts["bold"]
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), "CALENDAR", 12, UiChrome.C_GOLD, bold)
-	UiChrome.text(c, Vector2(24.0, HEADER + 25.0), month_label(str(view.get("month", ""))), 13, UiChrome.C_TEXT, bold)
+	LeagueExtra.header(c, vp, fonts, "CALENDAR", month_label(str(view.get("month", ""))))
 
-func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, _view: Dictionary) -> void:
 	hints.clear()
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
@@ -198,8 +203,14 @@ func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Ar
 			var fx: Dictionary = item["fixture"]
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 4)
 			UiChrome.text(c, Vector2(rect.position.x + 8.0, rect.position.y + 15.0),
-				"%s  %s v %s" % [str(fx["kickoff_time"]), str(fx["home_abbr"]), str(fx["away_abbr"])], 11,
-				UiChrome.C_TEXT, med)
+				str(fx["kickoff_time"]), 10, UiChrome.C_DIM, med)
+			var home_ink: Color = UiChrome.C_GOLD if LeagueInterest.marked(str(fx["home_club_id"])) else UiChrome.C_TEXT
+			var away_ink: Color = UiChrome.C_GOLD if LeagueInterest.marked(str(fx["away_club_id"])) else UiChrome.C_TEXT
+			UiChrome.text(c, Vector2(rect.position.x + 58.0, rect.position.y + 15.0),
+				str(fx["home_abbr"]), 11, home_ink, med)
+			UiChrome.text(c, Vector2(rect.position.x + 94.0, rect.position.y + 15.0), "v", 10, UiChrome.C_DIM, med)
+			UiChrome.text(c, Vector2(rect.position.x + 108.0, rect.position.y + 15.0),
+				str(fx["away_abbr"]), 11, away_ink, med)
 			var score := "%d-%d" % [int(fx["home_goals"]), int(fx["away_goals"])]
 			UiChrome.text_r(c, rect.end.x - 8.0, rect.position.y + 15.0,
 				score if str(fx["status"]) == "played" else "OPEN", 10,
@@ -224,18 +235,13 @@ func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 
 func draw_report_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
-	var bold: Font = fonts["bold"]
 	var roundup: Array = view.get("roundup", [])
 	var date := str(view.get("day", ""))
 	var label := FixtureCalendar.day_label(date)
-	var kicker := "MATCH REPORT"
-	if not roundup.is_empty():
-		kicker = "RESULTS · %s" % (label if label != "" else date)
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), kicker, 12, UiChrome.C_GOLD, bold)
-	if not roundup.is_empty() and date != "":
-		hints.add(DateHints.strip(bold, label,
-			Vector2(24.0 + DateHints.width(bold, "RESULTS · ", 12), 48.0), 12), date)
+	var kicker := "RESULTS" if not roundup.is_empty() else "MATCH REPORT"
+	LeagueExtra.header(c, vp, fonts, kicker, label)
+	if label != "":
+		hints.add(DateHints.strip_right(fonts["bold"], label, vp.x - 24.0, 34.0, 10), date)
 
 func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()
@@ -243,9 +249,13 @@ func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 	var med: Font = fonts["med"]
 	if (view.get("roundup", []) as Array).is_empty():
 		var fx: Dictionary = view.get("fixture", {})
-		UiChrome.text(c, Vector2(24.0, HEADER + 34.0),
-			"%s  %d – %d  %s" % [str(fx.get("home_name", "")), int(fx.get("home_goals", 0)),
-				int(fx.get("away_goals", 0)), str(fx.get("away_name", ""))], 22, UiChrome.C_TEXT, bold)
+		UiChrome.text_c(c, vp.x * 0.5, HEADER + 34.0,
+			"%d – %d" % [int(fx.get("home_goals", 0)), int(fx.get("away_goals", 0))], 22,
+			UiChrome.C_TEXT, bold)
+		var home_ink: Color = UiChrome.C_GOLD if LeagueInterest.marked(str(fx.get("home_club_id", ""))) else UiChrome.C_TEXT
+		var away_ink: Color = UiChrome.C_GOLD if LeagueInterest.marked(str(fx.get("away_club_id", ""))) else UiChrome.C_TEXT
+		UiChrome.text(c, Vector2(24.0, HEADER + 34.0), str(fx.get("home_name", "")), 22, home_ink, bold)
+		UiChrome.text_r(c, vp.x - 24.0, HEADER + 34.0, str(fx.get("away_name", "")), 22, away_ink, bold)
 		var date := str(view.get("day", ""))
 		var label := FixtureCalendar.day_label(date)
 		UiChrome.text(c, Vector2(24.0, HEADER + 54.0), label, 10, UiChrome.C_DIM, med)
@@ -265,8 +275,12 @@ func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 			var fx: Dictionary = report["fixture"]
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 5)
 			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 18.0),
-				"%s %d – %d %s" % [str(fx["home_abbr"]), int(fx["home_goals"]), int(fx["away_goals"]),
-					str(fx["away_abbr"])], 15, UiChrome.C_TEXT, bold)
+				"%d – %d" % [int(fx["home_goals"]), int(fx["away_goals"])], 15, UiChrome.C_TEXT, bold)
+			var home_ink: Color = UiChrome.C_GOLD if LeagueInterest.marked(str(fx["home_club_id"])) else UiChrome.C_TEXT
+			var away_ink: Color = UiChrome.C_GOLD if LeagueInterest.marked(str(fx["away_club_id"])) else UiChrome.C_TEXT
+			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 18.0),
+				str(fx["home_abbr"]), 15, home_ink, bold)
+			UiChrome.text_r(c, rect.end.x - 10.0, rect.position.y + 18.0, str(fx["away_abbr"]), 15, away_ink, bold)
 			var names: Array = []
 			for e in report["events"]:
 				if str(e.get("kind", "")) == "goal":
@@ -305,9 +319,7 @@ func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary
 
 func draw_podium_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	var bold: Font = fonts["bold"]
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), "SEASON COMPLETE · %s" % str(view.get("name", "")), 12, UiChrome.C_GOLD, bold)
+	LeagueExtra.header(c, vp, fonts, "SEASON COMPLETE", str(view.get("name", "")))
 
 func draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, _items: Array, view: Dictionary) -> void:
 	hints.clear()

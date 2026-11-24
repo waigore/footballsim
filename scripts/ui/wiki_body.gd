@@ -188,6 +188,8 @@ func _process(_d: float) -> void:
 
 func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 	var kind := str(row["k"])
+	var target: Dictionary = row.get("target", {})
+	var hot: bool = str(target.get("page", "")) == WikiModel.TEAM and LeagueInterest.marked(str(target.get("id", "")))
 	if kind == "section":
 		draw_rect(Rect2(rect.position.x, rect.position.y + 12, 3, 12), Color(0.96, 0.78, 0.30))
 		_text(Vector2(rect.position.x + 12, rect.position.y + 22), str(row["text"]), 11, Color(0.55, 0.64, 0.69), true)
@@ -216,7 +218,8 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 		var accent := Color(str(row["accent"])) if str(row["accent"]) != "" else Color(0.35, 0.45, 0.5)
 		draw_rect(rect, Color(0.075, 0.105, 0.125, 0.95 if not hovered else 1.0), true)
 		draw_rect(Rect2(rect.position, Vector2(4, rect.size.y)), accent)
-		_text(Vector2(rect.position.x + 14, rect.position.y + 19), str(row["text"]), 13, Color(0.92, 0.95, 0.96), true)
+		_text(Vector2(rect.position.x + 14, rect.position.y + 19), str(row["text"]), 13,
+			Color(0.96, 0.78, 0.30) if hot else Color(0.92, 0.95, 0.96), true)
 	elif kind == "thead":
 		var cols: Array = row["cols"]
 		var widths: Array = row["widths"]
@@ -252,7 +255,8 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 			if right:
 				_text_right(x + cw - 8.0, rect.position.y + 16.0, str(cells[i]), 11, Color(0.92, 0.95, 0.96), i == cells.size() - 1)
 			else:
-				_text(Vector2(x, rect.position.y + 16), _clip(str(cells[i]), 34), 11, Color(0.92, 0.95, 0.96), i == 1 and cells.size() >= 4)
+				_text(Vector2(x, rect.position.y + 16), _clip(str(cells[i]), 34), 11,
+					Color(0.96, 0.78, 0.30) if hot else Color(0.92, 0.95, 0.96), i == 1 and cells.size() >= 4)
 			x += cw
 		draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), Color(1, 1, 1, 0.05), 1)
 

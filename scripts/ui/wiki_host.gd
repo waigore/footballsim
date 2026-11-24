@@ -27,6 +27,9 @@ var pressing := false
 var dragged := false
 var press_at := Vector2.ZERO
 var last_at := Vector2.ZERO
+## A press held past `hold_ms` over a team name raises the interest menu.
+var press_ms := 0
+var hold_ms := InterestMenu.HOLD_MS
 
 func _init(host) -> void:
 	game = host
@@ -145,6 +148,7 @@ func reset_pointer() -> void:
 	dragged = false
 	if screen != null:
 		screen.holding = false
+		screen.menu.hide()
 
 func _point(event: InputEvent) -> Vector2:
 	return event.position / maxf(game.chrome_scale, 0.001)
@@ -154,6 +158,7 @@ func _pointer_down(p: Vector2) -> void:
 	dragged = false
 	press_at = p
 	last_at = p
+	press_ms = Time.get_ticks_msec()
 	screen.mouse = p
 	screen.holding = true
 
@@ -181,6 +186,9 @@ func _pointer_up() -> void:
 	screen.holding = false
 	if dragged:
 		return
+	if Time.get_ticks_msec() - press_ms >= hold_ms and not screen.menu.open:
+		if WikiInterest.open(screen, press_at):
+			return
 	var id: String = screen.button_at(press_at)
 	if id != "":
 		screen.click(id)

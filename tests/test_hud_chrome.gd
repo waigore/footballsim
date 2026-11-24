@@ -18,6 +18,8 @@ class FakeGame:
 	var camera_follow := false
 	var speed := 1.0
 	var token_scale := 1.0
+	## The long-press interest menu the HUD paints last; null in these fixtures.
+	var interest = null
 
 func _hud(eng) -> Control:
 	var game := FakeGame.new()

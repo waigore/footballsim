@@ -14,6 +14,12 @@ var season: LeagueSeason = null
 func before_all() -> void:
 	PLDatabase.cache_dir = CACHE_DIR
 	LeagueSave.dir = SAVE_DIR
+	# A suite that ran before this one may have left a season bound to its own
+	# file: drop it here so this suite never reads that save's rows.
+	if LeagueSeason.active != null:
+		LeagueSeason.active.close()
+	LeagueInterest.current = null
+	LeagueSave.close()
 	_clean()
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()

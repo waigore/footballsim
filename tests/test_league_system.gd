@@ -38,20 +38,23 @@ func after_all() -> void:
 func screen():
 	return game.menus.league.screen
 
+## A tap in design space: press and release, so the scene commits the click.
+func press(at: Vector2) -> void:
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = at * game.menus.shell.ui_scale
+	game._input(down)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = at * game.menus.shell.ui_scale
+	game._input(up)
+
 func press_id(id: String) -> void:
 	for item in screen().buttons:
 		if str(item["id"]) == id:
-			var at: Vector2 = (item["rect"] as Rect2).get_center()
-			var down := InputEventMouseButton.new()
-			down.button_index = MOUSE_BUTTON_LEFT
-			down.pressed = true
-			down.position = at * game.menus.shell.ui_scale
-			game._input(down)
-			var up := InputEventMouseButton.new()
-			up.button_index = MOUSE_BUTTON_LEFT
-			up.pressed = false
-			up.position = at * game.menus.shell.ui_scale
-			game._input(up)
+			press((item["rect"] as Rect2).get_center())
 			return
 	assert_true(false, "no button %s on screen %s" % [id, screen().mode])
 
@@ -62,16 +65,42 @@ func _season(name: String) -> LeagueSeason:
 	game.menus.league.show_season(season)
 	return season
 
-## Open the System sheet from the hub door a player presses.
+## Open the System sheet the way a player does now that the hub's bottom door
+## bar is gone: the left panel's SYSTEM row (#103).
+func _open_system() -> void:
+	var panel: LeaguePanel = screen().panel
+	panel.open()
+	panel.settle()
+	screen().refresh()
+	for i in range(LeaguePanel.ITEMS.size()):
+		if str(LeaguePanel.ITEMS[i]["id"]) == "nav:system":
+			press(panel.item_rect(screen().design_vp(), i).get_center())
+			panel.settle()
+			return
+	assert_true(false, "the panel has no SYSTEM row")
+
+## Press a left-panel row, the way the panel's destinations are reached now.
+func _nav(id: String) -> void:
+	var panel: LeaguePanel = screen().panel
+	panel.open()
+	panel.settle()
+	screen().refresh()
+	for i in range(LeaguePanel.ITEMS.size()):
+		if str(LeaguePanel.ITEMS[i]["id"]) == id:
+			press(panel.item_rect(screen().design_vp(), i).get_center())
+			panel.settle()
+			return
+	assert_true(false, "the panel has no %s row" % id)
+
 func _system(season: LeagueSeason) -> void:
 	game.menus.league.show_season(season)
-	press_id("system")
-	assert_eq(screen().mode, LeagueScreen.MODE_SYSTEM, "the hub's fourth door did not open System")
+	_open_system()
+	assert_eq(screen().mode, LeagueScreen.MODE_SYSTEM, "the panel's SYSTEM row did not open System")
 
 func test_the_hub_opens_the_system_sheet_and_back_returns() -> void:
 	var season := _season("System Door")
-	press_id("system")
-	assert_eq(screen().mode, LeagueScreen.MODE_SYSTEM, "the hub door did not open the System sheet")
+	_open_system()
+	assert_eq(screen().mode, LeagueScreen.MODE_SYSTEM, "the panel row did not open the System sheet")
 	var rows: Array = []
 	for item in screen().buttons:
 		if str(item["kind"]) == "row":
@@ -145,10 +174,10 @@ func test_load_unloads_the_previous_season_first() -> void:
 	var second := _season("Swap B")
 	var second_slug := str(second.save.slug)
 	game.menus.league.show_season(LeagueSeason.open(first_slug))
-	press_id("table")
+	_nav("nav:table")
 	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "the table did not open")
 	press_id("back")
-	press_id("system")
+	_open_system()
 	press_id("sys:load")
 	assert_eq(screen().mode, LeagueScreen.MODE_LOAD, "LOAD did not open the load list")
 	press_id("open:" + second_slug)
@@ -177,7 +206,7 @@ func test_a_b_a_keeps_each_seasons_own_state() -> void:
 	assert_ne(str(b.state()["date"]), a_date, "the two seasons share a clock")
 	game.menus.league.show_season(LeagueSeason.open(a_slug))
 	for step in [b_slug, a_slug]:
-		press_id("system")
+		_open_system()
 		press_id("sys:load")
 		press_id("open:" + str(step))
 	assert_eq(LeagueSeason.active.save.slug, a_slug, "the round trip did not land on A")
@@ -228,7 +257,7 @@ func _leave() -> void:
 	if screen().mode == LeagueScreen.MODE_SYSTEM:
 		press_id("sys:menu")
 	elif game.menus.league_active():
-		press_id("system")
+		_open_system()
 		press_id("sys:menu")
 	# Every case ends with the save out of memory, so the next one starts clean.
 	LeagueSystemActions.unload(screen())

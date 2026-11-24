@@ -46,11 +46,18 @@ func _door(id: String) -> Rect2:
 	return Rect2()
 
 func _tap(r: Rect2) -> void:
+	var at: Vector2 = (r.position + r.size * 0.5) * game.hud_scale
 	var ev := InputEventMouseButton.new()
 	ev.button_index = MOUSE_BUTTON_LEFT
 	ev.pressed = true
-	ev.position = (r.position + r.size * 0.5) * game.hud_scale
+	ev.position = at
 	game._input(ev)
+	# The scene commits a click on release so a hold can raise the interest menu.
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = at
+	game._input(up)
 
 # ----------------------------------------------------------------- routing ---
 
@@ -115,12 +122,20 @@ func test_the_fixture_sheet_routes_hover_taps_and_keys() -> void:
 	game._close_select()
 	assert_false(game.select_open, "back did not close the fixture sheet")
 
+## A click commits on release (the scene keeps a hold free for the interest
+## menu), so a tap is a press and a release at the same point.
 func _tap_css(r: Rect2) -> void:
+	var at: Vector2 = (r.position + r.size * 0.5) * game.chrome_scale
 	var ev := InputEventMouseButton.new()
 	ev.button_index = MOUSE_BUTTON_LEFT
 	ev.pressed = true
-	ev.position = (r.position + r.size * 0.5) * game.chrome_scale
+	ev.position = at
 	game._input(ev)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = at
+	game._input(up)
 
 # ------------------------------------------------------------ match input ---
 
@@ -155,13 +170,24 @@ func test_a_tap_on_another_token_switches_the_focus_and_asks_again() -> void:
 		ev.pressed = true
 		ev.position = screen
 		game._input(ev)
+		var up := InputEventMouseButton.new()
+		up.button_index = MOUSE_BUTTON_LEFT
+		up.pressed = false
+		up.position = screen
+		game._input(up)
 	assert_eq(game.focus_id, second, "a tap on another token did not move the focus")
 	# Tapping the focused token again drops it.
+	var again_at: Vector2 = game.get_viewport().get_canvas_transform() * game.engine.by_id[second].pos
 	var again := InputEventMouseButton.new()
 	again.button_index = MOUSE_BUTTON_LEFT
 	again.pressed = true
-	again.position = game.get_viewport().get_canvas_transform() * game.engine.by_id[second].pos
+	again.position = again_at
 	game._input(again)
+	var again_up := InputEventMouseButton.new()
+	again_up.button_index = MOUSE_BUTTON_LEFT
+	again_up.pressed = false
+	again_up.position = again_at
+	game._input(again_up)
 	assert_eq(game.focus_id, -1, "tapping the focused token did not clear it")
 	assert_eq(game.actors.focus_id, -1, "the view layer kept the cleared focus")
 

@@ -20,6 +20,9 @@ var body: WikiBody = null
 var hints := DateHints.new()
 var rows_hints: DateHints = null
 var tooltip: DateOverlay = null
+## Long-press interest menu, and the layer that paints it above the body.
+var menu := InterestMenu.new()
+var overlay: LeagueOverlay = null
 
 var stack: Array = []
 var page_data: Dictionary = {}
@@ -39,6 +42,11 @@ func _ready() -> void:
 	add_child(body)
 	rows_hints = body.hints
 	tooltip = DateOverlay.attach(self, body, true)
+	overlay = LeagueOverlay.new()
+	overlay.name = "Overlay"
+	overlay.menu = menu
+	overlay.fonts = UiChrome.fonts()
+	add_child(overlay)
 
 # -------------------------------------------------------------------- pages --
 
@@ -52,6 +60,7 @@ func open(page: String = WikiModel.LEAGUE, id: String = "") -> void:
 func push(page: String, id: String) -> void:
 	if not WikiModel.has_page(page, id):
 		return
+	menu.hide()
 	if not stack.is_empty():
 		var top: Dictionary = stack.back()
 		if str(top["page"]) == page and str(top["id"]) == id:
@@ -60,6 +69,7 @@ func push(page: String, id: String) -> void:
 	_refresh()
 
 func back() -> void:
+	menu.hide()
 	if stack.size() > 1:
 		stack.pop_back()
 		_refresh()
@@ -99,6 +109,11 @@ func click(id: String) -> void:
 		back()
 	elif id == "close":
 		close()
+	elif id == "interest:close":
+		menu.hide()
+		queue_redraw()
+	elif id == "interest:toggle":
+		WikiInterest.toggle(self)
 	elif id.begins_with("crumb:"):
 		stack = stack.slice(0, int(id.substr(6)) + 1)
 		_refresh()
@@ -146,6 +161,10 @@ func scroll_to(at: float) -> void:
 		body.scroll_to(at)
 
 func button_at(p: Vector2) -> String:
+	if menu.open:
+		var hit: String = menu.hit(p, design_vp())
+		if hit != "":
+			return hit
 	for b in buttons:
 		if (b["rect"] as Rect2).has_point(p):
 			return str(b["id"])
@@ -256,4 +275,6 @@ func _process(_d: float) -> void:
 		body.mouse = mouse
 		body.position = box.position
 		body.size = box.size
+	if overlay != null:
+		overlay.ui_scale = ui_scale
 	queue_redraw()

@@ -25,9 +25,15 @@ func before_all() -> void:
 func after_all() -> void:
 	if game != null:
 		if game.menus.league != null:
+			game.menus.league.unload_season()
 			game.menus.league.close()
 		game.queue_free()
-	LeagueSeason.active = null
+		# A freed scene must actually leave the tree before the next suite runs:
+		# a live one holds the share of file handles the editor opened.
+		await get_tree().process_frame
+	if LeagueSeason.active != null:
+		LeagueSeason.active.close()
+	LeagueInterest.current = null
 	LeagueSave.close()
 	_clean()
 	LeagueSave.dir = LeagueSave.DEFAULT_DIR
@@ -58,6 +64,30 @@ func press(p: Vector2) -> void:
 
 func screen():
 	return game.menus.league.screen
+
+## The panel is a real slide; a test opens it and settles it before pressing a
+## row, exactly as a player waits out the 220 ms.
+func open_panel() -> void:
+	if screen().panel.target < 0.5:
+		screen().panel.open()
+	screen().panel.settle()
+	screen().refresh()
+
+func press_nav(id: String) -> void:
+	open_panel()
+	var vp: Vector2 = screen().design_vp()
+	for i in range(LeaguePanel.ITEMS.size()):
+		if str(LeaguePanel.ITEMS[i]["id"]) == id:
+			press(screen().panel.item_rect(vp, i).get_center())
+			screen().panel.settle()
+			return
+	assert_true(false, "no panel row %s" % id)
+
+func leave_league() -> void:
+	for i in range(4):
+		if not game.menus.league_active():
+			return
+		press_id("back")
 
 func press_id(id: String) -> void:
 	for item in screen().buttons:
@@ -200,7 +230,7 @@ func test_leaving_a_watch_early_finishes_and_saves_it() -> void:
 	assert_eq(int((stored["score"] as Array)[0]), int(game.engine.score[0]),
 		"the saved score is not the engine's")
 	assert_false(bool(screen().current_view().get("settling", false)), "the hub still says finishing")
-	_leave_season()
+	press_id("back")
 
 ## #100: a leftover watch that finishes while the main menu is open saves its
 ## result without popping the season sheet over the menu.
@@ -215,8 +245,8 @@ func test_a_leftover_watch_finishes_behind_the_main_menu() -> void:
 	game.engine.clock = 5399.9
 	game.engine.added[1] = 0.0
 	game.menus.open_menu()
-	_leave_season()
-	assert_true(game.menus.shell.active(), "the hub's MENU did not reach the main menu")
+	press_id("back")
+	assert_true(game.menus.shell.active(), "the hub's BACK did not reach the main menu")
 	assert_false(bool(game.menus.league.layer.visible), "the hub stayed over the menu")
 	for i in range(60):
 		if not game.menus.league.watch.settling():
@@ -291,7 +321,7 @@ func test_the_report_still_reads_a_goal_less_match() -> void:
 	screen().open_season(LeagueSeason.active)
 
 func test_the_table_shows_the_saved_bands() -> void:
-	press_id("table")
+	press_nav("nav:table")
 	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "the table did not open")
 	var rows: Array = screen().current_view()["table"]
 	assert_eq(rows.size(), 20, "the table is short")
@@ -307,7 +337,7 @@ func test_the_table_shows_the_saved_bands() -> void:
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Back did not leave the table")
 
 func test_the_calendar_opens_a_day_and_a_report() -> void:
-	press_id("calendar")
+	press_nav("nav:calendar")
 	assert_eq(screen().mode, LeagueScreen.MODE_CALENDAR, "the calendar did not open")
 	var day_id := ""
 	for item in screen().buttons:
@@ -336,7 +366,7 @@ func test_the_podium_reads_a_finished_season() -> void:
 	assert_eq((summary["relegated"] as Array).size(), 3, "the podium lost the drop")
 	var champion := str(summary["champion"]["club"])
 	assert_true(champion != "", "the podium has no champion")
-	_leave_season()
+	leave_league()
 	assert_false(game.menus.league_active(), "Main Menu did not leave the league")
 
 func test_the_load_list_opens_and_deletes_a_save() -> void:
@@ -348,7 +378,7 @@ func test_the_load_list_opens_and_deletes_a_save() -> void:
 	press_id("open:" + slug)
 	assert_true(screen().mode == LeagueScreen.MODE_HUB or screen().mode == LeagueScreen.MODE_PODIUM,
 		"opening a save did not land on its season")
-	_leave_season()
+	leave_league()
 	game.menus.open_menu()
 	press(door("load_league").get_center())
 	var count_before: int = screen().saves.size()
@@ -388,12 +418,12 @@ func test_every_league_pose_draws() -> void:
 	await get_tree().process_frame
 	screen().queue_redraw()
 	await get_tree().process_frame
-	press_id("table")
+	press_nav("nav:table")
 	await get_tree().process_frame
 	screen().queue_redraw()
 	await get_tree().process_frame
 	press_id("back")
-	press_id("calendar")
+	press_nav("nav:calendar")
 	await get_tree().process_frame
 	screen().queue_redraw()
 	await get_tree().process_frame
@@ -421,13 +451,13 @@ func test_every_league_pose_draws() -> void:
 	screen().queue_redraw()
 	await get_tree().process_frame
 	assert_eq(screen().mode, LeagueScreen.MODE_PODIUM, "the podium did not draw")
-	_leave_season()
+	leave_league()
 	assert_false(game.menus.league_active(), "the draw walk did not leave the league")
 
 func test_the_wizard_reports_a_save_it_cannot_open() -> void:
 	game.menus.open_menu()
 	press(door("new_league").get_center())
-	screen()._open_save("no-such-save")
+	screen().open_save_now("no-such-save")
 	assert_eq(screen().mode, LeagueScreen.MODE_WIZARD, "a broken save did not return to the wizard")
 	assert_true(str(screen().wizard["error"]) != "", "the wizard hid the error")
 	await get_tree().process_frame
@@ -456,7 +486,7 @@ func test_keyboard_walks_the_league_and_respects_its_limits() -> void:
 
 func test_the_month_doors_and_an_empty_day_draw() -> void:
 	_open_hub()
-	press_id("calendar")
+	press_nav("nav:calendar")
 	var month := str(screen().current_view()["month"])
 	press_id("month:-1")
 	assert_ne(str(screen().current_view()["month"]), month, "the previous month door did nothing")
@@ -522,12 +552,12 @@ func test_the_host_opens_a_save_by_slug_and_syncs() -> void:
 	assert_true(game.menus.league_active(), "the host did not open the save")
 	game.menus.league.sync(Transform2D.IDENTITY, 1.0, false)
 	assert_true(game.menus.league.is_open(), "syncing closed the league layer")
-	_leave_season()
+	leave_league()
 	assert_false(game.menus.league_active(), "the league stayed open after MENU")
 
 func test_table_rows_and_the_podium_door() -> void:
 	_open_hub()
-	press_id("table")
+	press_nav("nav:table")
 	var club_id := ""
 	for item in screen().buttons:
 		if str(item["kind"]) == "table_row":
@@ -542,15 +572,16 @@ func test_table_rows_and_the_podium_door() -> void:
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Back did not leave the table")
 	LeagueSeason.active.save.set_status("complete")
 	screen().refresh()
-	press_id("podium")
+	press_nav("nav:stats")
+	press_id("stats:podium")
 	assert_eq(screen().mode, LeagueScreen.MODE_PODIUM, "the podium door did not open")
 	assert_false(LeagueSeason.active.summary().is_empty(), "a complete season lost its summary")
-	press_id("table")
+	press_nav("nav:table")
 	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "the podium table door did not open")
 	press_id("back")
 	LeagueSeason.active.save.set_status("in_progress")
 	screen().open_season(LeagueSeason.active)
-	_leave_season()
+	leave_league()
 
 func test_the_hub_table_row_opens_the_club_page_and_back_returns() -> void:
 	_open_hub()
@@ -570,7 +601,7 @@ func test_the_hub_table_row_opens_the_club_page_and_back_returns() -> void:
 	assert_true(game.menus.league_active(), "Back from the page did not give the season back")
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Back from the page lost the hub")
 	assert_true(game.paused, "the season resumed the match under it")
-	_leave_season()
+	leave_league()
 	assert_false(game.menus.league_active(), "MENU did not leave the season")
 
 func test_pointer_motion_and_drag_are_not_clicks() -> void:
@@ -598,12 +629,7 @@ func test_pointer_motion_and_drag_are_not_clicks() -> void:
 	press_id("back")
 
 func test_deleting_the_active_save_returns_to_the_list() -> void:
-	# Reopen a save that already exists: creating one here would add a file the
-	# later cases pick as the newest save.
-	if LeagueSeason.active == null:
-		game.menus.open_menu()
-		press(door("load_league").get_center())
-		press_id("open:" + str(screen().saves[0]["slug"]))
+	_open_hub()
 	var season := LeagueSeason.active
 	assert_not_null(season, "no season is active to delete")
 	var slug := str(season.save.slug)
@@ -638,7 +664,7 @@ func test_a_phone_table_scrolls_by_drag_wheel_pan_and_keys() -> void:
 	_open_scroll_hub()
 	var saved: float = screen().ui_scale
 	_phone_scale()
-	press_id("table")
+	press_nav("nav:table")
 	assert_true(screen().body.clip_contents, "the season body does not clip its content")
 	assert_gt(screen().body.max_scroll(), 0.0, "the table should overflow a phone viewport")
 	_drag(Vector2(400.0, 300.0), Vector2(400.0, 180.0))
@@ -672,7 +698,7 @@ func test_a_row_scrolled_into_view_is_the_one_that_opens() -> void:
 	_open_scroll_hub()
 	var saved: float = screen().ui_scale
 	_phone_scale()
-	press_id("table")
+	press_nav("nav:table")
 	var last_id := ""
 	var last_bottom := 0.0
 	for item in screen().buttons:
@@ -720,7 +746,7 @@ func test_the_body_clamps_its_scroll_to_the_content() -> void:
 func test_the_table_remembers_its_mode_in_the_save() -> void:
 	_open_scroll_hub()
 	var slug := str(LeagueSeason.active.save.slug)
-	press_id("table")
+	press_nav("nav:table")
 	var view = screen().book.table
 	assert_eq(view.mode, LeagueTableView.FULL, "a desktop sheet did not open the full table")
 	var heads := 0
@@ -737,7 +763,7 @@ func test_the_table_remembers_its_mode_in_the_save() -> void:
 	var reopened := LeagueSeason.open(slug)
 	assert_not_null(reopened, "the save did not reopen")
 	screen().open_season(reopened)
-	press_id("table")
+	press_nav("nav:table")
 	assert_eq(view.mode, LeagueTableView.COMPACT, "the reopened season forgot its table reading")
 	heads = 0
 	for item in screen().buttons:
@@ -745,7 +771,7 @@ func test_the_table_remembers_its_mode_in_the_save() -> void:
 			heads += 1
 	assert_eq(heads, 10, "the compact header should be #, club and the whole overall record")
 	press_id("back")
-	_leave_season()
+	leave_league()
 
 ## A header sorts the player's list; the place numbers and their bands stay the
 ## league's. The second tap reverses, and the choice survives a re-open.
@@ -754,7 +780,7 @@ func test_a_table_header_sorts_and_keeps_the_official_place() -> void:
 	press_id("continue")
 	if screen().mode == LeagueScreen.MODE_REPORT:
 		press_id("back")
-	press_id("table")
+	press_nav("nav:table")
 	press_id("tbl:sort:club")
 	var names: Array = []
 	for item in screen().buttons:
@@ -778,11 +804,11 @@ func test_a_table_header_sorts_and_keeps_the_official_place() -> void:
 	assert_eq(str(stored.get("table_sort", "")), "club", "the sort was not written to the save")
 	assert_eq(str(stored.get("table_dir", "")), "desc", "the direction was not written to the save")
 	press_id("back")
-	press_id("table")
+	press_nav("nav:table")
 	assert_eq(screen().book.table.sort, "club", "the table forgot its sort")
 	assert_eq(screen().book.table.dir, -1, "the table forgot its direction")
 	press_id("back")
-	_leave_season()
+	leave_league()
 
 ## The full table is wider than a phone in portrait; a sideways drag reaches the
 ## far columns and the compact reading fits again.
@@ -790,7 +816,7 @@ func test_the_full_table_pans_sideways_on_a_phone() -> void:
 	_open_scroll_hub()
 	var saved: float = screen().ui_scale
 	_phone_scale()
-	press_id("table")
+	press_nav("nav:table")
 	var view = screen().book.table
 	assert_eq(view.mode, LeagueTableView.COMPACT, "a phone did not open the compact table")
 	press_id("tbl:mode:full")
@@ -805,7 +831,7 @@ func test_the_full_table_pans_sideways_on_a_phone() -> void:
 	press_id("back")
 	screen().ui_scale = saved
 	screen().refresh()
-	_leave_season()
+	leave_league()
 
 ## The hub's date is a date like any other: hovering it hands the overlay that
 ## exact day, so the weekday never has to ride the date itself (#99).
@@ -814,7 +840,7 @@ func test_the_hub_date_reveals_its_weekday_on_hover() -> void:
 	screen().queue_redraw()
 	await get_tree().process_frame
 	var zone: Dictionary = {}
-	for z in screen().hints.zones:
+	for z in screen().rows_hints.zones:
 		zone = z
 	assert_false(zone.is_empty(), "the hub painted no date")
 	var date := str(zone["date"])
@@ -823,7 +849,7 @@ func test_the_hub_date_reveals_its_weekday_on_hover() -> void:
 		"a hovered hub date did not reach the overlay")
 	assert_eq(FixtureCalendar.day_label(date), str(LeagueSeason.active.state()["day"]),
 		"the hub date and the season clock disagree")
-	_leave_season()
+	leave_league()
 
 ## The scroll tests create their own season: earlier cases are free to delete
 ## every save in the list.

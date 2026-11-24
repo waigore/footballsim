@@ -25,6 +25,8 @@ var ui_scale := 1.0
 var touch := false
 var mouse := Vector2(-1000, -1000)
 var buttons: Array = []
+## The shared long-press menu main.gd drives; the picker paints it over its cards.
+var interest: InterestMenu = null
 ## Opened from the main menu, so its way out is the menu rather than the match.
 var back_to_menu := false
 
@@ -178,8 +180,9 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	rect(C_PANEL, r, 14, Color(1, 1, 1, 0.10))
 	draw_rect(Rect2(r.position.x + 1, r.position.y + 1, 6, r.size.y - 2), t["color"])
 	var cx := r.position.x + r.size.x * 0.5
-	text_c(cx, r.position.y + r.size.y * 0.30, str(t["abbr"]), 54, C_TEXT, f_bold)
-	text_c(cx, r.position.y + r.size.y * 0.50, str(t["name"]).to_upper(), 17, C_TEXT, f_med)
+	var ink: Color = C_GOLD if LeagueInterest.marked(str(t.get("id", ""))) else C_TEXT
+	text_c(cx, r.position.y + r.size.y * 0.30, str(t["abbr"]), 54, ink, f_bold)
+	text_c(cx, r.position.y + r.size.y * 0.50, str(t["name"]).to_upper(), 17, ink, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.64, str(t["nickname"]).to_upper(), 11, C_DIM, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.80, "%s  ·  %s" % [str(t["formation"]), str(t["manager"]).to_upper()], 10, C_GOLD, f_med)
 	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 9, C_DIM, f_bold)
@@ -274,3 +277,5 @@ func _draw() -> void:
 	rect(C_PANEL_LIGHT if league_hover else C_PANEL, league_btn, 8, Color(1, 1, 1, 0.14 if league_hover else 0.07))
 	text_c(league_btn.position.x + league_btn.size.x * 0.5, league_btn.position.y + league_btn.size.y * 0.66, "◈  LEAGUE", 13, C_TEXT if league_hover else C_DIM, f_bold)
 	_add_button("league", league_btn)
+	if interest != null and interest.open:
+		interest.draw(self, vp, {"bold": f_bold, "med": f_med}, LeagueInterest.marked(interest.club_id))

@@ -31,6 +31,13 @@ func _tap(design_point: Vector2) -> void:
 	ev.pressed = true
 	ev.position = design_point * game.hud_scale
 	game._input(ev)
+	# The broadcast commits a click on release so a hold can raise the interest
+	# menu instead; the helper releases at the same point.
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = design_point * game.hud_scale
+	game._input(up)
 
 func _door(id: String) -> Rect2:
 	for b in game.hud.buttons:

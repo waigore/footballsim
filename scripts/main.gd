@@ -1,10 +1,7 @@
 extends Node2D
 
-## Playback controller + scene assembly.
-## Owns the engine, the snapshot ring buffer that makes highlight replays possible,
-## the camera and every input binding. Screen/design-space arithmetic (overlay
-## doors, token picking, tick budget) lives in MatchView so the scene stays
-## inside its P3 size budget.
+## Playback controller + scene assembly: the engine, the highlight ring, the
+## camera and every input binding. Design-space arithmetic lives in MatchView.
 
 const W := 68.0
 const L := 105.0
@@ -74,6 +71,8 @@ var select_from_menu := false
 var match_started := false
 ## Encyclopedia sheet: league / club / player pages over the paused broadcast.
 var wiki_host: WikiHost = null
+## Long-press context menu for Teams of Interest on the HUD and the picker.
+var interest: InterestMenu = null
 ## A finished match is written to the cached seed exactly once.
 var result_recorded := false
 
@@ -87,6 +86,9 @@ func _ready() -> void:
 	dev.parse(self)
 	_build_wiki()
 	_build_selector()
+	interest = InterestMenu.new()
+	if selector != null:
+		selector.interest = interest
 	menus = MenuHost.new()
 	menus.attach(self)
 	_sync_overlay_scale()

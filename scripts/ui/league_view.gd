@@ -18,6 +18,15 @@ static func build(screen) -> Dictionary:
 	var state: Dictionary = season.state() if season != null else {"rules": rules}
 	if mode == LeagueScreen.MODE_SYSTEM:
 		return LeagueSystemActions.view(screen)
+	# The panel's two new readings (#103): Stats holds the played matchdays and
+	# the podium door; Teams of Interest reads the shortlist and its search.
+	if mode == LeagueScreen.MODE_STATS:
+		return {"name": state.get("name", ""), "complete": bool(state.get("complete", false)),
+			"reports": season.record.played_days() if season != null else []}
+	if mode == LeagueScreen.MODE_INTEREST:
+		var marked: Array = season.interest.all() if season != null else []
+		return {"query": screen.interest_query, "clubs": LeagueClubs.rows(marked),
+			"results": LeagueClubs.search(screen.interest_query, marked)}
 	if mode == LeagueScreen.MODE_TABLE:
 		return {"table": state.get("table", []), "rules": state.get("rules", rules),
 			"name": state.get("name", ""), "date": state.get("date", "")}
