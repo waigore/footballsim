@@ -14,24 +14,25 @@ Former gaps now shipped (wiki domains playable; DRs accepted):
 | Added time, injuries, handball, pitch official | DR-20261122-03 |
 | Live tactics + IFAB substitutions | DR-20261122-05; MatchAI |
 | Poisson / Dixon–Coles outcomes | `poisson_model.gd`; DR-20261122-04 |
+| Physics↔Poisson finishing + level/gradient | DR-20261124-08; [#33](https://github.com/waigore/footballsim/issues/33) closed; census green |
 | PL 2026-27 snapshot + encyclopedia | `data/`; DR-20261123-01 / 05 |
 | God-mode season saves, calendar, Continue/watch | `league_season.gd`; DR-20261124-01 / 06 |
+| System sheet (Quick Save / Save As / Load / Quit) | DR-20261124-07 |
 | Per-goal report playback packs | DR-20261124-04 |
 | Non-match type / viewport scale | DR-20261124-03 |
 | Live `tempo` on the tactics board | unused in DR-20261122-02; drives play now |
-| Woodwork, interceptions, momentum, stored rating | DR-20261125-01; momentum reads on the broadcast stats card (DR-20261125-02) |
+| Woodwork, interceptions, momentum, stored rating | DR-20261125-01; momentum on the broadcast stats card (DR-20261125-02) |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Physics↔Poisson level and strength gradient | Wiki [poisson-model](https://github.com/waigore/footballsim/wiki/poisson-model) + [#33](https://github.com/waigore/footballsim/issues/33); [#111](https://github.com/waigore/footballsim/pull/111) prices chance quality from ratings — census re-check still open |
-| 2 | Native match hot loop | DR-20261123-02 “future tightening” under the 120 s full-match budget |
+| 1 | Native match hot loop | DR-20261123-02 “future tightening” under the 120 s full-match budget |
 
 ## Next pick
 
-**Physics↔Poisson level and strength gradient** — finishes P2 agreement after
-#111 so auto-sim and watched physics stay trustworthy on the same ratings.
+**Native match hot loop** — only ranked gap left; cuts full-match wall clock under
+the census budget without changing the gated agreement story.
 
 ## Out of scope / blocked
 
