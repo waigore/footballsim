@@ -173,10 +173,11 @@ func refresh() -> void:
 func button_at(p: Vector2) -> String:
 	return body.hit(p) if body != null else ""
 
-## Wheel notches, trackpad pans, drags and the keys all land here.
-func scroll_by(delta: float) -> void:
+## Wheel notches, trackpad pans, drags and the keys all land here. The full
+## table is wider than a phone window, so a drag pans it sideways too.
+func scroll_by(delta: float, dx: float = 0.0) -> void:
 	if body != null:
-		body.scroll_by(delta)
+		body.pan_by(Vector2(dx, delta))
 
 func click(id: String) -> void:
 	if id == "":
@@ -220,7 +221,11 @@ func click(id: String) -> void:
 		refresh()
 	elif id == "table":
 		mode = MODE_TABLE
+		book.table.attach(season.save if season != null else null)
 		refresh()
+	elif id.begins_with("tbl:"):
+		if season != null and book.table.press(id, season.save):
+			refresh()
 	elif id == "calendar":
 		mode = MODE_CALENDAR
 		LeagueCalendar.open(self)
@@ -235,9 +240,7 @@ func click(id: String) -> void:
 		refresh()
 
 func _back() -> void:
-	if mode == MODE_HUB or mode == MODE_WIZARD or mode == MODE_LOAD:
-		close()
-	elif mode == MODE_PODIUM:
+	if mode == MODE_HUB or mode == MODE_WIZARD or mode == MODE_LOAD or mode == MODE_PODIUM:
 		close()
 	else:
 		mode = MODE_HUB

@@ -21,6 +21,9 @@ func _table(rows: int = 20) -> Array:
 			"position": i + 1, "club_id": "C%d" % i, "club_abbr": "C%d" % i,
 			"club_name": "Club %d" % i, "played": 0, "won": 0, "drawn": 0, "lost": 0,
 			"gf": 0, "ga": 0, "points": 0,
+			"home_played": 0, "home_won": 0, "home_drawn": 0, "home_lost": 0,
+			"home_gf": 0, "home_ga": 0, "away_played": 0, "away_won": 0,
+			"away_drawn": 0, "away_lost": 0, "away_gf": 0, "away_ga": 0,
 		})
 	return out
 
@@ -308,3 +311,158 @@ func test_zone_colours_cover_every_band() -> void:
 		var colour := LeagueSheet.zone_color(band)
 		assert_true(colour.a > 0.0, "band %s has no colour" % band)
 	assert_eq(LeagueRules.zone_label(""), "", "a neutral row has a label")
+
+# -------------------------------------------------------------- full table ---
+
+## #72/#74: the full reading is the compact strip plus the overall, home and
+## away columns. On the phone landscape design space (`--ui-scale` on a 1080p
+## handset) every one of them has to sit inside the row.
+func test_the_full_table_shows_every_column_on_a_phone_landscape() -> void:
+	for vp in [Vector2(913, 411), Vector2(873, 393)]:
+		var view := LeagueTableView.new()
+		view.mode = LeagueTableView.FULL
+		var items: Array = view.layout(vp, {"table": _table(), "rules": LeagueRules.defaults()})
+		var rows := 0
+		var heads := []
+		var widest := 0.0
+		for item in items:
+			if str(item["kind"]) == "table_row":
+				rows += 1
+				widest = maxf(widest, (item["rect"] as Rect2).end.x)
+			elif str(item["kind"]) == "head":
+				heads.append(str(item["id"]))
+		assert_eq(rows, 20, "the full table lost rows at %s" % vp)
+		assert_eq(heads.size(), 22, "the full header lost a column at %s" % vp)
+		assert_true(heads.has("tbl:sort:points"), "PTS is not sortable at %s" % vp)
+		assert_true(heads.has("tbl:sort:home_gf"), "the home goals are not sortable at %s" % vp)
+		assert_true(heads.has("tbl:sort:away_ga"), "the away goals against are missing at %s" % vp)
+		assert_lte(widest, vp.x - 24.0, "the full table runs off a phone landscape sheet at %s" % vp)
+
+func test_the_full_header_names_its_three_groups() -> void:
+	var view := LeagueTableView.new()
+	view.mode = LeagueTableView.FULL
+	var captions: Array = []
+	for item in view.layout(Vector2(913, 411), {"table": _table(), "rules": LeagueRules.defaults()}):
+		if str(item["kind"]) == "caption":
+			captions.append(str(item["label"]))
+	assert_eq(captions, ["OVERALL", "HOME", "AWAY"], "the full header lost a group caption")
+
+func test_the_table_defaults_to_compact_on_a_phone_and_full_on_desktop() -> void:
+	var phone := LeagueTableView.new()
+	var heads := 0
+	for item in phone.layout(Vector2(913, 411), {"table": _table(), "rules": LeagueRules.defaults()}):
+		if str(item["kind"]) == "head":
+			heads += 1
+	assert_eq(phone.mode, LeagueTableView.COMPACT, "a phone did not open the compact table")
+	assert_eq(heads, 5, "the compact header should be #, club, P, GD and PTS")
+	var desktop := LeagueTableView.new()
+	desktop.layout(Vector2(1600, 900), {"table": _table(), "rules": LeagueRules.defaults()})
+	assert_eq(desktop.mode, LeagueTableView.FULL, "a desktop did not open the full table")
+
+## A full table is wider than a portrait phone: the body offers the sideways
+## pan and every column is reachable by dragging.
+func test_the_full_table_pans_sideways_on_a_portrait_phone() -> void:
+	var view := LeagueTableView.new()
+	view.mode = LeagueTableView.FULL
+	var vp := Vector2(360.0, 780.0)
+	var items: Array = view.layout(vp, {"table": _table(), "rules": LeagueRules.defaults()})
+	var body := LeagueBody.new()
+	body.set_sheet(items, vp, true)
+	assert_gt(body.max_hscroll(), 0.0, "the full table does not offer a sideways pan")
+	body.pan_by(Vector2(1000.0, 0.0))
+	assert_almost_eq(body.hscroll, body.max_hscroll(), 0.5, "the pan did not reach the last column")
+	var last: Dictionary = {}
+	for item in body.button_rects():
+		if str(item["id"]) == "tbl:sort:away_ga":
+			last = item
+	assert_false(last.is_empty(), "the away goals column has no door")
+	var rect: Rect2 = last["rect"]
+	assert_lte(rect.end.x, vp.x + 0.5, "the last column is still off the window after the pan")
+	body.pan_by(Vector2(-1.0e7, 0.0))
+	assert_eq(body.hscroll, 0.0, "the pan ran past the first column")
+	body.free()
+
+## Sorting is the player's order; the `#` column and the zone bands stay the
+## league's official place, so a sorted table never lies about the standings.
+func test_sorting_orders_the_rows_but_keeps_the_official_place() -> void:
+	var rows: Array = _table()
+	rows[0]["points"] = 10
+	rows[1]["points"] = 30
+	rows[2]["points"] = 20
+	var view := LeagueTableView.new()
+	view.mode = LeagueTableView.FULL
+	view.sort = "points"
+	view.dir = -1
+	var items: Array = view.layout(Vector2(1600, 900),
+		{"table": rows, "rules": LeagueRules.defaults()})
+	var points: Array = []
+	var by_position := {}
+	for item in items:
+		if str(item["kind"]) == "table_row":
+			var row: Dictionary = item["row"]
+			points.append(int(row["points"]))
+			by_position[int(row["position"])] = str(item["zone"])
+	assert_eq(points[0], 30, "the high side did not come first")
+	assert_eq(points[1], 20, "the rows are not sorted by points")
+	assert_eq(points[2], 10, "the rows are not sorted by points")
+	assert_eq(by_position[1], "ucl", "the champion's band left its place")
+	assert_eq(by_position[20], "relegation", "the drop lost its band")
+	view.dir = 1
+	var ascending: Array = []
+	for item in view.layout(Vector2(1600, 900), {"table": rows, "rules": LeagueRules.defaults()}):
+		if str(item["kind"]) == "table_row":
+			ascending.append(int((item["row"] as Dictionary)["points"]))
+	assert_eq(ascending[0], 0, "the low side did not come first when reversed")
+
+func test_a_mode_press_flips_the_reading_and_a_header_press_sorts() -> void:
+	var view := LeagueTableView.new()
+	view.mode = LeagueTableView.FULL
+	assert_true(view.press("tbl:mode:compact", null), "the compact door did nothing")
+	assert_eq(view.mode, LeagueTableView.COMPACT, "the compact door did not take")
+	assert_false(view.press("tbl:mode:compact", null), "the reading already on screen was taken again")
+	assert_true(view.press("tbl:mode:full", null), "the full door did nothing")
+	assert_eq(view.mode, LeagueTableView.FULL, "the full door did not take")
+	assert_false(view.press("tbl:mode:sideways", null), "an unknown reading was taken")
+	assert_true(view.press("tbl:sort:points", null), "a header press did nothing")
+	assert_eq(view.sort, "points", "the header press did not sort")
+	assert_eq(view.dir, -1, "a numeric column should start on the high side")
+	view.press("tbl:sort:points", null)
+	assert_eq(view.dir, 1, "a second tap did not reverse")
+	view.press("tbl:sort:club", null)
+	assert_eq(view.dir, 1, "the club column should start A-Z")
+	assert_false(view.press("tbl:sort:position", null), "the place column is not sortable")
+	assert_false(view.press("nope", null), "an unknown door was taken")
+
+## A sort is only worth honouring in a reading that shows the column: the
+## compact strip keeps the player's full-table sort stored for when they come
+## back to it, but lists the official order while it is hidden.
+func test_a_hidden_sort_column_leaves_the_compact_strip_in_place() -> void:
+	var rows: Array = _table()
+	rows[0]["home_gf"] = 3
+	rows[1]["home_gf"] = 30
+	rows[2]["home_gf"] = 10
+	var view := LeagueTableView.new()
+	view.mode = LeagueTableView.COMPACT
+	view.sort = "home_gf"
+	view.dir = -1
+	var positions: Array = []
+	for item in view.layout(Vector2(913, 411), {"table": rows, "rules": LeagueRules.defaults()}):
+		if str(item["kind"]) == "table_row":
+			positions.append(int((item["row"] as Dictionary)["position"]))
+	assert_eq(positions[0], 1, "the compact strip sorted by a column it does not show")
+	view.mode = LeagueTableView.FULL
+	var by_home: Array = []
+	for item in view.layout(Vector2(1600, 900), {"table": rows, "rules": LeagueRules.defaults()}):
+		if str(item["kind"]) == "table_row":
+			by_home.append(int((item["row"] as Dictionary)["home_gf"]))
+	assert_eq(by_home[0], 30, "the full reading lost the sort it was given")
+
+func test_attach_clears_a_reading_without_a_save() -> void:
+	var view := LeagueTableView.new()
+	view.mode = LeagueTableView.FULL
+	view.sort = "points"
+	view.dir = 1
+	view.attach(null)
+	assert_eq(view.mode, "", "a table with no save kept a reading")
+	assert_eq(view.sort, "", "a table with no save kept a sort")
+	assert_eq(view.dir, -1, "a table with no save kept a direction")

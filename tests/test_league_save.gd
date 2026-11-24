@@ -104,6 +104,62 @@ func test_closing_returns_to_the_single_match_cache() -> void:
 	assert_eq(PLDatabase.current_path(), cache, "single-match mode is not on the cached seed")
 	assert_eq(PLRepository.shared().table().size(), 20, "the seed table did not come back")
 
+# --------------------------------------------------- home/away table (#73) ---
+
+func _columns() -> Dictionary:
+	var out := {}
+	for row in PLDatabase.rows("PRAGMA table_info(league_table);"):
+		out[str(row["name"])] = true
+	return out
+
+func test_the_league_table_keeps_home_and_away_aggregates() -> void:
+	var save := LeagueSave.create("Side Split", LeagueRules.defaults())
+	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
+	var columns := _columns()
+	assert_true(columns.has("home_played"), "the table has no home record")
+	for column in LeagueSave.SIDE_COLUMNS:
+		assert_true(columns.has(column), "the table is missing %s" % column)
+
+## A save written before the home/away columns existed gets them on open; the
+## season then rebuilds them from the played fixtures, so nothing is lost.
+func test_an_older_save_gains_the_side_columns_when_it_opens() -> void:
+	var save := LeagueSave.create("Old Table", LeagueRules.defaults())
+	PLDatabase.execute("DROP TABLE league_table;")
+	PLDatabase.execute(
+		"CREATE TABLE league_table (club_id TEXT PRIMARY KEY, "
+		+ "played INTEGER NOT NULL DEFAULT 0, won INTEGER NOT NULL DEFAULT 0, "
+		+ "drawn INTEGER NOT NULL DEFAULT 0, lost INTEGER NOT NULL DEFAULT 0, "
+		+ "gf INTEGER NOT NULL DEFAULT 0, ga INTEGER NOT NULL DEFAULT 0, "
+		+ "points INTEGER NOT NULL DEFAULT 0);")
+	PLDatabase.execute("INSERT INTO league_table (club_id) SELECT id FROM club;")
+	assert_false(_columns().has("home_played"), "the fixture did not start as an older save")
+	var reopened := LeagueSave.open(save.slug)
+	assert_not_null(reopened, "the older save did not open")
+	var upgraded := _columns()
+	for column in LeagueSave.SIDE_COLUMNS:
+		assert_true(upgraded.has(column), "opening an older save did not add %s" % column)
+	var row := PLDatabase.row("SELECT home_played, away_ga FROM league_table LIMIT 1;")
+	assert_eq(int(row["home_played"]), 0, "a migrated row should start on zero")
+	assert_eq(int(row["away_ga"]), 0, "a migrated row should start on zero")
+
+## The table reading belongs to one save: two seasons remember different modes
+## and sorts, and a save that was never changed has none.
+func test_table_choices_belong_to_their_own_save() -> void:
+	var first := LeagueSave.create("Reading One", LeagueRules.defaults())
+	assert_true(first.put_meta("table_mode", "full"), "the save took no mode")
+	assert_true(first.put_meta("table_sort", "points"), "the save took no sort")
+	assert_true(first.put_meta("table_dir", "asc"), "the save took no direction")
+	var second := LeagueSave.create("Reading Two", LeagueRules.defaults())
+	var view := LeagueTableView.new()
+	view.attach(LeagueSave.open(first.slug))
+	assert_eq(view.mode, "full", "the first save lost its reading")
+	assert_eq(view.sort, "points", "the first save lost its sort")
+	assert_eq(view.dir, 1, "the first save lost its direction")
+	view.attach(LeagueSave.open(second.slug))
+	assert_eq(view.mode, "", "a fresh save borrowed another save's reading")
+	assert_eq(view.sort, "", "a fresh save borrowed another save's sort")
+	assert_eq(view.dir, -1, "a fresh save borrowed another save's direction")
+
 func test_slugs_are_readable_and_files_stay_in_the_folder() -> void:
 	assert_eq(LeagueSave.slugify(""), "", "an empty name should fold to nothing")
 	assert_eq(LeagueSave.unique_slug("!!!"), "league", "an empty name has no fallback slug")

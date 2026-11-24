@@ -11,7 +11,6 @@ extends RefCounted
 
 const HEADER := 58.0
 const BAR_H := 52.0
-const ROW_H := 22.0
 ## The ▶ hit target beside a goal: thumb-sized, never hover-only.
 const PLAY_W := 44.0
 const PLAY_H := 26.0
@@ -19,26 +18,18 @@ const MONTHS := ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
 	"AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"]
 
 var cache := {}
+## The table pose's geometry, sorting and paint (compact/full, header sort). It
+## lives in its own module because the book is at its method budget.
+var table := LeagueTableView.new()
 
 # ----------------------------------------------------------------- table ---
 
 func table_layout(vp: Vector2, view: Dictionary) -> Array:
-	var items: Array = []
-	var rows: Array = view.get("table", [])
-	var top := HEADER + 22.0
-	for i in range(rows.size()):
-		var band := LeagueRules.zone(int(rows[i]["position"]), view.get("rules", {}))
-		items.append({
-			"id": "club:" + str(rows[i]["club_id"]), "kind": "table_row", "row": rows[i],
-			"zone": band, "rect": Rect2(24.0, top + float(i) * ROW_H, vp.x - 48.0, ROW_H - 1.0),
-		})
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
-	return items
+	return table.layout(vp, view)
 
-## Column geometry for one table row lives in `LeagueColumns` (the book is at
-## its method budget): place number and club on the left, P/GD/PTS on one
-## right-aligned rail, plus the width a club name may use.
+## Column geometry for one table row lives in `LeagueTableView`: compact keeps
+## `LeagueColumns` (the measured layout #71 settled), the full sheet walks the
+## overall, home and away columns from the club's right edge.
 
 func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
@@ -87,7 +78,7 @@ func report_layout(vp: Vector2, view: Dictionary) -> Array:
 		var index := goal
 		if is_goal:
 			goal += 1
-		var h := ROW_H + 19.0 if not clip.is_empty() else ROW_H - 1.0
+		var h := 40.0 if not clip.is_empty() else 20.0
 		items.append({"id": "", "kind": "event", "event": e, "clip": clip,
 			"rect": Rect2(24.0, y, vp.x - 48.0, h)})
 		if not clip.is_empty():
@@ -172,50 +163,10 @@ static func _first_weekday(month: String) -> int:
 # gd-tools: no cover start
 
 func draw_table_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
-	var bold: Font = fonts["bold"]
-	var med: Font = fonts["med"]
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), "LEAGUE TABLE", 12, UiChrome.C_GOLD, bold)
-	UiChrome.text_r(c, vp.x - 24.0, 30.0,
-		"%s · %s" % [str(view.get("name", "")), str(view.get("date", ""))], 10, UiChrome.C_DIM, bold)
-	var y := vp.y - BAR_H + 24.0
-	UiChrome.text(c, Vector2(160.0, y), "UCL", 9, LeagueSheet.zone_color("ucl"), bold)
-	UiChrome.text(c, Vector2(202.0, y), "UEL", 9, LeagueSheet.zone_color("uel"), bold)
-	UiChrome.text(c, Vector2(244.0, y), "UECL", 9, LeagueSheet.zone_color("uecl"), bold)
-	UiChrome.text(c, Vector2(292.0, y), "RELEGATION", 9, LeagueSheet.zone_color("relegation"), bold)
-	# The keys and the sentence share one line: a sheet too narrow for both
-	# drops the sentence rather than painting it over the legend.
-	if vp.x >= 640.0:
-		UiChrome.text_r(c, vp.x - 24.0, y, "COLOURED BAND = PLACE FROM SAVED RULES", 8, UiChrome.C_DIM, med)
+	table.draw_chrome(c, vp, fonts, view)
 
 func draw_table_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
-	var bold: Font = fonts["bold"]
-	var top := HEADER + 8.0
-	var head := LeagueColumns.of(Rect2(24.0, top, vp.x - 48.0, 0.0))
-	UiChrome.text(c, Vector2(float(head["pos_x"]), top), "#", 9, UiChrome.C_DIM, bold)
-	UiChrome.text(c, Vector2(float(head["club_x"]), top), "CLUB", 9, UiChrome.C_DIM, bold)
-	UiChrome.text_r(c, float(head["p_r"]), top, "P", 9, UiChrome.C_DIM, bold)
-	UiChrome.text_r(c, float(head["gd_r"]), top, "GD", 9, UiChrome.C_DIM, bold)
-	UiChrome.text_r(c, float(head["pts_r"]), top, "PTS", 9, UiChrome.C_DIM, bold)
-	for item in items:
-		if str(item["kind"]) == "table_row":
-			_draw_row(c, item["rect"], item, fonts)
-
-func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
-	var row: Dictionary = item["row"]
-	var band := str(item["zone"])
-	if band != "":
-		c.draw_rect(Rect2(rect.position.x, rect.position.y + 2.0, 4.0, rect.size.y - 4.0), LeagueSheet.zone_color(band))
-	var bold: Font = fonts["bold"]
-	var med: Font = fonts["med"]
-	var cols := LeagueColumns.of(rect)
-	var y := rect.position.y + rect.size.y * 0.5 + 4.0
-	UiChrome.text(c, Vector2(float(cols["pos_x"]), y), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
-	UiChrome.text(c, Vector2(float(cols["club_x"]), y),
-		LeagueColumns.fit_name(str(row["club_name"]), bold, 12, float(cols["club_w"])), 12, UiChrome.C_TEXT, bold)
-	UiChrome.text_r(c, float(cols["p_r"]), y, "%d" % int(row["played"]), 10, UiChrome.C_SOFT, med)
-	UiChrome.text_r(c, float(cols["gd_r"]), y, "%+d" % (int(row["gf"]) - int(row["ga"])), 10, UiChrome.C_SOFT, med)
-	UiChrome.text_r(c, float(cols["pts_r"]), y, "%d" % int(row["points"]), 11, UiChrome.C_TEXT, bold)
+	table.draw_body(c, vp, fonts, items, view)
 
 # -------------------------------------------------------------- calendar ---
 

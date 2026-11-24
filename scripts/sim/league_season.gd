@@ -73,6 +73,10 @@ static func open(slug: String) -> LeagueSeason:
 	season.record = LeagueRecord.new(save)
 	season.rules = save.rules
 	season.rng.seed = int(str(save.meta.get("seed", "0")))
+	# An older save may predate the home/away columns, and a hand-edited fixture
+	# ledger can drift: rebuild the aggregates now so the table (and its full
+	# reading) matches the played fixtures (#73).
+	season.record.recompute_table()
 	season.roll_clock()
 	active = season
 	return season
