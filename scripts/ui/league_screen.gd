@@ -27,6 +27,8 @@ const MODE_PODIUM := "podium"
 var ui_scale := 1.0
 var touch := false
 var mouse := Vector2(-1000, -1000)
+## The pointer's button is down: the touch stand-in for a hover (#99).
+var holding := false
 
 var mode := MODE_WIZARD
 var season: LeagueSeason = null
@@ -45,6 +47,10 @@ var buttons: Array:
 var body: LeagueBody = null
 var hub: LeagueSheet = LeagueSheet.new()
 var book: LeagueBook = LeagueBook.new()
+## Date strips: the chrome's own, and the active sheet's rows on screen (#99).
+var hints := DateHints.new()
+var rows_hints: DateHints = null
+var tooltip: DateOverlay = null
 var _last_mode := ""
 ## Pose -> [sheet, layout, body painter, chrome painter]. The screens share one
 ## scroll window; the table says which sheet owns each pose's geometry and paint.
@@ -65,6 +71,7 @@ func _ready() -> void:
 	body = LeagueBody.new()
 	body.name = "Body"
 	add_child(body)
+	tooltip = DateOverlay.attach(self, body, false)
 	resized.connect(refresh)
 
 func design_vp() -> Vector2:
@@ -162,6 +169,7 @@ func refresh() -> void:
 	if body == null or pose.is_empty():
 		return
 	var sheet: RefCounted = hub if str(pose[0]) == "hub" else book
+	rows_hints = hub.hints if str(pose[0]) == "hub" else book.hints
 	var items: Array = Callable(sheet, str(pose[1])).call(vp, view)
 	var content := body.set_sheet(items, vp, mode != _last_mode)
 	body.painter = Callable(sheet, str(pose[2])).bind(vp, UiChrome.fonts(), content, view)
@@ -377,7 +385,8 @@ func _draw() -> void:
 		return
 	var sheet: RefCounted = hub if str(pose[0]) == "hub" else book
 	var fonts := UiChrome.fonts()
-	Callable(sheet, str(pose[3])).call(self, vp, fonts, current_view())
+	hints.clear()
+	Callable(sheet, str(pose[3])).call(self, vp, fonts, current_view(), hints)
 	if body != null:
 		for item in body.pinned:
 			var rect: Rect2 = item["rect"]

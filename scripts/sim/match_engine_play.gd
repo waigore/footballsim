@@ -152,6 +152,12 @@ func _ball_physics(dt: float, goal_mode: bool = false) -> void:
 		ball.pos += ball.vel * dt * 0.55
 
 func _ball_interactions(dt: float) -> void:
+	# A converted chance is already a goal by the model's account: nothing may
+	# touch it before the line, or it would pass a second dice the xG never paid
+	# for (a block, a header in flight, a crowd squirt). Priced-out chances stay
+	# live and contestable.
+	if ball.planned_goal:
+		return
 	# Owner keeps control only while the ball is at their feet.
 	if ball.owner_id >= 0:
 		var own = by_id.get(ball.owner_id, null)
@@ -207,6 +213,7 @@ func _ball_interactions(dt: float) -> void:
 			if d < reach:
 				_gk_claim(kgk, d)
 	# Desperate blocks: defenders in the shot lane can throw a body in the way.
+	# (A converted chance never reaches this loop: see the early return above.)
 	if ball.shot_team >= 0 and ball.z < 1.9 and clock - ball.shot_time < 0.9:
 		for q in players:
 			if q.team == ball.shot_team or q.sent_off or q.is_gk or q.cooldown > 0.0:
@@ -224,6 +231,7 @@ func _ball_interactions(dt: float) -> void:
 				ball.z = maxf(ball.z, 0.3)
 				ball.shot_team = -1
 				ball.planned_goal = false
+				ball.planned_save = false
 				ball.last_touch_id = q.id
 				ball.last_touch_team = q.team
 				q.cooldown = 0.5
@@ -267,134 +275,3 @@ func _ball_interactions(dt: float) -> void:
 
 func _after_owner_checks() -> void:
 	pass
-
-func _attempt_tackle(d, carrier) -> void:
-	d.cooldown = 0.52
-	d.state = "tackle"
-	d.action_t = 0.25
-	var dist = d.pos.distance_to(carrier.pos)
-	var def: float = d.attr["def"] / 100.0
-	var dri: float = carrier.attr["dri"] / 100.0
-	var rel: Vector2 = carrier.pos - d.pos
-	var align: float = clampf(d.facing.dot(rel.normalized()) if rel.length() > 0.01 else 0.0, -1.0, 1.0)
-	var speed_adv: float = clampf((carrier.vel.length() - d.vel.length()) / 8.0, -1.0, 1.0)
-	var chance: float = 0.10 + def * 0.50 - dri * 0.30 + (1.0 - dist / 1.9) * 0.22 + align * 0.10 - maxf(0.0, speed_adv) * 0.14
-	chance += 0.020 if d.team == home_team else -0.015
-	chance = clampf(chance, 0.04, 0.60)
-	if rng.randf() < chance:
-		d.stats["tackles"] += 1
-		stats[d.team]["tackles"] += 1
-		carrier.has_ball = false
-		carrier.cooldown = 0.45
-		ball.owner_id = -1
-		ball.last_touch_id = d.id
-		ball.last_touch_team = d.team
-		ball.shot_team = -1
-		ball.assist_id = -1
-		ball.pos = carrier.pos + (d.pos - carrier.pos).normalized() * 0.35
-		var away_dir := Vector2(teams[d.team]["dir"], rng.randf_range(-0.75, 0.75)).normalized()
-		ball.vel = away_dir * rng.randf_range(2.0, 4.5)
-		ball.z = 0.0
-		ball.vz = 0.0
-		possession_team = d.team
-		possession_loose = true
-		_add_involvement(d, "tackle", "Tackle won", d.pos)
-		_flash(0.25)
-	else:
-		var foul_p: float = 0.0055 + (1.0 - def) * 0.007
-		if d.pos.distance_to(own_goal_pos(carrier.team)) < 30.0:
-			foul_p += 0.02
-		if in_penalty_box(carrier.pos, d.team):
-			foul_p *= 0.40
-		if rng.randf() < foul_p:
-			_award_foul(d, carrier)
-
-func _award_foul(fouler, victim) -> void:
-	var box = in_penalty_box(victim.pos, fouler.team)
-	stats[fouler.team]["fouls"] += 1
-	fouler.stats["fouls"] += 1
-	# Card decision.
-	var dogso = false
-	var ax = attacking_x(victim.team, victim.pos)
-	if ax > L * 0.62 and not box:
-		var defenders_behind = 0
-		for q in players:
-			if q.team == fouler.team and not q.sent_off and not q.is_gk:
-				if attacking_x(victim.team, q.pos) < ax:
-					defenders_behind += 1
-		dogso = defenders_behind <= 1
-	var card = ""
-	var r = rng.randf()
-	if dogso and r < 0.10:
-		card = "red"
-	elif r < 0.11:
-		card = "yellow"
-	if card == "yellow":
-		fouler.yellow += 1
-		stats[fouler.team]["yellow"] += 1
-		if fouler.yellow >= 2:
-			card = "red_second"
-	elif card == "red":
-		stats[fouler.team]["red"] += 1
-	if card != "":
-		_send_off_or_book(fouler, card)
-	var spot = victim.pos
-	if box:
-		spot = Vector2(PEN_D if fouler.team == 1 else L - PEN_D, W * 0.5)
-		_emit("foul", Commentary.foul(rng, fouler.name, victim.name, true), victim.team, victim)
-		_start_restart("penalty", victim.team, spot, 3.6)
-	else:
-		_emit("foul", Commentary.foul(rng, fouler.name, victim.name, false), victim.team, victim)
-		_start_restart("free_kick", victim.team, spot, 2.6)
-	_flash(0.4)
-	# A bad challenge can take the victim off as well.
-	if rng.randf() < 0.05:
-		_injure(victim)
-
-## The ball struck an arm in the flight path. Restart to the attacking side:
-## a penalty inside the box, a free kick anywhere else.
-func _award_handball(q) -> void:
-	var box: bool = in_penalty_box(q.pos, q.team)
-	var attack: int = 1 - q.team
-	stats[q.team]["handballs"] += 1
-	q.stats["handballs"] = int(q.stats.get("handballs", 0)) + 1
-	ball.shot_team = -1
-	ball.last_touch_id = q.id
-	ball.last_touch_team = q.team
-	possession_team = attack
-	_flash(0.4)
-	_emit("handball", Commentary.handball(rng, q.name, box), attack, q)
-	_add_involvement(q, "handball", "Handball", q.pos)
-	if box:
-		_start_restart("penalty", attack, q.pos, 3.6)
-	else:
-		_start_restart("free_kick", attack, q.pos, 2.6)
-
-func _send_off_or_book(p, card: String) -> void:
-	var line: String = Commentary.card(rng, p.name, card)
-	if card == "yellow":
-		_emit("card", line, p.team, p)
-	elif card == "red_second":
-		p.red = true
-		p.sent_off = true
-		_touch_squad()
-		_emit("card", line, p.team, p)
-		stats[p.team]["red"] += 1
-		_remove_body(p)
-	else:
-		p.red = true
-		p.sent_off = true
-		_touch_squad()
-		_emit("card", line, p.team, p)
-		_remove_body(p)
-	stoppage_events += 1
-	# A card changes the picture: the dugouts weigh a response.
-	manager.on_event("card", {"team": p.team, "red": card != "yellow"})
-
-func _remove_body(p) -> void:
-	p.vel = Vector2.ZERO
-	p.has_ball = false
-	if ball.owner_id == p.id:
-		ball.owner_id = -1
-	p.mark_id = -1
-	_add_involvement(p, "card", "Sent off", p.pos)

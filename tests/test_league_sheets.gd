@@ -29,8 +29,8 @@ func _table(rows: int = 20) -> Array:
 
 func _state(plan: Array, table: Array, complete: bool = false) -> Dictionary:
 	return {
-		"name": "Sheet Season", "day": "SAT 15 AUG", "matchday": 1, "played": 0,
-		"total": 380, "plan": plan, "table": table, "rules": LeagueRules.defaults(),
+		"name": "Sheet Season", "day": "15/AUG/2026", "date": "2026-08-15", "matchday": 1,
+		"played": 0, "total": 380, "plan": plan, "table": table, "rules": LeagueRules.defaults(),
 		"can_suggest": true, "complete": complete, "advance_mode": "fixture_days",
 	}
 

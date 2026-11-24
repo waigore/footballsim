@@ -53,7 +53,10 @@ static func league_page() -> Dictionary:
 		"page": LEAGUE,
 		"title": str(meta.get("league_name", "Premier League")).to_upper(),
 		"eyebrow": "PREMIER LEAGUE  ·  %s" % season,
-		"subtitle": "20 CLUBS  ·  SNAPSHOT %s" % str(meta.get("snapshot_date", "")).to_upper(),
+		# The snapshot date is drawn as its own date label (#99), so the sheet can
+		# give it the weekday hint without hunting for it in the subtitle.
+		"subtitle": "20 CLUBS  ·  SNAPSHOT ",
+		"snapshot": str(meta.get("snapshot_date", "")),
 		"accent": Color("#f7c948"),
 		"blocks": [],
 	}
@@ -89,10 +92,11 @@ static func league_page() -> Dictionary:
 	for fx in repo().fixtures("", 10):
 		results.append({
 			"cells": [
-				_short_date(str(fx["kickoff"])), str(fx["home_abbr"]),
+				FixtureCalendar.day_label(str(fx["kickoff"])), str(fx["home_abbr"]),
 				"%d – %d" % [int(fx["home_goals"]), int(fx["away_goals"])], str(fx["away_abbr"]),
 			],
 			"target": {"page": TEAM, "id": str(fx["home_club_id"])},
+			"dates": {0: str(fx["kickoff"])},
 		})
 	out["blocks"].append({"k": "section", "text": "LATEST RESULTS  ·  SNAPSHOT"})
 	out["blocks"].append({
@@ -182,10 +186,11 @@ static func team_page(club_id: String) -> Dictionary:
 	for fx in repo().fixtures(club_id, 8):
 		results.append({
 			"cells": [
-				_short_date(str(fx["kickoff"])),
+				FixtureCalendar.day_label(str(fx["kickoff"])),
 				"%s %d – %d %s" % [str(fx["home_abbr"]), int(fx["home_goals"]), int(fx["away_goals"]), str(fx["away_abbr"])],
 			],
 			"target": {"page": TEAM, "id": str(fx["away_club_id"] if str(fx["home_club_id"]) == club_id else fx["home_club_id"])},
+			"dates": {0: str(fx["kickoff"])},
 		})
 	out["blocks"].append({
 		"k": "table", "cols": ["DATE", "FIXTURE"],
@@ -340,14 +345,6 @@ static func _sim_blocks(club_id: String, league: bool) -> Array:
 static func _hex(col) -> String:
 	var c: Color = col if col is Color else Color.WHITE
 	return c.to_html(false)
-
-static func _short_date(iso: String) -> String:
-	var bits := iso.split("-")
-	if bits.size() < 3:
-		return iso
-	var months := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
-	var month: String = str(months[clampi(int(bits[1]) - 1, 0, 11)])
-	return "%s %s" % [bits[2].trim_prefix("0"), month]
 
 static func _thousands(n: int) -> String:
 	var s := str(n)

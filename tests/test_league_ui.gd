@@ -274,9 +274,9 @@ func test_a_phone_viewport_still_hits_every_door() -> void:
 	for i in range(20):
 		table.append({"position": i + 1, "club_id": "C%d" % i, "club_abbr": "C%d" % i,
 			"played": 0, "gf": 0, "ga": 0, "points": 0})
-	var state := {"name": "X", "day": "SAT 15 AUG", "matchday": 1, "played": 0, "total": 380,
-		"plan": fixtures, "table": table, "rules": LeagueRules.defaults(),
-		"can_suggest": false, "complete": false}
+	var state := {"name": "X", "day": "15/AUG/2026", "date": "2026-08-15", "matchday": 1,
+		"played": 0, "total": 380, "plan": fixtures, "table": table,
+		"rules": LeagueRules.defaults(), "can_suggest": false, "complete": false}
 	for size in [Vector2(1600, 900), Vector2(913, 411)]:
 		var sheet := LeagueSheet.new()
 		for item in sheet.hub_layout(size, state):
@@ -691,6 +691,24 @@ func test_the_full_table_pans_sideways_on_a_phone() -> void:
 	press_id("back")
 	screen().ui_scale = saved
 	screen().refresh()
+	press_id("menu")
+
+## The hub's date is a date like any other: hovering it hands the overlay that
+## exact day, so the weekday never has to ride the date itself (#99).
+func test_the_hub_date_reveals_its_weekday_on_hover() -> void:
+	_open_scroll_hub()
+	screen().queue_redraw()
+	await get_tree().process_frame
+	var zone: Dictionary = {}
+	for z in screen().hints.zones:
+		zone = z
+	assert_false(zone.is_empty(), "the hub painted no date")
+	var date := str(zone["date"])
+	screen().mouse = (zone["rect"] as Rect2).get_center()
+	assert_eq(str(screen().tooltip.zone_at().get("date", "")), date,
+		"a hovered hub date did not reach the overlay")
+	assert_eq(FixtureCalendar.day_label(date), str(LeagueSeason.active.state()["day"]),
+		"the hub date and the season clock disagree")
 	press_id("menu")
 
 ## The scroll tests create their own season: earlier cases are free to delete

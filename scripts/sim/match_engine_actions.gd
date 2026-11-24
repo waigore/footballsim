@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_presentation.gd"
+extends "res://scripts/sim/match_engine_duels.gd"
 
 ## Individual ball actions: control, passing, shooting, headers, keeper handling.
 
@@ -46,6 +46,7 @@ func _claim_ball(p) -> void:
 	ball.last_touch_id = p.id
 	ball.last_touch_team = p.team
 	ball.planned_goal = false
+	ball.planned_save = false
 	p.has_ball = true
 	p.action_t = maxf(p.action_t, 0.14)
 	p.stats["touches"] += 1
@@ -82,6 +83,8 @@ func _gk_claim(gk, d: float) -> void:
 		ball.assist_id = -1
 		gk.has_ball = true
 		ball.last_touch_time = clock
+		ball.planned_goal = false
+		ball.planned_save = false
 		if was_shot:
 			ball.shot_saved = true
 			gk.stats["saves"] += 1
@@ -105,56 +108,6 @@ func _gk_claim(gk, d: float) -> void:
 			stats[gk.team]["saves"] += 1
 			_emit("save", Commentary.save(rng, gk.name, _shot_credit(gk), "parry", ball.shot_xg), gk.team, gk)
 			_flash(0.8)
-
-func _header(p) -> void:
-	var to_goal = target_goal_pos(p.team) - p.pos
-	var dir: Vector2 = to_goal.normalized()
-	var attacking = false
-	if ball.last_touch_team == p.team or ball.last_touch_team == -1:
-		attacking = true
-	p.jump_t = 0.45
-	p.cooldown = 0.7
-	ball.last_touch_id = p.id
-	ball.last_touch_team = p.team
-	if p.team == possession_team or attacking:
-		# Header at goal if facing it, otherwise cushion to a teammate.
-		if to_goal.length() < 18.0 and absf(to_goal.x) > absf(to_goal.y) * 0.3:
-			var aim = Vector2(to_goal.x, clampf(to_goal.y, -2.6, 2.6))
-			ball.vel = aim.normalized() * rng.randf_range(9.0, 15.0)
-			ball.vz = 1.2
-			ball.z = maxf(ball.z, 1.7)
-			_emit("header", Commentary.shot(rng, p.name, to_goal.length(), 0.18, pressure_on(p), "header"), p.team, p)
-			_stats_shot(p, 0.18, "header")
-			stats[p.team]["xg"] += 0.18
-		else:
-			var mate = _best_outlet(p)
-			var tp: Vector2 = mate.pos if mate != null else p.pos + Vector2(teams[p.team]["dir"] * 8.0, 0.0)
-			ball.vel = (tp - ball.pos).normalized() * 9.0
-			ball.vz = 1.0
-	else:
-		# Defensive clearance
-		var away = Vector2(teams[p.team]["dir"] * 24.0, rng.randf_range(-14.0, 14.0))
-		ball.vel = away.normalized() * rng.randf_range(10.0, 16.0)
-		ball.vz = 5.5
-		ball.z = maxf(ball.z, 1.8)
-		_emit("clearance", Commentary.clearance(rng, p.name, true), p.team, p)
-		ball_kicked.emit(0.5)
-
-func _best_outlet(p):
-	var best = null
-	var bs = -1e9
-	for q in teammates_of(p):
-		if q.is_gk:
-			continue
-		var d: float = p.pos.distance_to(q.pos)
-		var adv: float = attacking_x(p.team, q.pos) - attacking_x(p.team, p.pos)
-		var s = -absf(d - 14.0) * 0.2 + adv * 0.08 + rng.randf_range(0.0, 2.0)
-		if s > bs:
-			bs = s
-			best = q
-	return best
-
-# ----------------------------------------------------------------- actions --
 
 func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, kind: String = "pass") -> void:
 	if p == null:
@@ -194,6 +147,7 @@ func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, 
 	ball.assist_time = clock
 	ball.shot_team = -1
 	ball.planned_goal = false
+	ball.planned_save = false
 	p.has_ball = false
 	p.cooldown = 0.22
 	p.state = "pass"
@@ -240,10 +194,12 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	# on target), so a match's goals track its expected goals. Everything else
 	# the keeper gets to is steered onto him, which keeps the save honest.
 	ball.planned_goal = false
+	ball.planned_save = false
 	if kind != "penalty" and rng.randf() < clampf(FINISH_EFFICIENCY * xg_est, 0.02, 0.92):
-		# This chance is converted: put it inside a post, so a goal is always a
-		# shot that beat the keeper and the goal-line save cannot veto it. The
-		# conversion rate is then exactly xG, independent of shot accuracy.
+		# This chance is converted: put it inside a post, low and without swerve,
+		# so a goal is always a shot that beat the keeper and the goal-line save
+		# cannot veto it. The conversion rate is then exactly xG, independent of
+		# shot accuracy.
 		var side := 1.0 if rng.randf() < 0.5 else -1.0
 		var ty: float = goal.y + side * minf(GOAL_W * 0.5 - 0.12, rng.randf_range(2.1, 3.45))
 		ang = atan2(ty - p.pos.y, goal.x - p.pos.x)
@@ -251,17 +207,22 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 		on_target = true
 		ball.planned_goal = true
 	elif on_target and gkk != null:
-		# A chance that will not be converted is smothered: aim it at the keeper.
+		# A chance that will not be converted is smothered: aim it at the keeper,
+		# and mark it so the goal-line check keeps it out rather than rolling a
+		# second dice that lets a priced-out goal through.
 		ang = atan2(gkk.pos.y - p.pos.y, goal.x - p.pos.x)
 		dir = Vector2(cos(ang), sin(ang))
 		speed *= 0.97
+		ball.planned_save = true
 	var flight: float = maxf(0.12, dist / maxf(speed, 1.0))
 	var zt = clampf(aim_z + rng.randf_range(-0.35, 0.35), 0.12, 2.6)
+	if ball.planned_goal:
+		zt = clampf(zt, 0.15, 1.9)  # a converted chance must not clear the bar
 	ball.vz = (zt - 0.11) / flight + 0.5 * 9.81 * flight
 	ball.vz = clampf(ball.vz, -1.0, 9.0)
 	ball.vel = dir * speed
 	ball.z = 0.11
-	ball.spin = rng.randf_range(-1.6, 1.6)
+	ball.spin = 0.0 if ball.planned_goal else rng.randf_range(-1.6, 1.6)
 	ball.owner_id = -1
 	ball.last_touch_id = p.id
 	ball.last_touch_team = p.team
@@ -311,10 +272,6 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	_flash(0.7)
 	brain.on_shot(p)
 
-func _stats_shot(p, xg: float, kind: String) -> void:
-	p.stats["shots"] += 1
-	stats[p.team]["shots"] += 1
-
 func expected_goals(pos: Vector2, aim_y: float, team: int) -> float:
 	var goal: Vector2 = target_goal_pos(team)
 	var d: float = pos.distance_to(goal)
@@ -323,7 +280,9 @@ func expected_goals(pos: Vector2, aim_y: float, team: int) -> float:
 	xg *= 1.0 - clampf((absf(aim_y) - 1.0) * 0.06, 0.0, 0.25)
 	# Scaled to the Poisson model's level: the raw positional model was ~40%
 	# more generous than real football, so a dominant side read 3.5 xG.
-	return clampf(xg * XG_SCALE, 0.006, 0.86)
+	# The contest factor then prices the defence facing the shot, which the
+	# positional reading cannot see.
+	return clampf(xg * XG_SCALE * float(xg_form[team]), 0.006, 0.86)
 
 func opponent_goal_angle_for(pos: Vector2, goal: Vector2) -> float:
 	var dx = absf(goal.x - pos.x)
@@ -340,6 +299,7 @@ func clear_ball(p, point: Vector2) -> void:
 	ball.last_touch_id = p.id
 	ball.last_touch_team = p.team
 	ball.planned_goal = false
+	ball.planned_save = false
 	p.has_ball = false
 	p.cooldown = 0.35
 	p.state = "clear"
