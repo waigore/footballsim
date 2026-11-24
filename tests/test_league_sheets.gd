@@ -97,6 +97,32 @@ func test_the_load_list_lays_out_zero_and_many_saves() -> void:
 	assert_eq(open_doors, 7, "the load list should show seven rows")
 	assert_eq(delete_doors, 7, "every shown save needs a delete door")
 
+## The compact column set (#, club, P, GD, PTS) has to fit inside the row at
+## every width the handheld overlay scale can produce: the numbers ride one rail
+## measured from the row's own right edge, and the club column keeps whatever is
+## left, so a long name is shortened instead of painted over P and GD.
+func test_the_table_columns_fit_a_phone_and_a_desktop_sheet() -> void:
+	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(873, 393), Vector2(360, 780), Vector2(320, 480)]:
+		var row := Rect2(24.0, 80.0, vp.x - 48.0, 18.0)
+		var cols: Dictionary = LeagueBook.table_columns(row)
+		assert_gt(float(cols["club_x"]), float(cols["pos_x"]), "# and CLUB overlap at %s" % vp)
+		assert_lte(float(cols["club_x"]) + float(cols["club_w"]), float(cols["p_r"]) - LeagueBook.NUM_GAP + 0.01,
+			"the club name may run into P at %s" % vp)
+		assert_lt(float(cols["p_r"]), float(cols["gd_r"]), "P and GD share an edge at %s" % vp)
+		assert_lt(float(cols["gd_r"]), float(cols["pts_r"]), "GD and PTS share an edge at %s" % vp)
+		assert_lte(float(cols["pts_r"]), row.end.x, "PTS is drawn outside the row at %s" % vp)
+		assert_gte(float(cols["club_w"]), 100.0, "the club column is unreadable at %s" % vp)
+
+## Columns must track the sheet, not sit on desktop-only offsets: a phone-shrunk
+## row moves the whole rail left and gives the slack to the club column.
+func test_the_number_rail_follows_the_row_width() -> void:
+	var wide: Dictionary = LeagueBook.table_columns(Rect2(24.0, 80.0, 1552.0, 20.0))
+	var phone: Dictionary = LeagueBook.table_columns(Rect2(24.0, 80.0, 825.0, 20.0))
+	assert_almost_eq(float(wide["pts_r"]) - float(phone["pts_r"]), 727.0, 0.01,
+		"PTS did not track the sheet width")
+	assert_almost_eq(float(wide["club_w"]) - float(phone["club_w"]), 727.0, 0.01,
+		"the club column did not take the slack the numbers gave up")
+
 func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 	var book := LeagueBook.new()
 	for vp in [Vector2(1600, 900), Vector2(913, 411)]:

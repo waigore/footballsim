@@ -7,6 +7,14 @@ extends RefCounted
 
 const HEADER := 58.0
 const BAR_H := 52.0
+## Table row indents: the place number, then the club name after the zone band.
+const POS_INDENT := 10.0
+const CLUB_INDENT := 32.0
+## Width of one number box on the right-hand rail and the air between them.
+const NUM_W := 26.0
+const NUM_GAP := 10.0
+## Never let the club column collapse to nothing on an absurdly narrow sheet.
+const MIN_CLUB_W := 24.0
 const MONTHS := ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
 	"AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"]
 
@@ -28,6 +36,28 @@ func table_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append({"id": "back", "kind": "button", "label": "BACK",
 		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
 	return items
+
+## Column geometry for one table row.
+##
+## The place number and the club name sit on the left; P, GD and PTS are one
+## right-aligned rail measured back from the row's own right edge. Deriving the
+## rail from the width — instead of fixed X offsets — is what keeps all five
+## compact columns inside a phone-sized sheet: once the handheld overlay scale
+## shrinks the design viewport, fixed offsets bunch the numbers on the left
+## while `PTS` floats out at the far right, and a full club name runs over `P`
+## and `GD`. The returned `club_w` is the width the name may use before it has
+## to be shortened, so a long name can never spill into the numbers.
+static func table_columns(row: Rect2) -> Dictionary:
+	var pts_r := row.end.x - 10.0
+	var gd_r := pts_r - NUM_W - NUM_GAP
+	var p_r := gd_r - NUM_W - NUM_GAP
+	var club_x := row.position.x + CLUB_INDENT
+	return {
+		"pos_x": row.position.x + POS_INDENT,
+		"club_x": club_x,
+		"club_w": maxf(p_r - NUM_W - NUM_GAP - club_x, MIN_CLUB_W),
+		"p_r": p_r, "gd_r": gd_r, "pts_r": pts_r,
+	}
 
 func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
@@ -128,11 +158,12 @@ func draw_table(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, vie
 	UiChrome.text_r(c, vp.x - 24.0, 30.0,
 		"%s · %s" % [str(view.get("name", "")), str(view.get("date", ""))], 10, UiChrome.C_DIM, bold)
 	var top := HEADER + 8.0
-	UiChrome.text(c, Vector2(33.0, top), "#", 9, UiChrome.C_DIM, bold)
-	UiChrome.text(c, Vector2(56.0, top), "CLUB", 9, UiChrome.C_DIM, bold)
-	UiChrome.text(c, Vector2(160.0, top), "P", 9, UiChrome.C_DIM, bold)
-	UiChrome.text(c, Vector2(188.0, top), "GD", 9, UiChrome.C_DIM, bold)
-	UiChrome.text_r(c, vp.x - 32.0, top, "PTS", 9, UiChrome.C_DIM, bold)
+	var head := table_columns(Rect2(24.0, top, vp.x - 48.0, 0.0))
+	UiChrome.text(c, Vector2(float(head["pos_x"]), top), "#", 9, UiChrome.C_DIM, bold)
+	UiChrome.text(c, Vector2(float(head["club_x"]), top), "CLUB", 9, UiChrome.C_DIM, bold)
+	UiChrome.text_r(c, float(head["p_r"]), top, "P", 9, UiChrome.C_DIM, bold)
+	UiChrome.text_r(c, float(head["gd_r"]), top, "GD", 9, UiChrome.C_DIM, bold)
+	UiChrome.text_r(c, float(head["pts_r"]), top, "PTS", 9, UiChrome.C_DIM, bold)
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		if str(item["kind"]) == "table_row":
@@ -146,7 +177,26 @@ func draw_table(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, vie
 	UiChrome.text(c, Vector2(66.0, y), "UEL", 9, LeagueSheet.zone_color("uel"), bold)
 	UiChrome.text(c, Vector2(108.0, y), "UECL", 9, LeagueSheet.zone_color("uecl"), bold)
 	UiChrome.text(c, Vector2(156.0, y), "RELEGATION", 9, LeagueSheet.zone_color("relegation"), bold)
-	UiChrome.text_r(c, vp.x - 24.0, y, "COLOURED BAND = PLACE FROM SAVED RULES", 8, UiChrome.C_DIM, med)
+	# The keys and the sentence share one line, so a narrow sheet drops the
+	# sentence rather than painting it over the legend.
+	if vp.x >= 760.0:
+		UiChrome.text_r(c, vp.x - 24.0, y, "COLOURED BAND = PLACE FROM SAVED RULES", 8, UiChrome.C_DIM, med)
+
+## Longest prefix of `s` that fits `max_w` at `size`, with an ellipsis. A club
+## name that would run into the number rail is shortened instead of drawn over
+## `P` and `GD`.
+static func fit_name(s: String, font: Font, size: int, max_w: float) -> String:
+	if font == null or max_w <= 0.0:
+		return s
+	if font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= max_w:
+		return s
+	var cut := s
+	while cut.length() > 1:
+		cut = cut.substr(0, cut.length() - 1).strip_edges()
+		var probe := cut + "…"
+		if font.get_string_size(probe, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= max_w:
+			return probe
+	return "…"
 
 func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
 	var row: Dictionary = item["row"]
@@ -155,12 +205,14 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) 
 		c.draw_rect(Rect2(rect.position.x, rect.position.y + 2.0, 4.0, rect.size.y - 4.0), LeagueSheet.zone_color(band))
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
+	var cols := table_columns(rect)
 	var y := rect.position.y + rect.size.y * 0.5 + 4.0
-	UiChrome.text(c, Vector2(rect.position.x + 10.0, y), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
-	UiChrome.text(c, Vector2(rect.position.x + 32.0, y), str(row["club_name"]), 12, UiChrome.C_TEXT, bold)
-	UiChrome.text(c, Vector2(rect.position.x + 136.0, y), "%d" % int(row["played"]), 10, UiChrome.C_SOFT, med)
-	UiChrome.text(c, Vector2(rect.position.x + 164.0, y), "%+d" % (int(row["gf"]) - int(row["ga"])), 10, UiChrome.C_SOFT, med)
-	UiChrome.text_r(c, rect.end.x - 10.0, y, "%d" % int(row["points"]), 11, UiChrome.C_TEXT, bold)
+	UiChrome.text(c, Vector2(float(cols["pos_x"]), y), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
+	UiChrome.text(c, Vector2(float(cols["club_x"]), y),
+		fit_name(str(row["club_name"]), bold, 12, float(cols["club_w"])), 12, UiChrome.C_TEXT, bold)
+	UiChrome.text_r(c, float(cols["p_r"]), y, "%d" % int(row["played"]), 10, UiChrome.C_SOFT, med)
+	UiChrome.text_r(c, float(cols["gd_r"]), y, "%+d" % (int(row["gf"]) - int(row["ga"])), 10, UiChrome.C_SOFT, med)
+	UiChrome.text_r(c, float(cols["pts_r"]), y, "%d" % int(row["points"]), 11, UiChrome.C_TEXT, bold)
 
 # -------------------------------------------------------------- calendar ---
 
