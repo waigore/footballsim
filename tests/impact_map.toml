@@ -104,6 +104,20 @@ suites = [
   "test_manager_subs.gd",
 ]
 
+# God-mode season: saves, rules, calendar, season clock, synthetic events, the
+# chosen XI and the league surfaces. One group, because a change in any layer
+# can move the season loop.
+[domains.league]
+suites = [
+  "test_league_rules.gd",
+  "test_league_save.gd",
+  "test_fixture_calendar.gd",
+  "test_match_events.gd",
+  "test_strongest_xi.gd",
+  "test_league_season.gd",
+  "test_league_ui.gd",
+]
+
 # Encyclopedia screens: page data, the sheet itself and every door into it.
 [domains.wiki]
 suites = [
@@ -176,6 +190,23 @@ domain = "match_engine"
 match = "scripts/sim/tactics.gd*"
 domain = "tactics"
 
+# Season clock, calendar, synthetic events and the strongest XI: one theme.
+[[rules]]
+match = "scripts/sim/league_season.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/fixture_calendar.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/match_events.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/strongest_xi.gd*"
+domain = "league"
+
 [[rules]]
 match = "scripts/sim/match_manager.gd*"
 domain = "managers"
@@ -190,8 +221,15 @@ domain = "match_engine"
 
 # ---------------------------------------------------------------- data ---
 
-# Every data module (clubs, squads, snapshot storage, in-sim ledger) shares the
-# same suites; the old per-shard rules are gone because the shards are gone.
+# League saves own their own schema and ledger; keep them on the season suites
+# even though they live beside the snapshot modules.
+[[rules]]
+match = "scripts/data/league_*.gd*"
+domain = "league"
+
+# Every other data module (clubs, squads, snapshot storage, in-sim ledger)
+# shares the same suites; the old per-shard rules are gone because the shards
+# are gone.
 [[rules]]
 match = "scripts/data/**"
 domain = "pl_data"
@@ -261,6 +299,10 @@ domain = "hud_chrome"
 [[rules]]
 match = "scripts/ui/wiki_*.gd*"
 domain = "wiki"
+
+[[rules]]
+match = "scripts/ui/league_*.gd*"
+domain = "league"
 
 [[rules]]
 match = "scripts/view/actor_layer.gd*"

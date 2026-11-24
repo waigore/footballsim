@@ -1,0 +1,383 @@
+class_name LeagueScreen
+extends Control
+
+## The god-mode league surface: New/Setup, Load, the Continue hub with its
+## matchday planner, the table, the calendar, match reports and the podium.
+##
+## The screen is the only stateful part; the sheets own geometry and paint, and
+## the season object owns the sim. Input arrives in design space from
+## `LeagueHost`, exactly like the encyclopedia sheet.
+
+signal closed
+signal match_requested(home: String, away: String, fixture_id: String)
+signal season_opened(season: LeagueSeason)
+
+const MODE_HUB := "hub"
+const MODE_WIZARD := "wizard"
+const MODE_LOAD := "load"
+const MODE_TABLE := "table"
+const MODE_CALENDAR := "calendar"
+const MODE_REPORT := "report"
+const MODE_PODIUM := "podium"
+
+var ui_scale := 1.0
+var touch := false
+var mouse := Vector2(-1000, -1000)
+
+var mode := MODE_WIZARD
+var season: LeagueSeason = null
+var wizard := {"name": "League 1", "calendar_mode": "generated", "advance_mode": "fixture_days", "error": ""}
+var saves: Array = []
+var report: Dictionary = {}
+var roundup: Array = []
+var month := ""
+var day := ""
+var day_fixtures: Array = []
+var days_cache := {}
+var buttons: Array = []
+var hub: LeagueSheet = LeagueSheet.new()
+var book: LeagueBook = LeagueBook.new()
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+	month = str(Time.get_date_dict_from_system()["year"]) + "-" + "%02d" % int(Time.get_date_dict_from_system()["month"])
+
+func design_vp() -> Vector2:
+	var vp: Vector2 = size / maxf(ui_scale, 0.001)
+	if vp.x <= 0.0 or vp.y <= 0.0:
+		vp = get_viewport().get_visible_rect().size / maxf(ui_scale, 0.001)
+	return vp
+
+func is_open() -> bool:
+	return visible and mode != ""
+
+# ------------------------------------------------------------------ open ---
+
+func open_wizard() -> void:
+	mode = MODE_WIZARD
+	wizard = {"name": "League %d" % (saves.size() + 1), "calendar_mode": "generated",
+		"advance_mode": "fixture_days", "error": ""}
+	visible = true
+	refresh()
+
+func open_load() -> void:
+	mode = MODE_LOAD
+	saves = LeagueSave.list()
+	visible = true
+	refresh()
+
+func open_season(target: LeagueSeason, show_podium: bool = false) -> void:
+	season = target
+	season_opened.emit(target)
+	if show_podium or (target != null and str(target.state().get("status", "")) == "complete"):
+		mode = MODE_PODIUM
+	else:
+		mode = MODE_HUB
+	month = _state_month()
+	visible = true
+	refresh()
+
+func show_report(fixture_id: String) -> void:
+	if season == null:
+		return
+	report = season.report(fixture_id)
+	roundup = []
+	mode = MODE_REPORT
+	refresh()
+
+func show_roundup(reports: Array) -> void:
+	report = {}
+	roundup = reports
+	mode = MODE_REPORT
+	refresh()
+
+func close() -> void:
+	visible = false
+	mode = MODE_HUB
+	closed.emit()
+
+# --------------------------------------------------------------- state ----
+
+func current_view() -> Dictionary:
+	if mode == MODE_WIZARD or mode == MODE_LOAD:
+		return wizard if mode == MODE_WIZARD else {"saves": saves}
+	var rules: Dictionary = season.rules if season != null else LeagueRules.defaults()
+	var state: Dictionary = season.state() if season != null else {"rules": rules}
+	if mode == MODE_TABLE:
+		return {"table": state.get("table", []), "rules": state.get("rules", rules),
+			"name": state.get("name", ""), "date": state.get("date", "")}
+	if mode == MODE_CALENDAR:
+		return {"month": month, "day": day, "days": days_cache, "day_fixtures": day_fixtures}
+	if mode == MODE_REPORT:
+		if not roundup.is_empty():
+			return {"roundup": roundup, "day": str(roundup[0]["fixture"]["kickoff"]) if roundup[0].has("fixture") else ""}
+		return {
+			"fixture": report.get("fixture", {}), "events": report.get("events", []),
+			"day": str((report.get("fixture", {}) as Dictionary).get("kickoff", "")),
+		}
+	if mode == MODE_PODIUM:
+		return {"summary": state.get("summary", {}), "name": state.get("name", ""),
+			"table": state.get("table", []), "rules": state.get("rules", rules)}
+	var view: Dictionary = state.duplicate()
+	if season != null:
+		view["plan"] = season.plan()
+		view["can_suggest"] = bool(view.get("can_suggest", false))
+	else:
+		view["plan"] = []
+	view["screen"] = mode
+	return view
+
+# ---------------------------------------------------------------- layout ---
+
+func refresh() -> void:
+	buttons = []
+	var vp := design_vp()
+	var view := current_view()
+	if mode == MODE_HUB:
+		buttons = hub.hub_layout(vp, view)
+	elif mode == MODE_WIZARD:
+		buttons = hub.wizard_layout(vp, view)
+	elif mode == MODE_LOAD:
+		buttons = hub.load_layout(vp, view)
+	elif mode == MODE_TABLE:
+		buttons = book.table_layout(vp, view)
+	elif mode == MODE_CALENDAR:
+		buttons = book.calendar_layout(vp, view)
+	elif mode == MODE_REPORT:
+		buttons = book.report_layout(vp, view)
+	elif mode == MODE_PODIUM:
+		buttons = book.podium_layout(vp, view)
+	queue_redraw()
+
+## Later items are painted on top (a delete chip sits inside its save row), so
+## the hit test walks the list back to front.
+func button_at(p: Vector2) -> String:
+	for i in range(buttons.size() - 1, -1, -1):
+		if (buttons[i]["rect"] as Rect2).has_point(p):
+			return str(buttons[i]["id"])
+	return ""
+
+func click(id: String) -> void:
+	if id == "":
+		return
+	if id.begins_with("match:"):
+		show_report(id.substr(6))
+	elif id.begins_with("club:") or id == "back":
+		_back()
+	elif id.begins_with("toggle:"):
+		_toggle(id.substr(7))
+	elif id.begins_with("fixture:"):
+		_press_fixture(id.substr(8))
+	elif id.begins_with("open:"):
+		_open_save(id.substr(5))
+	elif id.begins_with("delete:"):
+		var slug := id.substr(7)
+		if season != null and season.save.slug == slug:
+			season.close()
+			season = null
+		LeagueSave.remove(slug)
+		saves = LeagueSave.list()
+		refresh()
+	elif id.begins_with("mode:"):
+		wizard["calendar_mode"] = id.substr(5)
+		refresh()
+	elif id.begins_with("adv:"):
+		wizard["advance_mode"] = id.substr(4)
+		refresh()
+	elif id.begins_with("day:"):
+		_pick_day(id.substr(4))
+	elif id.begins_with("month:"):
+		month = LeagueBook.shift_month(month, int(id.substr(6)))
+		var keys: Array = days_cache.keys()
+		keys.sort()
+		var chosen := month + "-01"
+		for date in keys:
+			if str(date).begins_with(month):
+				chosen = str(date)
+				break
+		_pick_day(chosen)
+	elif id == "continue":
+		_continue()
+	elif id == "suggest":
+		season.suggest()
+		refresh()
+	elif id == "table":
+		mode = MODE_TABLE
+		refresh()
+	elif id == "calendar":
+		_open_calendar()
+	elif id == "podium":
+		mode = MODE_PODIUM
+		refresh()
+	elif id == "menu":
+		close()
+	elif id == "create":
+		_create()
+	elif id == "name":
+		refresh()
+
+func _back() -> void:
+	if mode == MODE_HUB or mode == MODE_WIZARD or mode == MODE_LOAD:
+		close()
+	elif mode == MODE_PODIUM:
+		close()
+	else:
+		mode = MODE_HUB
+		refresh()
+
+# --------------------------------------------------------------- actions ---
+
+func _create() -> void:
+	var created := LeagueSeason.create(str(wizard["name"]), str(wizard["calendar_mode"]),
+		str(wizard["advance_mode"]), 0)
+	if created == null:
+		wizard["error"] = "The season could not be created."
+		refresh()
+		return
+	season = created
+	season_opened.emit(created)
+	mode = MODE_HUB
+	month = _state_month()
+	refresh()
+
+func _open_save(slug: String) -> void:
+	var opened := LeagueSeason.open(slug)
+	if opened == null:
+		wizard["error"] = "That save could not be opened."
+		mode = MODE_WIZARD
+		refresh()
+		return
+	open_season(opened, str(opened.state().get("status", "")) == "complete")
+
+func _continue() -> void:
+	if season == null:
+		return
+	var result := season.advance()
+	var played: Array = result.get("played", [])
+	if str(result.get("status", "")) == "complete" or bool(result.get("complete", false)):
+		mode = MODE_PODIUM
+		month = _state_month()
+		refresh()
+		return
+	if not played.is_empty():
+		show_roundup(played)
+		return
+	month = _state_month()
+	refresh()
+
+func _toggle(fixture_id: String) -> void:
+	if season == null:
+		return
+	var fx := season.record.fixture(fixture_id)
+	if fx.is_empty() or str(fx["status"]) == "played":
+		return
+	season.set_watch(fixture_id, int(fx["watched"]) != 1)
+	refresh()
+
+func _press_fixture(fixture_id: String) -> void:
+	if season == null:
+		return
+	var fx := season.record.fixture(fixture_id)
+	if fx.is_empty():
+		return
+	if str(fx["status"]) == "played":
+		show_report(fixture_id)
+	elif int(fx["watched"]) == 1:
+		var watch := season.start_watch(fixture_id)
+		if not watch.is_empty():
+			match_requested.emit(str(watch["home"]), str(watch["away"]), str(watch["fixture_id"]))
+	else:
+		_toggle(fixture_id)
+
+func _open_calendar() -> void:
+	mode = MODE_CALENDAR
+	days_cache = {}
+	if season != null:
+		for fx in season.record.fixtures():
+			var date := str(fx["kickoff"])
+			if not days_cache.has(date):
+				days_cache[date] = {"n": 0, "played": 0}
+			days_cache[date]["n"] = int(days_cache[date]["n"]) + 1
+			if str(fx["status"]) == "played":
+				days_cache[date]["played"] = int(days_cache[date]["played"]) + 1
+		month = _state_month()
+	var chosen := _state_month() + "-01"
+	if season != null:
+		var current := str(season.state().get("date", ""))
+		if current.begins_with(month):
+			chosen = current
+		else:
+			var keys: Array = days_cache.keys()
+			keys.sort()
+			for date in keys:
+				if str(date).begins_with(month):
+					chosen = str(date)
+					break
+	_pick_day(chosen)
+
+func _pick_day(date: String) -> void:
+	day = date
+	day_fixtures = []
+	if season != null:
+		for fx in season.record.fixtures_on(date):
+			day_fixtures.append(fx)
+	refresh()
+
+func _state_month() -> String:
+	if season == null:
+		return month
+	var date := str(season.state().get("date", ""))
+	return date.substr(0, 7) if date.length() >= 7 else month
+
+# ---------------------------------------------------------------- input ----
+
+func key(code: int) -> bool:
+	if mode == MODE_WIZARD and _typing_name(code):
+		return true
+	if code == KEY_ESCAPE or code == KEY_BACKSPACE:
+		_back()
+		return true
+	if mode == MODE_HUB and (code == KEY_ENTER or code == KEY_KP_ENTER):
+		_continue()
+		return true
+	return false
+
+func _typing_name(code: int) -> bool:
+	var name := str(wizard["name"])
+	if code == KEY_BACKSPACE:
+		wizard["name"] = name.substr(0, maxi(name.length() - 1, 0))
+		refresh()
+		return true
+	if name.length() >= 24:
+		return false
+	var ch := char(code)
+	if (ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") or (ch >= "0" and ch <= "9") or ch == " ":
+		wizard["name"] = name + (ch.to_upper() if name == "" else ch)
+		refresh()
+		return true
+	return false
+
+# ----------------------------------------------------------------- paint ---
+
+func _draw() -> void:
+	var vp := design_vp()
+	if vp.x <= 1.0 or vp.y <= 1.0:
+		return
+	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.008, 0.014, 0.018, 0.94))
+	var fonts := UiChrome.fonts()
+	var view := current_view()
+	if mode == MODE_HUB:
+		hub.draw_hub(self, vp, fonts, buttons, view)
+	elif mode == MODE_WIZARD:
+		hub.draw_wizard(self, vp, fonts, buttons, view)
+	elif mode == MODE_LOAD:
+		hub.draw_load(self, vp, fonts, buttons, view)
+	elif mode == MODE_TABLE:
+		book.draw_table(self, vp, fonts, buttons, view)
+	elif mode == MODE_CALENDAR:
+		book.draw_calendar(self, vp, fonts, buttons, view)
+	elif mode == MODE_REPORT:
+		book.draw_report(self, vp, fonts, buttons, view)
+	elif mode == MODE_PODIUM:
+		book.draw_podium(self, vp, fonts, buttons, view)

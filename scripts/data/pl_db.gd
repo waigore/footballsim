@@ -97,6 +97,26 @@ static func close() -> void:
 		_db.close_db()
 	_db = null
 	_open_path = ""
+	_version = -1
+
+## Bind the static connection to another SQLite file: a league save owns its
+## whole universe, so the engine, repository and encyclopedia read the save
+## while it is active. `reset()` returns to the cached seed.
+static func open_path(path: String) -> bool:
+	if path == "" or not FileAccess.file_exists(path):
+		push_error("save database is missing: %s" % path)
+		return false
+	close()
+	var db := SQLite.new()
+	db.path = path
+	db.foreign_keys = true
+	if not db.open_db():
+		push_error("cannot open the save: %s" % db.error_message)
+		return false
+	_db = db
+	_open_path = path
+	return true
+
 
 ## Rows of a SELECT as plain dictionaries. The addon hands back StringName
 ## keys, so each key is copied to a String once and callers stay simple.
