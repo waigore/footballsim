@@ -14,6 +14,9 @@ const BAR_H := 52.0
 const HEADER := 58.0
 
 var cache := {}
+## Dates this sheet painted, with the strip each one occupies (#99): the screen's
+## overlay paints the weekday for the one under the pointer.
+var hints := DateHints.new()
 
 static func zone_color(band: String) -> Color:
 	if band == "ucl":
@@ -135,12 +138,20 @@ func _bar_rects(vp: Vector2, ids: Array, labels: Array) -> Array:
 
 # gd-tools: no cover start
 
-func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dictionary) -> void:
-	_heading(c, vp, fonts, str(state.get("name", "LEAGUE")),
-		"%s · GW %d · %d OF %d PLAYED" % [str(state.get("day", "")), int(state.get("matchday", 1)),
-			int(state.get("played", 0)), int(state.get("total", 0))])
+func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dictionary,
+		hints: DateHints) -> void:
+	var date := str(state.get("date", ""))
+	var label: String = FixtureCalendar.day_label(date) if date != "" else str(state.get("day", ""))
+	var rest := " · GW %d · %d OF %d PLAYED" % [int(state.get("matchday", 1)),
+		int(state.get("played", 0)), int(state.get("total", 0))]
+	_heading(c, vp, fonts, str(state.get("name", "LEAGUE")), label + rest)
+	if date != "":
+		var bold: Font = fonts["bold"]
+		var whole: float = DateHints.width(bold, label + rest, 10)
+		hints.add(Rect2(vp.x - 24.0 - whole, 20.0, DateHints.width(bold, label, 10), 14.0), date)
 
 func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, state: Dictionary) -> void:
+	hints.clear()
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	## The plan hint rides the caption: the first fixture row starts right under
@@ -177,9 +188,8 @@ func _draw_fixture_row(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dictio
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	var time := str(fx.get("kickoff_time", ""))
-	if time == "":
-		time = str(fx["kickoff"]).substr(5)
-	UiChrome.text(c, Vector2(rect.position.x + 8.0, rect.position.y + 17.0), time, 10, UiChrome.C_DIM, med)
+	if time != "":
+		UiChrome.text(c, Vector2(rect.position.x + 8.0, rect.position.y + 17.0), time, 10, UiChrome.C_DIM, med)
 	UiChrome.text(c, Vector2(rect.position.x + 60.0, rect.position.y + 17.0), str(fx["home_abbr"]), 13, UiChrome.C_TEXT, bold)
 	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 46.0, rect.position.y + 17.0), "v", 10, UiChrome.C_DIM, med)
 	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 66.0, rect.position.y + 17.0), str(fx["away_abbr"]), 13, UiChrome.C_TEXT, bold)
@@ -208,12 +218,14 @@ func _draw_table_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictio
 
 # ---------------------------------------------------------------- wizard ---
 
-func draw_wizard_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
+func draw_wizard_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
+		_hints: DateHints) -> void:
 	_heading(c, vp, fonts, "NEW LEAGUE", "GOD-MODE SEASON SETUP")
 	if str(view.get("error", "")) != "":
 		UiChrome.text(c, Vector2(24.0, vp.y - BAR_H - 10.0), str(view["error"]), 12, UiChrome.C_DANGER, fonts["med"])
 
 func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, _view: Dictionary) -> void:
+	hints.clear()
 	var bold: Font = fonts["bold"]
 	for item in items:
 		var rect: Rect2 = item["rect"]
@@ -240,10 +252,12 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 
 # ------------------------------------------------------------------ load ---
 
-func draw_load_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, _view: Dictionary) -> void:
+func draw_load_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, _view: Dictionary,
+		_hints: DateHints) -> void:
 	_heading(c, vp, fonts, "LOAD LEAGUE", "NAMED SEASONS")
 
 func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+	hints.clear()
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	if (view.get("saves", []) as Array).is_empty():
@@ -256,9 +270,14 @@ func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6)
 			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 17.0),
 				str(save["name"]), 14, UiChrome.C_TEXT, bold)
-			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 32.0),
-				"%s · %s" % [str(save.get("current_date", "")), str(save.get("status", ""))], 9,
+			var current := str(save.get("current_date", ""))
+			var dated: String = FixtureCalendar.day_label(current)
+			var line: String = "%s · %s" % [dated, str(save.get("status", ""))] if dated != "" else str(save.get("status", ""))
+			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 32.0), line, 9,
 				UiChrome.C_DIM, med)
+			if current != "":
+				hints.add(DateHints.strip(med, dated,
+					Vector2(rect.position.x + 12.0, rect.position.y + 32.0), 9), current)
 		elif str(item["kind"]) == "delete":
 			UiChrome.panel(c, cache, rect, UiChrome.C_DANGER.darkened(0.35), 5, UiChrome.C_DANGER, 1)
 			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 21.0, "X", 13, UiChrome.C_TEXT, bold)
@@ -278,6 +297,12 @@ func draw_button(c: CanvasItem, rect: Rect2, label: String, bold: Font, primary:
 		UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 7)
 		UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0, label, 12,
 			UiChrome.C_TEXT, bold)
+
+## The ▶ beside a goal on a match report: a bordered gold chip, sized by the
+## caller so the door stays thumb-sized on every platform.
+static func draw_play(c: CanvasItem, cache: Dictionary, rect: Rect2, bold: Font) -> void:
+	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, Color(0.96, 0.78, 0.30, 0.55), 1)
+	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 18.0, "▶ PLAY", 10, UiChrome.C_GOLD, bold)
 
 ## Month doors and other small fixed chips on a sheet header.
 func draw_chip(c: CanvasItem, rect: Rect2, label: String, bold: Font) -> void:

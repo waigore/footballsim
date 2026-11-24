@@ -13,6 +13,8 @@ signal match_requested(home: String, away: String, fixture_id: String)
 signal season_opened(season: LeagueSeason)
 ## A club row was pressed: the host opens that club's team page over the season.
 signal club_requested(club_id: String)
+## A goal's ▶ was pressed: the host plays that stored clip over the broadcast.
+signal goal_highlight_requested(fixture_id: String, goal_index: int)
 
 const MODE_HUB := "hub"
 const MODE_WIZARD := "wizard"
@@ -25,6 +27,8 @@ const MODE_PODIUM := "podium"
 var ui_scale := 1.0
 var touch := false
 var mouse := Vector2(-1000, -1000)
+## The pointer's button is down: the touch stand-in for a hover (#99).
+var holding := false
 
 var mode := MODE_WIZARD
 var season: LeagueSeason = null
@@ -43,6 +47,10 @@ var buttons: Array:
 var body: LeagueBody = null
 var hub: LeagueSheet = LeagueSheet.new()
 var book: LeagueBook = LeagueBook.new()
+## Date strips: the chrome's own, and the active sheet's rows on screen (#99).
+var hints := DateHints.new()
+var rows_hints: DateHints = null
+var tooltip: DateOverlay = null
 var _last_mode := ""
 ## Pose -> [sheet, layout, body painter, chrome painter]. The screens share one
 ## scroll window; the table says which sheet owns each pose's geometry and paint.
@@ -63,6 +71,7 @@ func _ready() -> void:
 	body = LeagueBody.new()
 	body.name = "Body"
 	add_child(body)
+	tooltip = DateOverlay.attach(self, body, false)
 	resized.connect(refresh)
 
 func design_vp() -> Vector2:
@@ -136,6 +145,7 @@ func current_view() -> Dictionary:
 			return {"roundup": roundup, "day": str(roundup[0]["fixture"]["kickoff"]) if roundup[0].has("fixture") else ""}
 		return {
 			"fixture": report.get("fixture", {}), "events": report.get("events", []),
+			"highlights": report.get("highlights", []),
 			"day": str((report.get("fixture", {}) as Dictionary).get("kickoff", "")),
 		}
 	if mode == MODE_PODIUM:
@@ -159,6 +169,7 @@ func refresh() -> void:
 	if body == null or pose.is_empty():
 		return
 	var sheet: RefCounted = hub if str(pose[0]) == "hub" else book
+	rows_hints = hub.hints if str(pose[0]) == "hub" else book.hints
 	var items: Array = Callable(sheet, str(pose[1])).call(vp, view)
 	var content := body.set_sheet(items, vp, mode != _last_mode)
 	body.painter = Callable(sheet, str(pose[2])).bind(vp, UiChrome.fonts(), content, view)
@@ -170,16 +181,19 @@ func refresh() -> void:
 func button_at(p: Vector2) -> String:
 	return body.hit(p) if body != null else ""
 
-## Wheel notches, trackpad pans, drags and the keys all land here.
-func scroll_by(delta: float) -> void:
+## Wheel notches, trackpad pans, drags and the keys all land here. The full
+## table is wider than a phone window, so a drag pans it sideways too.
+func scroll_by(delta: float, dx: float = 0.0) -> void:
 	if body != null:
-		body.scroll_by(delta)
+		body.pan_by(Vector2(dx, delta))
 
 func click(id: String) -> void:
 	if id == "":
 		return
 	if id.begins_with("match:"):
 		show_report(id.substr(6))
+	elif id.begins_with("goal:"):
+		play_goal(int(id.substr(5)))
 	elif id.begins_with("club:"):
 		club_requested.emit(id.substr(5))
 	elif id == "back":
@@ -205,17 +219,9 @@ func click(id: String) -> void:
 		wizard["advance_mode"] = id.substr(4)
 		refresh()
 	elif id.begins_with("day:"):
-		_pick_day(id.substr(4))
+		LeagueCalendar.pick(self, id.substr(4))
 	elif id.begins_with("month:"):
-		month = LeagueBook.shift_month(month, int(id.substr(6)))
-		var keys: Array = days_cache.keys()
-		keys.sort()
-		var chosen := month + "-01"
-		for date in keys:
-			if str(date).begins_with(month):
-				chosen = str(date)
-				break
-		_pick_day(chosen)
+		LeagueCalendar.shift(self, int(id.substr(6)))
 	elif id == "continue":
 		_continue()
 	elif id == "suggest":
@@ -223,9 +229,14 @@ func click(id: String) -> void:
 		refresh()
 	elif id == "table":
 		mode = MODE_TABLE
+		book.table.attach(season.save if season != null else null)
 		refresh()
+	elif id.begins_with("tbl:"):
+		if season != null and book.table.press(id, season.save):
+			refresh()
 	elif id == "calendar":
-		_open_calendar()
+		mode = MODE_CALENDAR
+		LeagueCalendar.open(self)
 	elif id == "podium":
 		mode = MODE_PODIUM
 		refresh()
@@ -237,13 +248,26 @@ func click(id: String) -> void:
 		refresh()
 
 func _back() -> void:
-	if mode == MODE_HUB or mode == MODE_WIZARD or mode == MODE_LOAD:
-		close()
-	elif mode == MODE_PODIUM:
+	if mode == MODE_HUB or mode == MODE_WIZARD or mode == MODE_LOAD or mode == MODE_PODIUM:
 		close()
 	else:
 		mode = MODE_HUB
 		refresh()
+
+# --------------------------------------------------------------- highlights ---
+
+## Play one goal of the report on screen. The host owns the viewer; the screen
+## only names the fixture and the goal's ordinal.
+func play_goal(index: int) -> void:
+	if mode != MODE_REPORT or not has_clip(index):
+		return
+	goal_highlight_requested.emit(str((report.get("fixture", {}) as Dictionary).get("id", "")), index)
+
+func has_clip(index: int) -> bool:
+	for row in report.get("highlights", []):
+		if int(row.get("goal_index", -1)) == index:
+			return true
+	return false
 
 # --------------------------------------------------------------- actions ---
 
@@ -309,45 +333,17 @@ func _press_fixture(fixture_id: String) -> void:
 	else:
 		_toggle(fixture_id)
 
-func _open_calendar() -> void:
-	mode = MODE_CALENDAR
-	days_cache = {}
-	if season != null:
-		for fx in season.record.fixtures():
-			var date := str(fx["kickoff"])
-			if not days_cache.has(date):
-				days_cache[date] = {"n": 0, "played": 0}
-			days_cache[date]["n"] = int(days_cache[date]["n"]) + 1
-			if str(fx["status"]) == "played":
-				days_cache[date]["played"] = int(days_cache[date]["played"]) + 1
-		month = LeagueBook.state_month(season, month)
-	var chosen := str(month) + "-01"
-	if season != null:
-		var current := str(season.state().get("date", ""))
-		if current.begins_with(month):
-			chosen = current
-		else:
-			var keys: Array = days_cache.keys()
-			keys.sort()
-			for date in keys:
-				if str(date).begins_with(month):
-					chosen = str(date)
-					break
-	_pick_day(chosen)
-
-func _pick_day(date: String) -> void:
-	day = date
-	day_fixtures = []
-	if season != null:
-		for fx in season.record.fixtures_on(date):
-			day_fixtures.append(fx)
-	refresh()
-
 # ---------------------------------------------------------------- input ----
 
 func key(code: int) -> bool:
 	if mode == MODE_WIZARD and _type_name(code):
 		return true
+	if mode == MODE_REPORT and code >= KEY_1 and code <= KEY_9:
+		# Keyboard parity for ▶: the number keys play the report's goals.
+		var want := code - KEY_1
+		if has_clip(want):
+			play_goal(want)
+			return true
 	if code == KEY_ESCAPE or code == KEY_BACKSPACE:
 		_back()
 		return true
@@ -389,7 +385,8 @@ func _draw() -> void:
 		return
 	var sheet: RefCounted = hub if str(pose[0]) == "hub" else book
 	var fonts := UiChrome.fonts()
-	Callable(sheet, str(pose[3])).call(self, vp, fonts, current_view())
+	hints.clear()
+	Callable(sheet, str(pose[3])).call(self, vp, fonts, current_view(), hints)
 	if body != null:
 		for item in body.pinned:
 			var rect: Rect2 = item["rect"]

@@ -38,6 +38,7 @@ func build() -> void:
 	screen.match_requested.connect(_on_match_requested)
 	screen.season_opened.connect(_on_season_opened)
 	screen.club_requested.connect(_on_club_requested)
+	screen.goal_highlight_requested.connect(_on_goal_highlight)
 	layer.visible = false
 
 ## Open means "the layer is on screen": the hand-off to the match viewer hides
@@ -186,7 +187,7 @@ func handle_input(event: InputEvent, design_point: Vector2) -> bool:
 		_pointer_motion(design_point)
 	elif event is InputEventPanGesture:
 		# macOS reports a two-finger scroll as a pan, never as wheel buttons.
-		screen.scroll_by(event.delta.y * PAN_STEP)
+		screen.scroll_by(event.delta.y * PAN_STEP, event.delta.x * PAN_STEP)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
 		screen.scroll_by(-110.0)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
@@ -207,6 +208,7 @@ func _pointer_down(p: Vector2) -> void:
 	press_at = p
 	last_at = p
 	screen.mouse = p
+	screen.holding = true
 
 ## Hover is free; holding the button turns the pointer into a scroll drag, and
 ## the travel since the last frame is charged to the body in one step.
@@ -221,15 +223,43 @@ func _pointer_motion(p: Vector2) -> void:
 		if p.distance_to(press_at) < DRAG_SLOP:
 			return
 		dragged = true
-	screen.scroll_by(last_at.y - p.y)
+		screen.holding = false
+	screen.scroll_by(last_at.y - p.y, last_at.x - p.x)
 	last_at = p
 
 func _pointer_up() -> void:
 	if not pressing:
 		return
 	pressing = false
+	screen.holding = false
 	if dragged:
 		return
 	var id := screen.button_at(press_at)
 	if id != "":
 		screen.click(id)
+
+# ------------------------------------------------------------- goal clips ---
+
+## ▶ on a report: play that goal's stored clip on the broadcast, then put the
+## report back on screen. The season stays open throughout, so no state moves.
+func _on_goal_highlight(fixture_id: String, goal_index: int) -> void:
+	if season == null or fixture_id == "":
+		return
+	var pack := season.goal_clip(fixture_id, goal_index)
+	if pack.is_empty():
+		return
+	if layer != null:
+		layer.visible = false
+	if game.hud_layer != null:
+		game.hud_layer.visible = true
+	game.play_goal_clip(pack, _on_goal_clip_done)
+
+func _on_goal_clip_done() -> void:
+	if game == null or screen == null:
+		return
+	game.paused = true
+	if game.hud_layer != null:
+		game.hud_layer.visible = false
+	if layer != null:
+		layer.visible = true
+	screen.refresh()

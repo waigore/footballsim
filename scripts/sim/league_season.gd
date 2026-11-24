@@ -28,6 +28,9 @@ var rules: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 ## Fixture the engine is currently playing back, if any.
 var watching_fixture := ""
+## Live clips captured for the fixture being watched, keyed by the goal's own
+## minute and scorer; written when the result comes back at full time.
+var captured: Array = []
 var last_advance: Dictionary = {}
 
 # ------------------------------------------------------------------ setup ---
@@ -70,6 +73,10 @@ static func open(slug: String) -> LeagueSeason:
 	season.record = LeagueRecord.new(save)
 	season.rules = save.rules
 	season.rng.seed = int(str(save.meta.get("seed", "0")))
+	# An older save may predate the home/away columns, and a hand-edited fixture
+	# ledger can drift: rebuild the aggregates now so the table (and its full
+	# reading) matches the played fixtures (#73).
+	season.record.recompute_table()
 	season.roll_clock()
 	active = season
 	return season
@@ -244,6 +251,8 @@ func _sim_fixture(fx: Dictionary) -> Dictionary:
 	record.save_result(fixture_id, score.x, score.y)
 	record.add_events(events)
 	_add_xi_stats(events, {"home": hxi, "away": axi}, {"home": home, "away": away})
+	LeagueHighlights.store_auto(record, int(rng.seed), fixture_id, events,
+		{"home": hxi, "away": axi}, home, away)
 	return report(fixture_id)
 
 ## A side's XI all played 90 minutes; goals, assists and cards come off the
@@ -290,8 +299,15 @@ func report(fixture_id: String) -> Dictionary:
 		"fixture": fx,
 		"score": [int(fx["home_goals"]), int(fx["away_goals"])],
 		"events": record.events(fixture_id),
+		"highlights": record.clips.list(fixture_id),
 		"played": str(fx["status"]) == "played",
 	}
+
+## One stored goal clip, decoded and ready for the match viewer.
+func goal_clip(fixture_id: String, goal_index: int) -> Dictionary:
+	if record == null or fixture_id == "":
+		return {}
+	return record.clips.pack(fixture_id, goal_index)
 
 # ------------------------------------------------------------------ watch ---
 
@@ -304,11 +320,19 @@ func start_watch(fixture_id: String) -> Dictionary:
 	if fx.is_empty():
 		return {}
 	watching_fixture = fixture_id
+	captured = []
 	return {
 		"fixture_id": fixture_id,
 		"home": str(fx["home_club_id"]),
 		"away": str(fx["away_club_id"]),
 	}
+
+## The viewer's ring caught a goal during a watched fixture: hold the clip here
+## until full time, when it is written beside the report it belongs to.
+func capture_goal(pack: Dictionary) -> void:
+	if watching_fixture == "" or pack.is_empty():
+		return
+	captured.append(pack)
 
 func record_engine(engine) -> void:
 	var fixture_id := watching_fixture
@@ -322,7 +346,7 @@ func record_engine(engine) -> void:
 	var away := int(engine.score[1])
 	PLDatabase.transaction("BEGIN TRANSACTION;")
 	record.save_result(fixture_id, home, away)
-	record.add_events(_engine_events(engine, fixture_id))
+	record.add_events(LeagueHighlights.engine_events(engine, fixture_id))
 	var lines: Array = []
 	for p in engine.players:
 		lines.append({
@@ -337,32 +361,17 @@ func record_engine(engine) -> void:
 			},
 		})
 	record.add_player_lines(lines)
+	var sides := {"home": [], "away": []}
+	for p in engine.players:
+		var side := "home" if int(p.team) == 0 else "away"
+		sides[side].append({"id": str(p.key), "role": str(p.role)})
+	LeagueHighlights.store_watch(record, int(rng.seed), fixture_id, captured, sides,
+		str(fx["home_club_id"]), str(fx["away_club_id"]))
+	captured = []
 	PLDatabase.transaction("COMMIT;")
 	roll_clock()
 	state_changed.emit()
 	match_recorded.emit(report(fixture_id))
-
-func _engine_events(engine, fixture_id: String) -> Array:
-	var rows: Array = []
-	for e in engine.events:
-		var kind := str(e.get("type", ""))
-		if kind != "goal" and kind != "card":
-			continue
-		var p = engine.by_id.get(int(e.get("player_id", -1)), null)
-		if p == null:
-			continue
-		var mapped := "goal"
-		if kind == "card":
-			mapped = "red" if p.red else "yellow"
-		rows.append({
-			"fixture_id": fixture_id,
-			"minute": int(e.get("minute", 0)),
-			"kind": mapped,
-			"player_id": str(p.key),
-			"club_id": str(engine.teams[int(e.get("team", 0))]["id"]),
-			"detail": str(p.name),
-		})
-	return rows
 
 # ------------------------------------------------------------ season end ---
 

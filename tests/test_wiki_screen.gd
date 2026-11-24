@@ -122,6 +122,17 @@ func test_the_back_door_and_the_close_door() -> void:
 	assert_false(wiki.is_open(), "the close door did not close the sheet")
 	assert_eq(closed[0], 2, "the close door did not signal the host")
 
+func test_a_snapshot_date_reveals_its_weekday_on_hover() -> void:
+	wiki.open(WikiModel.LEAGUE, "")
+	await get_tree().process_frame
+	var zone: Dictionary = {}
+	for z in wiki.hints.zones:
+		zone = z
+	assert_false(zone.is_empty(), "the league page painted no snapshot date")
+	wiki.mouse = (zone["rect"] as Rect2).get_center()
+	assert_eq(str(wiki.tooltip.zone_at().get("date", "")), str(zone["date"]),
+		"a hovered snapshot date did not reach the overlay")
+
 func _first_data_row() -> Dictionary:
 	for row in wiki.body.rows():
 		if str(row["k"]) == "trow" and row.has("target"):

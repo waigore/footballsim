@@ -119,6 +119,7 @@ suites = [
   "test_strongest_xi.gd",
   "test_league_season.gd",
   "test_league_ui.gd",
+  "test_goal_highlights.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -131,6 +132,14 @@ suites = [
   "test_hud_layout.gd",
   "test_hud_chrome.gd",
   "test_touch_flow.gd",
+]
+
+# The one date form and its weekday hint (#99): the league sheets and the
+# encyclopedia both paint it, so the formatter and the overlay ride together.
+[domains.dates]
+suites = [
+  "test_date_labels.gd",
+  "test_wiki_render.gd",
 ]
 
 # Lightest suite for tooling / project / addons / map edits.
@@ -212,6 +221,24 @@ domain = "league"
 
 [[rules]]
 match = "scripts/sim/strongest_xi.gd*"
+domain = "league"
+
+# Per-goal report clips: the pack generator, the store and the viewer that
+# plays one back. They all belong to the season theme.
+[[rules]]
+match = "scripts/sim/goal_highlight.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/league_highlights.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/view/goal_replay.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/view/highlight_director.gd*"
 domain = "league"
 
 [[rules]]
@@ -314,6 +341,10 @@ domain = "wiki"
 [[rules]]
 match = "scripts/ui/league_*.gd*"
 domain = "league"
+
+[[rules]]
+match = "scripts/ui/date_*.gd*"
+domain = "dates"
 
 [[rules]]
 match = "scripts/view/actor_layer.gd*"

@@ -135,6 +135,65 @@ func test_continue_plays_the_autos_and_shows_the_roundup() -> void:
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Continue did not settle on the hub")
 	assert_gte(int(LeagueSeason.active.record.played()), before, "the ledger went backwards")
 
+func test_a_report_play_door_plays_the_stored_clip_and_comes_back() -> void:
+	var season := LeagueSeason.active
+	var fixture := ""
+	for row in season.record.fixtures():
+		if not season.record.clips.list(str(row["id"])).is_empty():
+			fixture = str(row["id"])
+			break
+	assert_true(fixture != "", "no fixture has a stored clip")
+	game.menus.league.show_season(season)
+	screen().show_report(fixture)
+	assert_eq(screen().mode, LeagueScreen.MODE_REPORT, "the report did not open")
+	var door := ""
+	for item in screen().buttons:
+		if str(item["id"]).begins_with("goal:"):
+			door = str(item["id"])
+			break
+	assert_true(door != "", "the report offers no play door")
+	press_id(door)
+	assert_not_null(game.replay, "the play door did not start a clip")
+	assert_false(bool(game.menus.league.layer.visible), "the report stayed over the pitch")
+	assert_true(str(game.home_id) != "" and str(game.away_id) != "", "the viewer has no clubs")
+	var clock_before := float(game.engine.clock)
+	for i in range(24):
+		game._process(0.1)
+	assert_gt(float(game.engine.clock), clock_before, "the clip is not playing")
+	game._skip()
+	assert_eq(screen().mode, LeagueScreen.MODE_REPORT, "skipping did not return to the report")
+	assert_true(bool(game.menus.league.layer.visible), "the report did not come back")
+	screen().open_season(season)
+
+func test_the_number_keys_play_report_goals() -> void:
+	var season := LeagueSeason.active
+	var fixture := ""
+	for row in season.record.fixtures():
+		if not season.record.clips.list(str(row["id"])).is_empty():
+			fixture = str(row["id"])
+			break
+	game.menus.league.show_season(season)
+	screen().show_report(fixture)
+	assert_eq(screen().mode, LeagueScreen.MODE_REPORT, "the report did not open")
+	assert_true(screen().key(KEY_1), "the first goal key was not taken")
+	assert_not_null(game.replay, "the key did not start a clip")
+	assert_false(screen().has_clip(7), "a goal beyond the report claims a clip")
+	game._skip()
+	assert_null(game.replay, "the clip did not end")
+	screen().open_season(season)
+
+func test_the_report_still_reads_a_goal_less_match() -> void:
+	var season := LeagueSeason.active
+	game.menus.league.show_season(season)
+	screen().report = {"fixture": {"id": "", "home_name": "Home", "away_name": "Away"}, "events": [], "highlights": []}
+	screen().mode = LeagueScreen.MODE_REPORT
+	screen().refresh()
+	assert_false(screen().has_clip(0), "an empty report claims a clip")
+	screen().click("goal:0")
+	assert_null(game.replay, "an empty report started a clip")
+	assert_eq(screen().mode, LeagueScreen.MODE_REPORT, "the empty report left")
+	screen().open_season(LeagueSeason.active)
+
 func test_the_table_shows_the_saved_bands() -> void:
 	press_id("table")
 	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "the table did not open")
@@ -211,9 +270,9 @@ func test_a_phone_viewport_still_hits_every_door() -> void:
 	for i in range(20):
 		table.append({"position": i + 1, "club_id": "C%d" % i, "club_abbr": "C%d" % i,
 			"played": 0, "gf": 0, "ga": 0, "points": 0})
-	var state := {"name": "X", "day": "SAT 15 AUG", "matchday": 1, "played": 0, "total": 380,
-		"plan": fixtures, "table": table, "rules": LeagueRules.defaults(),
-		"can_suggest": false, "complete": false}
+	var state := {"name": "X", "day": "15/AUG/2026", "date": "2026-08-15", "matchday": 1,
+		"played": 0, "total": 380, "plan": fixtures, "table": table,
+		"rules": LeagueRules.defaults(), "can_suggest": false, "complete": false}
 	for size in [Vector2(1600, 900), Vector2(913, 411)]:
 		var sheet := LeagueSheet.new()
 		for item in sheet.hub_layout(size, state):
@@ -535,6 +594,118 @@ func test_the_body_clamps_its_scroll_to_the_content() -> void:
 	body.scroll_by(10000.0)
 	assert_almost_eq(body.scroll, 300.0, 0.5, "the body did not stop at its last row")
 	body.free()
+
+# ------------------------------------------------------------- table view ---
+
+## #74: the table opens on the device default, the mode door switches it, and
+## the choice is written to the save so reopening the season brings it back.
+func test_the_table_remembers_its_mode_in_the_save() -> void:
+	_open_scroll_hub()
+	var slug := str(LeagueSeason.active.save.slug)
+	press_id("table")
+	var view = screen().book.table
+	assert_eq(view.mode, LeagueTableView.FULL, "a desktop sheet did not open the full table")
+	var heads := 0
+	for item in screen().buttons:
+		if str(item["kind"]) == "head":
+			heads += 1
+	assert_eq(heads, 22, "the full header lost a column")
+	press_id("tbl:mode:compact")
+	assert_eq(view.mode, LeagueTableView.COMPACT, "the mode door did not switch to compact")
+	var stored: Dictionary = LeagueSeason.active.save.read_meta()
+	assert_eq(str(stored.get("table_mode", "")), "compact", "the mode was not written to the save")
+	press_id("back")
+	LeagueSeason.active.close()
+	var reopened := LeagueSeason.open(slug)
+	assert_not_null(reopened, "the save did not reopen")
+	screen().open_season(reopened)
+	press_id("table")
+	assert_eq(view.mode, LeagueTableView.COMPACT, "the reopened season forgot its table reading")
+	heads = 0
+	for item in screen().buttons:
+		if str(item["kind"]) == "head":
+			heads += 1
+	assert_eq(heads, 5, "the compact header should be #, club, P, GD and PTS")
+	press_id("back")
+	press_id("menu")
+
+## A header sorts the player's list; the place numbers and their bands stay the
+## league's. The second tap reverses, and the choice survives a re-open.
+func test_a_table_header_sorts_and_keeps_the_official_place() -> void:
+	_open_scroll_hub()
+	press_id("continue")
+	if screen().mode == LeagueScreen.MODE_REPORT:
+		press_id("back")
+	press_id("table")
+	press_id("tbl:sort:club")
+	var names: Array = []
+	for item in screen().buttons:
+		if str(item["kind"]) == "table_row":
+			var row: Dictionary = item["row"]
+			names.append(str(row["club_name"]))
+			assert_eq(str(item["zone"]), LeagueRules.zone(int(row["position"]), LeagueRules.defaults()),
+				"a zone band left its official place")
+	assert_eq(names.size(), 20, "the sorted table lost rows")
+	var expected := names.duplicate()
+	expected.sort()
+	assert_eq(names, expected, "the rows are not in club order")
+	press_id("tbl:sort:club")
+	var reversed: Array = []
+	for item in screen().buttons:
+		if str(item["kind"]) == "table_row":
+			reversed.append(str((item["row"] as Dictionary)["club_name"]))
+	expected.reverse()
+	assert_eq(reversed, expected, "the second tap did not reverse the sort")
+	var stored: Dictionary = LeagueSeason.active.save.read_meta()
+	assert_eq(str(stored.get("table_sort", "")), "club", "the sort was not written to the save")
+	assert_eq(str(stored.get("table_dir", "")), "desc", "the direction was not written to the save")
+	press_id("back")
+	press_id("table")
+	assert_eq(screen().book.table.sort, "club", "the table forgot its sort")
+	assert_eq(screen().book.table.dir, -1, "the table forgot its direction")
+	press_id("back")
+	press_id("menu")
+
+## The full table is wider than a phone in portrait; a sideways drag reaches the
+## far columns and the compact reading fits again.
+func test_the_full_table_pans_sideways_on_a_phone() -> void:
+	_open_scroll_hub()
+	var saved: float = screen().ui_scale
+	_phone_scale()
+	press_id("table")
+	var view = screen().book.table
+	assert_eq(view.mode, LeagueTableView.COMPACT, "a phone did not open the compact table")
+	press_id("tbl:mode:full")
+	assert_eq(view.mode, LeagueTableView.FULL, "the mode door did not switch to full")
+	assert_gt(screen().body.max_hscroll(), 0.0, "the full table should be wider than the phone")
+	_drag(Vector2(500.0, 250.0), Vector2(300.0, 250.0))
+	assert_gt(screen().body.hscroll, 0.0, "a sideways drag did not pan the table")
+	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "the sideways drag clicked through a row")
+	press_id("tbl:mode:compact")
+	assert_eq(view.mode, LeagueTableView.COMPACT, "the mode door did not come back to compact")
+	assert_eq(screen().body.max_hscroll(), 0.0, "the compact table should fit the phone")
+	press_id("back")
+	screen().ui_scale = saved
+	screen().refresh()
+	press_id("menu")
+
+## The hub's date is a date like any other: hovering it hands the overlay that
+## exact day, so the weekday never has to ride the date itself (#99).
+func test_the_hub_date_reveals_its_weekday_on_hover() -> void:
+	_open_scroll_hub()
+	screen().queue_redraw()
+	await get_tree().process_frame
+	var zone: Dictionary = {}
+	for z in screen().hints.zones:
+		zone = z
+	assert_false(zone.is_empty(), "the hub painted no date")
+	var date := str(zone["date"])
+	screen().mouse = (zone["rect"] as Rect2).get_center()
+	assert_eq(str(screen().tooltip.zone_at().get("date", "")), date,
+		"a hovered hub date did not reach the overlay")
+	assert_eq(FixtureCalendar.day_label(date), str(LeagueSeason.active.state()["day"]),
+		"the hub date and the season clock disagree")
+	press_id("menu")
 
 ## The scroll tests create their own season: earlier cases are free to delete
 ## every save in the list.
