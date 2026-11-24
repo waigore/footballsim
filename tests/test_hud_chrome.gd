@@ -211,6 +211,26 @@ func test_goal_and_half_time_banners_draw_on_a_phone() -> void:
 	assert_true(HudLayout.is_compact(hud.design_vp()), "banners were drawn in desktop metrics")
 	hud.queue_free()
 
+func test_the_momentum_meter_draws_inside_the_stats_card() -> void:
+	# DR-20261125-02: the summary's momentum reading reaches the broadcast on
+	# both metrics, and the meter is paint only — never a door.
+	for phone in [false, true]:
+		var eng := MatchEngine.new(37)
+		for i in range(4):
+			eng._emit("shot", "Chance!", 0, null, {"xg": 0.3})
+		var hud := _hud(eng)
+		hud.touch = phone
+		hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / (411.0 if phone else 900.0)
+		hud.queue_redraw()
+		await get_tree().process_frame
+		var vp: Vector2 = hud.design_vp()
+		var card: Rect2 = HudLayout.stats_rect(vp)
+		var meter: Rect2 = HudLayout.momentum_rect(vp)
+		assert_true(card.encloses(meter), "the meter left the stats card (phone=%s)" % phone)
+		assert_eq(hud.button_at(meter.position + meter.size * 0.5), "", "the meter is a door (phone=%s)" % phone)
+		assert_gt(eng.momentum_level().x, 0.5, "the meter had nothing to read (phone=%s)" % phone)
+		hud.queue_free()
+
 func test_zoomed_follow_view_draws_the_surname_labels() -> void:
 	var eng := MatchEngine.new(36)
 	var hud := _hud(eng)
