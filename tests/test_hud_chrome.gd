@@ -175,6 +175,19 @@ func test_phone_player_card_stays_clear_of_the_other_panels() -> void:
 		assert_gte(box.position.y, stats.end.y, "the card rises into the top bar at %s" % vp)
 		assert_gte(box.size.y, 96.0, "the card is too short to hold its rows at %s" % vp)
 
+func test_desktop_player_card_hangs_under_the_stats_card() -> void:
+	# The dossier is a column under the stats card; the card's momentum footer
+	# grew it (DR-20261125-02), so the column must read its bottom, never a
+	# constant it would now overlap.
+	var card := HudPlayerCard.new(Color.BLACK, Color.GOLD, Color.WHITE, Color.GRAY)
+	for vp in [Vector2(1600, 900), Vector2(1280, 720), Vector2(1920, 1080)]:
+		var box: Rect2 = card.rect_for(vp)
+		var stats: Rect2 = HudLayout.stats_rect(vp)
+		assert_false(box.intersects(stats), "the dossier covers the stats card at %s" % vp)
+		assert_gte(box.position.y, stats.end.y, "the dossier starts inside the stats card at %s" % vp)
+		assert_false(box.intersects(HudLayout.commentary_rect(vp)), "the dossier covers the ticker at %s" % vp)
+		assert_lte(box.end.x, vp.x, "the dossier runs off the right edge at %s" % vp)
+
 func test_player_card_draws_in_both_layouts() -> void:
 	var eng := MatchEngine.new(34)
 	var hud := _hud(eng)
@@ -210,6 +223,26 @@ func test_goal_and_half_time_banners_draw_on_a_phone() -> void:
 	await get_tree().process_frame
 	assert_true(HudLayout.is_compact(hud.design_vp()), "banners were drawn in desktop metrics")
 	hud.queue_free()
+
+func test_the_momentum_meter_draws_inside_the_stats_card() -> void:
+	# DR-20261125-02: the summary's momentum reading reaches the broadcast on
+	# both metrics, and the meter is paint only — never a door.
+	for phone in [false, true]:
+		var eng := MatchEngine.new(37)
+		for i in range(4):
+			eng._emit("shot", "Chance!", 0, null, {"xg": 0.3})
+		var hud := _hud(eng)
+		hud.touch = phone
+		hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / (411.0 if phone else 900.0)
+		hud.queue_redraw()
+		await get_tree().process_frame
+		var vp: Vector2 = hud.design_vp()
+		var card: Rect2 = HudLayout.stats_rect(vp)
+		var meter: Rect2 = HudLayout.momentum_rect(vp)
+		assert_true(card.encloses(meter), "the meter left the stats card (phone=%s)" % phone)
+		assert_eq(hud.button_at(meter.position + meter.size * 0.5), "", "the meter is a door (phone=%s)" % phone)
+		assert_gt(eng.momentum_level().x, 0.5, "the meter had nothing to read (phone=%s)" % phone)
+		hud.queue_free()
 
 func test_zoomed_follow_view_draws_the_surname_labels() -> void:
 	var eng := MatchEngine.new(36)

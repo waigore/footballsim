@@ -209,6 +209,30 @@ func test_the_summary_reads_the_momentum_the_match_carried() -> void:
 	assert_gt(momentum.x, 0.5, "the side creating the chances was not on top")
 	assert_lt(momentum.y, 0.05, "the side creating nothing was on top")
 
+## The broadcast meter reads the same numbers the summary does, so the two can
+## never disagree about who is carrying play (DR-20261125-02).
+func test_the_broadcast_reads_the_same_momentum_as_the_summary() -> void:
+	var eng := _eng(63)
+	eng._emit("shot", "Chance!", 0, null, {"xg": 0.4})
+	var summary: Vector2 = eng.summary()["momentum"]
+	var live: Vector2 = eng.momentum_level()
+	assert_eq(live, summary, "the meter and the summary read different momentum")
+	assert_gt(live.x, float(0.0), "a good chance left the meter at zero")
+
+func test_the_meter_names_the_side_carrying_play() -> void:
+	# A side well on top is named; a level match says nobody is.
+	assert_eq(MatchStats.momentum_leader(Vector2(0.80, 0.10)), 0, "the on-top side was not named")
+	assert_eq(MatchStats.momentum_leader(Vector2(0.10, 0.80)), 1, "the away side was not named")
+	assert_eq(MatchStats.momentum_leader(Vector2(0.42, 0.40)), -1, "an even match named a leader")
+	assert_eq(MatchStats.momentum_leader(Vector2(0.02, 0.01)), -1, "a quiet match named a leader")
+	assert_eq(MatchStats.momentum_phrase(0.80), "ON TOP", "a big spell is not read as on top")
+	assert_eq(MatchStats.momentum_phrase(0.35), "PRESSING", "a normal spell lost its word")
+	assert_eq(MatchStats.momentum_phrase(0.05), "", "a quiet side was given a word")
+	# The thresholds sit inside the range full matches actually read.
+	assert_gt(MatchStats.MOMENTUM_ON_TOP, MatchStats.MOMENTUM_PRESSING, "the ladder is inverted")
+	assert_lte(MatchStats.MOMENTUM_ON_TOP, 1.0, "the on-top bar is unreachable")
+	assert_true(MatchStats.MOMENTUM_CLEAR_GAP > 0.0, "the clear gap must be positive")
+
 # ----------------------------------------------------------------- rating ---
 
 func test_the_summary_stores_the_shared_rating() -> void:

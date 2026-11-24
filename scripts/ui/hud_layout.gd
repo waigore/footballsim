@@ -19,6 +19,19 @@ const COMPACT_STATS_W := 240.0
 const CONTROL_W := 108.0
 const CONTROL_GAP := 6.0
 const CONTROL_H := 46.0
+## Height of the momentum footer inside the match-stats card: a label row above
+## a two-sided meter (DR-20261125-02). The card grows by exactly this, so the
+## stats rows keep their old geometry above it.
+const MOMENTUM_H := 22.0
+## Inset of the meter's track from the card's edges, and the label column the
+## track starts after.
+const MOMENTUM_LABEL := 70.0
+const MOMENTUM_INSET := 14.0
+const MOMENTUM_TRACK_H := 4.0
+## Gap between the footer's rule and its label baseline, and between the label
+## and the track.
+const MOMENTUM_LABEL_Y := 10.0
+const MOMENTUM_TRACK_Y := 12.0
 ## Desktop bar: pause, speed, mode, skip, camera, league, restart, menu.
 const CONTROL_COUNT := 8
 ## Touch/compact adds the teams door, because the fixture panel that carries it
@@ -93,8 +106,24 @@ static func stats_rect(vp: Vector2) -> Rect2:
 	if is_compact(vp):
 		# A 360-unit-tall design space (a 720p handset) has no room for five
 		# rows beside the pitch, so the card drops to three.
-		return Rect2(vp.x - PANEL_MARGIN - COMPACT_STATS_W, 12.0, COMPACT_STATS_W, stats_row_limit(vp) * 16.0 + 45.0)
-	return Rect2(vp.x - PANEL_MARGIN - 300.0, PANEL_MARGIN, 300.0, 132.0)
+		return Rect2(vp.x - PANEL_MARGIN - COMPACT_STATS_W, 12.0, COMPACT_STATS_W, stats_row_limit(vp) * 16.0 + 45.0 + MOMENTUM_H)
+	return Rect2(vp.x - PANEL_MARGIN - 300.0, PANEL_MARGIN, 300.0, 132.0 + MOMENTUM_H)
+
+## The momentum footer's track inside the stats card: the two-sided meter the
+## next chance's pressure reads on (DR-20261125-02). It starts after the footer's
+## label column and ends at the card's right inset, so the card's own geometry is
+## unchanged above it.
+static func momentum_rect(vp: Vector2) -> Rect2:
+	var box := stats_rect(vp)
+	var left: float = box.position.x + MOMENTUM_INSET + MOMENTUM_LABEL
+	var right: float = box.end.x - MOMENTUM_INSET
+	var y: float = momentum_rule_y(vp) + MOMENTUM_TRACK_Y
+	return Rect2(left, y, maxf(right - left, 24.0), MOMENTUM_TRACK_H)
+
+## Top of the footer band: the rule that separates the momentum meter from the
+## last stats row.
+static func momentum_rule_y(vp: Vector2) -> float:
+	return stats_rect(vp).end.y - MOMENTUM_H
 
 static func stats_row_limit(vp: Vector2) -> int:
 	if is_compact(vp) and vp.y < 400.0:

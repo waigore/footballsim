@@ -130,6 +130,11 @@ func possession_pct() -> Vector2:
 	var a: float = float(stats[0]["possession"]) / tot * 100.0
 	return Vector2(snappedf(a, 0.1), snappedf(100.0 - a, 0.1))
 
+## Each side's momentum, 0..1, read on its own. The broadcast meter asks for this
+## every frame, so it does not build a summary to get it.
+func momentum_level() -> Vector2:
+	return MatchStats.momentum_level(momentum)
+
 func summary() -> Dictionary:
 	return {
 		"score": score.duplicate(), "half": half, "clock": display_clock(),

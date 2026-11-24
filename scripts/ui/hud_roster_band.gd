@@ -83,6 +83,44 @@ func stats(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> voi
 		p.text_c(c, col_away, yy, str(row[2]), 15, UiChrome.C_TEXT, f_bold)
 		c.draw_line(Vector2(x + 14, yy + 5), Vector2(x + w - 14, yy + 5), Color(1, 1, 1, 0.05), 1)
 		yy += step
+	momentum(p, c, engine, f_bold, f_med)
+
+## Momentum footer (DR-20261125-02): the side carrying play, as the summary
+## already reads it. One two-sided bar either side of a centre mark, each half
+## filling from the middle out, so a near-empty meter means a quiet spell for
+## both sides instead of a lie about who is on top.
+func momentum(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> void:
+	var box := HudLayout.stats_rect(p.vp)
+	var track := HudLayout.momentum_rect(p.vp)
+	var rule_y := HudLayout.momentum_rule_y(p.vp)
+	c.draw_line(Vector2(box.position.x + 14, rule_y), Vector2(box.end.x - 14, rule_y), Color(1, 1, 1, 0.07), 1)
+	var label_y: float = rule_y + HudLayout.MOMENTUM_LABEL_Y
+	p.text(c, Vector2(box.position.x + 14, label_y), "MOMENTUM", 9, UiChrome.C_DIM, f_bold)
+	var lvl: Vector2 = engine.momentum_level()
+	var mid: float = track.position.x + track.size.x * 0.5
+	var half: float = track.size.x * 0.5 - 1.0
+	c.draw_rect(track, Color(1, 1, 1, 0.07))
+	var c0: Color = engine.teams[0]["data"]["color"].lightened(0.25)
+	var c1: Color = engine.teams[1]["data"]["color"].lightened(0.25)
+	var w0: float = half * clampf(lvl.x, 0.0, 1.0)
+	var w1: float = half * clampf(lvl.y, 0.0, 1.0)
+	c.draw_rect(Rect2(mid - w0, track.position.y, w0, track.size.y), c0)
+	c.draw_rect(Rect2(mid + 1.0, track.position.y, w1, track.size.y), c1)
+	c.draw_rect(Rect2(mid - 1.0, track.position.y - 1.0, 2.0, track.size.y + 2.0), Color(1, 1, 1, 0.45))
+	# The words beside it, so the meter is legible without counting pixels: the
+	# bar is a share of each side's own ceiling, never a split of 100.
+	var lead: int = MatchStats.momentum_leader(lvl)
+	var phrase: String = MatchStats.momentum_phrase(maxf(lvl.x, lvl.y))
+	var label := "EVEN"
+	var col := UiChrome.C_DIM
+	var font: Font = f_med
+	if lead >= 0 and phrase != "":
+		label = "%s  %s" % [engine.teams[lead]["data"]["abbr"], phrase]
+		# Lightened like the header's club codes: a 9-unit label in a dark club
+		# colour would be a hairline on the panel.
+		col = engine.teams[lead]["data"]["color"].lightened(0.35)
+		font = f_bold
+	p.text_r(c, box.end.x - 14, label_y, label, 9, col, font)
 
 ## Play-state line: paused, highlights simming, or the full-match speed.
 func status(p: HudPaint, c: CanvasItem, game, speed_label: String, f_bold: Font, f_med: Font) -> void:
