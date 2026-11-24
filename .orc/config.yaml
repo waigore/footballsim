@@ -38,6 +38,11 @@ schedules:
     cron: "15 * * * *"
     agents:
       - fix-tests-agent
+  # 1am HKT — desktop UX playtest (live game → wiki Evidence → issues)
+  daily-ux-playtest:
+    cron: "0 1 * * *"
+    agents:
+      - ux-playtest-agent
   # 8am HKT — debug APK prerelease
   daily-android-debug:
     cron: "0 8 * * *"
@@ -204,3 +209,16 @@ agents:
       Run the export-android-debug skill unattended.
       Parallel id: {parallel_id}. Assigned issue: {issue}.
       Follow docs/android-debug.md; ship a downloadable debug APK release URL; then exit.
+
+  # Daily Cursor: live desktop UX playtest → wiki Evidence → GitHub issues.
+  ux-playtest-agent:
+    skill: ux-playtest-agent
+    provider: cursor
+    enabled: true
+    prompt: |
+      Load and follow the project skill ux-playtest-agent (under .agents/skills).
+      Run it unattended.
+      Parallel id: {parallel_id}. Assigned issue: {issue}.
+      Launch the desktop game, interactively playtest the league loop with at
+      least one match to full time, publish wiki Evidence, file UX issues
+      autonomously; do not fix code or open a PR; then exit.
