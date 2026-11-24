@@ -1,8 +1,11 @@
 extends "res://scripts/sim/match_engine_presentation.gd"
 
-## Physical duels and what they lead to: the header at goal, the tackle, the
-## foul and its card, the handball that sends play to the spot. They sit under
-## the ball actions so the same chain calls them and one finishing rule applies.
+## Physical duels and what they lead to: the outball to a teammate, the header
+## at goal, the tackle, the foul and its card. They sit under the ball actions
+## so the chain still calls them, and the duels layer reads the finishing
+## helpers it needs directly.
+
+# ---------------------------------------------------------------- helpers --
 
 func _best_outlet(p):
 	var best = null
@@ -18,7 +21,7 @@ func _best_outlet(p):
 			best = q
 	return best
 
-# ----------------------------------------------------------------- actions --
+# -------------------------------------------------------------- finishing --
 
 func _stats_shot(p, xg: float, kind: String) -> void:
 	p.stats["shots"] += 1
@@ -74,6 +77,7 @@ func _header(p) -> void:
 		_emit("clearance", Commentary.clearance(rng, p.name, true), p.team, p)
 		ball_kicked.emit(0.5)
 
+# ------------------------------------------------------------------ duels --
 
 func _attempt_tackle(d, carrier) -> void:
 	d.cooldown = 0.52
