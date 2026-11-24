@@ -464,7 +464,7 @@ func test_every_league_pose_draws() -> void:
 func test_the_wizard_reports_a_save_it_cannot_open() -> void:
 	game.menus.open_menu()
 	press(door("new_league").get_center())
-	screen()._open_save("no-such-save")
+	screen().open_save("no-such-save")
 	assert_eq(screen().mode, LeagueScreen.MODE_WIZARD, "a broken save did not return to the wizard")
 	assert_true(str(screen().wizard["error"]) != "", "the wizard hid the error")
 	await get_tree().process_frame

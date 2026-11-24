@@ -282,9 +282,7 @@ func test_a_watch_goal_keeps_the_captured_clip() -> void:
 		"assist_id": "", "assist_name": "", "commentary": "", "score_after": [1, 0],
 	})
 	assert_eq(str(captured.get("commentary", "")), "", "the capture invented a line")
-	var sides := {"home": StrongestXI.pick(TeamData.get_team(home)),
-		"away": StrongestXI.pick(TeamData.get_team(away))}
-	LeagueHighlights.store_watch(season.record, SEED, fx, [captured], sides, home, away)
+	LeagueHighlights.store_watch(season.record, SEED, fx, [captured], home, away)
 	var rows := season.record.clips.list(fx)
 	assert_eq(rows.size(), 2, "a watched goal has no stored clip")
 	assert_eq(str(rows[0]["source"]), "watch", "the captured goal is not marked live")
@@ -321,6 +319,68 @@ func test_a_settled_matchday_stores_a_clip_for_every_goal() -> void:
 			assert_eq(int(pack["minute"]), int(row["minute"]), "the clip's minute drifted")
 	assert_gt(goals, 0, "no goals were reported at all")
 	assert_eq(clips, goals, "the clips do not cover the goals")
+
+## A settled auto goal keeps a recipe, not a picture: the first report to ask
+## draws the pack from the save itself. It must be the clip the settling pass
+## would have drawn eagerly — same seed, same eleven, same scoreline.
+func test_a_settled_clip_is_drawn_from_its_recipe() -> void:
+	var fixture := ""
+	var row := {}
+	for candidate in season.record.fixtures():
+		for r in season.record.clips.list(str(candidate["id"])):
+			if str(r.get("source", "")) == "auto":
+				fixture = str(candidate["id"])
+				row = r
+				break
+		if not row.is_empty():
+			break
+	assert_false(row.is_empty(), "no settled clip to draw")
+	var index := int(row["goal_index"])
+	var fx := season.record.fixture(fixture)
+	var home := str(fx["home_club_id"])
+	var away := str(fx["away_club_id"])
+	var club := str(row["club_id"])
+	# The scoreline at that goal, from the report's own goal rows.
+	var score := [0, 0]
+	var goals := 0
+	for e in season.report(fixture)["events"]:
+		if str(e.get("kind", "")) != "goal":
+			continue
+		score[0 if str(e["club_id"]) == home else 1] += 1
+		if goals >= index:
+			break
+		goals += 1
+	var fields := {
+		"fixture_id": fixture, "goal_index": index, "minute": int(row["minute"]),
+		"home": home, "away": away, "club_id": club,
+		"player_id": str(row["scorer_id"]), "player_name": str(row["scorer_name"]),
+		"assist_id": str(row["assist_id"]), "assist_name": str(row["assist_name"]),
+		"club_short": LeagueHighlights.short_name(club),
+		"opp_short": LeagueHighlights.short_name(away if club == home else home),
+		"score_after": score, "source": "auto", "commentary": str(row["commentary"]),
+	}
+	var sides := {"home": StrongestXI.pick(TeamData.get_team(home)),
+		"away": StrongestXI.pick(TeamData.get_team(away))}
+	var eager := GoalHighlight.pack(
+		GoalHighlight.build(fields, sides, GoalHighlight.seed_for(SEED, fixture, index)))
+	var stored: PackedByteArray = PLDatabase.row(
+		"SELECT bytes FROM goal_highlight WHERE fixture_id = ? AND goal_index = ?;",
+		[fixture, index]).get("bytes", PackedByteArray())
+	assert_false(stored.is_empty(), "the report did not draw the clip")
+	assert_true(stored == eager, "the drawn clip is not the one the recipe describes")
+	# The draw is cached in the row: a second report reads the same bytes back.
+	assert_true(PLDatabase.row(
+		"SELECT bytes FROM goal_highlight WHERE fixture_id = ? AND goal_index = ?;",
+		[fixture, index]).get("bytes", PackedByteArray()) == eager,
+		"the recipe drew two different clips")
+	# A clip that is not there, and a recipe too bare to draw, read as empty
+	# rather than throw: a report must never crash on a missing picture.
+	season.record.clips.add([{"fixture_id": "gw99-NONE-NONE", "goal_index": 0,
+		"club_id": "NONE", "minute": 1, "source": "auto"}])
+	assert_true(season.record.clips.pack("gw99-NONE-NONE", 0).is_empty(),
+		"a recipe without its clubs drew a clip")
+	assert_true(season.record.clips.pack("gw99-NONE-NONE", 7).is_empty(),
+		"a missing clip decoded to a picture")
 
 func test_a_clip_records_the_assist_it_was_built_with() -> void:
 	var rows := season.record.clips.list(str((season.record.fixtures()[0] as Dictionary)["id"]))

@@ -150,6 +150,7 @@ suites = [
   "test_league_season.gd",
   "test_league_sheets.gd",
   "test_league_ui.gd",
+  "test_league_doors.gd",
   "test_league_system.gd",
   "test_goal_highlights.gd",
 ]
