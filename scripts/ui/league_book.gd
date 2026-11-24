@@ -29,6 +29,97 @@ func table_layout(vp: Vector2, view: Dictionary) -> Array:
 		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
 	return items
 
+func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
+	var items: Array = []
+	var month := str(view.get("month", ""))
+	var grid_top := HEADER + 34.0
+	var cw := (vp.x - 48.0) / 7.0
+	var ch := 30.0 if vp.y < 620.0 else 34.0
+	var count := month_days(month)
+	var first := _first_weekday(month)
+	for i in range(count):
+		var slot := first + i
+		var col := slot % 7
+		var row := slot / 7
+		var date := "%s-%02d" % [month, i + 1]
+		var info: Dictionary = (view.get("days", {}) as Dictionary).get(date, {})
+		items.append({
+			"id": "day:" + date, "kind": "cell", "date": date, "day": i + 1,
+			"info": info, "selected": str(view.get("day", "")) == date,
+			"rect": Rect2(24.0 + float(col) * cw, grid_top + float(row) * ch, cw - 2.0, ch - 2.0),
+		})
+	var y := grid_top + 6.0 * ch + 10.0
+	for fx in view.get("day_fixtures", []):
+		items.append({"id": "match:" + str(fx["id"]), "kind": "fixture",
+			"fixture": fx, "rect": Rect2(24.0, y, vp.x - 48.0, 22.0)})
+		y += 23.0
+	items.append({"id": "month:-1", "kind": "chip", "label": "<",
+		"rect": Rect2(vp.x - 24.0 - 132.0, HEADER + 8.0, 28.0, 24.0)})
+	items.append({"id": "month:1", "kind": "chip", "label": ">",
+		"rect": Rect2(vp.x - 24.0 - 28.0, HEADER + 8.0, 28.0, 24.0)})
+	items.append({"id": "back", "kind": "button", "label": "BACK",
+		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
+	return items
+
+func report_layout(vp: Vector2, view: Dictionary) -> Array:
+	var items: Array = []
+	var y := HEADER + 70.0
+	for e in view.get("events", []):
+		items.append({"id": "event", "kind": "event", "event": e,
+			"rect": Rect2(24.0, y, vp.x - 48.0, 20.0)})
+		y += 21.0
+	for report in view.get("roundup", []):
+		items.append({"id": "match:" + str(report["fixture"]["id"]), "kind": "result",
+			"report": report, "rect": Rect2(24.0, y, vp.x - 48.0, 44.0)})
+		y += 50.0
+	items.append({"id": "back", "kind": "button", "label": "BACK",
+		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
+	return items
+
+func podium_layout(vp: Vector2, view: Dictionary) -> Array:
+	var items: Array = []
+	items.append({"id": "table", "kind": "button", "label": "TABLE", "primary": false,
+		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 130.0, BAR_H - 14.0)})
+	items.append({"id": "menu", "kind": "button", "label": "MAIN MENU", "primary": true,
+		"rect": Rect2(24.0 + 142.0, vp.y - BAR_H + 6.0, 170.0, BAR_H - 14.0)})
+	return items
+
+## "2026-08" -> [year, month]; a missing month falls back to today.
+
+static func parse_month(month: String) -> Array:
+	if month.length() == 7 and month.substr(4, 1) == "-":
+		return [int(month.substr(0, 4)), int(month.substr(5, 2))]
+	var now := Time.get_date_dict_from_system()
+	return [int(now["year"]), int(now["month"])]
+
+static func month_key(year: int, month: int) -> String:
+	var m := ((month - 1) % 12 + 12) % 12 + 1
+	var y := year + int(floor(float(month - 1) / 12.0))
+	return "%04d-%02d" % [y, m]
+
+static func shift_month(month: String, delta: int) -> String:
+	var bits := parse_month(month)
+	return month_key(int(bits[0]), int(bits[1]) + delta)
+
+static func month_label(month: String) -> String:
+	var bits := parse_month(month)
+	return "%s %d" % [MONTHS[int(bits[1]) - 1], int(bits[0])]
+
+static func month_days(month: String) -> int:
+	var bits := parse_month(month)
+	return _days_in_month(int(bits[0]), int(bits[1]))
+
+static func _days_in_month(year: int, month: int) -> int:
+	var next := month_key(year, month + 1)
+	var stamp := Time.get_unix_time_from_datetime_string(next + "-01T00:00:00") - 86400
+	return int(Time.get_datetime_dict_from_unix_time(stamp)["day"])
+
+static func _first_weekday(month: String) -> int:
+	var stamp := Time.get_unix_time_from_datetime_string(month + "-01T00:00:00")
+	return int(Time.get_datetime_dict_from_unix_time(stamp)["weekday"])
+
+# gd-tools: no cover start
+
 func draw_table(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
@@ -72,38 +163,6 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) 
 	UiChrome.text_r(c, rect.end.x - 10.0, y, "%d" % int(row["points"]), 11, UiChrome.C_TEXT, bold)
 
 # -------------------------------------------------------------- calendar ---
-
-func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
-	var items: Array = []
-	var month := str(view.get("month", ""))
-	var grid_top := HEADER + 34.0
-	var cw := (vp.x - 48.0) / 7.0
-	var ch := 30.0 if vp.y < 620.0 else 34.0
-	var count := month_days(month)
-	var first := _first_weekday(month)
-	for i in range(count):
-		var slot := first + i
-		var col := slot % 7
-		var row := slot / 7
-		var date := "%s-%02d" % [month, i + 1]
-		var info: Dictionary = (view.get("days", {}) as Dictionary).get(date, {})
-		items.append({
-			"id": "day:" + date, "kind": "cell", "date": date, "day": i + 1,
-			"info": info, "selected": str(view.get("day", "")) == date,
-			"rect": Rect2(24.0 + float(col) * cw, grid_top + float(row) * ch, cw - 2.0, ch - 2.0),
-		})
-	var y := grid_top + 6.0 * ch + 10.0
-	for fx in view.get("day_fixtures", []):
-		items.append({"id": "match:" + str(fx["id"]), "kind": "fixture",
-			"fixture": fx, "rect": Rect2(24.0, y, vp.x - 48.0, 22.0)})
-		y += 23.0
-	items.append({"id": "month:-1", "kind": "chip", "label": "<",
-		"rect": Rect2(vp.x - 24.0 - 132.0, HEADER + 8.0, 28.0, 24.0)})
-	items.append({"id": "month:1", "kind": "chip", "label": ">",
-		"rect": Rect2(vp.x - 24.0 - 28.0, HEADER + 8.0, 28.0, 24.0)})
-	items.append({"id": "back", "kind": "button", "label": "BACK",
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
-	return items
 
 func draw_calendar(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
@@ -151,21 +210,6 @@ func draw_calendar(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, 
 				str(item["label"]), 13, Color(0.06, 0.06, 0.05), bold)
 
 # ---------------------------------------------------------------- report ---
-
-func report_layout(vp: Vector2, view: Dictionary) -> Array:
-	var items: Array = []
-	var y := HEADER + 70.0
-	for e in view.get("events", []):
-		items.append({"id": "event", "kind": "event", "event": e,
-			"rect": Rect2(24.0, y, vp.x - 48.0, 20.0)})
-		y += 21.0
-	for report in view.get("roundup", []):
-		items.append({"id": "match:" + str(report["fixture"]["id"]), "kind": "result",
-			"report": report, "rect": Rect2(24.0, y, vp.x - 48.0, 44.0)})
-		y += 50.0
-	items.append({"id": "back", "kind": "button", "label": "BACK",
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
-	return items
 
 func draw_report(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
@@ -227,14 +271,6 @@ func _scorer_line(events: Array) -> String:
 
 # ---------------------------------------------------------------- podium ---
 
-func podium_layout(vp: Vector2, view: Dictionary) -> Array:
-	var items: Array = []
-	items.append({"id": "table", "kind": "button", "label": "TABLE", "primary": false,
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 130.0, BAR_H - 14.0)})
-	items.append({"id": "menu", "kind": "button", "label": "MAIN MENU", "primary": true,
-		"rect": Rect2(24.0 + 142.0, vp.y - BAR_H + 6.0, 170.0, BAR_H - 14.0)})
-	return items
-
 func draw_podium(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
@@ -292,35 +328,4 @@ func _club_row(view: Dictionary, club_id: String) -> Dictionary:
 
 # ----------------------------------------------------------------- dates ---
 
-## "2026-08" -> [year, month]; a missing month falls back to today.
-static func parse_month(month: String) -> Array:
-	if month.length() == 7 and month.substr(4, 1) == "-":
-		return [int(month.substr(0, 4)), int(month.substr(5, 2))]
-	var now := Time.get_date_dict_from_system()
-	return [int(now["year"]), int(now["month"])]
-
-static func month_key(year: int, month: int) -> String:
-	var m := ((month - 1) % 12 + 12) % 12 + 1
-	var y := year + int(floor(float(month - 1) / 12.0))
-	return "%04d-%02d" % [y, m]
-
-static func shift_month(month: String, delta: int) -> String:
-	var bits := parse_month(month)
-	return month_key(int(bits[0]), int(bits[1]) + delta)
-
-static func month_label(month: String) -> String:
-	var bits := parse_month(month)
-	return "%s %d" % [MONTHS[int(bits[1]) - 1], int(bits[0])]
-
-static func month_days(month: String) -> int:
-	var bits := parse_month(month)
-	return _days_in_month(int(bits[0]), int(bits[1]))
-
-static func _days_in_month(year: int, month: int) -> int:
-	var next := month_key(year, month + 1)
-	var stamp := Time.get_unix_time_from_datetime_string(next + "-01T00:00:00") - 86400
-	return int(Time.get_datetime_dict_from_unix_time(stamp)["day"])
-
-static func _first_weekday(month: String) -> int:
-	var stamp := Time.get_unix_time_from_datetime_string(month + "-01T00:00:00")
-	return int(Time.get_datetime_dict_from_unix_time(stamp)["weekday"])
+# gd-tools: no cover end

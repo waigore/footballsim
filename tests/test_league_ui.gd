@@ -349,6 +349,50 @@ func test_a_report_with_every_event_kind_draws() -> void:
 	assert_true(kinds.has("red"), "the report lost the red card")
 	press_id("back")
 
+func test_menu_keys_open_both_league_doors() -> void:
+	game.menus.open_menu()
+	assert_true(game.menus.shell.key(KEY_N), "N was ignored on the menu")
+	assert_true(game.menus.league_active(), "N did not open New League")
+	press_id("back")
+	game.menus.open_menu()
+	assert_true(game.menus.shell.key(KEY_L), "L was ignored on the menu")
+	assert_true(game.menus.league_active(), "L did not open Load League")
+	press_id("back")
+
+func test_the_host_opens_a_save_by_slug_and_syncs() -> void:
+	game.menus.open_menu()
+	assert_gte(LeagueSave.list().size(), 1, "there is no save to open")
+	var slug := str(LeagueSave.list()[0]["slug"])
+	game.menus.league.open_save(slug)
+	assert_true(game.menus.league_active(), "the host did not open the save")
+	game.menus.league.sync(Transform2D.IDENTITY, 1.0, false)
+	assert_true(game.menus.league.is_open(), "syncing closed the league layer")
+	press_id("menu")
+	assert_false(game.menus.league_active(), "the league stayed open after MENU")
+
+func test_table_rows_and_the_podium_door() -> void:
+	_open_hub()
+	press_id("table")
+	var club_id := ""
+	for item in screen().buttons:
+		if str(item["kind"]) == "table_row":
+			club_id = str(item["id"])
+			break
+	assert_true(club_id != "", "the table laid out no club rows")
+	press_id(club_id)
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "a club row did not leave the table")
+	LeagueSeason.active.save.set_status("complete")
+	screen().refresh()
+	press_id("podium")
+	assert_eq(screen().mode, LeagueScreen.MODE_PODIUM, "the podium door did not open")
+	assert_false(LeagueSeason.active.summary().is_empty(), "a complete season lost its summary")
+	press_id("table")
+	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "the podium table door did not open")
+	press_id("back")
+	LeagueSeason.active.save.set_status("in_progress")
+	screen().open_season(LeagueSeason.active)
+	press_id("menu")
+
 func test_pointer_motion_and_drag_are_not_clicks() -> void:
 	game.menus.open_menu()
 	press(door("new_league").get_center())

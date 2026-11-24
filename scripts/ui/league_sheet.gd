@@ -73,6 +73,60 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 			"rect": Rect2(24.0, body_bottom - 34.0, 120.0, 28.0), "primary": false})
 	return items
 
+func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
+	var items: Array = []
+	var w := minf(520.0, vp.x - 48.0)
+	var y := HEADER + 30.0
+	items.append({"id": "name", "kind": "field", "label": "NAME",
+		"rect": Rect2(24.0, y, w, 38.0), "value": str(view.get("name", ""))})
+	y += 66.0
+	items.append({"id": "mode:real", "kind": "choice", "label": "REAL FIXTURES",
+		"rect": Rect2(24.0, y, w * 0.48, 40.0), "selected": str(view.get("calendar_mode", "")) == "real"})
+	items.append({"id": "mode:generated", "kind": "choice", "label": "GENERATED",
+		"rect": Rect2(24.0 + w * 0.52, y, w * 0.48, 40.0), "selected": str(view.get("calendar_mode", "")) == "generated"})
+	y += 52.0
+	items.append({"id": "adv:fixture_days", "kind": "choice", "label": "FIXTURE DAYS",
+		"rect": Rect2(24.0, y, w * 0.48, 40.0), "selected": str(view.get("advance_mode", "")) == "fixture_days"})
+	items.append({"id": "adv:every_day", "kind": "choice", "label": "EVERY DAY",
+		"rect": Rect2(24.0 + w * 0.52, y, w * 0.48, 40.0), "selected": str(view.get("advance_mode", "")) == "every_day"})
+	y += 54.0
+	items.append({"id": "create", "kind": "button", "label": "CREATE SEASON",
+		"rect": Rect2(24.0, y, minf(240.0, w), 46.0), "primary": true})
+	items.append({"id": "back", "kind": "button", "label": "BACK",
+		"rect": Rect2(24.0 + minf(240.0, w) + 12.0, y, 110.0, 46.0), "primary": false})
+	return items
+
+func load_layout(vp: Vector2, view: Dictionary) -> Array:
+	var items: Array = []
+	var saves: Array = view.get("saves", [])
+	var w := minf(620.0, vp.x - 48.0)
+	var y := HEADER + 26.0
+	for i in range(mini(saves.size(), 7)):
+		var save: Dictionary = saves[i]
+		var row := Rect2(24.0, y, w, 40.0)
+		items.append({"id": "open:" + str(save["slug"]), "kind": "save_row",
+			"rect": row, "save": save})
+		items.append({"id": "delete:" + str(save["slug"]), "kind": "delete",
+			"rect": Rect2(row.end.x - 96.0, row.position.y + 5.0, 34.0, 30.0), "slug": str(save["slug"])})
+		y += 46.0
+	items.append({"id": "back", "kind": "button", "label": "BACK",
+		"rect": Rect2(24.0, y + 8.0, 110.0, 42.0), "primary": false})
+	return items
+
+func _bar_rects(vp: Vector2, ids: Array, labels: Array) -> Array:
+	var out: Array = []
+	var margin := 24.0
+	var gap := 8.0
+	var w := (vp.x - 2.0 * margin - gap * float(ids.size() - 1)) / float(ids.size())
+	for i in range(ids.size()):
+		out.append({
+			"id": str(ids[i]), "kind": "button", "label": str(labels[i]), "primary": i == 0,
+			"rect": Rect2(margin + float(i) * (w + gap), vp.y - BAR_H + 6.0, w, BAR_H - 14.0),
+		})
+	return out
+
+# gd-tools: no cover start
+
 func draw_hub(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, state: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
@@ -146,29 +200,6 @@ func _draw_table_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictio
 
 # ---------------------------------------------------------------- wizard ---
 
-func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
-	var items: Array = []
-	var w := minf(520.0, vp.x - 48.0)
-	var y := HEADER + 30.0
-	items.append({"id": "name", "kind": "field", "label": "NAME",
-		"rect": Rect2(24.0, y, w, 38.0), "value": str(view.get("name", ""))})
-	y += 66.0
-	items.append({"id": "mode:real", "kind": "choice", "label": "REAL FIXTURES",
-		"rect": Rect2(24.0, y, w * 0.48, 40.0), "selected": str(view.get("calendar_mode", "")) == "real"})
-	items.append({"id": "mode:generated", "kind": "choice", "label": "GENERATED",
-		"rect": Rect2(24.0 + w * 0.52, y, w * 0.48, 40.0), "selected": str(view.get("calendar_mode", "")) == "generated"})
-	y += 52.0
-	items.append({"id": "adv:fixture_days", "kind": "choice", "label": "FIXTURE DAYS",
-		"rect": Rect2(24.0, y, w * 0.48, 40.0), "selected": str(view.get("advance_mode", "")) == "fixture_days"})
-	items.append({"id": "adv:every_day", "kind": "choice", "label": "EVERY DAY",
-		"rect": Rect2(24.0 + w * 0.52, y, w * 0.48, 40.0), "selected": str(view.get("advance_mode", "")) == "every_day"})
-	y += 54.0
-	items.append({"id": "create", "kind": "button", "label": "CREATE SEASON",
-		"rect": Rect2(24.0, y, minf(240.0, w), 46.0), "primary": true})
-	items.append({"id": "back", "kind": "button", "label": "BACK",
-		"rect": Rect2(24.0 + minf(240.0, w) + 12.0, y, 110.0, 46.0), "primary": false})
-	return items
-
 func draw_wizard(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
@@ -200,23 +231,6 @@ func draw_wizard(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, vi
 
 # ------------------------------------------------------------------ load ---
 
-func load_layout(vp: Vector2, view: Dictionary) -> Array:
-	var items: Array = []
-	var saves: Array = view.get("saves", [])
-	var w := minf(620.0, vp.x - 48.0)
-	var y := HEADER + 26.0
-	for i in range(mini(saves.size(), 7)):
-		var save: Dictionary = saves[i]
-		var row := Rect2(24.0, y, w, 40.0)
-		items.append({"id": "open:" + str(save["slug"]), "kind": "save_row",
-			"rect": row, "save": save})
-		items.append({"id": "delete:" + str(save["slug"]), "kind": "delete",
-			"rect": Rect2(row.end.x - 96.0, row.position.y + 5.0, 34.0, 30.0), "slug": str(save["slug"])})
-		y += 46.0
-	items.append({"id": "back", "kind": "button", "label": "BACK",
-		"rect": Rect2(24.0, y + 8.0, 110.0, 42.0), "primary": false})
-	return items
-
 func draw_load(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
@@ -243,17 +257,6 @@ func draw_load(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 # --------------------------------------------------------------- helpers ---
 
 ## Bottom action bar: equal-width doors; the first one is the primary.
-func _bar_rects(vp: Vector2, ids: Array, labels: Array) -> Array:
-	var out: Array = []
-	var margin := 24.0
-	var gap := 8.0
-	var w := (vp.x - 2.0 * margin - gap * float(ids.size() - 1)) / float(ids.size())
-	for i in range(ids.size()):
-		out.append({
-			"id": str(ids[i]), "kind": "button", "label": str(labels[i]), "primary": i == 0,
-			"rect": Rect2(margin + float(i) * (w + gap), vp.y - BAR_H + 6.0, w, BAR_H - 14.0),
-		})
-	return out
 
 func _draw_button(c: CanvasItem, rect: Rect2, label: String, bold: Font, primary: bool) -> void:
 	if primary:
@@ -270,3 +273,5 @@ func _heading(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String, capt
 	UiChrome.text(c, Vector2(24.0, 48.0), title.to_upper(), 12, UiChrome.C_GOLD, fonts["bold"])
 	UiChrome.text_r(c, vp.x - 24.0, 30.0, caption, 10, UiChrome.C_DIM, fonts["bold"])
 	c.draw_rect(Rect2(24.0, HEADER - 8.0, vp.x - 48.0, 1.0), Color(1, 1, 1, 0.08))
+
+# gd-tools: no cover end

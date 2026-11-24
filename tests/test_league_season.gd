@@ -167,6 +167,14 @@ func test_a_finished_season_reopens_on_the_podium() -> void:
 	assert_eq(reopened.advance()["complete"], true, "a finished season played on")
 	season = reopened
 
+func test_the_encyclopedia_reads_the_live_table() -> void:
+	var rows := PLRepository.shared().table()
+	assert_eq(rows.size(), 20, "the repository table is short while a save is open")
+	assert_eq(int(rows[0]["position"]), 1, "the live table has no positions")
+	assert_true(rows[0].has("club_name"), "the live table lost its club labels")
+	var mine := season.record.table()
+	assert_eq(str(rows[0]["club_id"]), str(mine[0]["club_id"]), "the repository is not reading the save")
+
 func test_a_lonely_season_object_is_safe() -> void:
 	var lonely := LeagueSeason.new()
 	assert_true(lonely.state().is_empty(), "an unopened season reported state")
