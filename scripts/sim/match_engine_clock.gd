@@ -219,7 +219,8 @@ func to_dict() -> Dictionary:
 		"referee": {"pos": referee.pos, "vel": referee.vel, "whistle": referee.whistle,
 			"focus": referee.focus, "focus_t": referee.focus_t},
 		"ev_seq": ev_seq, "sim_tick": sim_tick, "goal_timer": goal_timer,
-		"last_goal": last_goal.duplicate(true), "rng": rng.state, "dirs": [teams[0]["dir"], teams[1]["dir"]],
+		"last_goal": last_goal.duplicate(true), "goal_sheet": goal_sheet.duplicate(true),
+		"rng": rng.state, "dirs": [teams[0]["dir"], teams[1]["dir"]],
 		"subs": [teams[0]["subs_made"], teams[1]["subs_made"]],
 		"subs_left": [teams[0]["subs_left"], teams[1]["subs_left"]], "finished": finished,
 		"stoppage_events": stoppage_events, "kickoff_team": kickoff_team,
@@ -318,6 +319,9 @@ func from_dict(d: Dictionary) -> void:
 	sim_tick = d["sim_tick"]
 	goal_timer = d["goal_timer"]
 	last_goal = d["last_goal"].duplicate(true)
+	# Snapshots taken before the whistle card existed carry no sheet; the goals
+	# then rest with the event log they were cut from, so an empty sheet is right.
+	goal_sheet = d.get("goal_sheet", []).duplicate(true)
 	rng.state = d["rng"]
 	teams[0]["dir"] = d["dirs"][0]
 	teams[1]["dir"] = d["dirs"][1]
