@@ -11,6 +11,8 @@ extends Control
 signal closed
 signal match_requested(home: String, away: String, fixture_id: String)
 signal season_opened(season: LeagueSeason)
+## A club row was pressed: the host opens that club's team page over the season.
+signal club_requested(club_id: String)
 
 const MODE_HUB := "hub"
 const MODE_WIZARD := "wizard"
@@ -178,7 +180,9 @@ func click(id: String) -> void:
 		return
 	if id.begins_with("match:"):
 		show_report(id.substr(6))
-	elif id.begins_with("club:") or id == "back":
+	elif id.begins_with("club:"):
+		club_requested.emit(id.substr(5))
+	elif id == "back":
 		_back()
 	elif id.begins_with("toggle:"):
 		_toggle(id.substr(7))
