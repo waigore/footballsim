@@ -29,6 +29,18 @@ const MAX := 1.6
 static func scale_for(points: Vector2) -> float:
 	return clampf(BASE * maxf(points.y, REF_H) / REF_H, BASE, MAX)
 
+## The smallest size a non-match caption is painted at, in design units (#126).
+## A caption authored below it lands on a hairline at the base scale — the
+## calendar's `10/10` counter was 7 — so the paint primitives lift anything
+## smaller to this floor instead of trusting every sheet to remember it.
+const MIN_READ := 10
+
+## The size a non-match caption is actually painted at: the caller's size, or
+## the reading floor when it asked for less. Alignment and hit strips measure
+## through the same call, so a lifted caption is placed on the width it draws.
+static func read_size(size: int) -> int:
+	return maxi(size, MIN_READ)
+
 ## The window in density points: engines report pixels, so a Retina window is
 ## halved before it is compared with the reference height.
 static func window_points() -> Vector2:

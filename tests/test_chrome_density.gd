@@ -119,6 +119,42 @@ func test_the_handset_override_still_wins() -> void:
 	assert_almost_eq(game.chrome_scale, maxf(game.hud_scale, ChromeDensity.non_match_scale()), 0.001,
 		"the desktop chrome scale did not come back")
 
+# ------------------------------------------------------- caption floor (#126) ---
+
+func test_the_reading_floor_is_ten_design_units() -> void:
+	# Below ten design units a caption lands on a hairline at the base scale: the
+	# calendar's `10/10` counter was seven and read as a smudge.
+	assert_eq(ChromeDensity.MIN_READ, 10, "the non-match caption floor moved")
+
+func test_a_sub_floor_caption_is_painted_at_the_floor() -> void:
+	for size in [1, 6, 7, 8, 9]:
+		assert_eq(ChromeDensity.read_size(size), ChromeDensity.MIN_READ,
+			"a %d-unit caption would still paint at %d units" % [size, size])
+	for size in [10, 11, 13, 22, 54]:
+		assert_eq(ChromeDensity.read_size(size), size, "a %d-unit caption was shrunk" % size)
+
+func test_every_paint_primitive_lifts_a_sub_floor_caption() -> void:
+	# The lift lives at the shared primitives, not in each sheet, so a new caption
+	# cannot reintroduce a hairline: the league/menu language, the encyclopedia
+	# and the date strips all measure at the size they really paint.
+	var bold: Font = UiChrome.fonts()["bold"]
+	assert_almost_eq(UiChrome.text_width(bold, "10/10", 7), UiChrome.text_width(bold, "10/10", 10),
+		0.01, "UiChrome measured a lifted caption at its hairline size")
+	assert_gt(UiChrome.text_width(bold, "10/10", 13), UiChrome.text_width(bold, "10/10", 10),
+		"a comfortable caption was shrunk to the floor")
+	assert_eq(WikiChrome.text_size(8), ChromeDensity.MIN_READ,
+		"the encyclopedia kept a sub-floor caption")
+
+func test_a_date_strip_still_covers_the_lifted_caption() -> void:
+	# The weekday hover strip is measured from the caption: it must cover the
+	# glyphs the floor actually paints, not the size the sheet asked for.
+	var bold: Font = UiChrome.fonts()["bold"]
+	var strip := DateHints.strip(bold, "SAT", Vector2(10.0, 40.0), 9)
+	assert_gte(strip.size.y, float(ChromeDensity.MIN_READ),
+		"a hover strip is shorter than the caption it explains")
+	assert_almost_eq(strip.size.x, DateHints.width(bold, "SAT", 10), 0.01,
+		"a hover strip is narrower than the caption it explains")
+
 # ------------------------------------------------------------------ input ---
 
 func test_a_menu_door_is_tappable_in_window_space() -> void:

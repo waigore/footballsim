@@ -49,18 +49,25 @@ static func panel(c: CanvasItem, cache: Dictionary, r: Rect2, fill: Color, radiu
 
 static func text(c: CanvasItem, pos: Vector2, s: String, size: int, color: Color = C_TEXT, font: Font = null, outline: int = 0, outline_col: Color = Color(0, 0, 0, 0.5)) -> void:
 	var f: Font = font if font != null else fonts()["med"]
+	var px := ChromeDensity.read_size(size)
 	if outline > 0:
-		c.draw_string_outline(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, outline, outline_col)
-	c.draw_string(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+		c.draw_string_outline(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, outline, outline_col)
+	c.draw_string(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, color)
+
+## The width a caption paints at, measured at the size it is really drawn with:
+## an aligned caption must centre on the glyphs the player sees, not on a
+## hairline size the floor lifted away (#126).
+static func text_width(font: Font, s: String, size: int) -> float:
+	return font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, ChromeDensity.read_size(size)).x
 
 static func text_c(c: CanvasItem, center_x: float, y: float, s: String, size: int, color: Color = C_TEXT, font: Font = null) -> void:
 	var f: Font = font if font != null else fonts()["med"]
-	var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var w: float = text_width(f, s, size)
 	text(c, Vector2(center_x - w * 0.5, y), s, size, color, f)
 
 static func text_r(c: CanvasItem, right_x: float, y: float, s: String, size: int, color: Color = C_TEXT, font: Font = null) -> void:
 	var f: Font = font if font != null else fonts()["med"]
-	var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var w: float = text_width(f, s, size)
 	text(c, Vector2(right_x - w, y), s, size, color, f)
 
 ## "FOOTBALL" in chalk white with "SIM" in broadcast gold; returns the width.

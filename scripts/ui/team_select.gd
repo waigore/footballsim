@@ -158,12 +158,13 @@ func rect(c: Color, r: Rect2, radius: int = 10, bc: Color = C_BORDER) -> void:
 
 func text(pos: Vector2, s: String, size: int, color: Color = C_TEXT, font: Font = null) -> void:
 	var f: Font = font if font != null else f_med
-	draw_string(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+	draw_string(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, ChromeDensity.read_size(size), color)
 
 func text_c(center_x: float, y: float, s: String, size: int, color: Color = C_TEXT, font: Font = null) -> void:
 	var f: Font = font if font != null else f_med
-	var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-	text(Vector2(center_x - w * 0.5, y), s, size, color, f)
+	var px := ChromeDensity.read_size(size)
+	var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	text(Vector2(center_x - w * 0.5, y), s, px, color, f)
 
 func _add_button(id: String, r: Rect2) -> void:
 	buttons.append({"id": id, "rect": r})
@@ -182,7 +183,7 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	text_c(cx, r.position.y + r.size.y * 0.50, str(t["name"]).to_upper(), 17, C_TEXT, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.64, str(t["nickname"]).to_upper(), 11, C_DIM, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.80, "%s  ·  %s" % [str(t["formation"]), str(t["manager"]).to_upper()], 10, C_GOLD, f_med)
-	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 9, C_DIM, f_bold)
+	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 10, C_DIM, f_bold)
 	var label := "HOME" if side == 0 else "AWAY"
 	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
 
@@ -250,16 +251,16 @@ func _draw() -> void:
 		var cap_y: float = r.position.y + (r.size.y * 0.5 + 6.0 if touch else 24.0)
 		text_c(r.position.x + r.size.x * 0.5, cap_y, spec[2], 16, C_GOLD if spec[0] == "confirm" else C_TEXT, f_bold)
 		if not touch:
-			text_c(r.position.x + r.size.x * 0.5, r.position.y + 39, spec[3], 9, C_DIM, f_med)
+			text_c(r.position.x + r.size.x * 0.5, r.position.y + 39, spec[3], 10, C_DIM, f_med)
 		_add_button(spec[0], r)
 
 	if touch:
 		text_c(vp.x * 0.5, vp.y - 44, "TAP THE ARROWS TO CHANGE CLUBS  ·  TAP KICK OFF", 11, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 9, Color(0.96, 0.78, 0.30, 0.55), f_med)
+		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
 	else:
 		text_c(vp.x * 0.5, vp.y - 64, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, C_DIM, f_med)
 		text_c(vp.x * 0.5, vp.y - 44, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   ESC  %s" % ("MENU" if back_to_menu else "BACK"), 10, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 9, Color(0.96, 0.78, 0.30, 0.55), f_med)
+		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
 
 	# A touch build has no Escape key: the sheet needs a visible way out.
 	var back := back_rect(vp)
