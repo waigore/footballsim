@@ -32,6 +32,10 @@ const L := 105.0
 const W := 68.0
 ## Seconds into the clip at which the ball crosses the line.
 const GOAL_AT := 6.2
+## Where the build-up starts, where the finish is struck from, and the net.
+const PASS_FROM := Vector2(56.0, 30.0)
+const PASS_TO := Vector2(78.0, 40.0)
+const NET := Vector2(L - 0.4, W * 0.5 + 2.2)
 
 # ------------------------------------------------------------------ seed ---
 
@@ -72,21 +76,21 @@ static func build(goal: Dictionary, sides: Dictionary, seed: int) -> Dictionary:
 	var club := str(goal.get("club_id", home))
 	var attack := 1.0 if club == home else -1.0
 	var minute := int(goal.get("minute", 1))
-	var home_xi: Array = sides.get("home", [])
-	var away_xi: Array = sides.get("away", [])
 	var keys: Array = []
-	for p in home_xi:
+	for p in sides.get("home", []):
 		keys.append(str(p.get("id", "")))
-	for p in away_xi:
+	for p in sides.get("away", []):
 		keys.append(str(p.get("id", "")))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	var score: Array = goal.get("score_after", [0, 0])
+	# The goal-only half is settled once; the frame loop then just moves bodies.
+	var script := _script(goal, sides, attack)
 	var frames: Array = []
 	var count := int(LENGTH * FPS)
 	for i in range(count + 1):
 		var t := float(i) / float(FPS)
-		frames.append(_frame(float(minute) * 60.0 - PRE_ROLL + t, t, goal, sides, attack, keys, rng))
+		frames.append(_frame(float(minute) * 60.0 - PRE_ROLL + t, t, score, script, rng))
 	return {
 		"codec": CODEC, "version": VERSION, "seed": seed,
 		"fixture_id": str(goal.get("fixture_id", "")), "home": home, "away": away,
@@ -101,84 +105,119 @@ static func build(goal: Dictionary, sides: Dictionary, seed: int) -> Dictionary:
 		"keys": keys, "frames": frames,
 	}
 
-## One frame: clock, score, ball and the flat player list in key order.
-static func _frame(clock: float, t: float, goal: Dictionary, sides: Dictionary,
-		attack: float, keys: Array, rng: RandomNumberGenerator) -> Dictionary:
+## One frame: clock, score, ball and the flat player list in key order. Bodies
+## lerp from the script's attacking-frame slots and mirror at the end; the loop
+## touches only locals, since a pose dictionary per frame cost seconds a season.
+static func _frame(clock: float, t: float, score: Array, script: Dictionary,
+		rng: RandomNumberGenerator) -> Dictionary:
+	var attack := float(script["attack"])
+	var base := script["base"] as PackedVector2Array
+	var share := script["share"] as PackedFloat32Array
+	var attacking := script["attacking"] as PackedByteArray
+	var carrier := int(script["carrier"])
+	var shooter := int(script["shooter"])
+	var keeper := int(script["keeper"])
+	var push := _attack_push(t)
+	var k := smoothstep(0.0, GOAL_AT, t)
+	var late := clampf((t - GOAL_AT) / 2.6, 0.0, 1.0) if t > GOAL_AT else 0.0
+	var dive := smoothstep(4.6, GOAL_AT, t) * 0.9 if t >= 4.6 else 0.0
+	var meet := PASS_FROM + Vector2(2.0, 0.8)
+	var strike := PASS_TO + Vector2(2.2, -1.4)
+	var pile := PASS_TO + Vector2(3.6, 1.8)
+	var flat := PackedFloat32Array()
+	flat.resize(base.size() * 2)
+	for i in range(base.size()):
+		var b := base[i]
+		var pos := b.lerp(b + Vector2(push * share[i], 0.0), k)
+		if i == carrier:
+			pos = pos.lerp(meet, k)
+		elif i == shooter:
+			pos = pos.lerp(strike, k)
+		elif i == keeper:
+			# Beaten central, then a late dive across the line.
+			pos = pos.lerp(Vector2(L - 3.0, W * 0.5 + dive * 1.7), k)
+		if late > 0.0 and i != shooter and attacking[i] == 1:
+			# Everyone piles onto the scorer.
+			pos = pos.lerp(pile, late)
+		var world := _world(pos, attack)
+		flat[i * 2] = snappedf(world.x, 0.01)
+		flat[i * 2 + 1] = snappedf(world.y, 0.01)
+	var ball := _ball_path(t, PASS_FROM, PASS_TO, NET)
+	# The pack is generated, so a hair of seeded wobble keeps two goals that
+	# share a shape from looking like the same animation twice.
+	var wobble := (rng.randf() - 0.5) * 0.06
+	var scored := t >= GOAL_AT
+	return {
+		"t": snappedf(t, 0.01), "c": snappedf(clock, 0.01),
+		"s": [int(score[0]), int(score[1])] if scored else script["before"],
+		"g": 1 if scored else 0,
+		"b": [snappedf(_world_x(ball.x, attack), 0.01), snappedf(ball.y, 0.01),
+			snappedf(ball.z + wobble, 0.01)],
+		"p": flat,
+	}
+
+## The fixed half of a clip: each body's attacking-frame slot, how far it pushes
+## up the pitch, and the clock before the goal landed.
+static func _script(goal: Dictionary, sides: Dictionary, attack: float) -> Dictionary:
+	var home_xi: Array = sides.get("home", [])
+	var away_xi: Array = sides.get("away", [])
+	var scoring_home := str(goal.get("home", "")) == str(goal.get("club_id", ""))
+	var keys: Array = []
+	for p in home_xi:
+		keys.append(str(p.get("id", "")))
+	for p in away_xi:
+		keys.append(str(p.get("id", "")))
+	var base := PackedVector2Array()
+	var share := PackedFloat32Array()
+	var attacking := PackedByteArray()
+	base.resize(keys.size())
+	share.resize(keys.size())
+	attacking.resize(keys.size())
+	# The finishing side: the carrier meets the ball, the scorer strikes it.
+	var attack_xi: Array = home_xi if scoring_home else away_xi
+	var attack_at := 0 if scoring_home else home_xi.size()
+	var carrier := _slot_of(keys, attack_xi, _carrier_index(attack_xi,
+		str(goal.get("assist_id", "")), str(goal.get("player_id", ""))), attack_at)
+	var shooter := _slot_of(keys, attack_xi,
+		_index_of(attack_xi, str(goal.get("player_id", ""))), attack_at)
+	for i in range(attack_xi.size()):
+		var slot := _slot_of(keys, attack_xi, i, attack_at)
+		base[slot] = _slot_point(str(attack_xi[i].get("role", "")), i, attack_xi.size())
+		share[slot] = _push_share(str(attack_xi[i].get("role", "")))
+		attacking[slot] = 1
+	# The defending side drops a little; their keeper dives too late. Their shape
+	# is mirrored inside the attacking frame, so their own goal is the one being
+	# attacked.
+	var defend_xi: Array = away_xi if scoring_home else home_xi
+	var defend_at := home_xi.size() if scoring_home else 0
+	var keeper := -1
+	for i in range(defend_xi.size()):
+		var slot := _slot_of(keys, defend_xi, i, defend_at)
+		var point := _slot_point(str(defend_xi[i].get("role", "")), i, defend_xi.size())
+		base[slot] = Vector2(L - point.x, point.y)
+		share[slot] = _push_share(str(defend_xi[i].get("role", ""))) * 0.4
+		if str(defend_xi[i].get("role", "")) == "GK":
+			keeper = slot
 	var score: Array = goal.get("score_after", [0, 0])
-	var scoring_home := str(goal.get("club_id", "")) == str(goal.get("home", ""))
 	var before := [int(score[0]), int(score[1])]
 	if scoring_home:
 		before[0] = maxi(before[0] - 1, 0)
 	else:
 		before[1] = maxi(before[1] - 1, 0)
-	var scored := t >= GOAL_AT
-	var pose := _pose(t, goal, sides, attack)
-	var flat: Array = []
-	for i in range(keys.size()):
-		var p: Vector2 = pose.get(str(keys[i]), Vector2.ZERO)
-		flat.append(snappedf(p.x, 0.01))
-		flat.append(snappedf(p.y, 0.01))
-	# The pack is generated, so a hair of seeded wobble keeps two goals that
-	# share a shape from looking like the same animation twice.
-	var wobble := (rng.randf() - 0.5) * 0.06
 	return {
-		"t": snappedf(t, 0.01), "c": snappedf(clock, 0.01),
-		"s": [int(score[0]), int(score[1])] if scored else before,
-		"g": 1 if scored else 0,
-		"b": [snappedf(pose["ball_x"], 0.01), snappedf(pose["ball_y"], 0.01),
-			snappedf(pose["z"] + wobble, 0.01)],
-		"p": flat,
+		"base": base, "share": share, "attacking": attacking, "attack": attack,
+		"carrier": carrier, "shooter": shooter, "keeper": keeper, "before": before,
 	}
 
-## Ball and body positions for one instant. `attack` is +1 when the scoring
-## club is the home side; every point is built in the attacking frame and then
-## mirrored into world space, so the away side's clips run right to left.
-static func _pose(t: float, goal: Dictionary, sides: Dictionary, attack: float) -> Dictionary:
-	var home_xi: Array = sides.get("home", [])
-	var away_xi: Array = sides.get("away", [])
-	var club := str(goal.get("club_id", ""))
-	var scoring_home := str(goal.get("home", "")) == club
-	var attack_xi: Array = home_xi if scoring_home else away_xi
-	var defend_xi: Array = away_xi if scoring_home else home_xi
-	var assist_id := str(goal.get("assist_id", ""))
-	var scorer_id := str(goal.get("player_id", ""))
-	var carrier := _carrier_index(attack_xi, assist_id, scorer_id)
-	var shooter := _index_of(attack_xi, scorer_id)
-	var pass_from := Vector2(56.0, 30.0)
-	var pass_to := Vector2(78.0, 40.0)
-	var net := Vector2(L - 0.4, W * 0.5 + 2.2)
-	var ball := _ball_path(t, pass_from, pass_to, net)
-	var push := _attack_push(t)
-	var pose := {"ball_x": _world_x(ball.x, attack), "ball_y": ball.y, "z": ball.z}
-	# The finishing side: the carrier meets the ball, the scorer strikes it.
-	for i in range(attack_xi.size()):
-		var id := str(attack_xi[i].get("id", ""))
-		var role := str(attack_xi[i].get("role", ""))
-		var base := _slot_point(role, i, attack_xi.size())
-		var target := base + Vector2(push * _push_share(role), 0.0)
-		if i == carrier:
-			target = pass_from + Vector2(2.0, 0.8)
-		if i == shooter:
-			target = pass_to + Vector2(2.2, -1.4)
-		var pos := base.lerp(target, smoothstep(0.0, GOAL_AT, t))
-		if t > GOAL_AT and i != shooter:
-			# Everyone piles onto the scorer.
-			pos = pos.lerp(pass_to + Vector2(3.6, 1.8), clampf((t - GOAL_AT) / 2.6, 0.0, 1.0))
-		pose[id] = _world(pos, attack)
-	# The defending side drops with the ball; the keeper dives too late. Their
-	# shape is mirrored inside the attacking frame, so their own goal is the one
-	# being attacked and their keeper stands in it.
-	for i in range(defend_xi.size()):
-		var id := str(defend_xi[i].get("id", ""))
-		var role := str(defend_xi[i].get("role", ""))
-		var slot := _slot_point(role, i, defend_xi.size())
-		var base := Vector2(L - slot.x, slot.y)
-		var target := base + Vector2(push * 0.4 * _push_share(role), 0.0)
-		if role == "GK":
-			target = Vector2(L - 3.0, W * 0.5 + _dive(t) * 1.7)
-		var pos := base.lerp(target, smoothstep(0.0, GOAL_AT, t))
-		pose[id] = _world(pos, attack)
-	return pose
+## A player's position in the clip's key order: home XI first, then away.
+## `offset` is where that XI starts, so a player with no id still lands on his
+## own side instead of a namesake's slot.
+static func _slot_of(keys: Array, xi: Array, index: int, offset: int) -> int:
+	if index < 0 or index >= xi.size():
+		return -1
+	var id := str(xi[index].get("id", ""))
+	var found := keys.find(id) if id != "" else -1
+	return found if found >= 0 else offset + index
 
 ## The ball's scripted journey: carried, laid off, struck, then resting in the
 ## net. `z` gives the height, so the shot rises over the keeper.
@@ -202,12 +241,6 @@ static func _attack_push(t: float) -> float:
 	if t < GOAL_AT:
 		return 6.0 + smoothstep(2.4, GOAL_AT, t) * 12.0
 	return 18.0
-
-## Keepers are beaten by the finish: central, then a late dive.
-static func _dive(t: float) -> float:
-	if t < 4.6:
-		return 0.0
-	return smoothstep(4.6, GOAL_AT, t) * 0.9
 
 ## Home attacks +x, the away side -x, exactly like the engine's direction.
 static func _world_x(x_attacking: float, attack: float) -> float:

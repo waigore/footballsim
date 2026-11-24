@@ -7,7 +7,7 @@ extends GdToolsTest
 var game = null
 
 func before_all() -> void:
-	PLDatabase.cache_dir = "user://cache_test_entry"
+	PLDatabase.cache_dir = TestScratch.dir("cache_test_entry")
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
 	game = Node2D.new()

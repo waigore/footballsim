@@ -5,8 +5,8 @@ extends GdToolsTest
 ## podium. One generated season is shared across the tests so the full 380-fixture
 ## run stays inside the per-test budget.
 
-const SAVE_DIR := "user://saves_test_season_issue58"
-const CACHE_DIR := "user://cache_test_season_issue58"
+var SAVE_DIR := TestScratch.dir("saves_test_season_issue58")
+var CACHE_DIR := TestScratch.dir("cache_test_season_issue58")
 const SEED := 2026
 
 var season: LeagueSeason = null
@@ -318,6 +318,4 @@ func _play_until(rounds: int) -> void:
 
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
-		DirAccess.make_dir_recursive_absolute(folder)
-		for name in DirAccess.get_files_at(folder):
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(folder.path_join(name)))
+		TestScratch.clear(folder)

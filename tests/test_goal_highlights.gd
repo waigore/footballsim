@@ -4,8 +4,8 @@ extends GdToolsTest
 ## path and the codec — driven through a real save so the report and the clip are
 ## always read from the same ledger.
 
-const SAVE_DIR := "user://saves_test_clips_issue89"
-const CACHE_DIR := "user://cache_test_clips_issue89"
+var SAVE_DIR := TestScratch.dir("saves_test_clips_issue89")
+var CACHE_DIR := TestScratch.dir("cache_test_clips_issue89")
 const SEED := 4242
 
 var season: LeagueSeason = null
@@ -32,9 +32,7 @@ func after_all() -> void:
 	PLRepository.shared().invalidate()
 
 func _clean() -> void:
-	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
-	for name in DirAccess.get_files_at(SAVE_DIR):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_DIR.path_join(name)))
+	TestScratch.clear(SAVE_DIR)
 
 func _goal(minute: int = 34, club: String = "MUN", index: int = 1) -> Dictionary:
 	return {

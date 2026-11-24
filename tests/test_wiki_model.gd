@@ -4,7 +4,7 @@ extends GdToolsTest
 ## every cross-link points at a page that exists.
 
 func before_all() -> void:
-	PLDatabase.cache_dir = "user://cache_test_wiki"
+	PLDatabase.cache_dir = TestScratch.dir("cache_test_wiki")
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
 

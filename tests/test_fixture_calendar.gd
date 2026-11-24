@@ -4,7 +4,7 @@ extends GdToolsTest
 ## generated PL-like double round robin that obeys the saved window and the
 ## weekend/midweek policy.
 
-const CACHE_DIR := "user://cache_test_calendar_issue58"
+var CACHE_DIR := TestScratch.dir("cache_test_calendar_issue58")
 
 func before_all() -> void:
 	PLDatabase.cache_dir = CACHE_DIR

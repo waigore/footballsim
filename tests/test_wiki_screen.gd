@@ -6,7 +6,7 @@ extends GdToolsTest
 var wiki: Control = null
 
 func before_all() -> void:
-	PLDatabase.cache_dir = "user://cache_test_screen"
+	PLDatabase.cache_dir = TestScratch.dir("cache_test_screen")
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
 	wiki = Control.new()

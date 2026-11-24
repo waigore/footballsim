@@ -3,7 +3,7 @@ extends GdToolsTest
 ## In-sim stats: a finished match lands in the cached seed once, accumulates on
 ## repeat, and reads back through the same repository the dashboards use.
 
-const CACHE_DIR := "user://cache_test_stats"
+var CACHE_DIR := TestScratch.dir("cache_test_stats")
 
 func before_all() -> void:
 	PLDatabase.cache_dir = CACHE_DIR

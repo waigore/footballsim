@@ -5,7 +5,7 @@ extends GdToolsTest
 ## contract. The scene is the real main.gd, the same way test_touch_flow drives
 ## the phone overlay.
 
-const PREFS := "user://test_menu_nav_issue36.cfg"
+var PREFS := TestScratch.file("test_menu_nav_issue36.cfg")
 
 var game = null
 

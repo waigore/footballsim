@@ -6,7 +6,7 @@ extends GdToolsTest
 ## of S² is ~27% at n = 32, so a literal band would fail a correct engine nearly
 ## always), and the shard/results plumbing that lets CI split the grid.
 
-const RESULTS_DIR := "user://census_test_results"
+var RESULTS_DIR := TestScratch.dir("census_test_results")
 
 func before_each() -> void:
 	_clean_results()
