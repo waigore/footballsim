@@ -2,10 +2,11 @@ extends "res://scripts/sim/match_engine_clock.gd"
 
 class_name MatchEngine
 
-## A deterministic, full-Laws football match engine. The class is split across
-## match_engine_core → presentation → actions → play → rules → clock; this leaf
-## adds dead-ball restarts: the taker reads the picture and holds the restart
-## until his side is roughly set, bounded by his judgement and the clock.
+## A deterministic, full-Laws football match engine. The class is split across a
+## chain of files (core → pitch → presentation → duels → actions → play → rules
+## → clock); this leaf is the dead-ball lane. A restart's judgement (the taker's
+## picture, his reading of it, and how long he holds play up) lives in
+## MatchRestarts; this file places bodies, picks the taker and takes the kick.
 
 func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) -> void:
 	if phase == "goal":
@@ -56,7 +57,7 @@ func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) 
 			d = 3.6
 			stoppage_events += 1
 	restart = {"type": kind, "team": team, "pos": pos, "timer": d, "taker": taker.id if taker != null else -1,
-		"base_delay": d, "wait": 0.0, "patience": _restart_patience(taker, kind, team), "called_wait": false}
+		"base_delay": d, "wait": 0.0, "patience": MatchRestarts.patience(self, taker, kind, team), "called_wait": false}
 	restart_timer = d
 	if taker != null:
 		taker.target = pos + (pos - own_goal_pos(team)).normalized() * 0.9
@@ -75,27 +76,32 @@ func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) 
 					away = Vector2(0, 1)
 				q.pos = pos + away * (min_d + 0.4)
 	elif kind == "penalty":
-		var dir: int = teams[team]["dir"]
-		for q in players:
-			if q.sent_off:
-				continue
-			if q.team != team and q.is_gk:
-				continue
-			if taker != null and q.id == taker.id:
-				continue
-			if q.is_gk:
-				q.pos = Vector2(L - 0.5 if dir == 1 else 0.5, W * 0.5)
-				q.target = q.pos
-				continue
-			var behind_x: float = pos.x - dir * (4.5 + rng.randf_range(0.0, 7.0))
-			var yy = clampf(W * 0.5 + rng.randf_range(-14.0, 14.0), 3.0, W - 3.0)
-			q.pos = Vector2(behind_x, yy)
-			q.target = q.pos
+		_arrange_penalty(team, taker, pos)
 	_vlog("RESTART %s team %s at (%.1f,%.1f)" % [kind, teams[team]["id"], pos.x, pos.y])
 	_emit(kind, _restart_text(kind, team, taker), team, taker)
 	# A dead ball is the manager's legal moment to change a player.
 	if manager != null:
 		manager.on_stoppage(kind, team)
+
+## Before a penalty only the two keepers and the taker stay near the box:
+## everyone else waits outside it, behind the ball.
+func _arrange_penalty(team: int, taker, pos: Vector2) -> void:
+	var dir: int = teams[team]["dir"]
+	for q in players:
+		if q.sent_off:
+			continue
+		if q.team != team and q.is_gk:
+			continue
+		if taker != null and q.id == taker.id:
+			continue
+		if q.is_gk:
+			q.pos = Vector2(L - 0.5 if dir == 1 else 0.5, W * 0.5)
+			q.target = q.pos
+			continue
+		var behind_x: float = pos.x - dir * (4.5 + rng.randf_range(0.0, 7.0))
+		var yy = clampf(W * 0.5 + rng.randf_range(-14.0, 14.0), 3.0, W - 3.0)
+		q.pos = Vector2(behind_x, yy)
+		q.target = q.pos
 
 func _restart_text(kind: String, team: int, taker) -> String:
 	var who: String = taker.name if taker != null else ""
@@ -112,94 +118,6 @@ func _best_penalty_taker(t: int):
 			bs = s
 			best = p
 	return best
-
-## The taker's picture of his side: x = share of nearby outfield team-mates
-## roughly on their slot and no longer sprinting, y = their mean distance from
-## it. Players far from the restart are not part of this picture — nobody holds
-## a throw-in up for a centre-back 50m away.
-func _restart_picture(team: int, taker, pos: Vector2) -> Vector2:
-	var set_count := 0
-	var outfield := 0
-	var err_sum := 0.0
-	for q in players:
-		if q.team != team or q.sent_off or q.is_gk:
-			continue
-		if taker != null and q.id == taker.id:
-			continue
-		if q.pos.distance_to(pos) > 42.0:
-			continue
-		var err: float = q.pos.distance_to(q.target)
-		err_sum += err
-		outfield += 1
-		if err <= RESTART_READY_RADIUS and q.vel.length() <= RESTART_SETTLED_SPEED:
-			set_count += 1
-	if outfield == 0:
-		return Vector2(1.0, 0.0)
-	return Vector2(float(set_count) / float(outfield), err_sum / float(outfield))
-
-## How well this player reads a dead-ball picture (0..1, home composure included).
-func _restart_read(taker) -> float:
-	if taker == null:
-		return 0.5
-	var pas: float = float(taker.attr.get("pas", 60)) / 100.0
-	var ovr: float = float(taker.attr.get("ovr", 60)) / 100.0
-	return clampf((pas * 0.6 + ovr * 0.4) * home_factor(taker), 0.0, 1.0)
-
-## Share of his side the taker wants set before he plays it: a better reader
-## waits for a cleaner picture.
-func _restart_ready_needed(taker) -> float:
-	return 0.45 + _restart_read(taker) * 0.35
-
-## Seconds of extra waiting the taker will tolerate. A good reader and a side
-## protecting a lead will hold play up; a chase or a quick restart won't.
-func _restart_patience(taker, kind: String, team: int) -> float:
-	if taker == null:
-		return 0.0
-	var want: float = 0.8 + _restart_read(taker) * 2.8
-	match kind:
-		"throw_in":
-			want *= 0.35
-		"goal_kick":
-			want *= 0.7
-		"corner":
-			want *= 1.2
-	if clock > 4200.0:
-		var margin: int = score[team] - score[1 - team]
-		if margin < 0:
-			want *= 0.5
-		elif margin > 0:
-			want *= 1.6 + float(style_of(team)["time_wasting"]) * 0.9
-	var limit: float = 2700.0 + added[0] if half == 1 else 5400.0 + added[1]
-	return clampf(minf(want, limit - clock - 1.5), 0.0, 4.5)
-
-func _restart_should_wait(ready: float, taker) -> bool:
-	var kind: String = str(restart.get("type", ""))
-	if kind == "kickoff" or kind == "penalty":
-		return false
-	if taker == null or taker.sent_off:
-		return false
-	if float(restart.get("wait", 0.0)) >= float(restart.get("patience", 0.0)):
-		return false
-	if ready >= _restart_ready_needed(taker):
-		return false
-	# A picture that has stopped improving is as good as it is going to get:
-	# the taker gets on with it rather than burning his whole patience.
-	if float(restart.get("still", 0.0)) >= 1.2:
-		return false
-	return true
-
-## Track how long the picture has gone without improving, so the wait ends when
-## the side has settled even if it never hits the ideal shape.
-func _note_restart_picture(pic: Vector2) -> void:
-	restart["ready"] = pic.x
-	var err: float = pic.y
-	var shrinking: bool = err < float(restart.get("err", 999.0)) - 0.08
-	if pic.x > float(restart.get("best_ready", 0.0)) + 0.01 or shrinking:
-		restart["best_ready"] = maxf(float(restart.get("best_ready", 0.0)), pic.x)
-		restart["still"] = 0.0
-	else:
-		restart["still"] = float(restart.get("still", 0.0)) + RESTART_WAIT_STEP
-	restart["err"] = err
 
 func _update_restart(dt: float) -> void:
 	restart_timer -= dt
@@ -219,14 +137,14 @@ func _update_restart(dt: float) -> void:
 	if restart_timer <= 0.0:
 		var ready := 1.0
 		if taker != null and not taker.sent_off:
-			var pic := _restart_picture(int(restart["team"]), taker, restart["pos"])
+			var pic := MatchRestarts.picture(self, int(restart["team"]), taker, restart["pos"])
 			ready = pic.x
-			_note_restart_picture(pic)
-		if _restart_should_wait(ready, taker):
+			MatchRestarts.note_picture(restart, pic)
+		if MatchRestarts.should_wait(self, restart, ready, taker):
 			# Hold the restart: re-read the picture in short steps so the taker
 			# kicks as soon as his side is set, not on a fixed delay.
-			restart["wait"] = float(restart.get("wait", 0.0)) + RESTART_WAIT_STEP
-			restart_timer = RESTART_WAIT_STEP
+			restart["wait"] = float(restart.get("wait", 0.0)) + MatchRestarts.WAIT_STEP
+			restart_timer = MatchRestarts.WAIT_STEP
 			if not bool(restart.get("called_wait", false)):
 				restart["called_wait"] = true
 				_emit("restart_wait",
@@ -234,7 +152,7 @@ func _update_restart(dt: float) -> void:
 						taker.name if taker != null else "", true), int(restart["team"]), taker)
 			if verbose:
 				_vlog("RESTART WAIT %s ready=%.2f/%.2f waited=%.1f/%.1f" % [restart["type"], ready,
-					_restart_ready_needed(taker), float(restart.get("wait", 0.0)), float(restart.get("patience", 0.0))])
+					MatchRestarts.ready_needed(self, taker), float(restart.get("wait", 0.0)), float(restart.get("patience", 0.0))])
 		else:
 			_execute_restart()
 

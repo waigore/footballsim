@@ -115,9 +115,9 @@ func test_restart_patience_honours_time_wasting() -> void:
 		if p.team == 0 and not p.is_gk:
 			taker = p
 			break
-	var plain: float = eng._restart_patience(taker, "throw_in", 0)
+	var plain: float = MatchRestarts.patience(eng, taker, "throw_in", 0)
 	eng.manager._apply(0, {"time_wasting": 0.9}, "test")
-	var managed: float = eng._restart_patience(taker, "throw_in", 0)
+	var managed: float = MatchRestarts.patience(eng, taker, "throw_in", 0)
 	assert_gt(managed, plain, "time-wasting did not buy the leader more patience")
 
 func test_corner_and_free_kick_routines_execute() -> void:
