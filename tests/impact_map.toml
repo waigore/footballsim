@@ -167,6 +167,10 @@ match = "scripts/sim/match_engine_actions.gd*"
 domain = "finishing"
 
 [[rules]]
+match = "scripts/sim/match_engine_duels.gd*"
+domain = "match_engine"
+
+[[rules]]
 match = "scripts/sim/match_engine_rules.gd*"
 domain = "match_laws"
 
