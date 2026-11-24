@@ -62,6 +62,10 @@ func update_restart(dt: float, restart: Dictionary) -> void:
 func _update_shapes() -> void:
 	var bt: int = e.possession_team
 	var ball = e.ball
+	# One defensive-line read per side for the whole pass: no body moves inside
+	# it, so every back reads the same line. Filled lazily, so an attacking side
+	# pays nothing for it.
+	var dlines := {}
 	for p in e.players:
 		if p.sent_off or p.celebrate > 0.0:
 			continue
@@ -98,7 +102,7 @@ func _update_shapes() -> void:
 		if attacking:
 			target = _attack_shape(p, target)
 		else:
-			target = _defence_shape(p, target)
+			target = _defence_shape(p, target, dlines)
 		p.target = target
 		p.speed_scale = 0.86 if attacking else 0.94
 	_apply_pressing()
@@ -143,7 +147,7 @@ func _attack_shape(p, fallback: Vector2) -> Vector2:
 			target.x = capped if e.teams[p.team]["dir"] == 1 else e.L - capped
 	return target
 
-func _defence_shape(p, fallback: Vector2) -> Vector2:
+func _defence_shape(p, fallback: Vector2, dlines: Dictionary = {}) -> Vector2:
 	var own: Vector2 = e.own_goal_pos(p.team)
 	var ball = e.ball
 	var dist_to_own: float = ball.pos.distance_to(own)
@@ -197,7 +201,9 @@ func _defence_shape(p, fallback: Vector2) -> Vector2:
 	if dist_to_own < 26.0 and target.distance_to(own) > dist_to_own + 3.5:
 		target = own + (target - own).normalized() * (dist_to_own + 3.5)
 	if is_back:
-		var defensive_line: Vector2 = pq.defensive_line(p.team)
+		if not dlines.has(p.team):
+			dlines[p.team] = pq.defensive_line(p.team)
+		var defensive_line: Vector2 = dlines[p.team]
 		var ax2: float = e.attacking_x(p.team, target)
 		var line_ax: float = e.attacking_x(p.team, defensive_line)
 		ax2 = clampf(ax2, line_ax - 11.0, line_ax + 1.5)
@@ -206,6 +212,10 @@ func _defence_shape(p, fallback: Vector2) -> Vector2:
 
 func _apply_pressing() -> void:
 	var bt: int = e.possession_team
+	# Every "who gets to the ball first" question in this pass is a question
+	# about one path: the ball does not move inside a shape pass, so the walk is
+	# built once and every body reads it.
+	var path: Dictionary = pq.ball_trajectory()
 	# Each team sends its quickest player to the ball, with a second player covering.
 	for t in range(2):
 		if t == bt and e.ball.owner_id >= 0:
@@ -217,7 +227,7 @@ func _apply_pressing() -> void:
 		for p in e.players:
 			if p.team != t or p.sent_off or p.is_gk:
 				continue
-			var rt: float = pq.ball_reach_time(p)
+			var rt: float = pq.reach_time_on(p, path)
 			if rt < best_t:
 				second_t = best_t
 				second = presser
@@ -239,7 +249,7 @@ func _apply_pressing() -> void:
 				target = owner.pos + owner.vel * 0.20
 				target += (e.own_goal_pos(t) - owner.pos).normalized() * 0.5
 			else:
-				target = pq.intercept_point(presser)
+				target = pq.intercept_on(presser, path)
 			target.x = clampf(target.x, 0.5, e.L - 0.5)
 			target.y = clampf(target.y, 0.5, e.W - 0.5)
 			presser.target = target
@@ -262,7 +272,7 @@ func _apply_pressing() -> void:
 			for p in e.players:
 				if p.team != t or p.sent_off or p.is_gk or p == presser or p == second:
 					continue
-				var rt: float = pq.ball_reach_time(p)
+				var rt: float = pq.reach_time_on(p, path)
 				if rt < third_t:
 					third_t = rt
 					third = p
