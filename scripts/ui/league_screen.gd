@@ -211,6 +211,7 @@ func _draw() -> void:
 	hints.clear()
 	Callable(sheet, str(pose[3])).call(self, vp, fonts, current_view(), hints)
 	if body != null:
+		# Pinned doors keep the sheet's paint grammar (it owns the style cache).
 		for item in body.pinned:
 			var rect: Rect2 = item["rect"]
 			if str(item["kind"]) == "button":

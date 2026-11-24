@@ -346,28 +346,23 @@ func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 
 # --------------------------------------------------------------- helpers ---
 
-## Bottom action bar: equal-width doors; the first one is the primary.
-
-func draw_button(c: CanvasItem, rect: Rect2, label: String, bold: Font, primary: bool) -> void:
-	if primary:
-		UiChrome.panel(c, cache, rect, UiChrome.C_GOLD, 7, Color(0.96, 0.78, 0.30, 0.85), 1)
-		UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 6.0, label, 15,
-			Color(0.06, 0.06, 0.05), bold)
-	else:
-		UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 7)
-		UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0, label, 12,
-			UiChrome.C_TEXT, bold)
+## Bottom action bar: equal-width doors; the first one is the primary. The
+## grammar itself is `UiChrome.button`, shared with the menu, the System dialog,
+## the fixture picker and the encyclopedia.
+func draw_button(c: CanvasItem, rect: Rect2, label: String, bold: Font,
+		primary: bool) -> void:
+	UiChrome.button(c, cache, rect, label, bold, primary)
 
 ## The ▶ beside a goal on a match report: a bordered gold chip, sized by the
 ## caller so the door stays thumb-sized on every platform.
 static func draw_play(c: CanvasItem, cache: Dictionary, rect: Rect2, bold: Font) -> void:
 	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, Color(0.96, 0.78, 0.30, 0.55), 1)
-	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 18.0, "▶ PLAY", 10, UiChrome.C_GOLD, bold)
+	var mid: float = rect.position.y + rect.size.y * 0.5 + UiChrome.RISE
+	UiChrome.text_c(c, rect.get_center().x, mid, "▶ PLAY", 10, UiChrome.C_GOLD, bold)
 
-## Month doors and other small fixed chips on a sheet header.
+## Small fixed chips on a sheet header (the calendar's month doors).
 func draw_chip(c: CanvasItem, rect: Rect2, label: String, bold: Font) -> void:
-	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 5)
-	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 17.0, label, 13, UiChrome.C_TEXT, bold)
+	UiChrome.chip(c, cache, rect, label, bold)
 
 func _heading(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String, caption: String) -> void:
 	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, fonts["bold"])

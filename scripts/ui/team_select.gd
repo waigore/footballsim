@@ -243,15 +243,25 @@ func _draw() -> void:
 	var by: float = minf(card_y + card_h + 54.0, vp.y - bh - 78.0)
 	var confirm_rect := Rect2(vp.x * 0.5 - bw - 8.0, by, bw, bh)
 	var random_rect := Rect2(vp.x * 0.5 + 8.0, by, bw, bh)
-	for spec in [["confirm", confirm_rect, "KICK OFF", "ENTER"], ["random", random_rect, "RANDOM", "TAB"]]:
+	# Doors take the shared grammar's radius so KICK OFF reads like every other
+	# primary; its ENTER hint is a keyboard-only affordance under the caption.
+	for spec in [["confirm", confirm_rect, "KICK OFF", "ENTER"],
+			["random", random_rect, "RANDOM", "TAB"]]:
 		var r: Rect2 = spec[1]
 		var hovered := r.has_point(mouse)
-		var bg: Color = Color(0.16, 0.13, 0.05, 0.98) if spec[0] == "confirm" else (C_PANEL_LIGHT if hovered else C_PANEL)
-		rect(bg, r, 10, Color(0.96, 0.78, 0.30, 0.55) if spec[0] == "confirm" else Color(1, 1, 1, 0.10 if hovered else 0.06))
-		var cap_y: float = r.position.y + (r.size.y * 0.5 + 6.0 if touch else 24.0)
-		text_c(r.position.x + r.size.x * 0.5, cap_y, spec[2], 16, C_GOLD if spec[0] == "confirm" else C_TEXT, f_bold)
-		if not touch:
-			text_c(r.position.x + r.size.x * 0.5, r.position.y + 39, spec[3], 10, C_DIM, f_med)
+		if spec[0] == "confirm":
+			UiChrome.button(self, style_cache, r, str(spec[2]), f_bold, true, 16,
+				"" if touch else str(spec[3]))
+		else:
+			# RANDOM stays the picker's quiet door: it keeps its hover fill.
+			rect(C_PANEL_LIGHT if hovered else C_PANEL, r, 10,
+				Color(1, 1, 1, 0.10 if hovered else 0.06))
+			var middle: float = r.position.y + r.size.y * 0.5
+			var cap_y: float = middle + (UiChrome.RISE if touch else -UiChrome.RISE)
+			text_c(r.get_center().x, cap_y, str(spec[2]), 16, C_TEXT, f_bold)
+			if not touch:
+				text_c(r.get_center().x, middle + UiChrome.HINT_DROP, str(spec[3]), 10,
+					C_DIM, f_med)
 		_add_button(spec[0], r)
 
 	if touch:
