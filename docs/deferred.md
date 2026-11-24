@@ -19,7 +19,7 @@ Former gaps now shipped (wiki domains playable; DRs accepted):
 | Per-goal report playback packs | DR-20261124-04 |
 | Non-match type / viewport scale | DR-20261124-03 |
 | Live `tempo` on the tactics board | unused in DR-20261122-02; drives play now |
-| Woodwork, interceptions, momentum, stored rating | DR-20261125-01; the frame is real geometry, the three readings are written |
+| Woodwork, interceptions, momentum, stored rating | DR-20261125-01; momentum reads on the broadcast stats card (DR-20261125-02) |
 
 ## Remaining gaps (impact order)
 

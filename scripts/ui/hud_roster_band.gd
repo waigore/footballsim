@@ -100,8 +100,8 @@ func momentum(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> 
 	var mid: float = track.position.x + track.size.x * 0.5
 	var half: float = track.size.x * 0.5 - 1.0
 	c.draw_rect(track, Color(1, 1, 1, 0.07))
-	var c0: Color = engine.teams[0]["data"]["color"].lightened(0.10)
-	var c1: Color = engine.teams[1]["data"]["color"].lightened(0.10)
+	var c0: Color = engine.teams[0]["data"]["color"].lightened(0.25)
+	var c1: Color = engine.teams[1]["data"]["color"].lightened(0.25)
 	var w0: float = half * clampf(lvl.x, 0.0, 1.0)
 	var w1: float = half * clampf(lvl.y, 0.0, 1.0)
 	c.draw_rect(Rect2(mid - w0, track.position.y, w0, track.size.y), c0)
@@ -116,7 +116,9 @@ func momentum(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> 
 	var font: Font = f_med
 	if lead >= 0 and phrase != "":
 		label = "%s  %s" % [engine.teams[lead]["data"]["abbr"], phrase]
-		col = c0 if lead == 0 else c1
+		# Lightened like the header's club codes: a 9-unit label in a dark club
+		# colour would be a hairline on the panel.
+		col = engine.teams[lead]["data"]["color"].lightened(0.35)
 		font = f_bold
 	p.text_r(c, box.end.x - 14, label_y, label, 9, col, font)
 
