@@ -18,8 +18,7 @@ const SIX_W := 18.32
 const PEN_D := 11.0
 const CENTER := Vector2(52.5, 34.0)
 const DT := 1.0 / 60.0
-## Ceiling on `run_to_full_time`: 200 match minutes of ticks, more than any
-## match with added time can need, so a stuck phase can never spin forever.
+## `run_to_full_time` ceiling: 200 match minutes so a stuck phase cannot spin forever.
 const FAST_FORWARD_TICKS := 60 * 60 * 200
 
 ## Dead-ball judgement. The taker only kicks once most of his side is roughly on
@@ -390,8 +389,7 @@ func _gk_of(t: int):
 			return p
 	return null
 
-## Name of the player whose effort has just been stopped, unless the ball was
-## last kicked by the stopping side (deflections, blocks, keeper clearances).
+## Shooter name unless the ball was last kicked by the stopping side.
 func _last_kicker_name(not_team: int) -> String:
 	var k = by_id.get(ball.last_kick_id, null)
 	if k == null or k.team == not_team:
