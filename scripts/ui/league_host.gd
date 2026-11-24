@@ -155,13 +155,21 @@ func _on_recorded(_report: Dictionary) -> void:
 
 # ----------------------------------------------------------------- input ---
 
+## The sheet does its own hit testing; this converts pointers to design space
+## and forwards. Wheel notches, trackpad pans, a held drag and the keys all move
+## the season body; a press that never travels commits as a click on release.
 func handle_input(event: InputEvent, design_point: Vector2) -> bool:
 	if not is_open():
 		return false
 	if event is InputEventMouseMotion:
 		_pointer_motion(design_point)
 	elif event is InputEventPanGesture:
-		return false
+		# macOS reports a two-finger scroll as a pan, never as wheel buttons.
+		screen.scroll_by(event.delta.y * PAN_STEP)
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
+		screen.scroll_by(-110.0)
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		screen.scroll_by(110.0)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_pointer_down(design_point)
 	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -179,6 +187,8 @@ func _pointer_down(p: Vector2) -> void:
 	last_at = p
 	screen.mouse = p
 
+## Hover is free; holding the button turns the pointer into a scroll drag, and
+## the travel since the last frame is charged to the body in one step.
 func _pointer_motion(p: Vector2) -> void:
 	screen.mouse = p
 	if not pressing:
@@ -190,6 +200,7 @@ func _pointer_motion(p: Vector2) -> void:
 		if p.distance_to(press_at) < DRAG_SLOP:
 			return
 		dragged = true
+	screen.scroll_by(last_at.y - p.y)
 	last_at = p
 
 func _pointer_up() -> void:

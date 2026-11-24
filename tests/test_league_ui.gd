@@ -430,6 +430,115 @@ func test_deleting_the_active_save_returns_to_the_list() -> void:
 	press_id("back")
 	assert_true(game.menus.active(), "Back from the load list did not reach the menu")
 
+# ---------------------------------------------------------------- scroll ---
+
+func test_a_phone_table_scrolls_by_drag_wheel_pan_and_keys() -> void:
+	_open_scroll_hub()
+	var saved: float = screen().ui_scale
+	_phone_scale()
+	press_id("table")
+	assert_true(screen().body.clip_contents, "the season body does not clip its content")
+	assert_gt(screen().body.max_scroll(), 0.0, "the table should overflow a phone viewport")
+	_drag(Vector2(400.0, 300.0), Vector2(400.0, 180.0))
+	assert_gt(screen().body.scroll, 0.0, "a finger drag did not scroll the table")
+	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "the drag clicked through a row")
+	screen().body.scroll_to(0.0)
+	var host = game.menus.league
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	wheel.pressed = true
+	host.handle_input(wheel, Vector2(400.0, 200.0))
+	assert_gt(screen().body.scroll, 0.0, "a wheel notch did not scroll the table")
+	screen().body.scroll_to(0.0)
+	var pan := InputEventPanGesture.new()
+	pan.delta = Vector2(0.0, 2.0)
+	host.handle_input(pan, Vector2.ZERO)
+	assert_gt(screen().body.scroll, 0.0, "a trackpad pan did not scroll the table")
+	assert_true(screen().key(KEY_END), "END was ignored")
+	assert_almost_eq(screen().body.scroll, screen().body.max_scroll(), 0.5, "END did not reach the last row")
+	assert_true(screen().key(KEY_HOME), "HOME was ignored")
+	assert_eq(screen().body.scroll, 0.0, "HOME did not return to the top")
+	assert_true(screen().key(KEY_PAGEDOWN), "PAGE DOWN was ignored")
+	assert_gt(screen().body.scroll, 0.0, "PAGE DOWN did not scroll")
+	press_id("back")
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "BACK left the table")
+	assert_eq(screen().body.scroll, 0.0, "a new pose should start at the top")
+	screen().ui_scale = saved
+	screen().refresh()
+
+func test_a_row_scrolled_into_view_is_the_one_that_opens() -> void:
+	_open_scroll_hub()
+	var saved: float = screen().ui_scale
+	_phone_scale()
+	press_id("table")
+	var last_id := ""
+	var last_bottom := 0.0
+	for item in screen().buttons:
+		if str(item["id"]).begins_with("club:"):
+			last_id = str(item["id"])
+			last_bottom = (item["rect"] as Rect2).end.y
+	assert_true(last_id != "", "the table laid out no clubs")
+	assert_gt(last_bottom, screen().body.position.y + screen().body.size.y,
+		"the last club should start below the fold")
+	screen().body.scroll_to(screen().body.max_scroll())
+	var target: Dictionary = {}
+	for item in screen().buttons:
+		if str(item["id"]) == last_id:
+			target = item
+	assert_false(target.is_empty(), "the last club vanished after the scroll")
+	if target.is_empty():
+		screen().ui_scale = saved
+		return
+	assert_lte((target["rect"] as Rect2).end.y,
+		screen().body.position.y + screen().body.size.y + 0.5, "the last club is still under the footer")
+	press((target["rect"] as Rect2).get_center())
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "the scrolled club row did not open")
+	screen().ui_scale = saved
+	screen().refresh()
+
+func test_the_body_clamps_its_scroll_to_the_content() -> void:
+	var body := LeagueBody.new()
+	body.size = Vector2(400.0, 200.0)
+	body.content_height = 500.0
+	body.scroll_by(-100.0)
+	assert_eq(body.scroll, 0.0, "the body scrolled above its first row")
+	body.scroll_by(10000.0)
+	assert_almost_eq(body.scroll, 300.0, 0.5, "the body did not stop at its last row")
+	body.free()
+
+## The scroll tests create their own season: earlier cases are free to delete
+## every save in the list.
+func _open_scroll_hub() -> void:
+	game.menus.open_menu()
+	press(door("new_league").get_center())
+	press_id("create")
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "could not open a season to scroll")
+
+func _phone_scale() -> void:
+	# Shrink the design space the way the handheld overlay scale does (main.gd):
+	# a phone's short edge becomes the design height, whatever the window is.
+	var height: float = screen().size.y
+	screen().ui_scale = maxf(height / 411.0, 1.0)
+	screen().refresh()
+	assert_almost_eq(screen().design_vp().y, minf(height, 411.0), 1.0, "the design space did not shrink")
+
+func _drag(from: Vector2, to: Vector2, steps: int = 4) -> void:
+	var host = game.menus.league
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	host.handle_input(down, from)
+	var p := from
+	for i in range(1, steps + 1):
+		p = from.lerp(to, float(i) / float(steps))
+		var motion := InputEventMouseMotion.new()
+		motion.position = p
+		host.handle_input(motion, p)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	host.handle_input(up, p)
+
 func _open_hub() -> void:
 	game.menus.open_menu()
 	press(door("load_league").get_center())

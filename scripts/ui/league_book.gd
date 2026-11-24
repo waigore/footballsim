@@ -4,9 +4,14 @@ extends RefCounted
 ## The reading surfaces of a season: the full table with its bands, the month
 ## calendar and a day's fixtures, match reports and roundups, and the final
 ## podium. Geometry and paint only — the screen owns the state.
+##
+## Rows keep a readable height and are allowed to run past the bottom of the
+## viewport: LeagueBody clips them and scrolls. Only the bottom doors and the
+## month chips are pinned in place.
 
 const HEADER := 58.0
 const BAR_H := 52.0
+const ROW_H := 22.0
 const MONTHS := ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
 	"AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"]
 
@@ -18,14 +23,13 @@ func table_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 	var rows: Array = view.get("table", [])
 	var top := HEADER + 22.0
-	var row_h := minf(20.0, (vp.y - top - BAR_H - 28.0) / 20.0)
 	for i in range(rows.size()):
 		var band := LeagueRules.zone(int(rows[i]["position"]), view.get("rules", {}))
 		items.append({
 			"id": "club:" + str(rows[i]["club_id"]), "kind": "table_row", "row": rows[i],
-			"zone": band, "rect": Rect2(24.0, top + float(i) * row_h, vp.x - 48.0, row_h - 1.0),
+			"zone": band, "rect": Rect2(24.0, top + float(i) * ROW_H, vp.x - 48.0, ROW_H - 1.0),
 		})
-	items.append({"id": "back", "kind": "button", "label": "BACK",
+	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
 		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
 	return items
 
@@ -53,11 +57,11 @@ func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": "match:" + str(fx["id"]), "kind": "fixture",
 			"fixture": fx, "rect": Rect2(24.0, y, vp.x - 48.0, 22.0)})
 		y += 23.0
-	items.append({"id": "month:-1", "kind": "chip", "label": "<",
+	items.append({"id": "month:-1", "kind": "chip", "label": "<", "pinned": true,
 		"rect": Rect2(vp.x - 24.0 - 132.0, HEADER + 8.0, 28.0, 24.0)})
-	items.append({"id": "month:1", "kind": "chip", "label": ">",
+	items.append({"id": "month:1", "kind": "chip", "label": ">", "pinned": true,
 		"rect": Rect2(vp.x - 24.0 - 28.0, HEADER + 8.0, 28.0, 24.0)})
-	items.append({"id": "back", "kind": "button", "label": "BACK",
+	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
 		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
 	return items
 
@@ -65,24 +69,40 @@ func report_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 	var y := HEADER + 70.0
 	for e in view.get("events", []):
-		items.append({"id": "event", "kind": "event", "event": e,
+		items.append({"id": "", "kind": "event", "event": e,
 			"rect": Rect2(24.0, y, vp.x - 48.0, 20.0)})
 		y += 21.0
 	for report in view.get("roundup", []):
 		items.append({"id": "match:" + str(report["fixture"]["id"]), "kind": "result",
 			"report": report, "rect": Rect2(24.0, y, vp.x - 48.0, 44.0)})
 		y += 50.0
-	items.append({"id": "back", "kind": "button", "label": "BACK",
+	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
 		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
 	return items
 
 func podium_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
-	items.append({"id": "table", "kind": "button", "label": "TABLE", "primary": false,
+	## The summary is painted text rather than rows, so a bare extent row carries
+	## its height into the scroll window.
+	items.append({"id": "", "kind": "extent",
+		"rect": Rect2(24.0, HEADER, vp.x - 48.0, frame_height(view))})
+	items.append({"id": "table", "kind": "button", "label": "TABLE", "primary": false, "pinned": true,
 		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 130.0, BAR_H - 14.0)})
-	items.append({"id": "menu", "kind": "button", "label": "MAIN MENU", "primary": true,
+	items.append({"id": "menu", "kind": "button", "label": "MAIN MENU", "primary": true, "pinned": true,
 		"rect": Rect2(24.0 + 142.0, vp.y - BAR_H + 6.0, 170.0, BAR_H - 14.0)})
 	return items
+
+## How tall the podium summary paints below the header, so the body can size to
+## text that is not made of rows.
+func frame_height(view: Dictionary) -> float:
+	var summary: Dictionary = view.get("summary", {})
+	if summary.is_empty():
+		return 0.0
+	var h := 18.0 + 44.0 + 24.0 + 16.0
+	h += 16.0 * float(mini((summary["europe"] as Array).size(), 6))
+	h += 6.0 + 16.0
+	h += 16.0 * float((summary["relegated"] as Array).size())
+	return h + 8.0
 
 ## "2026-08" -> [year, month]; a missing month falls back to today.
 
@@ -109,6 +129,14 @@ static func month_days(month: String) -> int:
 	var bits := parse_month(month)
 	return _days_in_month(int(bits[0]), int(bits[1]))
 
+## The season clock's month, or the month the screen last showed when there is
+## no season loaded.
+static func state_month(season, fallback: String) -> String:
+	if season == null:
+		return fallback
+	var date := str(season.state().get("date", ""))
+	return date.substr(0, 7) if date.length() >= 7 else fallback
+
 static func _days_in_month(year: int, month: int) -> int:
 	var next := month_key(year, month + 1)
 	var stamp := Time.get_unix_time_from_datetime_string(next + "-01T00:00:00") - 86400
@@ -120,13 +148,22 @@ static func _first_weekday(month: String) -> int:
 
 # gd-tools: no cover start
 
-func draw_table(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+func draw_table_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
 	UiChrome.text(c, Vector2(24.0, 48.0), "LEAGUE TABLE", 12, UiChrome.C_GOLD, bold)
 	UiChrome.text_r(c, vp.x - 24.0, 30.0,
 		"%s · %s" % [str(view.get("name", "")), str(view.get("date", ""))], 10, UiChrome.C_DIM, bold)
+	var y := vp.y - BAR_H + 24.0
+	UiChrome.text(c, Vector2(160.0, y), "UCL", 9, LeagueSheet.zone_color("ucl"), bold)
+	UiChrome.text(c, Vector2(202.0, y), "UEL", 9, LeagueSheet.zone_color("uel"), bold)
+	UiChrome.text(c, Vector2(244.0, y), "UECL", 9, LeagueSheet.zone_color("uecl"), bold)
+	UiChrome.text(c, Vector2(292.0, y), "RELEGATION", 9, LeagueSheet.zone_color("relegation"), bold)
+	UiChrome.text_r(c, vp.x - 24.0, y, "COLOURED BAND = PLACE FROM SAVED RULES", 8, UiChrome.C_DIM, med)
+
+func draw_table_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+	var bold: Font = fonts["bold"]
 	var top := HEADER + 8.0
 	UiChrome.text(c, Vector2(33.0, top), "#", 9, UiChrome.C_DIM, bold)
 	UiChrome.text(c, Vector2(56.0, top), "CLUB", 9, UiChrome.C_DIM, bold)
@@ -134,19 +171,8 @@ func draw_table(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, vie
 	UiChrome.text(c, Vector2(188.0, top), "GD", 9, UiChrome.C_DIM, bold)
 	UiChrome.text_r(c, vp.x - 32.0, top, "PTS", 9, UiChrome.C_DIM, bold)
 	for item in items:
-		var rect: Rect2 = item["rect"]
 		if str(item["kind"]) == "table_row":
-			_draw_row(c, rect, item, fonts)
-		elif str(item["kind"]) == "button":
-			UiChrome.panel(c, cache, rect, UiChrome.C_GOLD, 7)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0,
-				str(item["label"]), 13, Color(0.06, 0.06, 0.05), bold)
-	var y := vp.y - BAR_H - 20.0
-	UiChrome.text(c, Vector2(24.0, y), "UCL", 9, LeagueSheet.zone_color("ucl"), bold)
-	UiChrome.text(c, Vector2(66.0, y), "UEL", 9, LeagueSheet.zone_color("uel"), bold)
-	UiChrome.text(c, Vector2(108.0, y), "UECL", 9, LeagueSheet.zone_color("uecl"), bold)
-	UiChrome.text(c, Vector2(156.0, y), "RELEGATION", 9, LeagueSheet.zone_color("relegation"), bold)
-	UiChrome.text_r(c, vp.x - 24.0, y, "COLOURED BAND = PLACE FROM SAVED RULES", 8, UiChrome.C_DIM, med)
+			_draw_row(c, item["rect"], item, fonts)
 
 func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
 	var row: Dictionary = item["row"]
@@ -164,11 +190,14 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) 
 
 # -------------------------------------------------------------- calendar ---
 
-func draw_calendar(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+func draw_calendar_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, _view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
-	var med: Font = fonts["med"]
 	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
 	UiChrome.text(c, Vector2(24.0, 48.0), "CALENDAR", 12, UiChrome.C_GOLD, bold)
+
+func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+	var bold: Font = fonts["bold"]
+	var med: Font = fonts["med"]
 	UiChrome.text_r(c, vp.x - 160.0, HEADER + 25.0, month_label(str(view.get("month", ""))), 13, UiChrome.C_TEXT, bold)
 	var labels := ["S", "M", "T", "W", "T", "F", "S"]
 	for i in range(7):
@@ -178,19 +207,7 @@ func draw_calendar(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, 
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
 		if kind == "cell":
-			var info: Dictionary = item["info"]
-			var has := int(info.get("n", 0)) > 0
-			var fill: Color = UiChrome.C_PANEL_LIGHT if has else UiChrome.C_PANEL
-			if bool(item["selected"]):
-				fill = UiChrome.C_GOLD.darkened(0.25)
-			UiChrome.panel(c, cache, rect, fill, 4, UiChrome.C_BORDER, 1)
-			UiChrome.text(c, Vector2(rect.position.x + 4.0, rect.position.y + 12.0), "%d" % int(item["day"]), 9,
-				UiChrome.C_TEXT if has else UiChrome.C_DIM, med)
-			if has:
-				var done := int(info.get("played", 0))
-				var total := int(info.get("n", 0))
-				UiChrome.text_r(c, rect.end.x - 3.0, rect.end.y - 4.0, "%d/%d" % [done, total], 7,
-					UiChrome.C_LIVE if done == total else UiChrome.C_GOLD, bold)
+			_draw_cell(c, rect, item, fonts)
 		elif kind == "fixture":
 			var fx: Dictionary = item["fixture"]
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 4)
@@ -201,24 +218,35 @@ func draw_calendar(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, 
 			UiChrome.text_r(c, rect.end.x - 8.0, rect.position.y + 15.0,
 				score if str(fx["status"]) == "played" else "OPEN", 10,
 				UiChrome.C_TEXT if str(fx["status"]) == "played" else UiChrome.C_GOLD, bold)
-		elif kind == "chip":
-			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 5)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 17.0, str(item["label"]), 13, UiChrome.C_TEXT, bold)
-		elif kind == "button":
-			UiChrome.panel(c, cache, rect, UiChrome.C_GOLD, 7)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0,
-				str(item["label"]), 13, Color(0.06, 0.06, 0.05), bold)
+
+func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
+	var info: Dictionary = item["info"]
+	var has := int(info.get("n", 0)) > 0
+	var fill: Color = UiChrome.C_PANEL_LIGHT if has else UiChrome.C_PANEL
+	if bool(item["selected"]):
+		fill = UiChrome.C_GOLD.darkened(0.25)
+	UiChrome.panel(c, cache, rect, fill, 4, UiChrome.C_BORDER, 1)
+	UiChrome.text(c, Vector2(rect.position.x + 4.0, rect.position.y + 12.0), "%d" % int(item["day"]), 9,
+		UiChrome.C_TEXT if has else UiChrome.C_DIM, fonts["med"])
+	if has:
+		var done := int(info.get("played", 0))
+		var total := int(info.get("n", 0))
+		UiChrome.text_r(c, rect.end.x - 3.0, rect.end.y - 4.0, "%d/%d" % [done, total], 7,
+			UiChrome.C_LIVE if done == total else UiChrome.C_GOLD, fonts["bold"])
 
 # ---------------------------------------------------------------- report ---
 
-func draw_report(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+func draw_report_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
-	var med: Font = fonts["med"]
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
 	var roundup: Array = view.get("roundup", [])
 	var kicker: String = "RESULTS · %s" % str(view.get("day", "")) if not roundup.is_empty() else "MATCH REPORT"
+	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
 	UiChrome.text(c, Vector2(24.0, 48.0), kicker, 12, UiChrome.C_GOLD, bold)
-	if roundup.is_empty():
+
+func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+	var bold: Font = fonts["bold"]
+	var med: Font = fonts["med"]
+	if (view.get("roundup", []) as Array).is_empty():
 		var fx: Dictionary = view.get("fixture", {})
 		UiChrome.text(c, Vector2(24.0, HEADER + 34.0),
 			"%s  %d – %d  %s" % [str(fx.get("home_name", "")), int(fx.get("home_goals", 0)),
@@ -238,12 +266,12 @@ func draw_report(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, vi
 			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 18.0),
 				"%s %d – %d %s" % [str(fx["home_abbr"]), int(fx["home_goals"]), int(fx["away_goals"]),
 					str(fx["away_abbr"])], 15, UiChrome.C_TEXT, bold)
+			var names: Array = []
+			for e in report["events"]:
+				if str(e.get("kind", "")) == "goal":
+					names.append("%s %d'" % [str(e.get("player_name", "")), int(e.get("minute", 0))])
 			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 34.0),
-				_scorer_line(report["events"]), 9, UiChrome.C_DIM, med)
-		elif kind == "button":
-			UiChrome.panel(c, cache, rect, UiChrome.C_GOLD, 7)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0,
-				str(item["label"]), 13, Color(0.06, 0.06, 0.05), bold)
+				", ".join(names) if not names.is_empty() else "no goals", 9, UiChrome.C_DIM, med)
 
 func _draw_event(c: CanvasItem, rect: Rect2, e: Dictionary, fonts: Dictionary) -> void:
 	var kind := str(e.get("kind", ""))
@@ -262,21 +290,17 @@ func _draw_event(c: CanvasItem, rect: Rect2, e: Dictionary, fonts: Dictionary) -
 	UiChrome.text(c, Vector2(rect.position.x + 34.0, rect.position.y + 14.0), name, 11, colour, fonts["bold"])
 	UiChrome.text(c, Vector2(rect.position.x + 210.0, rect.position.y + 14.0), kind.to_upper(), 8, colour, fonts["med"])
 
-func _scorer_line(events: Array) -> String:
-	var names: Array = []
-	for e in events:
-		if str(e.get("kind", "")) == "goal":
-			names.append("%s %d'" % [str(e.get("player_name", "")), int(e.get("minute", 0))])
-	return ", ".join(names) if not names.is_empty() else "no goals"
-
 # ---------------------------------------------------------------- podium ---
 
-func draw_podium(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+func draw_podium_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
+	var bold: Font = fonts["bold"]
+	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
+	UiChrome.text(c, Vector2(24.0, 48.0), "SEASON COMPLETE · %s" % str(view.get("name", "")), 12, UiChrome.C_GOLD, bold)
+
+func draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, _items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	var summary: Dictionary = view.get("summary", {})
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), "SEASON COMPLETE · %s" % str(view.get("name", "")), 12, UiChrome.C_GOLD, bold)
 	var y := HEADER + 18.0
 	if not summary.is_empty():
 		UiChrome.text(c, Vector2(24.0, y), "CHAMPIONS", 10, UiChrome.C_DIM, bold)
@@ -309,23 +333,11 @@ func draw_podium(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, vi
 		if not scorers.is_empty():
 			UiChrome.text_r(c, vp.x - 24.0, HEADER + 18.0, "TOP SCORER  %s (%d)" % [str(scorers[0]["name"]),
 				int(scorers[0]["goals"])], 11, UiChrome.C_SOFT, bold)
-	for item in items:
-		var rect: Rect2 = item["rect"]
-		if bool(item.get("primary", false)):
-			UiChrome.panel(c, cache, rect, UiChrome.C_GOLD, 7)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0,
-				str(item["label"]), 13, Color(0.06, 0.06, 0.05), bold)
-		else:
-			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 7)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0,
-				str(item["label"]), 12, UiChrome.C_TEXT, bold)
 
 func _club_row(view: Dictionary, club_id: String) -> Dictionary:
 	for row in view.get("table", []):
 		if str(row["club_id"]) == club_id:
 			return row
 	return {}
-
-# ----------------------------------------------------------------- dates ---
 
 # gd-tools: no cover end

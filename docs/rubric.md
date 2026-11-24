@@ -82,6 +82,7 @@ Cite `REQ-*`/`RUB-*` in PRs.
 | RUB-P5-05 | State-change ack ~1–2 frames; never silent (`REQ-P5-05`) |
 | RUB-P5-06 | Juice non-modal/skippable; no hidden outcomes (`REQ-P5-06`) |
 | RUB-P5-07 | Phone+tablet↔desktop intent parity (`REQ-P5-07`) |
+| RUB-P5-08 | Overflow content scrolls on touch + desktop (`REQ-P5-08`) |
 
 ## Decision record
 

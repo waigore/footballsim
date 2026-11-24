@@ -34,14 +34,34 @@ var month := ""
 var day := ""
 var day_fixtures: Array = []
 var days_cache := {}
-var buttons: Array = []
+## Every door on the sheet, with the rows moved by the body's scroll offset.
+var buttons: Array:
+	get:
+		return body.button_rects() if body != null else []
+var body: LeagueBody = null
 var hub: LeagueSheet = LeagueSheet.new()
 var book: LeagueBook = LeagueBook.new()
+var _last_mode := ""
+## Pose -> [sheet, layout, body painter, chrome painter]. The screens share one
+## scroll window; the table says which sheet owns each pose's geometry and paint.
+var _poses := {
+	MODE_HUB: ["hub", "hub_layout", "draw_hub_body", "draw_hub_chrome"],
+	MODE_WIZARD: ["hub", "wizard_layout", "draw_wizard_body", "draw_wizard_chrome"],
+	MODE_LOAD: ["hub", "load_layout", "draw_load_body", "draw_load_chrome"],
+	MODE_TABLE: ["book", "table_layout", "draw_table_body", "draw_table_chrome"],
+	MODE_CALENDAR: ["book", "calendar_layout", "draw_calendar_body", "draw_calendar_chrome"],
+	MODE_REPORT: ["book", "report_layout", "draw_report_body", "draw_report_chrome"],
+	MODE_PODIUM: ["book", "podium_layout", "draw_podium_body", "draw_podium_chrome"],
+}
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	month = str(Time.get_date_dict_from_system()["year"]) + "-" + "%02d" % int(Time.get_date_dict_from_system()["month"])
+	body = LeagueBody.new()
+	body.name = "Body"
+	add_child(body)
+	resized.connect(refresh)
 
 func design_vp() -> Vector2:
 	var vp: Vector2 = size / maxf(ui_scale, 0.001)
@@ -74,7 +94,7 @@ func open_season(target: LeagueSeason, show_podium: bool = false) -> void:
 		mode = MODE_PODIUM
 	else:
 		mode = MODE_HUB
-	month = _state_month()
+	month = LeagueBook.state_month(season, month)
 	visible = true
 	refresh()
 
@@ -131,32 +151,27 @@ func current_view() -> Dictionary:
 # ---------------------------------------------------------------- layout ---
 
 func refresh() -> void:
-	buttons = []
 	var vp := design_vp()
 	var view := current_view()
-	if mode == MODE_HUB:
-		buttons = hub.hub_layout(vp, view)
-	elif mode == MODE_WIZARD:
-		buttons = hub.wizard_layout(vp, view)
-	elif mode == MODE_LOAD:
-		buttons = hub.load_layout(vp, view)
-	elif mode == MODE_TABLE:
-		buttons = book.table_layout(vp, view)
-	elif mode == MODE_CALENDAR:
-		buttons = book.calendar_layout(vp, view)
-	elif mode == MODE_REPORT:
-		buttons = book.report_layout(vp, view)
-	elif mode == MODE_PODIUM:
-		buttons = book.podium_layout(vp, view)
+	var pose: Array = _poses.get(mode, [])
+	if body == null or pose.is_empty():
+		return
+	var sheet: RefCounted = hub if str(pose[0]) == "hub" else book
+	var items: Array = Callable(sheet, str(pose[1])).call(vp, view)
+	var content := body.set_sheet(items, vp, mode != _last_mode)
+	body.painter = Callable(sheet, str(pose[2])).bind(vp, UiChrome.fonts(), content, view)
+	_last_mode = mode
 	queue_redraw()
 
 ## Later items are painted on top (a delete chip sits inside its save row), so
 ## the hit test walks the list back to front.
 func button_at(p: Vector2) -> String:
-	for i in range(buttons.size() - 1, -1, -1):
-		if (buttons[i]["rect"] as Rect2).has_point(p):
-			return str(buttons[i]["id"])
-	return ""
+	return body.hit(p) if body != null else ""
+
+## Wheel notches, trackpad pans, drags and the keys all land here.
+func scroll_by(delta: float) -> void:
+	if body != null:
+		body.scroll_by(delta)
 
 func click(id: String) -> void:
 	if id == "":
@@ -238,7 +253,7 @@ func _create() -> void:
 	season = created
 	season_opened.emit(created)
 	mode = MODE_HUB
-	month = _state_month()
+	month = LeagueBook.state_month(season, month)
 	refresh()
 
 func _open_save(slug: String) -> void:
@@ -257,13 +272,13 @@ func _continue() -> void:
 	var played: Array = result.get("played", [])
 	if str(result.get("status", "")) == "complete" or bool(result.get("complete", false)):
 		mode = MODE_PODIUM
-		month = _state_month()
+		month = LeagueBook.state_month(season, month)
 		refresh()
 		return
 	if not played.is_empty():
 		show_roundup(played)
 		return
-	month = _state_month()
+	month = LeagueBook.state_month(season, month)
 	refresh()
 
 func _toggle(fixture_id: String) -> void:
@@ -301,8 +316,8 @@ func _open_calendar() -> void:
 			days_cache[date]["n"] = int(days_cache[date]["n"]) + 1
 			if str(fx["status"]) == "played":
 				days_cache[date]["played"] = int(days_cache[date]["played"]) + 1
-		month = _state_month()
-	var chosen := _state_month() + "-01"
+		month = LeagueBook.state_month(season, month)
+	var chosen := str(month) + "-01"
 	if season != null:
 		var current := str(season.state().get("date", ""))
 		if current.begins_with(month):
@@ -324,16 +339,10 @@ func _pick_day(date: String) -> void:
 			day_fixtures.append(fx)
 	refresh()
 
-func _state_month() -> String:
-	if season == null:
-		return month
-	var date := str(season.state().get("date", ""))
-	return date.substr(0, 7) if date.length() >= 7 else month
-
 # ---------------------------------------------------------------- input ----
 
 func key(code: int) -> bool:
-	if mode == MODE_WIZARD and _typing_name(code):
+	if mode == MODE_WIZARD and _type_name(code):
 		return true
 	if code == KEY_ESCAPE or code == KEY_BACKSPACE:
 		_back()
@@ -341,22 +350,28 @@ func key(code: int) -> bool:
 	if mode == MODE_HUB and (code == KEY_ENTER or code == KEY_KP_ENTER):
 		_continue()
 		return true
-	return false
-
-func _typing_name(code: int) -> bool:
-	var name := str(wizard["name"])
-	if code == KEY_BACKSPACE:
-		wizard["name"] = name.substr(0, maxi(name.length() - 1, 0))
-		refresh()
-		return true
-	if name.length() >= 24:
+	if code == KEY_UP or code == KEY_W:
+		scroll_by(-120.0)
+	elif code == KEY_DOWN or code == KEY_S:
+		scroll_by(120.0)
+	elif code == KEY_PAGEUP:
+		scroll_by(-body.size.y * 0.9)
+	elif code == KEY_PAGEDOWN:
+		scroll_by(body.size.y * 0.9)
+	elif code == KEY_HOME:
+		scroll_by(-1.0e7)
+	elif code == KEY_END:
+		scroll_by(1.0e7)
+	else:
 		return false
-	var ch := char(code)
-	if (ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") or (ch >= "0" and ch <= "9") or ch == " ":
-		wizard["name"] = name + (ch.to_upper() if name == "" else ch)
+	return true
+
+func _type_name(code: int) -> bool:
+	var typed: Array = LeagueSheet.type_name(str(wizard["name"]), code)
+	if bool(typed[0]):
+		wizard["name"] = str(typed[1])
 		refresh()
-		return true
-	return false
+	return bool(typed[0])
 
 # ----------------------------------------------------------------- paint ---
 
@@ -365,19 +380,16 @@ func _draw() -> void:
 	if vp.x <= 1.0 or vp.y <= 1.0:
 		return
 	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.008, 0.014, 0.018, 0.94))
+	var pose: Array = _poses.get(mode, [])
+	if pose.is_empty():
+		return
+	var sheet: RefCounted = hub if str(pose[0]) == "hub" else book
 	var fonts := UiChrome.fonts()
-	var view := current_view()
-	if mode == MODE_HUB:
-		hub.draw_hub(self, vp, fonts, buttons, view)
-	elif mode == MODE_WIZARD:
-		hub.draw_wizard(self, vp, fonts, buttons, view)
-	elif mode == MODE_LOAD:
-		hub.draw_load(self, vp, fonts, buttons, view)
-	elif mode == MODE_TABLE:
-		book.draw_table(self, vp, fonts, buttons, view)
-	elif mode == MODE_CALENDAR:
-		book.draw_calendar(self, vp, fonts, buttons, view)
-	elif mode == MODE_REPORT:
-		book.draw_report(self, vp, fonts, buttons, view)
-	elif mode == MODE_PODIUM:
-		book.draw_podium(self, vp, fonts, buttons, view)
+	Callable(sheet, str(pose[3])).call(self, vp, fonts, current_view())
+	if body != null:
+		for item in body.pinned:
+			var rect: Rect2 = item["rect"]
+			if str(item["kind"]) == "button":
+				hub.draw_button(self, rect, str(item["label"]), fonts["bold"], bool(item.get("primary", false)))
+			elif str(item["kind"]) == "chip":
+				hub.draw_chip(self, rect, str(item["label"]), fonts["bold"])
