@@ -97,6 +97,50 @@ func test_the_load_list_lays_out_zero_and_many_saves() -> void:
 	assert_eq(open_doors, 7, "the load list should show seven rows")
 	assert_eq(delete_doors, 7, "every shown save needs a delete door")
 
+## The compact column set (#, club, P, GD, PTS) has to fit inside the row at
+## every width the handheld overlay scale can produce: the numbers ride one rail
+## measured from the row's own right edge, and the club column keeps whatever is
+## left, so a long name is shortened instead of painted over P and GD.
+func test_the_table_columns_fit_a_phone_and_a_desktop_sheet() -> void:
+	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(873, 393), Vector2(360, 780), Vector2(320, 480)]:
+		var row := Rect2(24.0, 80.0, vp.x - 48.0, 18.0)
+		var cols: Dictionary = LeagueColumns.of(row)
+		assert_gt(float(cols["club_x"]), float(cols["pos_x"]), "# and CLUB overlap at %s" % vp)
+		assert_lte(float(cols["club_x"]) + float(cols["club_w"]), float(cols["p_r"]) - LeagueColumns.NUM_GAP + 0.01,
+			"the club name may run into P at %s" % vp)
+		assert_lt(float(cols["p_r"]), float(cols["gd_r"]), "P and GD share an edge at %s" % vp)
+		assert_lt(float(cols["gd_r"]), float(cols["pts_r"]), "GD and PTS share an edge at %s" % vp)
+		assert_lte(float(cols["pts_r"]), row.end.x, "PTS is drawn outside the row at %s" % vp)
+		assert_gte(float(cols["club_w"]), 100.0, "the club column is unreadable at %s" % vp)
+
+## Columns must track the sheet, not sit on desktop-only offsets: a phone-shrunk
+## row moves the whole rail left and gives the slack to the club column.
+func test_the_number_rail_follows_the_row_width() -> void:
+	var wide: Dictionary = LeagueColumns.of(Rect2(24.0, 80.0, 1552.0, 20.0))
+	var phone: Dictionary = LeagueColumns.of(Rect2(24.0, 80.0, 825.0, 20.0))
+	assert_almost_eq(float(wide["pts_r"]) - float(phone["pts_r"]), 727.0, 0.01,
+		"PTS did not track the sheet width")
+	assert_almost_eq(float(wide["club_w"]) - float(phone["club_w"]), 727.0, 0.01,
+		"the club column did not take the slack the numbers gave up")
+
+## A name wider than its column must be shortened, not painted over P and GD.
+## Headless text metrics are real (a dummy server would measure every string as
+## zero width and this case would pass without testing anything).
+func test_a_long_club_name_is_shortened_instead_of_overlapping() -> void:
+	var font: Font = load("res://fonts/BarlowCondensed-SemiBold.ttf")
+	var longest := "Wolverhampton Wanderers"
+	assert_gt(font.get_string_size(longest, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x, 60.0,
+		"the probe font measured every string as zero width")
+	var shown := LeagueColumns.fit_name(longest, font, 12, 60.0)
+	assert_ne(shown, longest, "a name wider than its column was drawn whole")
+	assert_true(shown.ends_with("…"), "a shortened name needs an ellipsis")
+	assert_lte(font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x, 60.0,
+		"the shortened name still overflows its column")
+	assert_eq(LeagueColumns.fit_name(longest, font, 12, 600.0), longest,
+		"a name that fits was shortened anyway")
+	assert_eq(LeagueColumns.fit_name(longest, null, 12, 60.0), longest,
+		"a missing font must not drop the name")
+
 func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 	var book := LeagueBook.new()
 	for vp in [Vector2(1600, 900), Vector2(913, 411)]:

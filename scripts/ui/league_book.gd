@@ -33,6 +33,10 @@ func table_layout(vp: Vector2, view: Dictionary) -> Array:
 		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
 	return items
 
+## Column geometry for one table row lives in `LeagueColumns` (the book is at
+## its method budget): place number and club on the left, P/GD/PTS on one
+## right-aligned rail, plus the width a club name may use.
+
 func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 	var month := str(view.get("month", ""))
@@ -162,16 +166,20 @@ func draw_table_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dict
 	UiChrome.text(c, Vector2(202.0, y), "UEL", 9, LeagueSheet.zone_color("uel"), bold)
 	UiChrome.text(c, Vector2(244.0, y), "UECL", 9, LeagueSheet.zone_color("uecl"), bold)
 	UiChrome.text(c, Vector2(292.0, y), "RELEGATION", 9, LeagueSheet.zone_color("relegation"), bold)
-	UiChrome.text_r(c, vp.x - 24.0, y, "COLOURED BAND = PLACE FROM SAVED RULES", 8, UiChrome.C_DIM, med)
+	# The keys and the sentence share one line: a sheet too narrow for both
+	# drops the sentence rather than painting it over the legend.
+	if vp.x >= 640.0:
+		UiChrome.text_r(c, vp.x - 24.0, y, "COLOURED BAND = PLACE FROM SAVED RULES", 8, UiChrome.C_DIM, med)
 
 func draw_table_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var top := HEADER + 8.0
-	UiChrome.text(c, Vector2(33.0, top), "#", 9, UiChrome.C_DIM, bold)
-	UiChrome.text(c, Vector2(56.0, top), "CLUB", 9, UiChrome.C_DIM, bold)
-	UiChrome.text(c, Vector2(160.0, top), "P", 9, UiChrome.C_DIM, bold)
-	UiChrome.text(c, Vector2(188.0, top), "GD", 9, UiChrome.C_DIM, bold)
-	UiChrome.text_r(c, vp.x - 32.0, top, "PTS", 9, UiChrome.C_DIM, bold)
+	var head := LeagueColumns.of(Rect2(24.0, top, vp.x - 48.0, 0.0))
+	UiChrome.text(c, Vector2(float(head["pos_x"]), top), "#", 9, UiChrome.C_DIM, bold)
+	UiChrome.text(c, Vector2(float(head["club_x"]), top), "CLUB", 9, UiChrome.C_DIM, bold)
+	UiChrome.text_r(c, float(head["p_r"]), top, "P", 9, UiChrome.C_DIM, bold)
+	UiChrome.text_r(c, float(head["gd_r"]), top, "GD", 9, UiChrome.C_DIM, bold)
+	UiChrome.text_r(c, float(head["pts_r"]), top, "PTS", 9, UiChrome.C_DIM, bold)
 	for item in items:
 		if str(item["kind"]) == "table_row":
 			_draw_row(c, item["rect"], item, fonts)
@@ -183,12 +191,14 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) 
 		c.draw_rect(Rect2(rect.position.x, rect.position.y + 2.0, 4.0, rect.size.y - 4.0), LeagueSheet.zone_color(band))
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
+	var cols := LeagueColumns.of(rect)
 	var y := rect.position.y + rect.size.y * 0.5 + 4.0
-	UiChrome.text(c, Vector2(rect.position.x + 10.0, y), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
-	UiChrome.text(c, Vector2(rect.position.x + 32.0, y), str(row["club_name"]), 12, UiChrome.C_TEXT, bold)
-	UiChrome.text(c, Vector2(rect.position.x + 136.0, y), "%d" % int(row["played"]), 10, UiChrome.C_SOFT, med)
-	UiChrome.text(c, Vector2(rect.position.x + 164.0, y), "%+d" % (int(row["gf"]) - int(row["ga"])), 10, UiChrome.C_SOFT, med)
-	UiChrome.text_r(c, rect.end.x - 10.0, y, "%d" % int(row["points"]), 11, UiChrome.C_TEXT, bold)
+	UiChrome.text(c, Vector2(float(cols["pos_x"]), y), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
+	UiChrome.text(c, Vector2(float(cols["club_x"]), y),
+		LeagueColumns.fit_name(str(row["club_name"]), bold, 12, float(cols["club_w"])), 12, UiChrome.C_TEXT, bold)
+	UiChrome.text_r(c, float(cols["p_r"]), y, "%d" % int(row["played"]), 10, UiChrome.C_SOFT, med)
+	UiChrome.text_r(c, float(cols["gd_r"]), y, "%+d" % (int(row["gf"]) - int(row["ga"])), 10, UiChrome.C_SOFT, med)
+	UiChrome.text_r(c, float(cols["pts_r"]), y, "%d" % int(row["points"]), 11, UiChrome.C_TEXT, bold)
 
 # -------------------------------------------------------------- calendar ---
 
