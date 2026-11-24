@@ -46,7 +46,10 @@ func rect_for(vp: Vector2) -> Rect2:
 		var bottom: float = HudLayout.commentary_rect(vp).position.y - 8.0
 		var h: float = clampf(bottom - top, 96.0, 132.0)
 		return Rect2(vp.x - 12.0 - w, bottom - h, w, h)
-	return Rect2(vp.x - 12.0 - W, 176.0, W, H)
+	# Desktop: the column hangs under the stats card, so it reads that card's
+	# bottom instead of a constant that the card's momentum footer would grow
+	# into.
+	return Rect2(vp.x - 12.0 - W, HudLayout.stats_rect(vp).end.y + 20.0, W, H)
 
 ## The "open the full profile" door. Read by the drawer and by hud.gd, which
 ## turns it into a hit target for the encyclopedia.

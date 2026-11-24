@@ -175,6 +175,19 @@ func test_phone_player_card_stays_clear_of_the_other_panels() -> void:
 		assert_gte(box.position.y, stats.end.y, "the card rises into the top bar at %s" % vp)
 		assert_gte(box.size.y, 96.0, "the card is too short to hold its rows at %s" % vp)
 
+func test_desktop_player_card_hangs_under_the_stats_card() -> void:
+	# The dossier is a column under the stats card; the card's momentum footer
+	# grew it (DR-20261125-02), so the column must read its bottom, never a
+	# constant it would now overlap.
+	var card := HudPlayerCard.new(Color.BLACK, Color.GOLD, Color.WHITE, Color.GRAY)
+	for vp in [Vector2(1600, 900), Vector2(1280, 720), Vector2(1920, 1080)]:
+		var box: Rect2 = card.rect_for(vp)
+		var stats: Rect2 = HudLayout.stats_rect(vp)
+		assert_false(box.intersects(stats), "the dossier covers the stats card at %s" % vp)
+		assert_gte(box.position.y, stats.end.y, "the dossier starts inside the stats card at %s" % vp)
+		assert_false(box.intersects(HudLayout.commentary_rect(vp)), "the dossier covers the ticker at %s" % vp)
+		assert_lte(box.end.x, vp.x, "the dossier runs off the right edge at %s" % vp)
+
 func test_player_card_draws_in_both_layouts() -> void:
 	var eng := MatchEngine.new(34)
 	var hud := _hud(eng)
