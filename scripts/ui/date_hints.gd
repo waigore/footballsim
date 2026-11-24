@@ -59,9 +59,10 @@ static func strip_right(font: Font, s: String, right_x: float, y: float, size: i
 
 # gd-tools: no cover start
 
-## The bubble itself: the weekday over the date it belongs to, or under it when
-## the date sits against the top of the sheet. Kept inside the viewport so a
-## strip at the right margin never pushes its bubble off the screen.
+## The bubble itself: the weekday under the date it belongs to, or over it when
+## the date sits against the bottom of the sheet. Kept inside the viewport so a
+## strip at the margin never pushes its bubble off the screen, and kept under the
+## line so a header title above the date is never covered.
 static func paint(c: CanvasItem, cache: Dictionary, zone: Dictionary, vp: Vector2,
 		fonts: Dictionary) -> void:
 	var label: String = FixtureCalendar.weekday_label(str(zone["date"]))
@@ -71,9 +72,9 @@ static func paint(c: CanvasItem, cache: Dictionary, zone: Dictionary, vp: Vector
 	var w: float = bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x + PAD * 2.0
 	var rect: Rect2 = zone["rect"]
 	var x: float = clampf(rect.position.x, 4.0, maxf(vp.x - w - 4.0, 4.0))
-	var y: float = rect.position.y - BUBBLE_H - 3.0
-	if y < 4.0:
-		y = rect.end.y + 2.0
+	var y: float = rect.end.y + 2.0
+	if y + BUBBLE_H > vp.y - 2.0:
+		y = rect.position.y - BUBBLE_H - 3.0
 	UiChrome.panel(c, cache, Rect2(x, y, w, BUBBLE_H), UiChrome.C_PANEL_LIGHT, 4,
 		UiChrome.C_GOLD, 1)
 	UiChrome.text_c(c, x + w * 0.5, y + 12.0, label, 9, UiChrome.C_GOLD, bold)
