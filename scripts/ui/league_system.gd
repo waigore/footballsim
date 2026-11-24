@@ -97,6 +97,7 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array, _vi
 				UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
 					str(item["value"]), 15, UiChrome.C_TEXT, bold)
 			"button":
-				chrome.draw_button(c, rect, str(item["label"]), bold, bool(item.get("primary", false)))
+				UiChrome.button(c, chrome.cache, rect, str(item["label"]), bold,
+					bool(item.get("primary", false)))
 
 # gd-tools: no cover end

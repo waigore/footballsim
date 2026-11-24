@@ -86,6 +86,8 @@ suites = [
   "test_hud_layout.gd",
   "test_touch_flow.gd",
   "test_chrome_density.gd",
+  # Paint grammar of every door painted on a sheet (season, System, picker).
+  "test_ui_chrome_doors.gd",
 ]
 
 # Shared engine spine: laws + finishing + restart + managers when a core file moves.
