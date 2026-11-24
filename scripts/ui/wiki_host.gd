@@ -34,6 +34,7 @@ func build() -> void:
 	screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(screen)
 	screen.closed.connect(_on_screen_closed)
+	screen.interest_toggled.connect(_on_interest_toggled)
 	pointer = SheetPointer.new(screen)
 	layer.visible = false
 
@@ -71,6 +72,17 @@ func _open(page: String, id: String, over_select: bool, over_league: bool) -> vo
 	layer.transform = Transform2D.IDENTITY.scaled(Vector2(game.chrome_scale, game.chrome_scale))
 	screen.visible = true
 	screen.open(page, id)
+
+## The team page's follow door (#104): the open season owns the shortlist, so the
+## page only names the club and repaints once the rule has moved. With no season
+## open there is nothing to follow and the door is not drawn at all.
+func _on_interest_toggled(club_id: String) -> void:
+	var season = LeagueSeason.active
+	if season == null or club_id == "":
+		return
+	season.set_interest(club_id, not season.record.interest.is_interested(club_id))
+	if screen != null:
+		screen.queue_redraw()
 
 ## Ask the sheet to close; it emits `closed` and the surface comes back.
 func close() -> void:

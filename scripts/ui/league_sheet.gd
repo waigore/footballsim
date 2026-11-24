@@ -74,17 +74,24 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	var plan: Array = state.get("plan", [])
 	var top: float = HEADER + (14.0 if not compact(vp) else 8.0)
 	var body_bottom := vp.y - BAR_H - 6.0
+	var interest := LeagueInterestMark.set_of(state.get("interests", []))
 	var wide := vp.x >= 760.0 and not compact(vp)
 	var left_w: float = (vp.x - 72.0) * 0.58 if wide else vp.x - 48.0
 	var y := top + 24.0
 	for fx in plan:
 		var row := Rect2(24.0, y, left_w, ROW_H)
-		items.append({"id": "fixture:" + str(fx["id"]), "kind": "row", "rect": row, "fixture": fx})
+		items.append({"id": "fixture:" + str(fx["id"]), "kind": "row", "rect": row,
+			"fixture": fx, "interest": interest})
 		# A played row is a result, not a plan: no chip to press, the score takes
 		# the chip's place and a tap opens the report (#124).
 		if str(fx.get("status", "")) != "played":
 			var chip := Rect2(row.end.x - 72.0, y + 2.0, 68.0, ROW_H - 4.0)
-			items.append({"id": "toggle:" + str(fx["id"]), "kind": "chip", "rect": chip, "fixture": fx})
+			# A followed club's game is on Watch because of the shortlist, not
+			# because of this chip: it states the rule and carries no door of its
+			# own, so a press falls through to the row and opens the match (#104).
+			var followed := LeagueInterestMark.follows(interest, fx)
+			items.append({"id": "" if followed else "toggle:" + str(fx["id"]), "kind": "chip",
+				"rect": chip, "fixture": fx, "followed": followed})
 		y += ROW_H + ROW_GAP
 	if wide:
 		var box := _hub_table_box(vp)
@@ -99,6 +106,7 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 				"id": "club:" + str(rows[i]["club_id"]), "kind": "table_row",
 				"rect": Rect2(box.position.x, ty, box.size.x, 19.0), "row": rows[i],
 				"zone": band, "places": places,
+				"interested": interest.has(str(rows[i]["club_id"])),
 			})
 			ty += 19.0
 	if bool(state.get("can_suggest", false)):
@@ -217,22 +225,30 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, 
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		if str(item["kind"]) == "row":
-			_draw_fixture_row(c, rect, item["fixture"], fonts)
+			_draw_fixture_row(c, rect, item, fonts)
 		elif str(item["kind"]) == "chip":
 			if str(item["id"]) == "suggest":
 				UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, UiChrome.C_GOLD, 1)
 				UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 4.0,
 					"SUGGEST WATCHES", 10, UiChrome.C_GOLD, bold)
+			elif bool(item.get("followed", false)):
+				LeagueInterestMark.chip(c, cache, rect, bold)
 			else:
 				_draw_toggle(c, rect, item["fixture"], bold)
 		elif str(item["kind"]) == "table_row":
 			_draw_table_row(c, rect, item, fonts)
 
-func _draw_fixture_row(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dictionary) -> void:
+func _draw_fixture_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
+	var fx: Dictionary = item["fixture"]
+	var interest: Dictionary = item.get("interest", {})
 	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6)
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	var played := str(fx.get("status", "")) == "played"
+	# A followed club carries the interest mark: its name is the yellow the
+	# planner and the tables share (#104).
+	var home_ink := LeagueInterestMark.ink(interest, str(fx.get("home_club_id", "")))
+	var away_ink := LeagueInterestMark.ink(interest, str(fx.get("away_club_id", "")))
 	var line_y := rect.position.y + 17.0
 	var time := str(fx.get("kickoff_time", ""))
 	if time != "" or played:
@@ -240,9 +256,9 @@ func _draw_fixture_row(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dictio
 		# as a results column once the day is done (#124).
 		UiChrome.text(c, Vector2(rect.position.x + 8.0, line_y), "FT" if played else time, 10,
 			UiChrome.C_GOLD if played else UiChrome.C_DIM, bold if played else med)
-	UiChrome.text(c, Vector2(rect.position.x + 60.0, line_y), str(fx["home_abbr"]), 13, UiChrome.C_TEXT, bold)
+	UiChrome.text(c, Vector2(rect.position.x + 60.0, line_y), str(fx["home_abbr"]), 13, home_ink, bold)
 	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 46.0, line_y), "v", 10, UiChrome.C_DIM, med)
-	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 66.0, line_y), str(fx["away_abbr"]), 13, UiChrome.C_TEXT, bold)
+	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 66.0, line_y), str(fx["away_abbr"]), 13, away_ink, bold)
 	if played:
 		UiChrome.text_r(c, rect.end.x - 12.0, line_y, "%d  –  %d" % [
 			int(fx.get("home_goals", 0)), int(fx.get("away_goals", 0))], 14, UiChrome.C_TEXT, bold)
@@ -268,7 +284,7 @@ func _draw_table_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictio
 	UiChrome.text(c, Vector2(float(places["pos_x"]), y), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
 	UiChrome.text(c, Vector2(float(places["club_x"]), y),
 		LeagueColumns.fit_name(str(row["club_abbr"]), bold, 12, float(places["club_w"])),
-		12, UiChrome.C_TEXT, bold)
+		12, UiChrome.C_GOLD if bool(item.get("interested", false)) else UiChrome.C_TEXT, bold)
 	for col in places["cols"]:
 		var key := str(col["key"])
 		var points := key == "points"

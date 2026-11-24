@@ -17,9 +17,6 @@ extends RefCounted
 signal match_recorded(report: Dictionary)
 signal state_changed
 
-## Completed gameweeks before the planner starts suggesting watches.
-const SUGGEST_AFTER_ROUNDS := 5
-
 static var active: LeagueSeason = null
 
 var save: LeagueSave = null
@@ -79,6 +76,9 @@ static func open(slug: String) -> LeagueSeason:
 	# ledger can drift: rebuild the aggregates now so the table (and its full
 	# reading) matches the played fixtures (#73).
 	season.record.recompute_table()
+	# Interest is the save's, so a reopened season re-applies it before the clock
+	# rolls: a followed club's game is never left on Auto by a stale flag (#104).
+	season.record.interest.force_watch()
 	season.roll_clock()
 	active = season
 	return season
@@ -121,7 +121,8 @@ func state() -> Dictionary:
 		"played": record.played(),
 		"total": record.played() + record.unplayed(),
 		"rounds": record.completed_matchdays(),
-		"can_suggest": record.completed_matchdays() >= SUGGEST_AFTER_ROUNDS,
+		"can_suggest": record.completed_matchdays() >= LeaguePlanner.SUGGEST_AFTER_ROUNDS,
+		"interests": record.interest.interests(),
 		"advance_mode": str(rules.get("advance_mode", "fixture_days")),
 		"rules": rules.duplicate(true),
 		"complete": complete,
@@ -140,8 +141,22 @@ func plan() -> Array:
 		out.append(item)
 	return out
 
+## Mark or unmark a club: the write and the shortlist's Watch sync both happen
+## here, so a followed club's games are on Watch before the surface repaints.
+func set_interest(club_id: String, follow: bool) -> bool:
+	if record == null or not record.interest.has_club(club_id):
+		return false
+	if not record.interest.set_interest(club_id, follow):
+		return false
+	state_changed.emit()
+	return true
+
 func set_watch(fixture_id: String, watch: bool) -> bool:
 	if finishing:
+		return false
+	# Interest wins: a followed club's game cannot be put back on Auto, or the
+	# season would auto-sim a match the player asked to see (#104).
+	if not watch and record.interest.holds(fixture_id):
 		return false
 	var ok := record.set_watch(fixture_id, watch)
 	if ok:
@@ -151,23 +166,7 @@ func set_watch(fixture_id: String, watch: bool) -> bool:
 ## After five completed gameweeks, flag the upcoming clashes between clubs in
 ## the current top six so the planner can point at the games worth watching.
 func suggest() -> Array:
-	if record.completed_matchdays() < SUGGEST_AFTER_ROUNDS:
-		return []
-	var top := _top_six()
-	var ids: Array = []
-	for fx in record.pending_upto(save.current_date()):
-		if top.has(str(fx["home_club_id"])) and top.has(str(fx["away_club_id"])):
-			ids.append(str(fx["id"]))
-	record.suggest(ids)
-	state_changed.emit()
-	return ids
-
-func _top_six() -> Dictionary:
-	var out := {}
-	var rows := record.table()
-	for i in range(mini(6, rows.size())):
-		out[str(rows[i]["club_id"])] = true
-	return out
+	return LeaguePlanner.suggest(self)
 
 # ------------------------------------------------------------------- clock ---
 

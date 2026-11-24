@@ -24,6 +24,9 @@ const SIDE_COLUMNS := [
 ## All league tables live beside the seed tables, in the same file.
 const SCHEMA := [
 	"CREATE TABLE IF NOT EXISTS save_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
+	# The clubs this season follows (#104). A set of club ids, so a save written
+	# before Teams of Interest simply opens with an empty shortlist.
+	"CREATE TABLE IF NOT EXISTS league_interest (club_id TEXT PRIMARY KEY);",
 	"CREATE TABLE IF NOT EXISTS league_fixture (id TEXT PRIMARY KEY, matchday INTEGER NOT NULL, "
 	+ "kickoff TEXT NOT NULL, kickoff_time TEXT NOT NULL DEFAULT '', "
 	+ "home_club_id TEXT NOT NULL, away_club_id TEXT NOT NULL, "
