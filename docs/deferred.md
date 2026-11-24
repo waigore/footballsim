@@ -19,14 +19,14 @@ Former gaps now shipped (wiki domains playable; DRs accepted):
 | Per-goal report playback packs | DR-20261124-04 |
 | Non-match type / viewport scale | DR-20261124-03 |
 | Live `tempo` on the tactics board | unused in DR-20261122-02; drives play now |
+| Woodwork, interceptions, momentum, stored rating | DR-20261125-01; the frame is real geometry, the three readings are written |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
 | 1 | Physics↔Poisson level and strength gradient | Wiki [poisson-model](https://github.com/waigore/footballsim/wiki/poisson-model) + [#33](https://github.com/waigore/footballsim/issues/33); [#111](https://github.com/waigore/footballsim/pull/111) prices chance quality from ratings — census re-check still open |
-| 2 | Match summary schema stubs | `momentum`, `xt_gain`, `woodwork`, `interceptions`, stored `rating` declared on Match; never written |
-| 3 | Native match hot loop | DR-20261123-02 “future tightening” under the 120 s full-match budget |
+| 2 | Native match hot loop | DR-20261123-02 “future tightening” under the 120 s full-match budget |
 
 ## Next pick
 

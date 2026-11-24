@@ -26,6 +26,17 @@ suites = [
 suites = [
   "test_match_laws.gd",
   "test_engine_rules.gd",
+  "test_match_stats.gd",
+]
+
+# The readings a match summary carries: the frame a shot struck, the pass a
+# defender cut out, the momentum a side is carrying and the stored rating. They
+# sit beside the laws they are read from, so the laws still run with them.
+[domains.match_stats]
+suites = [
+  "test_match_stats.gd",
+  "test_engine_rules.gd",
+  "test_finishing.gd",
 ]
 
 [domains.restart]
@@ -192,6 +203,10 @@ domain = "match_engine"
 [[rules]]
 match = "scripts/sim/match_engine_rules.gd*"
 domain = "match_laws"
+
+[[rules]]
+match = "scripts/sim/match_stats.gd*"
+domain = "match_stats"
 
 [[rules]]
 match = "scripts/sim/match_engine_clock.gd*"

@@ -8,12 +8,12 @@ extends RefCounted
 ## Lines are kept under ~90 characters so the commentary panel never truncates
 ## mid-word, and every variant names a real player/team from the event.
 
-static func _pick(rng, lines: Array) -> String:
+## One line from a set. `i >= 0` takes that variant deterministically — the
+## live line must not disturb the sim — and otherwise the match RNG chooses.
+static func _pick(rng, lines: Array, i: int = -1) -> String:
+	if i >= 0:
+		return lines[i % lines.size()]
 	return lines[rng.randi_range(0, lines.size() - 1)]
-
-## Deterministic variant for the live line (no RNG: it must not disturb the sim).
-static func _variant(lines: Array, i: int) -> String:
-	return lines[abs(i) % lines.size()]
 
 ## Distance phrasing for shots, relative to the goal being attacked.
 static func _shot_range(dist: float) -> String:
@@ -116,6 +116,21 @@ static func block(rng, name: String, shooter: String) -> String:
 			"%s gets in the way of %s' shot!" % [name, shooter],
 		])
 	return _pick(rng, ["Blocked by %s!" % name, "%s throws his body in the way!" % name])
+
+## The frame denies it: the ball comes back off a post or the bar instead of
+## going in, which is neither a goal nor a save.
+static func woodwork(rng, name: String, frame: String) -> String:
+	if frame == "bar":
+		return _pick(rng, [
+			"OFF THE BAR! %s is denied by the woodwork!" % name,
+			"%s beats the keeper and the crossbar saves him!" % name,
+			"CRASHING OFF THE BAR! %s can't believe it!" % name,
+		])
+	return _pick(rng, [
+		"OFF THE POST! %s is inches away!" % name,
+		"%s beats the keeper — and the post!" % name,
+		"THE POST! %s is denied by the width of a post!" % name,
+	])
 
 static func foul(rng, fouler: String, victim: String, penalty: bool) -> String:
 	if penalty:
@@ -360,12 +375,12 @@ static func live(e) -> String:
 		if e.clock > 4500.0 and e.score[0] != e.score[1]:
 			tail = "  %s." % _scoreline(e)
 		if pu >= 0.6:
-			return _variant([
+			return _pick(null, [
 				"%s snap at %s %s." % [on, owner.name, where],
 				"%s is hounded %s by %s." % [owner.name, where, on],
 				"%s press hard and %s has nowhere to go." % [on, owner.name],
 			], i) + tail
-		return _variant([
+		return _pick(null, [
 			"%s carries it %s for %s." % [owner.name, where, tn],
 			"%s keep it patient %s." % [tn, where],
 			"%s build %s through %s." % [tn, where, owner.name],
@@ -373,7 +388,7 @@ static func live(e) -> String:
 	var tail2 := ""
 	if e.clock > 4500.0 and e.score[0] != e.score[1]:
 		tail2 = "  %s." % _scoreline(e)
-	return _variant([
+	return _pick(null, [
 		"Loose ball %s — both sides scrapping for it." % where,
 		"Scrappy stuff %s — nobody in control." % where,
 		"It's pinball %s." % where,

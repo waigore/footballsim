@@ -67,6 +67,7 @@ func _emit(kind: String, text: String, team: int, player, extra: Dictionary = {}
 	events.append(e)
 	if events.size() > 600:
 		events.pop_front()
+	MatchStats.bump(momentum, team, kind, float(extra.get("xg", 0.0)))
 	_official_reacts(kind, player)
 	event_fired.emit(e)
 
@@ -134,4 +135,6 @@ func summary() -> Dictionary:
 		"score": score.duplicate(), "half": half, "clock": display_clock(),
 		"possession": possession_pct(), "stats": stats.duplicate(true),
 		"events": events.size(), "phase": phase,
+		# Each side's momentum, 0..1 (DR-20261125-01).
+		"momentum": MatchStats.momentum_level(momentum),
 	}

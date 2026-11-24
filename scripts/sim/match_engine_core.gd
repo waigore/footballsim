@@ -205,7 +205,6 @@ var flash = 0.0                   # presentation hint: 0..1
 var stoppage_events = 0
 var injury_timer := 45.0
 var commentary_key = 0
-var xt_gain = 0.0
 var verbose := false
 var shot_buckets := {}
 var gk_debug := []
@@ -298,6 +297,7 @@ func _blank_stats() -> Dictionary:
 		"passes": 0, "passes_ok": 0, "tackles": 0, "fouls": 0, "corners": 0,
 		"offsides": 0, "saves": 0, "yellow": 0, "red": 0, "distance": 0.0,
 		"big_chances": 0, "woodwork": 0, "handballs": 0, "injuries": 0,
+		"interceptions": 0,
 	}
 
 func _build_squads() -> void:
