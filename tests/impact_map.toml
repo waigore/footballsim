@@ -60,13 +60,11 @@ suites = [
 [domains.tactics]
 suites = [
   "test_tactics.gd",
-  "test_tactics_ai.gd",
 ]
 
 [domains.managers]
 suites = [
   "test_managers.gd",
-  "test_manager_subs.gd",
 ]
 
 # Menu shell: cold start, settings + BGM, quit confirm, HUD doors, and the
@@ -95,7 +93,7 @@ suites = [
 [domains.match_ai_choices]
 suites = [
   "test_match_ai_choices.gd",
-  "test_tactics_ai.gd",
+  "test_tactics.gd",
   "test_engine_rules.gd",
 ]
 
@@ -105,11 +103,8 @@ suites = [
   "test_finishing.gd",
   "test_restart_judgement.gd",
   "test_tactics.gd",
-  "test_tactics_ai.gd",
   "test_managers.gd",
-  "test_manager_subs.gd",
   "test_attributes.gd",
-  "test_engine_contact.gd",
   "test_engine_rules.gd",
 ]
 
@@ -118,7 +113,6 @@ suites = [
   "test_poisson_model.gd",
   "test_kits.gd",
   "test_tactics.gd",
-  "test_tactics_ai.gd",
   "test_team_data.gd",
 ]
 
@@ -131,9 +125,7 @@ suites = [
   "test_poisson_model.gd",
   "test_kits.gd",
   "test_tactics.gd",
-  "test_tactics_ai.gd",
   "test_managers.gd",
-  "test_manager_subs.gd",
 ]
 
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
@@ -145,7 +137,6 @@ suites = [
   "test_league_rules.gd",
   "test_league_save.gd",
   "test_fixture_calendar.gd",
-  "test_match_events.gd",
   "test_strongest_xi.gd",
   "test_league_season.gd",
   "test_league_sheets.gd",
