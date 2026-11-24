@@ -42,6 +42,13 @@ func _init() -> void:
 	var elapsed_total := float(Time.get_ticks_msec() - started) / 1000.0
 	print("SMOKE full time %s %d-%d %s clock=%s" % [
 		HOME, eng.score[0], eng.score[1], AWAY, eng.display_clock()])
+	# The whistle card lists the goals the scoreboard counted (DR-20261125-04):
+	# the summary can never disagree with the result it summarises.
+	if eng.goal_sheet.size() != eng.score[0] + eng.score[1]:
+		_fail("the whistle sheet lists %d goals for a %d-%d score" % [
+			eng.goal_sheet.size(), eng.score[0], eng.score[1]])
+		return
+
 	print("SMOKE OK %s %d-%d %s seed=%d ticks=%d wall=%.1fs" % [
 		HOME, eng.score[0], eng.score[1], AWAY, SEED, ticks, elapsed_total])
 	quit(0)

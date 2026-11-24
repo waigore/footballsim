@@ -52,6 +52,12 @@ func display_clock() -> String:
 func minute_of(t: float) -> int:
 	return clampi(int(ceil(t / 60.0)), 1, 120)
 
+## Every goal this match has scored, in order: `team` (the side credited),
+## `minute`, `scorer` and `own_goal`. Written where the goal is narrated, so the
+## half/full-time card can list the goals without re-reading `events`, which
+## drops its oldest entries once a match gets busy (DR-20261125-04).
+var goal_sheet: Array = []
+
 # ----------------------------------------------------------------- physics --
 
 func _emit(kind: String, text: String, team: int, player, extra: Dictionary = {}) -> void:
@@ -67,6 +73,12 @@ func _emit(kind: String, text: String, team: int, player, extra: Dictionary = {}
 	events.append(e)
 	if events.size() > 600:
 		events.pop_front()
+	if kind == "goal":
+		goal_sheet.append({
+			"team": team, "minute": minute_of(clock),
+			"scorer": player.name if player != null else "Unknown",
+			"own_goal": bool(extra.get("own_goal", false)),
+		})
 	MatchStats.bump(momentum, team, kind, float(extra.get("xg", 0.0)))
 	_official_reacts(kind, player)
 	event_fired.emit(e)

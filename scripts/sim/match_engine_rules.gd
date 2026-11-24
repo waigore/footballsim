@@ -126,7 +126,8 @@ func _score_goal(conceding_team: int) -> void:
 	_emit("goal", Commentary.goal(rng, scorer.name if scorer != null else "Unknown",
 		str(last_goal.get("assist", "")), own_goal,
 		teams[scoring_team]["data"]["short"], teams[conceding_team]["data"]["short"],
-		score[scoring_team] - 1, score[conceding_team], minute_of(clock)), scoring_team, scorer, {"xg": 0.0})
+		score[scoring_team] - 1, score[conceding_team], minute_of(clock)), scoring_team, scorer,
+		{"xg": 0.0, "own_goal": own_goal})
 	flash = 1.0
 	for p in players:
 		if p.team == scoring_team:

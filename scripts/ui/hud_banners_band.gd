@@ -31,21 +31,93 @@ func _goal(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> voi
 	p.text(c, Vector2(gx, y + 98), "%s %d  –  %d %s" % [engine.teams[0]["data"]["abbr"], engine.score[0], engine.score[1], engine.teams[1]["data"]["abbr"]], 14, UiChrome.C_GOLD, f_bold)
 
 func _break(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:
-	var bw: float = minf(460.0, p.vp.x - 48.0)
-	var bh := 190.0
-	var x := p.vp.x * 0.5 - bw * 0.5
-	var y := p.vp.y * 0.5 - bh * 0.5
-	p.panel(c, Color(0.02, 0.03, 0.04, 0.94), Rect2(x, y, bw, bh), 14, Color(1, 1, 1, 0.12))
+	var sheet: Array = engine.goal_sheet
+	var home_goals := 0
+	var away_goals := 0
+	for g in sheet:
+		if int(g.get("team", 0)) == 0:
+			home_goals += 1
+		else:
+			away_goals += 1
+	# The card grows by the goals it can list and is capped at the band between
+	# the scoreboard and the ticker, so a seven-goal game never covers either.
+	var m: Dictionary = HudLayout.break_metrics(p.vp, home_goals, away_goals)
+	var r: Rect2 = m["rect"]
+	p.panel(c, Color(0.02, 0.03, 0.04, 0.94), r, 14, Color(1, 1, 1, 0.12))
+	var cx: float = r.position.x + r.size.x * 0.5
 	var title := "HALF TIME" if engine.phase == "half_time" else "FULL TIME"
-	p.text_c(c, p.vp.x * 0.5, y + 48, title, 30, UiChrome.C_GOLD, f_bold)
-	p.text_c(c, p.vp.x * 0.5, y + 104, "%d  –  %d" % [engine.score[0], engine.score[1]], 48, UiChrome.C_TEXT, f_bold)
-	p.text_c(c, p.vp.x * 0.5, y + 132, "%s  ·  %s" % [engine.teams[0]["data"]["abbr"], engine.teams[1]["data"]["abbr"]], 11, UiChrome.C_DIM, f_med)
+	p.text_c(c, cx, r.position.y + float(m["title_y"]), title, int(m["title_size"]), UiChrome.C_GOLD, f_bold)
+	p.text_c(c, cx, r.position.y + float(m["score_y"]), "%d  –  %d" % [engine.score[0], engine.score[1]], int(m["score_size"]), UiChrome.C_TEXT, f_bold)
+	var compact := bool(m["compact"])
+	if not compact and r.size.y >= HudLayout.BREAK_BASE_H:
+		p.text_c(c, cx, r.position.y + float(m["abbr_y"]), "%s  ·  %s" % [engine.teams[0]["data"]["abbr"], engine.teams[1]["data"]["abbr"]], int(m["abbr_size"]), UiChrome.C_DIM, f_med)
+	_goals(p, c, engine, r, m, f_med)
 	var sub := "SECOND HALF STARTS SHORTLY" if engine.phase == "half_time" else ("TAP RESTART TO PLAY AGAIN" if touch else "PRESS R TO PLAY AGAIN")
 	# A league watch keeps this card until the player reads it (#124): the result
 	# is in the save, and the season sheet is one tap behind the whistle.
 	if engine.phase == "full_time" and game != null and bool(game.result_hold):
 		sub = "TAP TO RETURN TO THE SEASON" if touch else "PRESS SPACE TO RETURN TO THE SEASON"
-	p.text_c(c, p.vp.x * 0.5, y + 168, sub, 10, UiChrome.C_DIM, f_med)
+	if float(m["sub_y"]) <= r.size.y - 4.0:
+		p.text_c(c, cx, r.position.y + float(m["sub_y"]), sub, int(m["sub_size"]), UiChrome.C_DIM, f_med)
+
+## The goals that made the score, in the card's own space: two columns on a
+## desktop scorecard (home left, visitors right) and two short entries per row on
+## a phone, where each entry carries its club. Anything past the last row is
+## counted (`+2`) instead of dropped silently.
+func _goals(p: HudPaint, c: CanvasItem, engine, r: Rect2, m: Dictionary, f_med: Font) -> void:
+	var rows: int = int(m["rows"])
+	if rows <= 0:
+		return
+	var size: int = int(m["line_size"])
+	var y0: float = r.position.y + float(m["rows_y"])
+	var step: float = float(m["step"])
+	if bool(m["compact"]):
+		var entries: Array = []
+		for g in engine.goal_sheet:
+			entries.append(_entry(engine, g, true))
+		var shown: int = mini(rows * int(m["per_row"]), entries.size())
+		for i in range(rows):
+			var from: int = i * int(m["per_row"])
+			var to: int = mini(from + int(m["per_row"]), shown)
+			if from >= to:
+				break
+			var line := "  ·  ".join(entries.slice(from, to))
+			if i == rows - 1 and entries.size() > shown:
+				line += "  +%d" % (entries.size() - shown)
+			p.text_c(c, r.position.x + r.size.x * 0.5, y0 + step * float(i), line, size, UiChrome.C_TEXT, f_med)
+		return
+	var home: Array = []
+	var away: Array = []
+	for g in engine.goal_sheet:
+		var entry := _entry(engine, g, false)
+		if int(g.get("team", 0)) == 0:
+			home.append(entry)
+		else:
+			away.append(entry)
+	for i in range(rows):
+		if i < home.size():
+			var hl := str(home[i])
+			if i == rows - 1 and home.size() > rows:
+				hl += "  +%d" % (home.size() - rows)
+			p.text(c, Vector2(r.position.x + 24.0, y0 + step * float(i)), hl, size, UiChrome.C_TEXT, f_med)
+		if i < away.size():
+			var al := str(away[i])
+			if i == rows - 1 and away.size() > rows:
+				al += "  +%d" % (away.size() - rows)
+			p.text_r(c, r.end.x - 24.0, y0 + step * float(i), al, size, UiChrome.C_TEXT, f_med)
+
+static func _entry(engine, g: Dictionary, with_club: bool) -> String:
+	var name := str(g.get("scorer", "")).to_upper()
+	if name == "":
+		name = "UNKNOWN"
+	if bool(g.get("own_goal", false)):
+		name += " (OG)"
+	var minute := int(g.get("minute", 0))
+	if with_club:
+		var t: int = clampi(int(g.get("team", 0)), 0, 1)
+		return "%s %d'  %s" % [str(engine.teams[t]["data"]["abbr"]), minute, name]
+	return "%d'  %s" % [minute, name]
+
 
 ## Opening team sheet; waits out the kickoff and fades across the first seconds.
 func intro(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:
