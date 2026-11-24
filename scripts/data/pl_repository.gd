@@ -198,9 +198,9 @@ func leaders(limit: int = 6, stat: String = "goals") -> Array:
 		out.append(row)
 	return out
 
-## Fixtures for one club (or the whole league), newest first. Played games
-## carry the real result; the rest are the snapshot's remaining schedule. A
-## season save answers with the fixtures it has actually played.
+## Fixtures for one club (or the whole league), newest first. Only a played game
+## is a result: an unplayed one is `upcoming()`'s reading, never a 0 – 0 line.
+## A season save answers with the fixtures it has actually played.
 func fixtures(club_id: String = "", limit: int = 8) -> Array:
 	if LeagueLedger.bound():
 		return LeagueLedger.fixtures(club_id, limit)
@@ -212,7 +212,24 @@ func fixtures(club_id: String = "", limit: int = 8) -> Array:
 	if club_id.is_empty():
 		sql += "WHERE f.played = 1 ORDER BY f.kickoff DESC LIMIT ?;"
 		return PLDatabase.rows(sql, [limit])
-	sql += "WHERE f.home_club_id = ? OR f.away_club_id = ? ORDER BY f.kickoff DESC LIMIT ?;"
+	sql += "WHERE f.played = 1 AND (f.home_club_id = ? OR f.away_club_id = ?) "
+	sql += "ORDER BY f.kickoff DESC, f.id DESC LIMIT ?;"
+	return PLDatabase.rows(sql, [club_id, club_id, limit])
+
+## The fixtures still ahead, soonest first: what a page reads as what comes next
+## for a club. A season answers with the games its clock still holds; the
+## snapshot answers with the remaining schedule it ships.
+func upcoming(club_id: String = "", limit: int = 6) -> Array:
+	if LeagueLedger.bound():
+		return LeagueLedger.upcoming(club_id, limit)
+	var sql := (
+		"SELECT f.*, h.abbr AS home_abbr, a.abbr AS away_abbr, h.name AS home_name, "
+		+ "a.name AS away_name FROM fixture f JOIN club h ON h.id = f.home_club_id "
+		+ "JOIN club a ON a.id = f.away_club_id WHERE f.played = 0 "
+	)
+	if club_id.is_empty():
+		return PLDatabase.rows(sql + "ORDER BY f.kickoff ASC, f.id ASC LIMIT ?;", [limit])
+	sql += "AND (f.home_club_id = ? OR f.away_club_id = ?) ORDER BY f.kickoff ASC, f.id ASC LIMIT ?;"
 	return PLDatabase.rows(sql, [club_id, club_id, limit])
 
 ## True while a league save owns the connection (DR-20261125-08): the pages
