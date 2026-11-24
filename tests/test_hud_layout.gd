@@ -157,3 +157,56 @@ func test_the_scale_lands_a_phone_at_about_one_unit_per_point() -> void:
 	assert_almost_eq(HudLayout.scale_for(1080.0), 1.0, 0.01, "a desktop-height screen should not scale")
 	assert_almost_eq(HudLayout.scale_for(0.0), 2.6, 0.01, "a zero height should clamp, not divide")
 	assert_gte(HudLayout.scale_for(2400.0), 1.0, "the scale floor is below one unit per point")
+
+# --------------------------------------------------- the whistle card ---
+
+func test_the_whistle_card_keeps_its_shipped_desktop_numbers() -> void:
+	# With no goals to list the card is the 190-unit scorecard every desktop
+	# screenshot has (DR-20261125-04): same width, same centre, same height.
+	var vp := Vector2(1600, 900)
+	var m: Dictionary = HudLayout.break_metrics(vp, 0, 0)
+	assert_eq(m["rect"], Rect2(570.0, 355.0, 460.0, 190.0), "the empty whistle card moved")
+	assert_eq(int(m["rows"]), 0, "an empty sheet still asked for a goal row")
+	# Three goals for the home side and one for the visitors: three rows, one per
+	# line above the hint line.
+	var m3: Dictionary = HudLayout.break_metrics(vp, 3, 1)
+	assert_eq(int(m3["rows"]), 3, "the card did not grow a row per goal")
+	assert_almost_eq(float(m3["rect"].size.y), 190.0 + 3.0 * 15.0, 0.01, "the card did not grow by its rows")
+
+func test_the_whistle_card_clears_the_band_at_every_size() -> void:
+	# The card grows with the score but must never cover the scoreboard, the
+	# ticker or a control — a seven-goal game included, on both metrics.
+	for vp in SIZES + COMPACT_SIZES:
+		var board: Rect2 = HudLayout.scoreboard_rect(vp)
+		var ticker: Rect2 = HudLayout.commentary_rect(vp)
+		var bar: Rect2 = HudLayout.controls_rect(vp)
+		for goals in [0, 1, 3, 7]:
+			var m: Dictionary = HudLayout.break_metrics(vp, goals, goals)
+			var card: Rect2 = m["rect"]
+			var tag := "%s with %d goals" % [vp, goals]
+			assert_gte(card.position.x, 0.0, "the whistle card runs off the left of %s" % tag)
+			assert_lte(card.end.x, vp.x, "the whistle card runs off the right of %s" % tag)
+			assert_lte(card.end.y, vp.y, "the whistle card runs off the bottom of %s" % tag)
+			assert_lte(card.end.y, ticker.position.y, "the whistle card covers the ticker at %s" % tag)
+			assert_lte(card.end.y, bar.position.y, "the whistle card covers a control at %s" % tag)
+			assert_gte(card.position.y, 0.0, "the whistle card runs off the top at %s" % tag)
+			# Only a card that still clears the scoreboard may sit under it: the
+			# narrowest handset squeezes into whatever band is left.
+			if card.size.y >= HudLayout.BREAK_BASE_H and not bool(m["compact"]):
+				assert_gte(card.position.y, board.end.y, "the whistle card covers the scoreboard at %s" % tag)
+
+func test_the_whistle_card_lists_what_fits_and_counts_the_rest() -> void:
+	# The rows it draws are what it can hold: a phone lists two short entries per
+	# row, a desktop one entry per column.
+	var desktop := Vector2(1600, 900)
+	assert_gte(int(HudLayout.break_metrics(desktop, 6, 6)["rows"]), 6, "desktop dropped rows it had room for")
+	assert_eq(int(HudLayout.break_metrics(desktop, 6, 6)["per_row"]), 1, "desktop is not the two-column layout")
+	var phone := Vector2(913, 411)
+	var m: Dictionary = HudLayout.break_metrics(phone, 2, 2)
+	assert_eq(int(m["per_row"]), 2, "a phone row is not two entries")
+	assert_gte(int(m["rows"]), 2, "a phone dropped the rows it had room for")
+	assert_lte(int(m["rows"]), int(m["capacity"]), "a phone drew more rows than fit")
+	var squeezed := HudLayout.break_metrics(Vector2(640, 300), 4, 2)
+	assert_eq(int(squeezed["rows"]), 0, "the narrowest handset drew goal rows it cannot fit")
+	assert_lte(squeezed["rect"].end.y, HudLayout.commentary_rect(Vector2(640, 300)).position.y, "the squeezed card ran into the ticker")
+

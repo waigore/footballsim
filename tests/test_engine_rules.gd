@@ -107,6 +107,69 @@ func test_defender_putting_it_in_his_own_net_is_an_own_goal() -> void:
 	assert_true(bool(eng.last_goal["own_goal"]), "the own goal was credited as a normal goal")
 	assert_eq(int(eng.stats[1]["goals"]), 0, "the conceding side was credited with the goal")
 
+# ---------------------------------------------------- the whistle sheet ---
+
+## A ball already over `team`'s line with the keepers out of the picture: the
+## shortest way to a real goal, and so to a row in the whistle sheet.
+func _goal_for(eng, team: int) -> void:
+	_park_keepers_off_the_line(eng)
+	eng.phase = "play"
+	eng.restart = {}
+	var scorer = _outfield(eng, team)
+	var goal: Vector2 = eng.target_goal_pos(team)
+	eng.ball.pos = Vector2(goal.x, 34.0)
+	eng.ball.vel = Vector2.ZERO
+	eng.ball.z = 0.4
+	eng.ball.vz = 0.0
+	eng.ball.owner_id = -1
+	eng.ball.shot_team = team
+	eng.ball.shot_time = eng.clock
+	eng.ball.last_touch_id = scorer.id
+	eng.ball.last_touch_team = team
+	eng.ball.planned_goal = true
+	eng._check_rules()
+
+func test_the_whistle_sheet_lists_every_goal_in_order() -> void:
+	var eng := _eng(70)
+	eng.clock = 660.0
+	_goal_for(eng, 0)
+	assert_eq(eng.goal_sheet.size(), 1, "the goal never reached the whistle sheet")
+	assert_eq(int(eng.goal_sheet[0]["team"]), 0, "the first goal went to the wrong side")
+	assert_eq(int(eng.goal_sheet[0]["minute"]), 11, "the first goal's minute was not read")
+	eng.clock = 2400.0
+	_goal_for(eng, 1)
+	assert_eq(eng.goal_sheet.size(), 2, "the sheet did not keep both goals")
+	assert_eq(int(eng.goal_sheet[0]["team"]), 0, "the sheet reordered the goals")
+	assert_eq(int(eng.goal_sheet[1]["team"]), 1, "the second goal went to the wrong side")
+	assert_eq(int(eng.goal_sheet[1]["minute"]), 40, "the second goal's minute was not read")
+
+func test_an_own_goal_lands_in_the_other_side_of_the_sheet() -> void:
+	var eng := _eng(71)
+	_park_keepers_off_the_line(eng)
+	var defender = _outfield(eng, 1)
+	var goal: Vector2 = eng.target_goal_pos(0)
+	eng.ball.pos = Vector2(goal.x, 34.0)
+	eng.ball.vel = Vector2.ZERO
+	eng.ball.z = 0.3
+	eng.ball.owner_id = -1
+	eng.ball.last_touch_id = defender.id
+	eng.ball.last_touch_team = 1
+	eng._check_rules()
+	assert_eq(eng.goal_sheet.size(), 1, "the own goal never reached the whistle sheet")
+	assert_eq(int(eng.goal_sheet[0]["team"]), 0, "the own goal was credited to the wrong side")
+	assert_true(bool(eng.goal_sheet[0]["own_goal"]), "the sheet dropped the own-goal mark")
+	assert_eq(str(eng.goal_sheet[0]["scorer"]), defender.name, "the sheet named the wrong player")
+
+func test_the_whistle_sheet_survives_a_snapshot() -> void:
+	var eng := _eng(72)
+	eng.clock = 900.0
+	_goal_for(eng, 0)
+	var other := MatchEngine.new(72)
+	other.from_dict(eng.to_dict())
+	assert_eq(other.goal_sheet.size(), 1, "the snapshot lost the goal sheet")
+	assert_eq(str(other.goal_sheet[0]["scorer"]), str(eng.goal_sheet[0]["scorer"]), "the snapshot renamed the scorer")
+	assert_eq(int(other.goal_sheet[0]["minute"]), 15, "the snapshot lost the goal's minute")
+
 func test_goal_line_save_keeps_the_ball_out() -> void:
 	var saved := 0
 	for seed_in in range(30):
