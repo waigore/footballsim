@@ -380,7 +380,11 @@ func test_table_rows_and_the_podium_door() -> void:
 			break
 	assert_true(club_id != "", "the table laid out no club rows")
 	press_id(club_id)
-	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "a club row did not leave the table")
+	assert_true(game.wiki_host.is_open(), "a club row did not open the team page")
+	game.wiki_host.screen.click("back")
+	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "the club row left the table")
+	press_id("back")
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Back did not leave the table")
 	LeagueSeason.active.save.set_status("complete")
 	screen().refresh()
 	press_id("podium")
@@ -392,6 +396,27 @@ func test_table_rows_and_the_podium_door() -> void:
 	LeagueSeason.active.save.set_status("in_progress")
 	screen().open_season(LeagueSeason.active)
 	press_id("menu")
+
+func test_the_hub_table_row_opens_the_club_page_and_back_returns() -> void:
+	_open_hub()
+	var club_id := ""
+	for item in screen().buttons:
+		if str(item["kind"]) == "table_row":
+			club_id = str(item["id"])
+			break
+	assert_true(club_id != "", "the wide hub laid out no club rows")
+	press_id(club_id)
+	assert_true(game.wiki_host.is_open(), "a hub club row did not open the team page")
+	var landed: Dictionary = game.wiki_host.screen.current()
+	assert_eq(str(landed["page"]), WikiModel.TEAM, "the hub row opened another page")
+	assert_eq(str(landed["id"]), club_id.substr(5), "the hub row opened another club")
+	assert_false(game.menus.league_active(), "the season stayed painted under the page")
+	game.wiki_host.screen.click("back")
+	assert_true(game.menus.league_active(), "Back from the page did not give the season back")
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Back from the page lost the hub")
+	assert_true(game.paused, "the season resumed the match under it")
+	press_id("menu")
+	assert_false(game.menus.league_active(), "MENU did not leave the season")
 
 func test_pointer_motion_and_drag_are_not_clicks() -> void:
 	game.menus.open_menu()
@@ -492,7 +517,12 @@ func test_a_row_scrolled_into_view_is_the_one_that_opens() -> void:
 	assert_lte((target["rect"] as Rect2).end.y,
 		screen().body.position.y + screen().body.size.y + 0.5, "the last club is still under the footer")
 	press((target["rect"] as Rect2).get_center())
-	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "the scrolled club row did not open")
+	assert_true(game.wiki_host.is_open(), "the scrolled club row did not open its page")
+	var landed: Dictionary = game.wiki_host.screen.current()
+	assert_eq(str(landed["page"]), WikiModel.TEAM, "the scrolled row opened another page")
+	assert_eq(str(landed["id"]), last_id.substr(5), "the scrolled row opened another club")
+	game.wiki_host.screen.click("close")
+	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "closing the page left the table")
 	screen().ui_scale = saved
 	screen().refresh()
 

@@ -37,6 +37,7 @@ func build() -> void:
 	screen.closed.connect(_on_closed)
 	screen.match_requested.connect(_on_match_requested)
 	screen.season_opened.connect(_on_season_opened)
+	screen.club_requested.connect(_on_club_requested)
 	layer.visible = false
 
 ## Open means "the layer is on screen": the hand-off to the match viewer hides
@@ -108,6 +109,26 @@ func _on_closed() -> void:
 		game.hud_layer.visible = false
 	if game.menus != null:
 		game.menus.open_menu()
+
+## A club row is a look-up, not an exit: the encyclopedia opens over the season
+## and hands the season sheet back when it closes.
+func _on_club_requested(club_id: String) -> void:
+	if game.wiki_host == null:
+		return
+	game.wiki_host.open_page_over_league(WikiModel.TEAM, club_id)
+
+## Stand the season sheet down while the encyclopedia covers it, then put it
+## back on the pose it left — the season object never closes.
+func hide_for_wiki() -> void:
+	if layer != null:
+		layer.visible = false
+
+func show_after_wiki() -> void:
+	if layer == null or screen == null:
+		return
+	game.paused = true
+	layer.visible = true
+	screen.queue_redraw()
 
 ## Single-match mode owns the cached seed: a friendly started while a league
 ## save is loaded unbinds the season so its stats cannot land in the save.
