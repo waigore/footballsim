@@ -74,7 +74,7 @@ func open_load() -> void:
 
 func open_save(slug: String) -> void:
 	_activate()
-	screen._open_save(slug)
+	screen.open_save(slug)
 
 ## Show a season that already exists (a resumed save, a dev/evidence pose).
 func show_season(season_in: LeagueSeason, podium: bool = false) -> void:

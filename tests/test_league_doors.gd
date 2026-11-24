@@ -1,0 +1,244 @@
+extends GdToolsTest
+
+## The season surface's doors (`LeagueDoors`): the key map, the press table and
+## the season actions a press can reach. Driven against a bare `LeagueScreen` and
+## a real generated season, so the dispatch is pinned without a renderer or the
+## match view.
+
+var SAVE_DIR := TestScratch.dir("saves_test_league_doors")
+var CACHE_DIR := TestScratch.dir("cache_test_league_doors")
+const SEED := 411
+
+var season: LeagueSeason = null
+var screen: LeagueScreen = null
+var asked: Array = []
+
+func before_all() -> void:
+	PLDatabase.cache_dir = CACHE_DIR
+	LeagueSave.dir = SAVE_DIR
+	_clean()
+	PLDatabase.reset()
+	PLRepository.shared().invalidate()
+	season = LeagueSeason.create("Doors Season", "generated", "fixture_days", SEED)
+	screen = LeagueScreen.new()
+	add_child(screen)
+	screen.season = season
+	screen.mode = LeagueScreen.MODE_HUB
+
+func after_all() -> void:
+	if screen != null:
+		screen.queue_free()
+		screen = null
+	if season != null:
+		season.close()
+		season = null
+	LeagueSeason.active = null
+	_clean()
+	LeagueSave.dir = LeagueSave.DEFAULT_DIR
+	PLDatabase.cache_dir = PLDatabase.CACHE_DIR
+	PLDatabase.reset()
+	PLRepository.shared().invalidate()
+
+func _clean() -> void:
+	for folder in [SAVE_DIR, CACHE_DIR]:
+		TestScratch.clear(folder)
+
+func _hub() -> void:
+	screen.season = season
+	screen.mode = LeagueScreen.MODE_HUB
+
+func _fixture(watched: int = 0) -> Dictionary:
+	for fx in season.record.fixtures():
+		if str(fx["status"]) == "pending":
+			season.set_watch(str(fx["id"]), watched == 1)
+			return season.record.fixture(str(fx["id"]))
+	return {}
+
+func test_the_key_map_walks_a_sheet_without_a_window() -> void:
+	_hub()
+	# A bare screen has no body: the map still reports the keys it owns and the
+	# scroll helpers simply have nothing to move.
+	for code in [KEY_UP, KEY_W, KEY_DOWN, KEY_S, KEY_PAGEUP, KEY_PAGEDOWN, KEY_HOME, KEY_END]:
+		assert_true(screen.key(code), "the sheet did not take scroll key %d" % code)
+	assert_false(screen.key(KEY_TAB), "an unbound key was taken")
+	var body := screen.body
+	screen.body = null
+	assert_true(screen.key(KEY_DOWN), "a screen without a window stopped taking scroll keys")
+	screen.body = body
+
+func test_enter_continues_the_hub_and_escape_leaves_it() -> void:
+	_hub()
+	assert_true(screen.key(KEY_ENTER), "Enter did not press Continue")
+	assert_ne(screen.mode, LeagueScreen.MODE_HUB, "Continue left the hub without settling")
+	screen.mode = LeagueScreen.MODE_TABLE
+	assert_true(screen.key(KEY_ESCAPE), "Esc was not taken on a reading")
+	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "Esc did not return to the hub")
+	assert_true(screen.key(KEY_BACKSPACE), "Backspace was not taken on the hub")
+	assert_false(screen.visible, "the hub did not close the surface")
+
+func test_the_wizard_and_the_report_take_their_own_keys() -> void:
+	screen.mode = LeagueScreen.MODE_WIZARD
+	screen.wizard = {"name": "", "calendar_mode": "generated", "advance_mode": "fixture_days", "error": ""}
+	assert_true(screen.key(KEY_A), "the wizard did not take a letter")
+	assert_eq(str(screen.wizard["name"]), "A", "the typed letter did not reach the name")
+	screen.mode = LeagueScreen.MODE_REPORT
+	screen.report = {"fixture": {"id": "gw01-HOM-AWY"}, "events": [], "highlights": []}
+	assert_false(screen.key(KEY_5), "a goal key with no clip was taken")
+	assert_false(screen.has_clip(0), "an empty report claims a clip")
+
+func test_the_pose_doors_move_the_surface_between_its_sheets() -> void:
+	_hub()
+	screen.click("table")
+	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table door did not open the table")
+	screen.click("calendar")
+	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR, "the calendar door did not open the calendar")
+	screen.click("podium")
+	assert_eq(screen.mode, LeagueScreen.MODE_PODIUM, "the podium door did not open the podium")
+	screen.click("back")
+	assert_false(screen.visible, "BACK on the podium did not close the surface")
+	_hub()
+	screen.click("menu")
+	assert_false(screen.visible, "MENU did not close the surface")
+	screen.click("")
+	assert_false(screen.visible, "an empty press reopened something")
+
+func test_the_table_door_opens_without_a_season() -> void:
+	screen.season = null
+	screen.click("table")
+	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table door needed a season it does not")
+	screen.click("tbl:sort:club")
+	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "a table press left the table")
+
+func test_the_simple_doors_reach_the_surface_and_the_season() -> void:
+	asked = []
+	screen.club_requested.connect(func(id: String) -> void: asked.append("club:" + id))
+	_hub()
+	screen.click("club:MCI")
+	assert_eq(asked, ["club:MCI"], "a club row did not ask for the team page")
+	screen.click("suggest")
+	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "the Suggest door moved the surface")
+	screen.click("name")
+	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "a repaint door changed the pose")
+	screen.click("mode:real")
+	assert_eq(str(screen.wizard["calendar_mode"]), "real", "a wizard choice was not taken")
+	screen.click("adv:every_day")
+	assert_eq(str(screen.wizard["advance_mode"]), "every_day", "an advance choice was not taken")
+
+func test_continue_settles_a_day_and_opens_the_roundup() -> void:
+	_hub()
+	screen.click("continue")
+	assert_eq(screen.mode, LeagueScreen.MODE_REPORT, "the settled day did not show its roundup")
+	assert_false((screen.roundup as Array).is_empty(), "the roundup is empty")
+
+func test_continue_opens_a_pending_watch_before_settling() -> void:
+	asked = []
+	screen.match_requested.connect(func(home: String, away: String, fixture_id: String) -> void:
+		asked.append(fixture_id))
+	_hub()
+	var fx := _fixture(1)
+	screen.click("continue")
+	assert_eq(asked, [str(fx["id"])], "Continue did not open the watched fixture")
+	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "a pending watch left the hub")
+
+func test_continue_is_inert_without_a_season_or_while_finishing() -> void:
+	screen.season = null
+	screen.mode = LeagueScreen.MODE_HUB
+	screen.click("continue")
+	assert_null(screen.season, "Continue invented a season")
+	_hub()
+	var before := str(season.state()["date"])
+	season.finishing = true
+	screen.click("continue")
+	assert_eq(str(season.state()["date"]), before, "Continue moved the clock while finishing")
+	season.finishing = false
+
+func test_a_fixture_row_watches_starts_or_opens_a_report() -> void:
+	asked = []
+	screen.match_requested.connect(func(_home: String, _away: String, fixture_id: String) -> void:
+		asked.append(fixture_id))
+	_hub()
+	var fx := _fixture(0)
+	screen.click("toggle:" + str(fx["id"]))
+	assert_eq(int(season.record.fixture(str(fx["id"]))["watched"]), 1, "the toggle did not watch the fixture")
+	screen.click("fixture:" + str(fx["id"]))
+	assert_eq(asked, [str(fx["id"])], "a watched fixture did not start its match")
+	season.set_watch(str(fx["id"]), false)
+	screen.click("fixture:" + str(fx["id"]))
+	assert_eq(int(season.record.fixture(str(fx["id"]))["watched"]), 1, "a pending row did not flip its watch")
+	var played := {}
+	for row in season.record.fixtures():
+		if str(row["status"]) == "played":
+			played = row
+			break
+	if not played.is_empty():
+		screen.click("fixture:" + str(played["id"]))
+		assert_eq(screen.mode, LeagueScreen.MODE_REPORT, "a played fixture did not open its report")
+		screen.mode = LeagueScreen.MODE_HUB
+		screen.click("toggle:" + str(played["id"]))
+		assert_eq(int(season.record.fixture(str(played["id"]))["watched"]),
+			int(played["watched"]), "a played fixture changed its watch")
+
+func test_fixture_rows_are_inert_without_a_season_and_ignore_unknown_ids() -> void:
+	screen.season = null
+	screen.click("toggle:gw01-HOM-AWY")
+	screen.click("fixture:gw01-HOM-AWY")
+	assert_null(screen.season, "a fixture row invented a season")
+	_hub()
+	var watched := 0
+	for row in season.record.fixtures():
+		watched += int(row["watched"])
+	screen.click("fixture:no-such-fixture")
+	screen.click("toggle:no-such-fixture")
+	var after := 0
+	for row in season.record.fixtures():
+		after += int(row["watched"])
+	assert_eq(after, watched, "an unknown fixture changed a watch flag")
+
+func test_a_report_row_opens_the_sheet_for_its_fixture() -> void:
+	_hub()
+	var played := ""
+	for row in season.record.fixtures():
+		if str(row["status"]) == "played":
+			played = str(row["id"])
+			break
+	assert_true(played != "", "the settled day left no played fixture")
+	screen.click("match:" + played)
+	assert_eq(screen.mode, LeagueScreen.MODE_REPORT, "a report row did not open its report")
+	assert_eq(str((screen.report.get("fixture", {}) as Dictionary).get("id", "")), played,
+		"the report is for another fixture")
+
+func test_a_goal_door_plays_a_stored_clip_and_names_its_fixture() -> void:
+	var played: Array = []
+	screen.goal_highlight_requested.connect(func(fixture_id: String, index: int) -> void:
+		played.append("%s#%d" % [fixture_id, index]))
+	_hub()
+	screen.click("goal:0")
+	assert_true(played.is_empty(), "a goal away from the report was played")
+	screen.mode = LeagueScreen.MODE_REPORT
+	screen.report = {"fixture": {"id": "gw01-HOM-AWY"}, "highlights": [{"goal_index": 0}]}
+	assert_true(screen.has_clip(0), "the report's own goal clip was not seen")
+	screen.click("goal:0")
+	assert_eq(played, ["gw01-HOM-AWY#0"], "the goal door did not name the clip's fixture")
+	assert_true(screen.key(KEY_1), "the report's goal key was not taken")
+	assert_eq(played.size(), 2, "the report's goal key did not play the clip")
+
+func test_deleting_the_open_save_unloads_it_first() -> void:
+	# The already-open season unloads before its file goes, so nothing keeps
+	# reading a save that no longer exists.
+	var throwaway := LeagueSeason.create("Doors Throwaway", "generated", "fixture_days", SEED + 1)
+	assert_not_null(throwaway, "the throwaway season was not created")
+	screen.season = throwaway
+	screen.mode = LeagueScreen.MODE_LOAD
+	var slug := throwaway.save.slug
+	screen.click("delete:" + slug)
+	assert_null(screen.season, "the deleted save stayed bound to the surface")
+	var left: Array = []
+	for row in LeagueSave.list():
+		left.append(str(row["slug"]))
+	assert_false(left.has(slug), "the deleted save is still on disk")
+	# A save that is not the open one deletes straight off the load list.
+	var copy := season.save.write_copy("Doors other copy")
+	assert_true(copy != "", "the stand-in save was not written")
+	screen.season = season
+	screen.click("delete:" + copy)
+	assert_eq(screen.season, season, "deleting another save unloaded the open one")
