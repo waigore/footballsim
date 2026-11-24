@@ -66,12 +66,18 @@ static func record_match(engine) -> bool:
 		if str(p.key) == "":
 			continue
 		lines.append(player_line(p, str(engine.teams[p.team]["id"]), 90))
-	return record({
+	var ok := record({
 		"home": str(engine.teams[0]["id"]),
 		"away": str(engine.teams[1]["id"]),
 		"score": [engine.score[0], engine.score[1]],
 		"players": lines,
 	})
+	# A league save whose planner sent this fixture to the viewer owns the
+	# result too; the controller stays league-blind.
+	if ok and LeagueSeason.active != null:
+		LeagueSeason.engine_finished(engine)
+	return ok
+
 
 ## Persist a finished match. Returns false when the cache is unavailable.
 static func record(summary: Dictionary) -> bool:

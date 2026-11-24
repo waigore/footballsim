@@ -9,6 +9,8 @@ extends RefCounted
 var game = null
 var layer: CanvasLayer = null
 var shell: AppShell = null
+## The god-mode league surface: New/Setup, Load and the season hub.
+var league: LeagueHost = null
 
 func attach(main_node) -> void:
 	game = main_node
@@ -21,14 +23,28 @@ func attach(main_node) -> void:
 	shell.set_anchors_preset(Control.PRESET_FULL_RECT)
 	shell.start_requested.connect(_on_start)
 	shell.resume_requested.connect(_on_resume)
+	shell.new_league_requested.connect(_on_new_league)
+	shell.load_league_requested.connect(_on_load_league)
 	shell.visible = false
+	league = LeagueHost.new()
+	league.attach(main_node)
+	league.build()
 
 func active() -> bool:
-	return shell != null and shell.active()
+	return (shell != null and shell.active()) or league_active()
+
+func league_active() -> bool:
+	return league != null and league.is_open()
+
+func open_league_menu() -> void:
+	if league != null:
+		league.open_wizard()
 
 func open_menu() -> void:
 	if game.wiki_host != null and game.wiki_host.is_open():
 		game.wiki_host.close()
+	if league != null and league.is_open():
+		league.close()
 	game.paused = true
 	game.select_open = false
 	_hide_chrome()
@@ -69,6 +85,8 @@ func pose(dev) -> void:
 func sync(frame: Transform2D, scale: float, touch: bool) -> void:
 	if shell == null:
 		return
+	if league != null:
+		league.sync(frame, scale, touch)
 	layer.transform = frame
 	shell.ui_scale = scale
 	shell.touch = touch
@@ -76,6 +94,8 @@ func sync(frame: Transform2D, scale: float, touch: bool) -> void:
 
 ## Swallow every event while a sheet is up: nothing may reach the paused match.
 func handle_input(event: InputEvent, design_point: Vector2) -> bool:
+	if league_active():
+		return league.handle_input(event, design_point)
 	if not active():
 		return false
 	if event is InputEventMouse:
@@ -91,7 +111,17 @@ func _hide_chrome() -> void:
 		game.sel_layer.visible = false
 
 func _on_start() -> void:
+	if league != null:
+		league.detach_season()
 	game.open_select(true)
+
+func _on_new_league() -> void:
+	if league != null:
+		league.open_wizard()
+
+func _on_load_league() -> void:
+	if league != null:
+		league.open_load()
 
 func _on_resume() -> void:
 	if game.hud_layer != null:

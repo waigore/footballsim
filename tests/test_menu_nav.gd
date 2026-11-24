@@ -56,7 +56,7 @@ func test_cold_start_opens_the_main_menu() -> void:
 func test_the_menu_doors_are_tappable_and_inside_the_screen() -> void:
 	for size in [Vector2(1600, 900), Vector2(913, 411), Vector2(640, 300)]:
 		var rects := MenuScreen.door_rects(size, true)
-		assert_eq(rects.size(), 4, "the menu is missing a door at %s" % size)
+		assert_eq(rects.size(), 6, "the menu is missing a door at %s" % size)
 		for b in rects:
 			var r: Rect2 = b["rect"]
 			assert_gte(r.size.y, 44.0, "a door is too short to tap at %s" % size)

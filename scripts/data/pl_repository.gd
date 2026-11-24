@@ -151,8 +151,11 @@ func player_by_name(club_id: String, name: String) -> Dictionary:
 	var row := PLDatabase.row("SELECT id FROM player WHERE club_id = ? AND name = ?;", [club_id, name])
 	return player(str(row["id"])) if not row.is_empty() else {}
 
-## League table, joined with the club names the dashboards print.
+## League table: the save's live standings while a league season owns the
+## connection, otherwise the snapshot's finished table.
 func table() -> Array:
+	if _live_table_exists():
+		return _live_table()
 	var out: Array = []
 	for row in PLDatabase.rows(
 		"SELECT t.*, c.name AS club_name, c.abbr AS club_abbr, c.color AS club_color "
@@ -160,6 +163,24 @@ func table() -> Array:
 	):
 		out.append(row)
 	return out
+
+## A league save adds `league_table` beside the snapshot's `table_row`; when it
+## is there, the encyclopedia must show the season the player is actually in.
+func _live_table_exists() -> bool:
+	return not PLDatabase.row(
+		"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'league_table';"
+	).is_empty()
+
+func _live_table() -> Array:
+	var rows := PLDatabase.rows(
+		"SELECT t.*, c.name AS club_name, c.abbr AS club_abbr, c.color AS club_color "
+		+ "FROM league_table t JOIN club c ON c.id = t.club_id "
+		+ "ORDER BY t.points DESC, (t.gf - t.ga) DESC, t.gf DESC, c.name ASC;"
+	)
+	for i in range(rows.size()):
+		rows[i]["position"] = i + 1
+	return rows
+
 
 ## Top scorers from the real-world snapshot; `stat` is goals or assists.
 func leaders(limit: int = 6, stat: String = "goals") -> Array:

@@ -25,7 +25,16 @@ time (or added time) is reached and fails fast if the match stalls.
 
 ## Poisson-agreement census (tier 2)
 
-`playtests/census` plays full physics matches on fixed seed grids for the anchors (MCI v BUR, MCI v MCI) and hard-gates goal variance vs the Poisson λ (`|var − λ|/λ ≤ 10%`, both sides) plus a **≤ 60 s** wall-clock budget per match (a 60 Hz GDScript tick bottoms out near 30 s). Tier-2 only — the impact map sends census edits to the fast poisson suite on PRs. Grid size, seeds and the latest numbers live on the wiki poisson-model page.
+`playtests/census` plays fixed-seed full matches for the anchors (MCI v BUR, MCI v MCI) and hard-gates goal dispersion vs Poisson λ: the **10% target** plus a two-sided **95% sampling allowance** at the grid's n (`CensusLib.variance_tolerance`; ≈±67% at n=32), and **≤120 s** per match (40–80 s on CI). Matches cost tens of seconds; `.github/workflows/census.yml` shards the grid: runners play a slice, `test_census_aggregate.gd` pools the rows and asserts. Tier-2 only; census edits run the poisson suite on PRs. Numbers: wiki poisson-model.
+
+Local census:
+
+```bash
+godot --headless --path . --import --quit
+CENSUS_SHARDS=1 gd-tools test playtests/census/test_census_mci_bur.gd
+CENSUS_SHARDS=1 gd-tools test playtests/census/test_census_mci_mci.gd
+CENSUS_REQUIRE=1 gd-tools test playtests/census/test_census_aggregate.gd
+```
 
 ## Local
 
@@ -46,7 +55,7 @@ Tier 2 measures **shipped game code**: `scripts/`, `scenes/`, `ui/`, `autoload/`
 | Excluded | Why |
 |----------|-----|
 | `tools/` | Dev probes, reporting scripts, old suite copies — nothing a player runs (`gd-tools.toml` `coverage.exclude`) |
-| `scripts/view/pitch_view.gd` | Stadium painting: only runs when a frame renders, and the suite is headless (`# gd-tools: no cover`) |
+| `scripts/view/pitch_view.gd`, league sheet paint | Painting only runs on a rendered frame; the suite is headless (`# gd-tools: no cover`). League layout stays measured |
 
 Two gd-tools instrumentation rules shape the source:
 

@@ -107,6 +107,7 @@ func wheel(delta: float) -> void:
 	if body != null:
 		body.scroll_by(delta)
 
+## One row of keys scrolls by a wheel notch, a page of keys by most of the sheet.
 func key(code: int) -> bool:
 	if code == KEY_ESCAPE or code == KEY_BACKSPACE or code == KEY_LEFT:
 		back()
@@ -114,9 +115,25 @@ func key(code: int) -> bool:
 		wheel(-120.0)
 	elif code == KEY_DOWN or code == KEY_S:
 		wheel(120.0)
+	elif code == KEY_PAGEUP:
+		scroll_page(-1.0)
+	elif code == KEY_PAGEDOWN:
+		scroll_page(1.0)
+	elif code == KEY_HOME:
+		scroll_to(0.0)
+	elif code == KEY_END:
+		scroll_to(INF)
 	else:
 		return false
 	return true
+
+func scroll_page(direction: float) -> void:
+	if body != null:
+		body.scroll_by(direction * body.size.y * 0.9)
+
+func scroll_to(at: float) -> void:
+	if body != null:
+		body.scroll_to(at)
 
 func button_at(p: Vector2) -> String:
 	for b in buttons:
@@ -194,11 +211,13 @@ func _draw_furniture(vp: Vector2, br: Rect2) -> void:
 	if body != null and body.max_scroll() > 0.0:
 		var track := Rect2(br.position.x + br.size.x + 6.0, br.position.y, 3.0, br.size.y)
 		var frac: float = clampf(body.size.y / maxf(body.content_height(), 1.0), 0.06, 1.0)
-		var offset: float = body.scroll / maxf(body.content_height(), 1.0)
+		# The thumb travels the whole track between the top and the last row, so
+		# the end of the bar is where the end of the page is.
+		var offset: float = clampf(body.scroll / maxf(body.max_scroll(), 0.001), 0.0, 1.0)
 		var h: float = track.size.y * frac
 		draw_rect(track, Color(1, 1, 1, 0.05))
 		draw_rect(Rect2(track.position.x, track.position.y + (track.size.y - h) * offset, 3.0, h), Color(1, 1, 1, 0.22))
-	var hint := "TAP A ROW TO OPEN  ·  BACK RETURN" if touch else "CLICK A ROW TO OPEN  ·  ESC BACK  ·  WHEEL SCROLLS"
+	var hint := "TAP A ROW TO OPEN  ·  DRAG OR KEYS SCROLL" if touch else "CLICK A ROW TO OPEN  ·  ESC BACK  ·  WHEEL, DRAG OR KEYS SCROLL"
 	WikiChrome.label(self, f_med, Vector2(br.position.x, vp.y - 14.0), hint, 9, WikiChrome.DIM)
 	var source := "SNAPSHOT %s" % str(WikiModel.repo().meta().get("snapshot_date", "")).to_upper()
 	WikiChrome.label_r(self, f_med, br.end.x, vp.y - 14.0, source, 9, Color(0.96, 0.78, 0.30, 0.55))
