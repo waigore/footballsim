@@ -75,8 +75,8 @@ func _open(page: String, id: String, over_select: bool, over_league: bool) -> vo
 	layer.visible = true
 	screen.mouse = Vector2(-1000, -1000)
 	screen.touch = game.touch
-	screen.ui_scale = game.hud_scale
-	layer.transform = Transform2D.IDENTITY.scaled(Vector2(game.hud_scale, game.hud_scale))
+	screen.ui_scale = game.chrome_scale
+	layer.transform = Transform2D.IDENTITY.scaled(Vector2(game.chrome_scale, game.chrome_scale))
 	screen.visible = true
 	screen.open(page, id)
 
@@ -110,8 +110,8 @@ func _on_screen_closed() -> void:
 func sync_scale() -> void:
 	if layer == null:
 		return
-	layer.transform = Transform2D.IDENTITY.scaled(Vector2(game.hud_scale, game.hud_scale))
-	screen.ui_scale = game.hud_scale
+	layer.transform = Transform2D.IDENTITY.scaled(Vector2(game.chrome_scale, game.chrome_scale))
+	screen.ui_scale = game.chrome_scale
 	screen.touch = game.touch
 
 ## The sheet does its own hit testing; this only converts pointers to design
@@ -145,7 +145,7 @@ func reset_pointer() -> void:
 	dragged = false
 
 func _point(event: InputEvent) -> Vector2:
-	return event.position / maxf(game.hud_scale, 0.001)
+	return event.position / maxf(game.chrome_scale, 0.001)
 
 func _pointer_down(p: Vector2) -> void:
 	pressing = true
