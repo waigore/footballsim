@@ -18,6 +18,9 @@ const SIX_W := 18.32
 const PEN_D := 11.0
 const CENTER := Vector2(52.5, 34.0)
 const DT := 1.0 / 60.0
+## Ceiling on `run_to_full_time`: 200 match minutes of ticks, more than any
+## match with added time can need, so a stuck phase can never spin forever.
+const FAST_FORWARD_TICKS := 60 * 60 * 200
 
 ## Dead-ball judgement. The taker only kicks once most of his side is roughly on
 ## its slot; how long he is willing to hold play up depends on how well he reads

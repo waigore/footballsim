@@ -15,6 +15,8 @@ var game = null
 var layer: CanvasLayer = null
 var screen: LeagueScreen = null
 var season: LeagueSeason = null
+## A watched fixture the player left early: it is played out while the hub paints.
+var watch: LeagueWatch = null
 var was_paused := false
 var pressing := false
 var dragged := false
@@ -23,6 +25,7 @@ var last_at := Vector2.ZERO
 
 func attach(host) -> void:
 	game = host
+	watch = LeagueWatch.new(self)
 
 func build() -> void:
 	if layer != null or game == null:
@@ -34,6 +37,10 @@ func build() -> void:
 	screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(screen)
+	# The body owns the frame while the season sheet paints; a leftover watch
+	# takes one engine slice per frame from it (#100).
+	if screen.body != null:
+		screen.body.host = self
 	screen.closed.connect(_on_closed)
 	screen.match_requested.connect(_on_match_requested)
 	screen.season_opened.connect(_on_season_opened)
@@ -136,6 +143,10 @@ func show_after_wiki() -> void:
 func detach_season() -> void:
 	if season != null and season.match_recorded.is_connected(_on_recorded):
 		season.match_recorded.disconnect(_on_recorded)
+	if season != null:
+		season.finishing = false
+	if watch != null:
+		watch.clear()
 	if screen != null:
 		screen.season = null
 	season = null
@@ -164,14 +175,17 @@ func _on_match_requested(home: String, away: String, _fixture_id: String) -> voi
 		game.hud_layer.visible = true
 
 ## A watched match reached full time and the season recorded it: pause again and
-## show the hub with the new clock.
+## show the hub with the new clock. A result that lands while the main menu is
+## open (a left-behind watch finishing) stays behind it — the hub is there when
+## the menu closes.
 func _on_recorded(_report: Dictionary) -> void:
 	if screen == null:
 		return
 	game.paused = true
 	if game.hud_layer != null:
 		game.hud_layer.visible = false
-	layer.visible = true
+	if game.menus == null or game.menus.shell == null or not game.menus.shell.active():
+		layer.visible = true
 	screen.open_season(season)
 	screen.refresh()
 

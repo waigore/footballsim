@@ -28,6 +28,8 @@ var rules: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 ## Fixture the engine is currently playing back, if any.
 var watching_fixture := ""
+## True while a watch the player left early is being played out on the engine.
+var finishing := false
 ## Live clips captured for the fixture being watched, keyed by the goal's own
 ## minute and scorer; written when the result comes back at full time.
 var captured: Array = []
@@ -139,6 +141,8 @@ func plan() -> Array:
 	return out
 
 func set_watch(fixture_id: String, watch: bool) -> bool:
+	if finishing:
+		return false
 	var ok := record.set_watch(fixture_id, watch)
 	if ok:
 		state_changed.emit()
@@ -296,10 +300,8 @@ func report(fixture_id: String) -> Dictionary:
 	if fx.is_empty():
 		return {}
 	return {
-		"fixture": fx,
-		"score": [int(fx["home_goals"]), int(fx["away_goals"])],
-		"events": record.events(fixture_id),
-		"highlights": record.clips.list(fixture_id),
+		"fixture": fx, "score": [int(fx["home_goals"]), int(fx["away_goals"])],
+		"events": record.events(fixture_id), "highlights": record.clips.list(fixture_id),
 		"played": str(fx["status"]) == "played",
 	}
 
@@ -314,7 +316,7 @@ func goal_clip(fixture_id: String, goal_index: int) -> Dictionary:
 ## Hand one fixture to the match viewer. The screen starts the engine with these
 ## clubs; when it reaches full time, `engine_finished` records the result here.
 func start_watch(fixture_id: String) -> Dictionary:
-	if record == null or fixture_id == "":
+	if record == null or fixture_id == "" or finishing:
 		return {}
 	var fx := record.fixture(fixture_id)
 	if fx.is_empty():
@@ -323,8 +325,7 @@ func start_watch(fixture_id: String) -> Dictionary:
 	captured = []
 	return {
 		"fixture_id": fixture_id,
-		"home": str(fx["home_club_id"]),
-		"away": str(fx["away_club_id"]),
+		"home": str(fx["home_club_id"]), "away": str(fx["away_club_id"]),
 	}
 
 ## The viewer's ring caught a goal during a watched fixture: hold the clip here
@@ -339,6 +340,7 @@ func record_engine(engine) -> void:
 	if fixture_id == "":
 		return
 	watching_fixture = ""
+	finishing = false
 	var fx := record.fixture(fixture_id)
 	if fx.is_empty():
 		return
@@ -350,13 +352,10 @@ func record_engine(engine) -> void:
 	var lines: Array = []
 	for p in engine.players:
 		lines.append({
-			"player_id": str(p.key),
-			"club_id": str(engine.teams[p.team]["id"]),
+			"player_id": str(p.key), "club_id": str(engine.teams[p.team]["id"]),
 			"line": {
-				"apps": 1,
-				"goals": int(p.stats.get("goals", 0)),
-				"assists": int(p.stats.get("assists", 0)),
-				"yellow": int(p.yellow),
+				"apps": 1, "goals": int(p.stats.get("goals", 0)),
+				"assists": int(p.stats.get("assists", 0)), "yellow": int(p.yellow),
 				"red": 1 if p.red else 0,
 			},
 		})

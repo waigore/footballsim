@@ -135,6 +135,63 @@ func test_continue_plays_the_autos_and_shows_the_roundup() -> void:
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Continue did not settle on the hub")
 	assert_gte(int(LeagueSeason.active.record.played()), before, "the ledger went backwards")
 
+## #100: Continue on a day that still holds watches hands the viewer the next
+## watched fixture instead of settling the day and leaving the hub as it was.
+func test_continue_opens_the_pending_watch() -> void:
+	_open_hub()
+	var plan: Array = screen().current_view()["plan"]
+	assert_gte(plan.size(), 1, "the hub has no fixtures to watch")
+	var held := str(plan[0]["id"])
+	if int(plan[0]["watched"]) != 1:
+		press_id("toggle:" + held)
+	press_id("continue")
+	assert_false(game.paused, "Continue did not open the watched match")
+	assert_eq(str(game.home_id), str(plan[0]["home_club_id"]), "Continue opened another fixture")
+	assert_eq(LeagueSeason.active.watching_fixture, held, "the season is not waiting for that watch")
+	game.engine.score[0] = 2
+	game.engine.score[1] = 1
+	game.engine.phase = "full_time"
+	game._process(0.016)
+	assert_true(game.menus.league_active(), "the hub did not come back after the watch")
+	var stored := LeagueSeason.active.report(held)
+	assert_true(bool(stored["played"]), "Continue's watch was not saved")
+	assert_eq(int((stored["score"] as Array)[0]), 2, "the watched score was not stored")
+
+## #100: leaving the viewer before full time plays the rest out on the physical
+## engine at max speed and saves it, so the hub shows the same result a
+## full-time watch would have left.
+func test_leaving_a_watch_early_finishes_and_saves_it() -> void:
+	_open_hub()
+	var plan: Array = screen().current_view()["plan"]
+	assert_gte(plan.size(), 1, "the hub has no fixtures to watch")
+	var held := str(plan[0]["id"])
+	if int(plan[0]["watched"]) != 1:
+		press_id("toggle:" + held)
+	press_id("continue")
+	assert_false(game.paused, "Continue did not open the watched match")
+	# Park the match one tick short of full time: the settle has to play the rest
+	# itself, and the suite must not sit through 90 minutes under coverage.
+	game.engine.half = 2
+	game.engine.clock = 5399.9
+	game.engine.added[1] = 0.0
+	game.menus.open_menu()
+	assert_true(game.menus.league_active(), "MENU left the season")
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "MENU did not land on the hub")
+	assert_true(bool(screen().current_view().get("settling", false)), "the hub hides the finishing match")
+	assert_true(game.menus.league.watch.settling(), "the host is not finishing the match")
+	for i in range(60):
+		if not game.menus.league.watch.settling():
+			break
+		game.menus.league.watch.tick()
+	assert_false(game.menus.league.watch.settling(), "the match never finished")
+	assert_true(game.menus.league_active(), "the hub did not stay up for the result")
+	var stored := LeagueSeason.active.report(held)
+	assert_true(bool(stored["played"]), "the left-behind watch was not saved")
+	assert_eq(int((stored["score"] as Array)[0]), int(game.engine.score[0]),
+		"the saved score is not the engine's")
+	assert_false(bool(screen().current_view().get("settling", false)), "the hub still says finishing")
+	press_id("menu")
+
 func test_a_report_play_door_plays_the_stored_clip_and_comes_back() -> void:
 	var season := LeagueSeason.active
 	var fixture := ""

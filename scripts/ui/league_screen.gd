@@ -148,6 +148,7 @@ func current_view() -> Dictionary:
 	if season != null:
 		view["plan"] = season.plan()
 		view["can_suggest"] = bool(view.get("can_suggest", false))
+		view["settling"] = season.finishing
 	else:
 		view["plan"] = []
 	view["screen"] = mode
@@ -286,7 +287,8 @@ func _open_save(slug: String) -> void:
 	open_season(opened, str(opened.state().get("status", "")) == "complete")
 
 func _continue() -> void:
-	if season == null:
+	if season == null or season.finishing:
+		refresh()
 		return
 	var result := season.advance()
 	var played: Array = result.get("played", [])
@@ -295,6 +297,14 @@ func _continue() -> void:
 		month = LeagueBook.state_month(season, month)
 		refresh()
 		return
+	# A watch still holds today's clock: Continue hands the viewer the next one
+	# instead of settling the day and leaving the hub where it was (#100).
+	var pending: Array = result.get("pending", [])
+	if not pending.is_empty():
+		var watch := season.start_watch(str(pending[0]["id"]))
+		if not watch.is_empty():
+			match_requested.emit(str(watch["home"]), str(watch["away"]), str(watch["fixture_id"]))
+			return
 	if not played.is_empty():
 		show_roundup(played)
 		return
