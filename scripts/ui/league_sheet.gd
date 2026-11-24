@@ -5,7 +5,8 @@ extends RefCounted
 ##
 ## The sheets are pure: `layout()` turns the season state into rows and chips
 ## with rects (so a headless test can press them), and `draw()` paints exactly
-## those rects. No sim calls happen here.
+## those rects. No sim calls happen here. Doors that must not move (the bottom
+## bar and BACK) are tagged `pinned`; everything else scrolls inside LeagueBody.
 
 const ROW_H := 26.0
 const ROW_GAP := 5.0
@@ -28,6 +29,18 @@ static func zone_color(band: String) -> Color:
 static func compact(vp: Vector2) -> bool:
 	return vp.y < 620.0
 
+## The wizard's name field: a key either edits the name or is left for the
+## screen. Returns `[handled, name]` so the caller never guesses.
+static func type_name(name: String, code: int) -> Array:
+	if code == KEY_BACKSPACE:
+		return [true, name.substr(0, maxi(name.length() - 1, 0))]
+	if name.length() >= 24:
+		return [false, name]
+	var ch := char(code)
+	if (ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") or (ch >= "0" and ch <= "9") or ch == " ":
+		return [true, name + (ch.to_upper() if name == "" else ch)]
+	return [false, name]
+
 # ------------------------------------------------------------------- hub ---
 
 func hub_layout(vp: Vector2, state: Dictionary) -> Array:
@@ -38,9 +51,7 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	var wide := vp.x >= 760.0 and not compact(vp)
 	var left_w: float = (vp.x - 72.0) * 0.58 if wide else vp.x - 48.0
 	var y := top + 24.0
-	var fits := int((body_bottom - y) / (ROW_H + ROW_GAP))
-	for i in range(mini(plan.size(), maxi(fits, 0))):
-		var fx: Dictionary = plan[i]
+	for fx in plan:
 		var row := Rect2(24.0, y, left_w, ROW_H)
 		items.append({"id": "fixture:" + str(fx["id"]), "kind": "row", "rect": row, "fixture": fx})
 		var chip := Rect2(row.end.x - 72.0, y + 2.0, 68.0, ROW_H - 4.0)
@@ -52,8 +63,6 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 		var rows: Array = state.get("table", [])
 		var ty := top + 24.0
 		for i in range(mini(rows.size(), 20)):
-			if ty + 19.0 > body_bottom:
-				break
 			if i == 6:
 				ty += 6.0
 			var band := LeagueRules.zone(int(rows[i]["position"]), state.get("rules", {}))
@@ -65,11 +74,10 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	if bool(state.get("can_suggest", false)):
 		items.append({"id": "suggest", "kind": "chip", "label": "SUGGEST WATCHES",
 			"rect": Rect2(24.0 + left_w - 150.0, top + 2.0, 150.0, 20.0)})
-	var bar := _bar_rects(vp, ["continue", "table", "calendar", "menu"],
-		["CONTINUE", "TABLE", "CALENDAR", "MENU"])
-	items.append_array(bar)
+	items.append_array(_bar_rects(vp, ["continue", "table", "calendar", "menu"],
+		["CONTINUE", "TABLE", "CALENDAR", "MENU"]))
 	if bool(state.get("complete", false)):
-		items.append({"id": "podium", "kind": "button", "label": "PODIUM",
+		items.append({"id": "podium", "kind": "button", "label": "PODIUM", "pinned": true,
 			"rect": Rect2(24.0, body_bottom - 34.0, 120.0, 28.0), "primary": false})
 	return items
 
@@ -109,8 +117,8 @@ func load_layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": "delete:" + str(save["slug"]), "kind": "delete",
 			"rect": Rect2(row.end.x - 96.0, row.position.y + 5.0, 34.0, 30.0), "slug": str(save["slug"])})
 		y += 46.0
-	items.append({"id": "back", "kind": "button", "label": "BACK",
-		"rect": Rect2(24.0, y + 8.0, 110.0, 42.0), "primary": false})
+	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
+		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 110.0, BAR_H - 14.0), "primary": false})
 	return items
 
 func _bar_rects(vp: Vector2, ids: Array, labels: Array) -> Array:
@@ -121,23 +129,28 @@ func _bar_rects(vp: Vector2, ids: Array, labels: Array) -> Array:
 	for i in range(ids.size()):
 		out.append({
 			"id": str(ids[i]), "kind": "button", "label": str(labels[i]), "primary": i == 0,
-			"rect": Rect2(margin + float(i) * (w + gap), vp.y - BAR_H + 6.0, w, BAR_H - 14.0),
+			"pinned": true, "rect": Rect2(margin + float(i) * (w + gap), vp.y - BAR_H + 6.0, w, BAR_H - 14.0),
 		})
 	return out
 
 # gd-tools: no cover start
 
-func draw_hub(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, state: Dictionary) -> void:
-	var bold: Font = fonts["bold"]
-	var med: Font = fonts["med"]
+func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dictionary) -> void:
 	_heading(c, vp, fonts, str(state.get("name", "LEAGUE")),
 		"%s · GW %d · %d OF %d PLAYED" % [str(state.get("day", "")), int(state.get("matchday", 1)),
 			int(state.get("played", 0)), int(state.get("total", 0))])
-	UiChrome.text(c, Vector2(24.0, HEADER + 18.0), "TODAY'S FIXTURES", 11, UiChrome.C_DIM, bold)
+
+func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, state: Dictionary) -> void:
+	var bold: Font = fonts["bold"]
+	var med: Font = fonts["med"]
+	## The plan hint rides the caption: the first fixture row starts right under
+	## it, so a second line would print through the row.
+	var hint := " · TAP A GAME TO SWITCH AUTO / WATCH" if bool(state.get("can_suggest", false)) else ""
+	UiChrome.text(c, Vector2(24.0, HEADER + 18.0), "TODAY'S FIXTURES" + hint, 11, UiChrome.C_DIM, bold)
 	if vp.x >= 760.0 and not compact(vp):
 		var left_w := (vp.x - 72.0) * 0.58
 		var tx := 24.0 + left_w + 22.0
-		var top: float = HEADER + (14.0 if not compact(vp) else 8.0)
+		var top: float = HEADER + 14.0
 		UiChrome.text(c, Vector2(tx + 32.0, top + 16.0), "CLUB", 9, UiChrome.C_DIM, bold)
 		UiChrome.text(c, Vector2(tx + 82.0, top + 16.0), "P", 9, UiChrome.C_DIM, bold)
 		UiChrome.text(c, Vector2(tx + 112.0, top + 16.0), "GD", 9, UiChrome.C_DIM, bold)
@@ -158,11 +171,6 @@ func draw_hub(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, state
 				_draw_toggle(c, rect, item["fixture"], bold)
 		elif str(item["kind"]) == "table_row":
 			_draw_table_row(c, rect, item, fonts)
-		elif str(item["kind"]) == "button":
-			_draw_button(c, rect, str(item["label"]), bold, bool(item.get("primary", false)))
-	if bool(state.get("can_suggest", false)):
-		UiChrome.text(c, Vector2(24.0, HEADER + 44.0),
-			"Tap a game to switch AUTO / WATCH.", 11, UiChrome.C_DIM, med)
 
 func _draw_fixture_row(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dictionary) -> void:
 	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6)
@@ -200,10 +208,13 @@ func _draw_table_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictio
 
 # ---------------------------------------------------------------- wizard ---
 
-func draw_wizard(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
-	var bold: Font = fonts["bold"]
-	var med: Font = fonts["med"]
+func draw_wizard_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
 	_heading(c, vp, fonts, "NEW LEAGUE", "GOD-MODE SEASON SETUP")
+	if str(view.get("error", "")) != "":
+		UiChrome.text(c, Vector2(24.0, vp.y - BAR_H - 10.0), str(view["error"]), 12, UiChrome.C_DANGER, fonts["med"])
+
+func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, _view: Dictionary) -> void:
+	var bold: Font = fonts["bold"]
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
@@ -225,16 +236,16 @@ func draw_wizard(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, vi
 			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 25.0, str(item["label"]), 12,
 				Color(0.06, 0.06, 0.05) if chosen else UiChrome.C_TEXT, bold)
 		elif kind == "button":
-			_draw_button(c, rect, str(item["label"]), bold, bool(item.get("primary", false)))
-	if str(view.get("error", "")) != "":
-		UiChrome.text(c, Vector2(24.0, vp.y - BAR_H - 10.0), str(view["error"]), 12, UiChrome.C_DANGER, med)
+			draw_button(c, rect, str(item["label"]), bold, bool(item.get("primary", false)))
 
 # ------------------------------------------------------------------ load ---
 
-func draw_load(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+func draw_load_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, _view: Dictionary) -> void:
+	_heading(c, vp, fonts, "LOAD LEAGUE", "NAMED SEASONS")
+
+func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
-	_heading(c, vp, fonts, "LOAD LEAGUE", "NAMED SEASONS")
 	if (view.get("saves", []) as Array).is_empty():
 		UiChrome.text(c, Vector2(24.0, HEADER + 34.0),
 			"No saves yet — start a New League from the menu.", 13, UiChrome.C_SOFT, med)
@@ -252,13 +263,13 @@ func draw_load(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 			UiChrome.panel(c, cache, rect, UiChrome.C_DANGER.darkened(0.35), 5, UiChrome.C_DANGER, 1)
 			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 21.0, "X", 13, UiChrome.C_TEXT, bold)
 		elif str(item["kind"]) == "button":
-			_draw_button(c, rect, str(item["label"]), bold, bool(item.get("primary", false)))
+			draw_button(c, rect, str(item["label"]), bold, bool(item.get("primary", false)))
 
 # --------------------------------------------------------------- helpers ---
 
 ## Bottom action bar: equal-width doors; the first one is the primary.
 
-func _draw_button(c: CanvasItem, rect: Rect2, label: String, bold: Font, primary: bool) -> void:
+func draw_button(c: CanvasItem, rect: Rect2, label: String, bold: Font, primary: bool) -> void:
 	if primary:
 		UiChrome.panel(c, cache, rect, UiChrome.C_GOLD, 7, Color(0.96, 0.78, 0.30, 0.85), 1)
 		UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 6.0, label, 15,
@@ -267,6 +278,11 @@ func _draw_button(c: CanvasItem, rect: Rect2, label: String, bold: Font, primary
 		UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 7)
 		UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0, label, 12,
 			UiChrome.C_TEXT, bold)
+
+## Month doors and other small fixed chips on a sheet header.
+func draw_chip(c: CanvasItem, rect: Rect2, label: String, bold: Font) -> void:
+	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 5)
+	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 17.0, label, 13, UiChrome.C_TEXT, bold)
 
 func _heading(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String, caption: String) -> void:
 	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, fonts["bold"])
