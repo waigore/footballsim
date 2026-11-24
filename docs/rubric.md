@@ -38,7 +38,7 @@ Cite `REQ-*`/`RUB-*` in PRs.
 | RUB-P1-04 | Key actions/transitions animated (`REQ-P1-04`) |
 | RUB-P1-05 | Touch + mouse/keyboard OK (`REQ-P1-05`) |
 | RUB-P1-06 | Music optional; mute/volume (`REQ-P1-06`) |
-| RUB-P1-07 | Readable UI at target sizes (`REQ-P1-07`) |
+| RUB-P1-07 | Non-match type comfortable; scales with viewport (`REQ-P1-07`) |
 | RUB-P1-08 | Entity icons; theme + style (`REQ-P1-08`) |
 
 ### P2 — Rules fidelity
@@ -67,7 +67,7 @@ Cite `REQ-*`/`RUB-*` in PRs.
 |----|----------|
 | RUB-P4-01 | No material hitch (`REQ-P4-01`) |
 | RUB-P4-02 | Input ack within ~1–2 frames (`REQ-P4-02`) |
-| RUB-P4-03 | Long work does not freeze UI (`REQ-P4-03`) |
+| RUB-P4-03 | Long work never freezes UI (`REQ-P4-03`) |
 | RUB-P4-04 | Reasonable imports; no leaks (`REQ-P4-04`) |
 | RUB-P4-05 | No known stalls shipped (`REQ-P4-05`) |
 
