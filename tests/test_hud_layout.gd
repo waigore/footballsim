@@ -45,11 +45,26 @@ func test_desktop_metrics_are_the_shipped_ones() -> void:
 	# handhelds only, and these are the numbers every desktop screenshot has.
 	var vp := Vector2(1600, 900)
 	assert_eq(HudLayout.scoreboard_rect(vp), Rect2(480.0, 14.0, 640.0, 86.0), "desktop scoreboard moved")
-	assert_eq(HudLayout.stats_rect(vp), Rect2(1276.0, 24.0, 300.0, 132.0), "desktop stats card moved")
+	# The stats card grew by the momentum footer (DR-20261125-02); its top-left
+	# and width are unchanged, so every stats row sits where it did.
+	assert_eq(HudLayout.stats_rect(vp), Rect2(1276.0, 24.0, 300.0, 132.0 + HudLayout.MOMENTUM_H), "desktop stats card moved")
 	# Eight doors: the encyclopedia's league door and the menu door ride the bar.
 	assert_eq(HudLayout.controls_rect(vp), Rect2(347.0, 834.0, 906.0, 46.0), "desktop control bar moved")
 	assert_eq(HudLayout.commentary_rect(vp), Rect2(24.0, 774.0, 620.0, 52.0), "desktop ticker moved")
 	assert_false(HudLayout.is_compact(vp), "the desktop viewport must not switch to phone metrics")
+
+func test_the_momentum_footer_sits_inside_the_stats_card() -> void:
+	# The meter is a reading, not a door: it must stay inside the card it is
+	# part of, and the card must still clear the scoreboard and the bar.
+	for vp in SIZES + COMPACT_SIZES:
+		var card: Rect2 = HudLayout.stats_rect(vp)
+		var meter: Rect2 = HudLayout.momentum_rect(vp)
+		assert_true(card.encloses(meter), "the momentum meter left the stats card at %s" % vp)
+		assert_gte(meter.size.x, 24.0, "the meter collapsed at %s" % vp)
+		var rule_y: float = HudLayout.momentum_rule_y(vp)
+		assert_lt(rule_y, meter.position.y, "the footer rule is below its meter at %s" % vp)
+		assert_lte(card.end.y, vp.y, "the stats card runs off the bottom at %s" % vp)
+		assert_gte(card.position.x, 0.0, "the stats card runs off the left at %s" % vp)
 
 func test_compact_metrics_fit_the_design_viewport() -> void:
 	for vp in COMPACT_SIZES:

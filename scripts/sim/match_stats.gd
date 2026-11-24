@@ -106,3 +106,28 @@ static func momentum_level(pressure: Array) -> Vector2:
 	var home: float = 1.0 - exp(-maxf(float(pressure[0]), 0.0) / MOMENTUM_SCALE)
 	var away: float = 1.0 - exp(-maxf(float(pressure[1]), 0.0) / MOMENTUM_SCALE)
 	return Vector2(snappedf(home, 0.01), snappedf(away, 0.01))
+
+## A level worth naming on the broadcast, and the words for it. The two sides'
+## levels are independent, so the meter never turns them into a share of
+## possession: it names the side carrying play and how hard, or says the match is
+## even. Thresholds are read off full matches (mean 0.42 / 0.19, 29% of samples
+## above 0.5), so a normal spell labels and a quiet one stays "EVEN".
+const MOMENTUM_ON_TOP := 0.66
+const MOMENTUM_PRESSING := 0.28
+## Gap below which neither side is clearly carrying play.
+const MOMENTUM_CLEAR_GAP := 0.08
+
+## Which side is carrying play: 0, 1, or -1 when neither is clearly ahead.
+static func momentum_leader(levels: Vector2) -> int:
+	var gap: float = absf(levels.x - levels.y)
+	if gap < MOMENTUM_CLEAR_GAP:
+		return -1
+	return 0 if levels.x > levels.y else 1
+
+## The word for one side's level: "ON TOP", "PRESSING", or "" when quiet.
+static func momentum_phrase(level: float) -> String:
+	if level >= MOMENTUM_ON_TOP:
+		return "ON TOP"
+	if level >= MOMENTUM_PRESSING:
+		return "PRESSING"
+	return ""
