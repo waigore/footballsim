@@ -2,7 +2,9 @@ extends Node2D
 
 ## Playback controller + scene assembly.
 ## Owns the engine, the snapshot ring buffer that makes highlight replays possible,
-## the camera and every input binding.
+## the camera and every input binding. Screen/design-space arithmetic (overlay
+## doors, token picking, tick budget) lives in MatchView so the scene stays
+## inside its P3 size budget.
 
 const W := 68.0
 const L := 105.0
@@ -48,6 +50,9 @@ var elapsed_real := 0.0
 var match_time := 0.0
 var audio: MatchAudio = null
 var camera: MatchCamera = null
+var view: MatchView = null
+var input: MatchInput = null
+var fixture: FixtureSheet = null
 var batch_abort := false
 var hud_scale := 1.0
 ## Reading scale for the non-match layers; the match HUD keeps HudLayout's.
@@ -117,20 +122,23 @@ func build_scene() -> void:
 	hud.game = self
 	touch = OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
 	camera = MatchCamera.new(self)
+	view = MatchView.new(self)
+	input = MatchInput.new(self)
+	fixture = FixtureSheet.new(self)
 	_sync_overlay_scale()
 	camera.fit()
 	actors.game = self
 
-## Handhelds read the overlay at one density point per design unit; outside the
-## match, ChromeDensity does the same for the menus, settings and the league and
-## encyclopedia sheets. Each path scales its own layers.
+## Handhelds read the match overlay at one density point per design unit; the
+## non-match chrome (menus, settings, league and encyclopedia sheets) has its
+## own scale. Each layer keeps its own transform; MatchView owns the numbers and
+## the scene hands back the overlay layer it created.
 func _sync_overlay_scale() -> void:
-	hud_scale = HudLayout.overlay_scale()
-	if dev != null and dev.ui_scale > 0.0:
-		hud_scale = dev.ui_scale
-		touch = true
-	chrome_scale = maxf(hud_scale, ChromeDensity.non_match_scale())
-	token_scale = 1.5 if HudLayout.is_compact(get_viewport_rect().size / hud_scale) else 1.0
+	var scales: Dictionary = view.overlay_scale(hud_layer, dev)
+	hud_scale = float(scales["hud"])
+	touch = bool(scales["touch"])
+	chrome_scale = float(scales["chrome"])
+	token_scale = float(scales["token"])
 	actors.token_scale = token_scale
 	hud.ui_scale = hud_scale
 	hud.touch = touch
@@ -178,23 +186,7 @@ func new_match(seed: int) -> void:
 # --------------------------------------------------------------- fixture ----
 
 func _build_selector() -> void:
-	if selector != null:
-		return
-	sel_layer = CanvasLayer.new()
-	sel_layer.layer = 20
-	add_child(sel_layer)
-	selector = Control.new()
-	selector.set_script(load("res://scripts/ui/team_select.gd"))
-	selector.set_anchors_preset(Control.PRESET_FULL_RECT)
-	selector.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sel_layer.add_child(selector)
-	selector.confirmed.connect(_on_fixture_confirmed)
-	selector.cancelled.connect(_close_select)
-	selector.browse.connect(wiki_host.open_page)
-	sel_layer.transform = Transform2D.IDENTITY.scaled(Vector2(hud_scale, hud_scale))
-	selector.ui_scale = hud_scale
-	selector.touch = touch
-	sel_layer.visible = false
+	fixture.build()
 
 # -------------------------------------------------------------- encyclopedia --
 
@@ -203,54 +195,16 @@ func _build_wiki() -> void:
 	wiki_host.build()
 
 func open_select(from_menu: bool = false) -> void:
-	if selector == null:
-		return
-	select_from_menu = from_menu
-	select_open = true
-	paused = true
-	if from_menu and menus != null:
-		menus.close(true)
-	selector.back_to_menu = from_menu
-	selector.setup(home_id, away_id)
-	if hud_layer != null:
-		hud_layer.visible = false
-	sel_layer.visible = true
-	selector.visible = true
+	fixture.open(from_menu)
 
 func _close_select() -> void:
-	select_open = false
-	if sel_layer != null:
-		sel_layer.visible = false
-	if select_from_menu:
-		select_from_menu = false
-		if menus != null:
-			menus.open_menu()
-		return
-	if hud_layer != null:
-		hud_layer.visible = true
-	paused = false
+	fixture.close()
 
 func _on_fixture_confirmed(h: String, a: String) -> void:
-	home_id = h
-	away_id = a
-	select_open = false
-	select_from_menu = false
-	if sel_layer != null:
-		sel_layer.visible = false
-	if hud_layer != null:
-		hud_layer.visible = true
-	if menus != null:
-		menus.close()
-	match_started = true
-	seeded += randi_range(1, 9999)
-	new_match(seeded)
+	fixture.confirm(h, a)
 
 func _parse_fixture_args() -> void:
-	var f := FixtureArgs.parse(OS.get_cmdline_user_args(), TeamData.team_ids(), {"seed": seeded, "home": home_id, "away": away_id})
-	seeded = int(f["seed"])
-	home_id = str(f["home"])
-	away_id = str(f["away"])
-	fixture_arg_given = bool(f["given"])
+	fixture_arg_given = fixture.parse_args()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
@@ -260,84 +214,13 @@ func _notification(what: int) -> void:
 
 # ------------------------------------------------------------------ input ----
 
+## Sheets, the wheel, the overlay bar and the one-key controls all route
+## through MatchInput; the scene only exposes its state.
 func _input(event: InputEvent) -> void:
-	if wiki_host != null and wiki_host.is_open():
-		wiki_host.handle_input(event)
-		return
-	if menus != null and menus.handle_input(event, event.position if event is InputEventMouse else Vector2.ZERO):
-		return
-	if select_open:
-		if event is InputEventMouseMotion:
-			mouse = event.position
-			selector.mouse = _design(event.position, chrome_scale)
-			if not touch:
-				Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if selector.button_at(selector.mouse) != "" else Input.CURSOR_ARROW)
-		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			mouse = event.position
-			selector.mouse = _design(event.position, chrome_scale)
-			var sid: String = selector.button_at(selector.mouse)
-			if sid != "":
-				selector.click(sid)
-		elif event is InputEventKey and event.pressed and not event.echo:
-			selector.key(event.keycode)
-		return
-	if event is InputEventMouseMotion:
-		mouse = event.position
-		_update_hover()
-	elif event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			zoom_scale = clampf(zoom_scale * 1.08, 0.65, 2.4)
-			_apply_camera(true)
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			zoom_scale = clampf(zoom_scale / 1.08, 0.65, 2.4)
-			_apply_camera(true)
-		elif event.button_index == MOUSE_BUTTON_LEFT:
-			mouse = event.position
-			_click(event.position)
-	elif event is InputEventKey and event.pressed and not event.echo:
-		# if/elif rather than match: the coverage injector cannot instrument a
-		# match statement, and an uninstrumentable main.gd fails the patch gate.
-		var k: int = event.keycode
-		if k == KEY_SPACE:
-			paused = not paused
-		elif k == KEY_1:
-			speed = 1.0
-		elif k == KEY_2:
-			speed = 2.0
-		elif k == KEY_3:
-			speed = 4.0
-		elif k == KEY_4:
-			speed = 8.0
-		elif k == KEY_H:
-			_toggle_mode()
-		elif k == KEY_S:
-			_skip()
-		elif k == KEY_R:
-			new_match(seeded + randi_range(0, 9999))
-		elif k == KEY_N:
-			names_visible = not names_visible
-			actors.names_visible = names_visible
-		elif k == KEY_C:
-			camera_follow = not camera_follow
-		elif k == KEY_M:
-			menus.open_menu()
-		elif k == KEY_T:
-			open_select()
-		elif k == KEY_L:
-			wiki_host.open_page(WikiModel.LEAGUE, "")
-		elif k == KEY_ESCAPE:
-			if focus_id >= 0:
-				focus_id = -1
-			else:
-				menus.ask_quit()
-
-## Overlay widgets read pointers in design space; a non-match sheet passes its
-## own reading scale because the chrome layer is scaled separately.
-func _design(p: Vector2, scale := -1.0) -> Vector2:
-	return p / maxf(hud_scale if scale < 0.0 else scale, 0.001)
+	input.handle(event)
 
 func _click(p: Vector2) -> void:
-	var b: String = hud.button_at(_design(p))
+	var b: String = view.button_at(p)
 	if b == "pause":
 		paused = not paused
 	elif b == "speed":
@@ -368,13 +251,10 @@ func _click(p: Vector2) -> void:
 		new_match(seeded + randi_range(0, 9999))
 	if b != "":
 		return
-	hover_id = _pick(p)
-	if hover_id >= 0:
-		focus_id = -1 if focus_id == hover_id else hover_id
-		actors.focus_id = focus_id
-	else:
-		focus_id = -1
-		actors.focus_id = -1
+
+	hover_id = view.pick(p)
+	focus_id = -1 if hover_id < 0 or focus_id == hover_id else hover_id
+	actors.focus_id = focus_id
 
 func _cycle_speed() -> void:
 	var opts := [1.0, 2.0, 4.0, 8.0]
@@ -409,29 +289,6 @@ func _skip() -> void:
 	else:
 		_advance_ticks(60 * 10)
 
-## Nearest player to a logical-space point, within a radius a finger can hit.
-func _pick(p: Vector2) -> int:
-	var world: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * p
-	var best = null
-	var reach: float = 2.8 if touch else 1.7
-	var bd := reach * reach
-	for q in engine.players:
-		if q.sent_off:
-			continue
-		var d: float = q.pos.distance_squared_to(world)
-		if d < bd:
-			bd = d
-			best = q
-	return -1 if best == null else best.id
-
-func _update_hover() -> void:
-	hover_id = _pick(mouse)
-	actors.hover_id = hover_id
-	hud.mouse = _design(mouse)
-	if not touch:
-		var over_button: bool = hud.button_at(hud.mouse) != ""
-		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if (hover_id >= 0 or over_button) else Input.CURSOR_ARROW)
-
 # ------------------------------------------------------------------ loop ----
 
 func _process(delta: float) -> void:
@@ -450,7 +307,7 @@ func _process(delta: float) -> void:
 		camera.update(delta)
 	_apply_camera(false)
 	if not dev.apply_hover(self):
-		_update_hover()
+		view.hover(mouse)
 
 	if replay != null:
 		# A stored clip owns the broadcast until it ends: the pack drives the
@@ -474,18 +331,7 @@ func _process(delta: float) -> void:
 	if paused:
 		return
 
-	var ticks := 0
-	if mode == "highlights" and fast_mode:
-		accumulator += delta * 60.0 * 24.0
-		ticks = int(accumulator)
-		accumulator -= ticks
-		ticks = mini(ticks, 60)
-	else:
-		accumulator += delta * 60.0 * speed
-		ticks = int(accumulator)
-		accumulator -= ticks
-		ticks = mini(ticks, 120)
-	_advance_ticks(ticks)
+	_advance_ticks(view.ticks_this_frame(delta))
 	_post_tick()
 
 func _advance_ticks(n: int) -> void:

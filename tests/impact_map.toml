@@ -60,6 +60,16 @@ suites = [
 
 # Menu shell: cold start, settings + BGM, quit confirm, HUD doors, and the
 # shared non-match reading density (ChromeDensity).
+# Play-scene glue — input routing, the fixture picker and the design-space
+# face — driven headlessly through the real main.gd.
+[domains.match_input]
+suites = [
+  "test_match_input.gd",
+  "test_touch_flow.gd",
+  "test_menu_nav.gd",
+  "test_league_ui.gd",
+]
+
 [domains.shell]
 suites = [
   "test_menu_nav.gd",
@@ -70,6 +80,14 @@ suites = [
 ]
 
 # Shared engine spine: laws + finishing + restart + managers when a core file moves.
+# The on-ball half of the brain: possess, shoot, pass, cross, clear, dribble.
+[domains.match_ai_choices]
+suites = [
+  "test_match_ai_choices.gd",
+  "test_tactics_ai.gd",
+  "test_engine_rules.gd",
+]
+
 [domains.match_engine]
 suites = [
   "test_match_laws.gd",
@@ -201,6 +219,12 @@ domain = "match_engine"
 [[rules]]
 match = "scripts/sim/match_ai.gd*"
 domain = "match_engine"
+
+# The on-ball half of the brain shares MatchAI's suite: off it no carrier
+# decision has a test.
+[[rules]]
+match = "scripts/sim/match_ai_choices.gd*"
+domain = "match_ai_choices"
 
 [[rules]]
 match = "scripts/sim/tactics.gd*"
@@ -365,6 +389,20 @@ domain = "hud_chrome"
 [[rules]]
 match = "scripts/view/match_camera.gd*"
 domain = "hud_chrome"
+
+# The scene's presentation face and input router share main.gd's suite.
+[[rules]]
+match = "scripts/view/match_view.gd*"
+domain = "match_input"
+
+[[rules]]
+match = "scripts/view/match_input.gd*"
+domain = "match_input"
+
+# Fixture-picker glue rides the router domain: the same suites drive the sheet.
+[[rules]]
+match = "scripts/view/fixture_sheet.gd*"
+domain = "match_input"
 
 [[rules]]
 match = "scripts/platform/**"
