@@ -60,6 +60,15 @@ static func type_name_into(state: Dictionary, code: int) -> bool:
 
 # ------------------------------------------------------------------- hub ---
 
+## True when today's plan still holds an unplayed watch, which is exactly when
+## CONTINUE's caption has something to promise (#100). A played fixture stops
+## counting the moment its result lands, whatever watch flag it kept (#124).
+static func watch_pending(plan: Array) -> bool:
+	for fx in plan:
+		if int(fx.get("watched", 0)) == 1 and str(fx.get("status", "")) != "played":
+			return true
+	return false
+
 func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	var items: Array = []
 	var plan: Array = state.get("plan", [])
@@ -71,8 +80,11 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	for fx in plan:
 		var row := Rect2(24.0, y, left_w, ROW_H)
 		items.append({"id": "fixture:" + str(fx["id"]), "kind": "row", "rect": row, "fixture": fx})
-		var chip := Rect2(row.end.x - 72.0, y + 2.0, 68.0, ROW_H - 4.0)
-		items.append({"id": "toggle:" + str(fx["id"]), "kind": "chip", "rect": chip, "fixture": fx})
+		# A played row is a result, not a plan: no chip to press, the score takes
+		# the chip's place and a tap opens the report (#124).
+		if str(fx.get("status", "")) != "played":
+			var chip := Rect2(row.end.x - 72.0, y + 2.0, 68.0, ROW_H - 4.0)
+			items.append({"id": "toggle:" + str(fx["id"]), "kind": "chip", "rect": chip, "fixture": fx})
 		y += ROW_H + ROW_GAP
 	if wide:
 		var box := _hub_table_box(vp)
@@ -186,12 +198,11 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, 
 	var med: Font = fonts["med"]
 	## The plan hint rides the caption: the first fixture row starts right under
 	## it, so a second line would print through the row. A day that still holds
-	## watches says what CONTINUE does with them (#100).
+	## watches says what CONTINUE does with them (#100); a played row never
+	## counts, whatever flag it was left with (#124).
 	var hint := " · TAP A GAME TO SWITCH AUTO / WATCH" if bool(state.get("can_suggest", false)) else ""
-	for fx in state.get("plan", []):
-		if int(fx.get("watched", 0)) == 1:
-			hint = " · CONTINUE OPENS THE NEXT WATCH"
-			break
+	if watch_pending(state.get("plan", [])):
+		hint = " · CONTINUE OPENS THE NEXT WATCH"
 	UiChrome.text(c, Vector2(24.0, HEADER + 18.0), "TODAY'S FIXTURES" + hint, 11, UiChrome.C_DIM, bold)
 	if vp.x >= 760.0 and not compact(vp):
 		var places := _hub_table_places(_hub_table_box(vp))
@@ -221,13 +232,21 @@ func _draw_fixture_row(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dictio
 	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6)
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
+	var played := str(fx.get("status", "")) == "played"
+	var line_y := rect.position.y + 17.0
 	var time := str(fx.get("kickoff_time", ""))
-	if time != "":
-		UiChrome.text(c, Vector2(rect.position.x + 8.0, rect.position.y + 17.0), time, 10, UiChrome.C_DIM, med)
-	UiChrome.text(c, Vector2(rect.position.x + 60.0, rect.position.y + 17.0), str(fx["home_abbr"]), 13, UiChrome.C_TEXT, bold)
-	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 46.0, rect.position.y + 17.0), "v", 10, UiChrome.C_DIM, med)
-	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 66.0, rect.position.y + 17.0), str(fx["away_abbr"]), 13, UiChrome.C_TEXT, bold)
-	if int(fx.get("suggested", 0)) == 1:
+	if time != "" or played:
+		# A played row leads with FT where the kickoff time sat, so the list reads
+		# as a results column once the day is done (#124).
+		UiChrome.text(c, Vector2(rect.position.x + 8.0, line_y), "FT" if played else time, 10,
+			UiChrome.C_GOLD if played else UiChrome.C_DIM, bold if played else med)
+	UiChrome.text(c, Vector2(rect.position.x + 60.0, line_y), str(fx["home_abbr"]), 13, UiChrome.C_TEXT, bold)
+	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 46.0, line_y), "v", 10, UiChrome.C_DIM, med)
+	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 66.0, line_y), str(fx["away_abbr"]), 13, UiChrome.C_TEXT, bold)
+	if played:
+		UiChrome.text_r(c, rect.end.x - 12.0, line_y, "%d  –  %d" % [
+			int(fx.get("home_goals", 0)), int(fx.get("away_goals", 0))], 14, UiChrome.C_TEXT, bold)
+	elif int(fx.get("suggested", 0)) == 1:
 		UiChrome.text_r(c, rect.end.x - 78.0, rect.position.y + 15.0, "TOP-6", 8, UiChrome.C_GOLD, bold)
 
 func _draw_toggle(c: CanvasItem, rect: Rect2, fx: Dictionary, bold: Font) -> void:

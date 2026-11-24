@@ -18,6 +18,8 @@ class FakeGame:
 	var camera_follow := false
 	var speed := 1.0
 	var token_scale := 1.0
+	## The scene field the broadcast reads when a league watch holds its card (#124).
+	var result_hold := false
 
 func _hud(eng) -> Control:
 	var game := FakeGame.new()
@@ -221,6 +223,11 @@ func test_goal_and_half_time_banners_draw_on_a_phone() -> void:
 	eng.phase = "full_time"
 	hud.queue_redraw()
 	await get_tree().process_frame
+	# #124: a league watch keeps this card, so its line points back at the season.
+	hud.game.result_hold = true
+	hud.queue_redraw()
+	await get_tree().process_frame
+	hud.game.result_hold = false
 	assert_true(HudLayout.is_compact(hud.design_vp()), "banners were drawn in desktop metrics")
 	hud.queue_free()
 

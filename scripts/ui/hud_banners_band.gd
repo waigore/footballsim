@@ -6,11 +6,11 @@ extends RefCounted
 
 var touch := false
 
-func events(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> void:
+func events(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:
 	if engine.phase == "goal":
 		_goal(p, c, engine, f_bold, f_med)
 	if engine.phase == "half_time" or engine.phase == "full_time":
-		_break(p, c, engine, f_bold, f_med)
+		_break(p, c, engine, game, f_bold, f_med)
 
 func _goal(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> void:
 	var gk: Dictionary = engine.last_goal
@@ -30,7 +30,7 @@ func _goal(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> voi
 	p.text(c, Vector2(gx, y + 72), "%s  ·  %d'" % [team_name, int(gk.get("minute", 0))], 12, Color(0.8, 0.85, 0.88), f_med)
 	p.text(c, Vector2(gx, y + 98), "%s %d  –  %d %s" % [engine.teams[0]["data"]["abbr"], engine.score[0], engine.score[1], engine.teams[1]["data"]["abbr"]], 14, UiChrome.C_GOLD, f_bold)
 
-func _break(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> void:
+func _break(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:
 	var bw: float = minf(460.0, p.vp.x - 48.0)
 	var bh := 190.0
 	var x := p.vp.x * 0.5 - bw * 0.5
@@ -41,6 +41,10 @@ func _break(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> vo
 	p.text_c(c, p.vp.x * 0.5, y + 104, "%d  –  %d" % [engine.score[0], engine.score[1]], 48, UiChrome.C_TEXT, f_bold)
 	p.text_c(c, p.vp.x * 0.5, y + 132, "%s  ·  %s" % [engine.teams[0]["data"]["abbr"], engine.teams[1]["data"]["abbr"]], 11, UiChrome.C_DIM, f_med)
 	var sub := "SECOND HALF STARTS SHORTLY" if engine.phase == "half_time" else ("TAP RESTART TO PLAY AGAIN" if touch else "PRESS R TO PLAY AGAIN")
+	# A league watch keeps this card until the player reads it (#124): the result
+	# is in the save, and the season sheet is one tap behind the whistle.
+	if engine.phase == "full_time" and game != null and bool(game.result_hold):
+		sub = "TAP TO RETURN TO THE SEASON" if touch else "PRESS SPACE TO RETURN TO THE SEASON"
 	p.text_c(c, p.vp.x * 0.5, y + 168, sub, 10, UiChrome.C_DIM, f_med)
 
 ## Opening team sheet; waits out the kickoff and fades across the first seconds.

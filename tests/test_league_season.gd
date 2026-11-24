@@ -90,7 +90,16 @@ func test_a_watch_holds_the_clock_until_the_match_is_played() -> void:
 	var stored := season.report(held)
 	assert_true(bool(stored["played"]), "the watched fixture stayed unplayed")
 	assert_eq((stored["score"] as Array)[0], 2, "the watched score was not stored")
-	assert_true(str(season.state()["date"]) > date, "the clock did not move after the watch")
+	# #124: the day that was played stays current so the hub can show its result;
+	# the next Continue moves the clock on.
+	assert_eq(str(season.state()["date"]), date, "the clock ran off the day the watch was played")
+	var on_day := false
+	for fx in season.plan():
+		if str(fx["id"]) == held:
+			on_day = str(fx["status"]) == "played"
+	assert_true(on_day, "the played fixture left its own day")
+	season.advance()
+	assert_true(str(season.state()["date"]) > date, "Continue did not move the clock on")
 	assert_eq(season.watching_fixture, "", "the season is still waiting for that watch")
 
 ## #100: a watch the player walks out of is played out on the physical engine —
