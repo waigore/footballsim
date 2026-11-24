@@ -21,12 +21,8 @@ const DT := 1.0 / 60.0
 ## `run_to_full_time` ceiling: 200 match minutes so a stuck phase cannot spin forever.
 const FAST_FORWARD_TICKS := 60 * 60 * 200
 
-## Dead-ball judgement. The taker only kicks once most of his side is roughly on
-## its slot; how long he is willing to hold play up depends on how well he reads
-## the game and on whether the clock is on his side.
-const RESTART_READY_RADIUS := 8.5   # metres from a player's target that counts as set
-const RESTART_SETTLED_SPEED := 3.0  # m/s; still sprinting = not set
-const RESTART_WAIT_STEP := 0.3      # seconds per re-read while holding play up
+## Dead-ball judgement lives in MatchRestarts (READY_RADIUS, SETTLED_SPEED,
+## WAIT_STEP); the restart lane only places bodies and picks taker + target.
 
 ## Referee movement: he runs the opposite side of the diagonal to the ball,
 ## a dozen metres behind it, and closes on the spot when play stops.
