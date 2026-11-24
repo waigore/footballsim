@@ -22,6 +22,7 @@ Former gaps now shipped (wiki domains playable; DRs accepted):
 | Non-match type / viewport scale | DR-20261124-03 |
 | Live `tempo` on the tactics board | unused in DR-20261122-02; drives play now |
 | Woodwork, interceptions, momentum, stored rating | DR-20261125-01; momentum on the broadcast stats card (DR-20261125-02) |
+| Whistle card lists the goals that made the score | `goal_sheet`; DR-20261125-04 |
 | Roundup scorers name their club, in minute order | [#125](https://github.com/waigore/footballsim/issues/125); DR-20261125-07 |
 | Encyclopedia reads the open season (table, results, scorers, player lines) | `league_ledger.gd`; DR-20261125-08 |
 | Teams of Interest: a followed club's games stay on Watch, gold names | `league_interest.gd`; DR-20261125-09; [#104](https://github.com/waigore/footballsim/issues/104) |
