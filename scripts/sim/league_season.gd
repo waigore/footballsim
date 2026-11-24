@@ -256,6 +256,9 @@ func _sim_fixture(fx: Dictionary) -> Dictionary:
 	record.add_events(events)
 	_add_xi_stats(events, {"home": hxi, "away": axi}, {"home": home, "away": away})
 	LeagueHighlights.store_auto(record, int(rng.seed), fixture_id, events, home, away)
+	# The encyclopedia reads this save's ledger, so forget what it read before
+	# this result landed (DR-20261125-08).
+	PLRepository.shared().invalidate()
 	return report(fixture_id)
 
 ## A side's XI all played 90 minutes; goals, assists and cards come off the
@@ -363,6 +366,8 @@ func record_engine(engine) -> void:
 		str(fx["home_club_id"]), str(fx["away_club_id"]))
 	captured = []
 	PLDatabase.transaction("COMMIT;")
+	# The encyclopedia reads this save's ledger: show it this result now.
+	PLRepository.shared().invalidate()
 	# The clock stays on the day just played so the hub can show its result, and
 	# the next Continue moves on (#124); `open()` still rolls a played day forward.
 	state_changed.emit()
