@@ -113,7 +113,9 @@ func tap(p: Vector2) -> bool:
 	push(str(target.get("page", "")), str(target.get("id", "")))
 	return true
 
-func wheel(delta: float) -> void:
+## Wheel, trackpad pan and drag travel arrives as one vertical step; the shared
+## pointer grammar also passes a horizontal step, which this sheet ignores.
+func scroll_by(delta: float, _dx: float = 0.0) -> void:
 	if body != null:
 		body.scroll_by(delta)
 
@@ -122,9 +124,9 @@ func key(code: int) -> bool:
 	if code == KEY_ESCAPE or code == KEY_BACKSPACE or code == KEY_LEFT:
 		back()
 	elif code == KEY_UP or code == KEY_W:
-		wheel(-120.0)
+		scroll_by(-120.0)
 	elif code == KEY_DOWN or code == KEY_S:
-		wheel(120.0)
+		scroll_by(120.0)
 	elif code == KEY_PAGEUP:
 		scroll_page(-1.0)
 	elif code == KEY_PAGEDOWN:
