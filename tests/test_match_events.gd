@@ -87,6 +87,13 @@ func test_every_event_names_a_player_from_the_xi() -> void:
 		assert_gte(int(e["minute"]), 1, "an event came before kick-off")
 		assert_lte(int(e["minute"]), 90, "an event came after full time")
 
+func test_empty_sides_and_zero_weights_are_safe() -> void:
+	assert_eq(MatchEvents.side(1, "gw07-X-Y", "X", [], 3).size(), 0, "an empty XI produced events")
+	assert_eq(MatchEvents.side(1, "gw07-X-Y", "X", _xi(), 0).size() >= 0, true, "zero goals broke the report")
+	var rng := RandomNumberGenerator.new()
+	assert_true(MatchEvents.pick([], MatchEvents.GOAL_SHARE, "sho", rng).is_empty(),
+		"an empty XI returned a scorer")
+
 func _role_of(xi: Array, player_id: String) -> String:
 	for p in xi:
 		if str(p["id"]) == player_id:

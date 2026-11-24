@@ -269,6 +269,131 @@ func test_every_league_pose_draws() -> void:
 	press_id("menu")
 	assert_false(game.menus.league_active(), "the draw walk did not leave the league")
 
+func test_the_wizard_reports_a_save_it_cannot_open() -> void:
+	game.menus.open_menu()
+	press(door("new_league").get_center())
+	screen()._open_save("no-such-save")
+	assert_eq(screen().mode, LeagueScreen.MODE_WIZARD, "a broken save did not return to the wizard")
+	assert_true(str(screen().wizard["error"]) != "", "the wizard hid the error")
+	await get_tree().process_frame
+	screen().queue_redraw()
+	await get_tree().process_frame
+	press_id("back")
+
+func test_keyboard_walks_the_league_and_respects_its_limits() -> void:
+	_open_hub()
+	var before := int(LeagueSeason.active.record.played())
+	assert_true(screen().key(KEY_ENTER), "Enter did not press Continue")
+	assert_gte(int(LeagueSeason.active.record.played()), before, "Enter lost matches")
+	assert_true(screen().key(KEY_ESCAPE), "Esc did not leave the hub")
+	if game.menus.league_active():
+		screen().key(KEY_ESCAPE)
+	assert_false(game.menus.league_active(), "Esc left the league open")
+	assert_true(game.menus.active(), "Esc did not return to the main menu")
+	game.menus.open_menu()
+	press(door("new_league").get_center())
+	for i in range(30):
+		screen().key(KEY_A)
+	assert_lte(str(screen().wizard["name"]).length(), 24, "the name grew past its limit")
+	screen().key(KEY_BACKSPACE)
+	assert_true(str(screen().wizard["name"]).length() <= 24, "backspace broke the name")
+	assert_false(screen().key(KEY_TAB), "an unrelated key was taken")
+
+func test_the_month_doors_and_an_empty_day_draw() -> void:
+	_open_hub()
+	press_id("calendar")
+	var month := str(screen().current_view()["month"])
+	press_id("month:-1")
+	assert_ne(str(screen().current_view()["month"]), month, "the previous month door did nothing")
+	press_id("month:1")
+	assert_eq(str(screen().current_view()["month"]), month, "the next month door did not come back")
+	var empty_day := ""
+	for item in screen().buttons:
+		if str(item["kind"]) == "cell" and int((item["info"] as Dictionary).get("n", 0)) == 0:
+			empty_day = str(item["id"])
+			break
+	if empty_day != "":
+		press_id(empty_day)
+		assert_eq(screen().day_fixtures.size(), 0, "an empty day listed fixtures")
+	await get_tree().process_frame
+	screen().queue_redraw()
+	await get_tree().process_frame
+	press_id("back")
+
+func test_a_report_with_every_event_kind_draws() -> void:
+	var season := LeagueSeason.active
+	var played := season.record.fixtures()
+	var fixture_id := ""
+	for fx in played:
+		if str(fx["status"]) == "played":
+			fixture_id = str(fx["id"])
+			break
+	assert_true(fixture_id != "", "there is no played fixture to report")
+	var fx := season.record.fixture(fixture_id)
+	season.record.add_events([
+		{"fixture_id": fixture_id, "minute": 1, "kind": "goal", "player_id": "", "club_id": str(fx["home_club_id"]), "detail": "A. Player"},
+		{"fixture_id": fixture_id, "minute": 2, "kind": "assist", "player_id": "", "club_id": str(fx["home_club_id"]), "detail": "B. Player"},
+		{"fixture_id": fixture_id, "minute": 3, "kind": "yellow", "player_id": "", "club_id": str(fx["away_club_id"]), "detail": "C. Player"},
+		{"fixture_id": fixture_id, "minute": 4, "kind": "red", "player_id": "", "club_id": str(fx["away_club_id"]), "detail": "D. Player"},
+	])
+	screen().open_season(season)
+	screen().show_report(fixture_id)
+	assert_eq(screen().mode, LeagueScreen.MODE_REPORT, "the report did not open")
+	await get_tree().process_frame
+	screen().queue_redraw()
+	await get_tree().process_frame
+	var kinds := {}
+	for item in screen().buttons:
+		if str(item["kind"]) == "event":
+			kinds[str((item["event"] as Dictionary).get("kind", ""))] = true
+	assert_true(kinds.has("red"), "the report lost the red card")
+	press_id("back")
+
+func test_pointer_motion_and_drag_are_not_clicks() -> void:
+	game.menus.open_menu()
+	press(door("new_league").get_center())
+	var before := str(screen().wizard["name"])
+	var motion := InputEventMouseMotion.new()
+	motion.position = Vector2(10, 10) * game.menus.shell.ui_scale
+	game._input(motion)
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = Vector2(200, 200)
+	game._input(down)
+	var drag := InputEventMouseMotion.new()
+	drag.position = Vector2(320, 240)
+	drag.button_mask = MOUSE_BUTTON_MASK_LEFT
+	game._input(drag)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = Vector2(320, 240)
+	game._input(up)
+	assert_eq(str(screen().wizard["name"]), before, "a drag clicked through to the wizard")
+	press_id("back")
+
+func test_deleting_the_active_save_returns_to_the_list() -> void:
+	var season := LeagueSeason.active
+	assert_not_null(season, "no season is active to delete")
+	var slug := str(season.save.slug)
+	game.menus.open_menu()
+	press(door("load_league").get_center())
+	press_id("delete:" + slug)
+	assert_null(LeagueSeason.active, "the deleted season stayed active")
+	assert_null(screen().season, "the screen kept a deleted season")
+	assert_eq(screen().mode, LeagueScreen.MODE_LOAD, "the delete did not stay on the list")
+	press_id("back")
+	assert_true(game.menus.active(), "Back from the load list did not reach the menu")
+
+func _open_hub() -> void:
+	game.menus.open_menu()
+	press(door("load_league").get_center())
+	press_id("open:" + str(screen().saves[0]["slug"]))
+	if screen().mode == LeagueScreen.MODE_PODIUM:
+		LeagueSeason.active.save.set_status("in_progress")
+		screen().open_season(LeagueSeason.active)
+
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
 		DirAccess.make_dir_recursive_absolute(folder)

@@ -110,6 +110,23 @@ func test_the_calendar_builds_in_both_modes() -> void:
 	assert_eq(generated.size(), 380, "generated mode did not build a calendar")
 	assert_eq(FixtureCalendar.build("generated", _rules(), 1).size(), 380, "the build is not repeatable")
 
+func test_an_unknown_mode_falls_back_to_the_generator() -> void:
+	var rows := FixtureCalendar.build("nonsense", _rules(), 3)
+	assert_eq(rows.size(), 380, "an unknown mode built no calendar")
+
+func test_odd_club_counts_and_short_windows_still_build() -> void:
+	var clubs: Array = []
+	for i in range(21):
+		clubs.append("T%d" % i)
+	var rounds := FixtureCalendar.pairings(clubs)
+	assert_eq(rounds.size(), 21, "an odd squad count did not get a bye round")
+	for round in rounds:
+		assert_eq((round as Array).size(), 10, "the bye round did not drop one pairing")
+	var dates := FixtureCalendar.round_dates("2026-08-15", "2026-09-01", 10, 2)
+	assert_eq(dates.size(), 10, "a short window produced the wrong number of dates")
+	for i in range(1, dates.size()):
+		assert_true(str(dates[i]) > str(dates[i - 1]), "short-window dates are not increasing")
+
 func test_day_labels_are_readable() -> void:
 	assert_eq(FixtureCalendar.day_label("2026-08-15"), "SAT 15 AUG", "the date label is wrong")
 	assert_eq(FixtureCalendar.day_label(""), "", "an empty date produced a label")

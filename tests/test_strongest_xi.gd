@@ -74,6 +74,11 @@ func test_the_choice_is_written_into_the_save() -> void:
 			assert_eq(str(row["squad"]), expected, "%s does not carry its XI order" % club_id)
 	season.close()
 
+func test_an_unknown_club_is_not_applied() -> void:
+	LeagueSave.create("XI Errors", LeagueRules.defaults())
+	assert_false(StrongestXI.apply("NOPE"), "an unknown club got an XI")
+	assert_eq(StrongestXI.pick({}).size(), 0, "an empty team produced players")
+
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
 		DirAccess.make_dir_recursive_absolute(folder)

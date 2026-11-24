@@ -121,7 +121,7 @@ func state() -> Dictionary:
 
 ## The day's fixtures with the flags the planner draws.
 func plan() -> Array:
-	if save == null:
+	if save == null or record == null:
 		return []
 	var out: Array = []
 	for fx in record.fixtures_on(save.current_date()):
@@ -164,7 +164,7 @@ func _top_six() -> Dictionary:
 ## fixtures block the clock until their match is played. Returns what happened
 ## so the screen can show a roundup.
 func advance() -> Dictionary:
-	if save == null:
+	if save == null or record == null:
 		return {"ok": false}
 	save.reload()
 	rules = save.rules
@@ -281,6 +281,8 @@ func _seed_for(fixture_id: String) -> int:
 
 ## A saved fixture as a report: score, synthetic or engine events, played flag.
 func report(fixture_id: String) -> Dictionary:
+	if record == null or fixture_id == "":
+		return {}
 	var fx := record.fixture(fixture_id)
 	if fx.is_empty():
 		return {}
@@ -296,6 +298,8 @@ func report(fixture_id: String) -> Dictionary:
 ## Hand one fixture to the match viewer. The screen starts the engine with these
 ## clubs; when it reaches full time, `engine_finished` records the result here.
 func start_watch(fixture_id: String) -> Dictionary:
+	if record == null or fixture_id == "":
+		return {}
 	var fx := record.fixture(fixture_id)
 	if fx.is_empty():
 		return {}
@@ -365,7 +369,7 @@ func _engine_events(engine, fixture_id: String) -> Array:
 ## Champion, runner-up, European places and the drop, read from the saved
 ## regulations. Empty until every fixture is played.
 func summary() -> Dictionary:
-	if save == null or record.unplayed() > 0:
+	if save == null or record == null or record.unplayed() > 0:
 		return {}
 	var rows := record.table()
 	if rows.size() < 20:

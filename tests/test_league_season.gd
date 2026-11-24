@@ -167,6 +167,29 @@ func test_a_finished_season_reopens_on_the_podium() -> void:
 	assert_eq(reopened.advance()["complete"], true, "a finished season played on")
 	season = reopened
 
+func test_a_lonely_season_object_is_safe() -> void:
+	var lonely := LeagueSeason.new()
+	assert_true(lonely.state().is_empty(), "an unopened season reported state")
+	assert_eq(lonely.plan().size(), 0, "an unopened season planned fixtures")
+	assert_true(lonely.report("nope").is_empty(), "an unopened season produced a report")
+	assert_true(lonely.summary().is_empty(), "an unopened season produced a podium")
+	assert_true(lonely.start_watch("nope").is_empty(), "an unopened season started a watch")
+	assert_eq(lonely.matches_remaining(), 0, "an unopened season has matches")
+	assert_false(bool(lonely.advance().get("ok", false)), "an unopened season advanced")
+	lonely.close()
+
+func test_engine_finish_without_watching_is_a_no_op() -> void:
+	var before := season.record.played()
+	var engine := MatchEngine.new(SEED, "MUN", "MCI")
+	engine.score[0] = 1
+	engine.score[1] = 1
+	LeagueSeason.engine_finished(engine)
+	assert_eq(season.record.played(), before, "an unrelated match reached the season")
+	assert_eq(season.watching_fixture, "", "the season is waiting for a match nobody started")
+
+func test_an_unknown_date_falls_back_to_the_saved_gameweek() -> void:
+	assert_eq(season._matchday_of("1999-01-01"), season.save.matchday(), "an empty day lost the gameweek")
+
 func _play_until(rounds: int) -> void:
 	var guard := 0
 	while season.record.completed_matchdays() < rounds and guard < 40:

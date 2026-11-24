@@ -37,6 +37,15 @@ func test_table_bands_follow_the_places() -> void:
 	var places := LeagueRules.places(r)
 	assert_eq(int(places["europe"]), 6, "the v1 European cut is not six clubs")
 
+func test_normalising_a_partial_row_keeps_the_template() -> void:
+	var row := {"win_points": "2", "season_start": "2027-08-14", "weekend_bias": "0.9"}
+	var rules := LeagueRules.normalize(row)
+	assert_eq(int(rules["win_points"]), 2, "an override did not take")
+	assert_eq(str(rules["season_start"]), "2027-08-14", "the window override did not take")
+	assert_almost_eq(float(rules["weekend_bias"]), 0.9, 0.001, "the weekend bias did not take")
+	assert_eq(int(rules["relegation_places"]), 3, "a missing field lost its default")
+	assert_eq(str(rules["advance_mode"]), "fixture_days", "a missing policy lost its default")
+
 func test_setup_choices_are_validated() -> void:
 	var r := LeagueRules.defaults("real", "every_day")
 	assert_eq(str(r["calendar_mode"]), "real", "a real setup was dropped")

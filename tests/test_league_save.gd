@@ -104,6 +104,20 @@ func test_closing_returns_to_the_single_match_cache() -> void:
 	assert_eq(PLDatabase.current_path(), cache, "single-match mode is not on the cached seed")
 	assert_eq(PLRepository.shared().table().size(), 20, "the seed table did not come back")
 
+func test_slugs_are_readable_and_files_stay_in_the_folder() -> void:
+	assert_eq(LeagueSave.slugify(""), "", "an empty name should fold to nothing")
+	assert_eq(LeagueSave.unique_slug("!!!"), "league", "an empty name has no fallback slug")
+	assert_eq(LeagueSave.slugify("  My  Save!! "), "my-save", "punctuation was not folded")
+	assert_eq(LeagueSave.slugify("2026/27"), "2026-27", "digits and slashes were mishandled")
+	var notes := LeagueSave.dir.path_join("notes.txt")
+	var out := FileAccess.open(notes, FileAccess.WRITE)
+	out.store_string("not a save")
+	out.close()
+	for entry in LeagueSave.list():
+		assert_ne(str(entry["slug"]), "notes", "a stray file was listed as a save")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(notes))
+	assert_false(LeagueSave.remove("no-such-save"), "removing a missing save reported success")
+
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
 		DirAccess.make_dir_recursive_absolute(folder)
