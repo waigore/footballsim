@@ -330,7 +330,7 @@ func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary
 		colour = UiChrome.C_SOFT
 	elif kind == "assist":
 		colour = UiChrome.C_SOFT
-	var name := str(e.get("player_name", e.get("detail", "")))
+	var name := LeagueRoundup.name_of(e)
 	UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), "%d'" % int(e.get("minute", 0)), 10,
 		UiChrome.C_DIM, fonts["bold"])
 	UiChrome.text(c, Vector2(rect.position.x + 34.0, rect.position.y + 14.0), name, 11, colour, fonts["bold"])

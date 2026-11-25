@@ -53,6 +53,12 @@ static func commentary(goal: Dictionary, seed: int) -> String:
 	var scoring_home := str(goal.get("club_id", "")) == str(goal.get("home", ""))
 	var goals_for := int(score[0]) if scoring_home else int(score[1])
 	var goals_against := int(score[1]) if scoring_home else int(score[0])
+	# A tagged penalty reads as a spot kick, not a build-up: the report row has
+	# no assist, and the line says where the goal came from (#171).
+	if bool(goal.get("penalty", false)):
+		return Commentary.penalty_goal(rng, str(goal.get("player_name", "Unknown")),
+			str(goal.get("club_short", "")), str(goal.get("opp_short", "")),
+			maxi(goals_for - 1, 0), goals_against)
 	return Commentary.goal(rng, str(goal.get("player_name", "Unknown")),
 		str(goal.get("assist_name", "")), false, str(goal.get("club_short", "")),
 		str(goal.get("opp_short", "")), maxi(goals_for - 1, 0), goals_against,

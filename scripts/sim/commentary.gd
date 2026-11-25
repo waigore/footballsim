@@ -109,6 +109,18 @@ static func goal(rng, scorer: String, assist: String, own_goal: bool, team_short
 		line = "%s %s scores! %s." % [open, scorer, score]
 	return line
 
+## A goal from the spot. No assist, because there is none: the taker is the
+## whole story. Reads like the engine's own goal line, with the score from the
+## scoring side (#171).
+static func penalty_goal(rng, scorer: String, team_short: String, other_short: String,
+		before_for: int, before_against: int) -> String:
+	var score := "%s %d-%d %s" % [team_short, before_for + 1, before_against, other_short]
+	return _pick(rng, [
+		"PENALTY! %s sends the keeper the wrong way. %s." % [scorer, score],
+		"FROM THE SPOT! %s buries it. %s." % [scorer, score],
+		"%s holds his nerve from twelve yards. %s." % [scorer, score],
+	])
+
 static func block(rng, name: String, shooter: String) -> String:
 	if shooter != "":
 		return _pick(rng, [

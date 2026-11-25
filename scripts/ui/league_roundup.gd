@@ -31,11 +31,18 @@ static func club_abbr(fixture: Dictionary, club_id: String) -> String:
 		return str(fixture.get("away_abbr", ""))
 	return ""
 
+## A scorer's name as a report reads it. A penalty is marked on the name — the
+## same shape the HUD gives an own goal — so a spot kick is visible without a
+## column of its own, and a row with no name still reads as nothing.
+static func name_of(e: Dictionary) -> String:
+	var name := str(e.get("player_name", e.get("detail", "")))
+	if bool(e.get("penalty", false)):
+		return name + " (PEN)"
+	return name
+
 ## One goal as the row reads it: `CRY 6' J. Mateta`.
 static func entry(fixture: Dictionary, e: Dictionary) -> String:
-	var name := str(e.get("player_name", ""))
-	if name == "":
-		name = str(e.get("detail", ""))
+	var name := name_of(e)
 	var minute := int(e.get("minute", 0))
 	var abbr := club_abbr(fixture, str(e.get("club_id", "")))
 	if abbr == "":

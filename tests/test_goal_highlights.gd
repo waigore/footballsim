@@ -77,6 +77,30 @@ func test_the_same_save_seed_reproduces_the_same_clip() -> void:
 	assert_true(a == b, "the same goal produced two different clips")
 	assert_true(a != c, "a new seed reproduced the old clip")
 
+## #171: a tagged penalty keeps its scorer and minute but reads and plays as a
+## spot kick — no assist, a line from the spot, and a different picture from the
+## open-play chance the same seed would have drawn.
+func test_a_penalty_clip_reads_and_plays_as_a_spot_kick() -> void:
+	var goal := _goal()
+	goal["penalty"] = true
+	goal["assist_id"] = ""
+	goal["assist_name"] = ""
+	var seed := GoalHighlight.seed_for(SEED, "gw01-MUN-MCI", 1)
+	var open_goal := _goal()
+	goal["commentary"] = GoalHighlight.commentary(goal, seed)
+	open_goal["commentary"] = GoalHighlight.commentary(open_goal, seed)
+	var pen := GoalHighlight.build(goal, _sides(), seed)
+	var open := GoalHighlight.build(open_goal, _sides(), seed)
+	assert_eq(str(pen["scorer_id"]), str(goal["player_id"]), "the spot kick lost its taker")
+	assert_eq(int(pen["minute"]), int(goal["minute"]), "the spot kick lost its minute")
+	var line := str(pen["commentary"]).to_upper()
+	assert_true(line.find("PENALTY") >= 0 or line.find("SPOT") >= 0 or line.find("TWELVE") >= 0,
+		"the penalty clip's line did not say what it was: %s" % pen["commentary"])
+	assert_ne(str(pen["commentary"]), str(open["commentary"]),
+		"a penalty was narrated as open play")
+	assert_true(GoalHighlight.pack(pen) != GoalHighlight.pack(open),
+		"a penalty played the open-play picture")
+
 func test_the_seed_follows_the_goal_index() -> void:
 	var a := GoalHighlight.seed_for(SEED, "gw01-MUN-MCI", 0)
 	var b := GoalHighlight.seed_for(SEED, "gw01-MUN-MCI", 1)
@@ -402,6 +426,33 @@ func test_a_watch_goal_keeps_the_captured_clip() -> void:
 	season.record.clips.clear(fx)
 	assert_true(season.record.clips.list(fx).is_empty(), "clearing a fixture left clip rows")
 
+## #171: a stored penalty recipe is drawn as a spot kick, and the line the
+## settling pass wrote survives beside it. The tag is part of the ledger, so a
+## reopened report still plays the right picture.
+func test_a_stored_penalty_clip_draws_as_a_spot_kick() -> void:
+	var fx := str((season.plan()[0] as Dictionary)["id"])
+	var row := season.record.fixtures.one(fx)
+	var home := str(row["home_club_id"])
+	var away := str(row["away_club_id"])
+	var scorer: Dictionary = StrongestXI.pick(TeamData.get_team(home))[9]
+	season.record.clips.clear(fx)
+	LeagueHighlights.store_auto(season.record, SEED, fx, [{
+		"fixture_id": fx, "minute": 20, "kind": "goal", "club_id": home,
+		"player_id": str(scorer["id"]), "player_name": str(scorer["name"]),
+		"detail": str(scorer["name"]), "penalty": true,
+	}], home, away)
+	var stored := season.record.clips.list(fx)
+	assert_eq(stored.size(), 1, "the penalty goal stored no clip")
+	assert_eq(int(stored[0].get("penalty", 0)), 1, "the stored clip lost the tag")
+	var pack := season.record.clips.pack(fx, 0)
+	assert_false(pack.is_empty(), "the stored penalty clip does not decode")
+	var line := str(pack.get("commentary", "")).to_upper()
+	assert_true(line.find("PENALTY") >= 0 or line.find("SPOT") >= 0 or line.find("TWELVE") >= 0,
+		"the stored penalty clip was narrated as open play: %s" % line)
+	assert_eq(str(pack.get("scorer_id", "")), str(scorer["id"]), "the clip lost its taker")
+	assert_eq(int(pack.get("minute", 0)), 20, "the clip lost its minute")
+	season.record.clips.clear(fx)
+
 func test_a_settled_matchday_stores_a_clip_for_every_goal() -> void:
 	var result := season.advance()
 	var reports: Array = result["played"]
@@ -464,6 +515,7 @@ func test_a_settled_clip_is_drawn_from_its_recipe() -> void:
 		"club_short": LeagueHighlights.short_name(club),
 		"opp_short": LeagueHighlights.short_name(away if club == home else home),
 		"score_after": score, "source": "auto", "commentary": str(row["commentary"]),
+		"penalty": int(row.get("penalty", 0)) == 1,
 	}
 	var sides := {"home": StrongestXI.pick(TeamData.get_team(home)),
 		"away": StrongestXI.pick(TeamData.get_team(away))}

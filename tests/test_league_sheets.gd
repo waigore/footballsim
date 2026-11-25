@@ -451,6 +451,35 @@ func test_a_scorer_with_no_known_club_still_reads() -> void:
 	assert_eq(LeagueRoundup.entry(fixture, {"minute": 12, "detail": "A. Striker"}),
 		"12' A. Striker", "a row with no player_name lost its scorer")
 
+## #171: a converted penalty is marked on the scorer's name, the shape an own
+## goal takes on the live HUD. The report row and the roundup read the mark from
+## one helper, so desktop and phone cannot disagree about it.
+func test_a_penalty_goal_is_marked_on_its_scorer() -> void:
+	var fixture := _fixture(1)
+	assert_eq(LeagueRoundup.entry(fixture, {"minute": 12, "club_id": "A1",
+		"player_name": "A. Striker", "penalty": true}), "HOM 12' A. Striker (PEN)",
+		"the roundup did not mark the penalty")
+	assert_eq(LeagueRoundup.name_of({"player_name": "A. Striker", "penalty": true}),
+		"A. Striker (PEN)", "the report row did not mark the penalty")
+	# A reopened save hands the flag back as SQLite's 1, not a bool.
+	assert_eq(LeagueRoundup.name_of({"detail": "A. Striker", "penalty": 1}),
+		"A. Striker (PEN)", "a stored penalty lost its mark")
+	assert_eq(LeagueRoundup.name_of({"player_name": "A. Striker"}),
+		"A. Striker", "an open-play goal was marked")
+	# The report layout carries the flag through on both sheet sizes.
+	for vp in [Vector2(1280, 720), Vector2(913, 411)]:
+		var book := LeagueBook.new()
+		var items: Array = book.report_layout(vp, {
+			"fixture": fixture, "day": "2026-08-15", "events": [
+				{"minute": 12, "kind": "goal", "player_name": "A. Striker", "penalty": true},
+			],
+		})
+		var marked := false
+		for item in items:
+			if str(item["kind"]) == "event" and bool(item["event"].get("penalty", false)):
+				marked = true
+		assert_true(marked, "the report dropped the penalty flag at %s" % vp)
+
 func _bottom(items: Array) -> float:
 	var bottom := 0.0
 	for item in items:
