@@ -14,8 +14,8 @@ extends RefCounted
 ## those rects. No sim calls happen here; BACK and the header band come from
 ## `LeagueExtra`, like every other league sheet.
 
-const HEADER := LeagueSheet.HEADER
-const BAR_H := LeagueSheet.BAR_H
+const HEADER := LeagueChrome.HEADER
+const BAR_H := LeagueChrome.BAR_H
 
 var cache := {}
 ## Dates this sheet painted, with the strip each one occupies (#99).

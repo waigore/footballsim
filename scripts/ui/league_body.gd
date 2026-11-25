@@ -7,10 +7,10 @@ extends Control
 ## that laid the rows out. Chrome (the header and the bottom bar) stays on the
 ## screen above it, exactly like the encyclopedia's body sits under its own header.
 
-## Sheet chrome above the content (LeagueSheet.HEADER).
-const TOP := LeagueSheet.HEADER
-## Bottom action bar under the content (LeagueSheet.BAR_H).
-const BAR := LeagueSheet.BAR_H
+## Sheet chrome above the content (LeagueChrome.HEADER).
+const TOP := LeagueChrome.HEADER
+## Bottom action bar under the content (LeagueChrome.BAR_H).
+const BAR := LeagueChrome.BAR_H
 
 var scroll := 0.0
 ## Sideways offset for a sheet wider than the window (the full table on a phone).
