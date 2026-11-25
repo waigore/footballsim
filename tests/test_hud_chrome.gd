@@ -20,6 +20,8 @@ class FakeGame:
 	var token_scale := 1.0
 	## The scene field the broadcast reads when a league watch holds its card (#124).
 	var result_hold := false
+	## The competition the match is billed in (#209), as the play scene carries it.
+	var billing := MatchBilling.new()
 
 func _hud(eng) -> Control:
 	var game := FakeGame.new()
@@ -301,3 +303,37 @@ func test_zoomed_follow_view_draws_the_surname_labels() -> void:
 	assert_gt(hud.get_viewport().get_canvas_transform().get_scale().x, 14.0, "the follow zoom never reached the label gate")
 	cam.queue_free()
 	hud.queue_free()
+
+## The fixture card and the opening team sheet name the match's own competition
+## (#209): a friendly's card must not claim the Premier League while the briefing
+## that opened it says FRIENDLY.
+func test_the_fixture_card_and_team_sheet_follow_the_scene_billing() -> void:
+	var eng := MatchEngine.new(4242)
+	var hud := _hud(eng)
+	# A scene with no binding at all (a probe, an old suite) still names the home
+	# club's own league rather than printing an empty line.
+	assert_eq(HudTopBand.billing_name(BareScene.new(), eng), "PREMIER LEAGUE",
+		"the card lost the home club's competition")
+	# A friendly (the picker's match) names no league anywhere on the chrome.
+	var game := FakeGame.new()
+	game.engine = eng
+	assert_eq(HudTopBand.billing_name(game, eng), "FRIENDLY", "a friendly's card claims a league")
+	# A league watch rebinds the scene, and both the card and the team sheet read
+	# the same answer the briefing printed.
+	MatchBilling.bind_scene(game, "MUN", {"matchday": 5})
+	assert_eq(HudTopBand.billing_name(game, eng), game.billing.chrome_name(),
+		"the card disagrees with the briefing about the competition")
+	assert_eq(game.billing.caption(), "PREMIER LEAGUE · MATCHDAY 5",
+		"the briefing lost its round")
+	# Both surfaces paint without a script error at phone and desktop metrics.
+	for phone in [false, true]:
+		hud.touch = phone
+		hud.game = game
+		hud.queue_redraw()
+		await get_tree().process_frame
+	hud.queue_free()
+
+## A scene that carries no billing field at all: the overlay must still name the
+## home club's league rather than crash on the read.
+class BareScene extends RefCounted:
+	pass

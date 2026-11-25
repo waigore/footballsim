@@ -191,6 +191,21 @@ func _draw_header(vp: Vector2, fonts: Dictionary) -> void:
 		line = LeagueColumns.fit_name(kicker, bold, 10, room)
 	LeagueExtra.header(self, vp, fonts, "PRE-MATCH", line, right)
 
+## The line under a club strip: the shape on the pitch, the table place and the
+## last five results (`4-2-3-1 · 7TH · W D L W W`). The strip is chrome, so a
+## place reads in caps; the desk blurb says the same number in a sentence
+## (`7th`). Pure, so a suite pins the ordinal without a rendered frame.
+static func strip_line(team: Dictionary, position: int, form: String) -> String:
+	var parts: Array = []
+	var shape := str(team.get("formation", ""))
+	if shape != "":
+		parts.append(shape)
+	if position > 0:
+		parts.append(PreMatchCopy.place(position).to_upper())
+	if form != "":
+		parts.append(form)
+	return " · ".join(PackedStringArray(parts))
+
 ## One side: the club strip, its pitch, the OUT list and the manager's line.
 func _draw_side(pitch: Rect2, out_rect: Rect2, quote: Rect2, team: Dictionary,
 		xi: Array, captain: String, absences: Array, quote_data: Dictionary,
@@ -205,11 +220,7 @@ func _draw_side(pitch: Rect2, out_rect: Rect2, quote: Rect2, team: Dictionary,
 	UiChrome.text(self, Vector2(name_x, pitch.position.y - 7.0),
 		str(team.get("name", "")).to_upper(), 11, UiChrome.C_DIM, med)
 	# The shape the pitch is showing, then the table place and the form run.
-	var right := str(team.get("formation", ""))
-	if position > 0:
-		right = (right + " · %dTH" % position) if right != "" else "%dTH" % position
-	if form != "":
-		right = (right + " · " + form) if right != "" else form
+	var right := strip_line(team, position, form)
 	if right != "":
 		UiChrome.text_r(self, pitch.end.x, pitch.position.y - 7.0, right, 10, UiChrome.C_GOLD, bold)
 	PreMatchPitch.draw(self, pitch, team, xi, captain, fonts, mirror)

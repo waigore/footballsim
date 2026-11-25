@@ -170,7 +170,7 @@ func _draw() -> void:
 		# The chrome leaves in two directions (#158): the top row lifts, the
 		# bottom strip drops, and neither waits on the other.
 		draw_set_transform(Vector2(0.0, -HudLayout.HUD_SLIDE_TOP * lift))
-		top_band.meta(p, self, engine, touch, mouse, f_bold, f_med)
+		top_band.meta(p, self, engine, game, touch, mouse, f_bold, f_med)
 		roster_band.stats(p, self, engine, f_bold, f_med)
 		if manager_card != null:
 			manager_card.draw(self, vp, f_bold, f_med, engine)
