@@ -180,6 +180,8 @@ suites = [
   "test_league_system.gd",
   "test_league_interest.gd",
   "test_league_sheets.gd",  "test_goal_highlights.gd",
+  # The long press reads the club strips these sheets paint (#107).
+  "test_interest_long_press.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.

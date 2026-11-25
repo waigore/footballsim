@@ -18,8 +18,9 @@ extends RefCounted
 ## difference still fit. That keeps Compact readable on a landscape phone
 ## instead of needing a sideways pan for its own default reading.
 ##
-## Kept beside `LeagueBook` rather than inside it: the book is already at its
-## method budget, and this is pure arithmetic a headless test can pin.
+## Its own module, not a helper inside a sheet: the hub's side table, the table
+## and the report all read one rail, and this is pure arithmetic a headless test
+## can pin.
 
 ## The compact reading, in paint order: the place, the club, then the whole
 ## overall record. Full adds the home and away splits on top of these.

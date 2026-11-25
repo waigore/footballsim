@@ -19,7 +19,7 @@ static func continue_day(screen) -> void:
 	var played: Array = result.get("played", [])
 	if str(result.get("status", "")) == "complete" or bool(result.get("complete", false)):
 		LeagueDoors.go(screen, screen.MODE_PODIUM)
-		screen.month = LeagueBook.state_month(screen.season, screen.month)
+		screen.month = LeagueMonth.state_month(screen.season, screen.month)
 		screen.refresh()
 		return
 	var pending: Array = result.get("pending", [])
@@ -31,7 +31,7 @@ static func continue_day(screen) -> void:
 	if not played.is_empty():
 		screen.show_roundup(played)
 		return
-	screen.month = LeagueBook.state_month(screen.season, screen.month)
+	screen.month = LeagueMonth.state_month(screen.season, screen.month)
 	screen.refresh()
 
 ## Hand a started watch to the host: it owns the match view and reports back.

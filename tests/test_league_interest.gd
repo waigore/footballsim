@@ -162,7 +162,12 @@ func test_the_hub_and_the_table_mark_a_followed_club() -> void:
 	view["plan"] = season.plan()
 	var hub_items := LeagueSheet.new().hub_layout(Vector2(1200.0, 900.0), view)
 	var row := _hub_row(hub_items, str(view["plan"][0]["id"]))
-	assert_true((row.get("interest", {}) as Dictionary).has(club_id), "the hub row is missing the interest mark")
+	assert_true((row.get("home_ink", Color.BLACK) as Color).is_equal_approx(
+		LeagueInterestMark.ink(LeagueSheet.interest_view(view), club_id)),
+		"the hub row is missing the interest mark")
+	assert_true((row.get("away_ink", UiChrome.C_TEXT) as Color).is_equal_approx(
+		LeagueInterestMark.ink(LeagueSheet.interest_view(view), str(view["plan"][0]["away_club_id"]))),
+		"the hub row painted the wrong club's ink")
 	# The followed game's chip states the rule instead of offering a switch that
 	# the shortlist would refuse.
 	var chip := _hub_chip(hub_items, str(view["plan"][0]["id"]))
