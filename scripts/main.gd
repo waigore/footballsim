@@ -258,18 +258,14 @@ func _cycle_speed() -> void:
 	speed = opts[(idx + 1) % opts.size()]
 
 func _toggle_mode() -> void:
-	mode = "full" if mode == "highlights" else "highlights"
-	if mode == "full":
-		fast_mode = false
-		in_highlight = false
-		highlight_until = -1.0
-		paused = false
-		speed = 1.0
-	else:
-		fast_mode = not in_highlight
-		if not in_highlight:
-			in_highlight = false
-			highlight_until = -1.0
+	set_mode(Prefs.next_mode(mode))
+
+## Every door into the match view — `H`, the bar's mode door, the Settings sheet
+## — lands here, and the prefs file remembers the choice (#164).
+func set_mode(next: String) -> void:
+	view.set_mode(next)
+	if menus != null:
+		menus.save_mode(mode)
 
 func _skip() -> void:
 	if replay != null:
@@ -277,7 +273,7 @@ func _skip() -> void:
 		replay.finish(true)
 		replay = null
 		return
-	if mode == "highlights":
+	if mode != "full":
 		if in_highlight:
 			_end_highlight()
 		elif fast_mode:
@@ -348,7 +344,7 @@ func _post_tick() -> void:
 	if in_highlight:
 		if engine.clock > highlight_until:
 			_end_highlight()
-	elif mode == "highlights":
+	elif mode != "full":
 		fast_mode = true
 	if camera != null:
 		camera.update_target()
@@ -357,7 +353,7 @@ func _post_tick() -> void:
 func _end_highlight() -> void:
 	in_highlight = false
 	highlight_until = -1.0
-	if mode == "highlights":
+	if mode != "full":
 		fast_mode = true
 
 func _snapshot() -> void:

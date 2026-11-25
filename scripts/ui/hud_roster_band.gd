@@ -122,22 +122,19 @@ func momentum(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> 
 		font = f_bold
 	p.text_r(c, box.end.x - 14, label_y, label, 9, col, font)
 
-## Play-state line: paused, highlights simming, or the full-match speed.
+## Play-state line: paused, a replay mode simming or live, or the full-match
+## speed. The mode's own name is on the line, so Goals only never reads as
+## Highlights (#164).
 func status(p: HudPaint, c: CanvasItem, game, speed_label: String, f_bold: Font, f_med: Font) -> void:
 	var y := p.vp.y - 72.0
-	var label := ""
+	var label := state_label(game, speed_label)
 	var col := UiChrome.C_DIM
 	if game.paused:
-		label = "PAUSED"
 		col = UiChrome.C_GOLD
-	elif game.mode == "highlights" and game.fast_mode:
-		label = "HIGHLIGHTS  ·  SIMMING 24x"
+	elif game.mode != "full" and game.fast_mode:
 		col = Color(0.55, 0.82, 0.86)
-	elif game.mode == "highlights":
-		label = "HIGHLIGHTS  ·  LIVE"
+	elif game.mode != "full":
 		col = Color(0.62, 0.88, 0.66)
-	else:
-		label = "FULL MATCH  ·  %sx" % speed_label
 	if p.compact():
 		# One line, level with the commentary ticker: the key-hint row it sits
 		# under on desktop would run into the control bar here.
@@ -145,6 +142,17 @@ func status(p: HudPaint, c: CanvasItem, game, speed_label: String, f_bold: Font,
 		return
 	p.text_r(c, p.vp.x - 24.0, y + 16, label, 11, col, f_bold)
 	p.text_r(c, p.vp.x - 24.0, y + 32, "HOVER A PLAYER  ·  CLICK TO TRACK THEIR MATCH", 9, UiChrome.C_DIM, f_med)
+
+## The play-state line's words: paused first, then the mode. Exposed so the copy
+## is read by a test instead of a screenshot.
+func state_label(game, speed_label: String) -> String:
+	if game.paused:
+		return "PAUSED"
+	if game.mode != "full" and game.fast_mode:
+		return "%s  ·  SIMMING 24x" % Prefs.mode_label(game.mode)
+	if game.mode != "full":
+		return "%s  ·  LIVE" % Prefs.mode_label(game.mode)
+	return "FULL MATCH  ·  %sx" % speed_label
 
 ## Hovered player's dossier card, offset from the pointer and flipped near edges.
 func tooltip(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:
