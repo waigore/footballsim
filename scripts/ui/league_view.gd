@@ -41,7 +41,10 @@ static func build(screen) -> Dictionary:
 	if mode == LeagueScreen.MODE_TABLE:
 		return {"table": state.get("table", []), "rules": state.get("rules", rules),
 			"name": state.get("name", ""), "date": state.get("date", ""),
-			"interests": state.get("interests", [])}
+			"interests": state.get("interests", []),
+			# A touch sheet lays thumb-sized rows and headers (#204); a desktop
+			# sheet keeps its dense reading, so the pose carries the device.
+			"touch": bool(screen.touch)}
 	if mode == LeagueScreen.MODE_CALENDAR:
 		return {"month": screen.month, "day": screen.day, "days": screen.days_cache,
 			"day_fixtures": screen.day_fixtures, "interests": state.get("interests", [])}

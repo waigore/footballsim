@@ -26,6 +26,11 @@ const META_SORT := "table_sort"
 const META_DIR := "table_dir"
 
 const ROW_H := 22.0
+## The pitch a touch sheet lays its club rows on: 48 density points of hit area
+## plus the one-unit divider every row gives to the sheet. At the desktop pitch a
+## finger covers two clubs and the wrong one opens (#204). A desktop sheet keeps
+## its dense reading untouched.
+const TAP_ROW_H := 49.0
 ## Room for the place number before the club name.
 const POS_W := 22.0
 ## The club column never collapses; a name wider than it is shortened instead.
@@ -33,10 +38,9 @@ const CLUB_MIN := 150.0
 ## One number box and the air between two of them.
 const NUM_W := 28.0
 const NUM_GAP := 2.0
-## Rows start below a one-line header, or below the group captions of the full
-## sheet (OVERALL / HOME / AWAY).
-const HEAD_ONE := 22.0
-const HEAD_TWO := 34.0
+## Rows start below the group captions of the full sheet (OVERALL / HOME / AWAY)
+## and below the header band itself — a desktop caption there, a full tap target
+## on a touch sheet (#204).
 
 ## `num` boxes sit on a right-aligned rail; `group` names the caption band the
 ## full sheet paints above them. `position` is never sortable: `#` is the league.
@@ -123,16 +127,17 @@ static func numeric(cols: Array) -> int:
 func layout(vp: Vector2, view: Dictionary) -> Array:
 	var reading := _reading(vp)
 	var rows := ordered(view.get("table", []))
+	var row_h := row_height(view)
 	var row_w := maxf(vp.x - 48.0, _min_row_w(reading))
-	var places := _places(Rect2(24.0, 0.0, row_w, ROW_H))
-	var top: float = LeagueSheet.HEADER + (HEAD_TWO if reading == FULL else HEAD_ONE)
-	var items := _header(places)
+	var places := _places(Rect2(24.0, 0.0, row_w, row_h))
+	var top: float = LeagueTableHead.rows_top(reading == FULL, bool(view.get("touch", false)))
+	var items := LeagueTableHead.cells(places, reading == FULL, sort, bool(view.get("touch", false)))
 	var interest := LeagueInterestMark.set_of(view.get("interests", []))
 	for i in range(rows.size()):
 		items.append({
 			"id": "club:" + str(rows[i]["club_id"]), "kind": "table_row", "row": rows[i],
 			"zone": LeagueRules.zone(int(rows[i]["position"]), view.get("rules", {})),
-			"rect": Rect2(24.0, top + float(i) * ROW_H, row_w, ROW_H - 1.0), "places": places,
+			"rect": Rect2(24.0, top + float(i) * row_h, row_w, row_h - 1.0), "places": places,
 			"interested": interest.has(str(rows[i]["club_id"])),
 		})
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
@@ -146,6 +151,12 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		"pinned": true, "primary": reading == FULL,
 		"rect": Rect2(134.0, vp.y - LeagueSheet.BAR_H + 6.0, 78.0, LeagueSheet.BAR_H - 14.0)})
 	return items
+
+## The row pitch this sheet lays: a touch sheet asks for one club per finger,
+## a desktop sheet keeps the dense reading (#204). Read from the pose the screen
+## built, so the layout and the hit test can never disagree.
+static func row_height(view: Dictionary) -> float:
+	return TAP_ROW_H if bool(view.get("touch", false)) else ROW_H
 
 ## The reading this sheet draws. With no saved choice the device decides once;
 ## the resolved value is what a mode press flips.
@@ -213,42 +224,8 @@ func _places(row: Rect2) -> Dictionary:
 
 ## The header is part of the scrolling content, so a column stays above its
 ## numbers when the sheet is panned sideways and its tap target travels with it.
-func _header(places: Dictionary) -> Array:
-	var items: Array = []
-	var y := LeagueSheet.HEADER + 6.0
-	if mode == FULL:
-		items.append_array(_captions(places, y))
-		y += 12.0
-	items.append(_head_cell(y, float(places["pos_x"]), 20.0, "#", "", false))
-	items.append(_head_cell(y, float(places["club_x"]), float(places["club_w"]),
-		"CLUB", "club", false))
-	for col in places["cols"]:
-		items.append(_head_cell(y, float(col["right"]) - float(col["w"]), float(col["w"]),
-			str(col["label"]), str(col["key"]), true))
-	return items
-
-func _captions(places: Dictionary, y: float) -> Array:
-	var out: Array = []
-	var bands: Array = []
-	for col in places["cols"]:
-		var group := str(col["group"])
-		if group == "":
-			continue
-		var left := float(col["right"]) - float(col["w"])
-		if bands.is_empty() or str(bands[bands.size() - 1]["label"]) != group:
-			bands.append({"label": group, "left": left, "right": float(col["right"])})
-		else:
-			bands[bands.size() - 1]["right"] = float(col["right"])
-	for band in bands:
-		out.append({"id": "", "kind": "caption", "label": str(band["label"]),
-			"rect": Rect2(float(band["left"]), y, float(band["right"]) - float(band["left"]), 11.0)})
-	return out
-
-func _head_cell(y: float, x: float, w: float, label: String, key: String,
-		right_align: bool) -> Dictionary:
-	var id: String = "" if key == "" else "tbl:sort:" + key
-	return {"id": id, "kind": "head", "label": label, "align_right": right_align,
-		"sorted": key != "" and key == sort, "rect": Rect2(x, y, w, 12.0)}
+## Its geometry and paint live in `LeagueTableHead`, which is where the touch
+## handhold a header needs (#204) is decided.
 
 # ------------------------------------------------------------------- press ---
 
@@ -338,24 +315,11 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array,
 		if kind == "table_row":
 			_draw_row(c, item["rect"], item, fonts, strips)
 		elif kind == "head":
-			_draw_head(c, item["rect"], item, fonts)
+			LeagueTableHead.draw(c, item["rect"], item, fonts, mode == COMPACT)
 		elif kind == "caption":
 			UiChrome.text(c, Vector2((item["rect"] as Rect2).position.x + 2.0,
 				(item["rect"] as Rect2).position.y + 8.0), str(item["label"]), 7,
 				UiChrome.C_DIM, fonts["bold"])
-
-func _draw_head(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
-	var size := 9
-	if mode != COMPACT:
-		size = 8
-	var colour: Color = UiChrome.C_GOLD if bool(item["sorted"]) else UiChrome.C_DIM
-	var y := rect.position.y + float(size) + 1.0
-	if bool(item["align_right"]):
-		UiChrome.text_r(c, rect.end.x, y, str(item["label"]), size, colour, fonts["bold"])
-	else:
-		UiChrome.text(c, Vector2(rect.position.x, y), str(item["label"]), size, colour, fonts["bold"])
-	if bool(item["sorted"]):
-		c.draw_rect(Rect2(rect.position.x, rect.end.y - 1.0, rect.size.x, 1.0), UiChrome.C_GOLD)
 
 ## The table's club label: the abbreviation — the one season pose that keeps it
 ## (#168) — falling back to the name only for a row that carries no short form.
