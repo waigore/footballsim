@@ -145,7 +145,7 @@ func test_the_month_door_steps_from_the_clock() -> void:
 	assert_true(LeagueStatsActions.press(screen, "statsmonth:1"), "the month door was not handled")
 	var date := str(season.state().get("date", ""))
 	var base := date.substr(0, 7)
-	assert_eq(str(screen.stats_filter["month"]), LeagueBook.shift_month(base, 1),
+	assert_eq(str(screen.stats_filter["month"]), LeagueMonth.shift(base, 1),
 		"the month door did not step once from the clock")
 	season.close()
 

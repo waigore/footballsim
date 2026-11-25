@@ -62,7 +62,11 @@ func handle(event: InputEvent, point: Vector2) -> bool:
 		else:
 			_up()
 	elif event is InputEventKey and event.pressed and not event.echo:
-		sheet.key(event.keycode)
+		# A soft keyboard sends the character it types, often with no keycode at
+		# all; a sheet with a text field reads that first (#201) and the key map
+		# takes whatever it does not.
+		if not (sheet.has_method("text_key") and sheet.text_key(event.keycode, event.unicode)):
+			sheet.key(event.keycode)
 	else:
 		return false
 	return true

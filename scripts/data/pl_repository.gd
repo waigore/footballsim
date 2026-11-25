@@ -59,14 +59,6 @@ func competition(competition_id: String) -> Dictionary:
 			return row
 	return {}
 
-## Ids of the competitions a season can run: the open save's actives, or every
-## league the seed carries when no season is bound.
-func active_competition_ids() -> Array:
-	var out: Array = []
-	for row in active_competitions():
-		out.append(str(row["id"]))
-	return out
-
 ## Competitions a player can actually pick: the open save's active leagues, or
 ## every league the shipped seed carries when no season is bound.
 func active_competitions() -> Array:
@@ -101,21 +93,27 @@ func club(club_id: String) -> Dictionary:
 	var row := PLDatabase.row("SELECT * FROM club WHERE id = ?;", [club_id])
 	if row.is_empty():
 		return {}
+	var competition_id := str(row.get("competition_id", ""))
+	var competition := PLDatabase.row(
+		"SELECT name, short_name FROM competition WHERE id = ?;", [competition_id])
 	# A season save owns its own standings, so the header reads the row the
 	# season keeps; without one it is the snapshot's reading of the real table.
-	var table: Dictionary = LeagueLedger.club_record(club_id) if LeagueLedger.bound() \
+	var table: Dictionary = LeagueLedger.club_record(club_id) \
+		if PLCompetitions.season_owns(competition_id) \
 		else PLDatabase.row("SELECT * FROM table_row WHERE club_id = ?;", [club_id])
 	var style := {}
 	for key in ["possession", "tempo", "press", "line", "width", "directness", "crossing", "aggression"]:
 		style[key] = float(row.get("style_" + key, 0.5))
 	var out := {
 		"id": str(row["id"]),
-		"competition_id": str(row.get("competition_id", "")),
-		"competition": str(row.get("competition_id", "")),
+		"competition_id": competition_id,
+		"competition": competition_id,
 		"name": str(row["name"]),
 		"short": str(row["short"]),
 		"abbr": str(row["abbr"]),
 		"nickname": str(row["nickname"]),
+		"competition_short": str(competition.get("short_name", competition_id)),
+		"competition_name": str(competition.get("name", competition_id)),
 		"manager": str(row["manager"]),
 		"stadium": str(row["stadium"]),
 		"city": str(row["city"]),
@@ -209,8 +207,16 @@ func player_by_name(club_id: String, name: String) -> Dictionary:
 ## connection, otherwise the snapshot's table as of its snapshot date. An empty
 ## competition id reads every active league (the index), a competition id one.
 func table(competition_id: String = "") -> Array:
-	if LeagueLedger.bound():
+	if competition_id == "":
+		if LeagueLedger.bound():
+			return _live_table("")
+		return _snapshot_table("")
+	if PLCompetitions.season_owns(competition_id):
 		return _live_table(competition_id)
+	return _snapshot_table(competition_id)
+
+## The snapshot's own table, filtered to one competition when one is named.
+func _snapshot_table(competition_id: String = "") -> Array:
 	var sql := (
 		"SELECT t.*, c.name AS club_name, c.abbr AS club_abbr, c.color AS club_color "
 		+ "FROM table_row t JOIN club c ON c.id = t.club_id"
@@ -269,7 +275,7 @@ func leaders(limit: int = 6, stat: String = "goals", competition_id: String = ""
 ## is a result: an unplayed one is `upcoming()`'s reading, never a 0 – 0 line.
 ## A season save answers with the fixtures it has actually played.
 func fixtures(club_id: String = "", limit: int = 8, competition_id: String = "") -> Array:
-	if LeagueLedger.bound():
+	if PLCompetitions.season_owns(competition_id):
 		return LeagueLedger.fixtures(club_id, limit, competition_id)
 	var sql := (
 		"SELECT f.*, h.abbr AS home_abbr, a.abbr AS away_abbr, h.name AS home_name, "
@@ -291,7 +297,7 @@ func fixtures(club_id: String = "", limit: int = 8, competition_id: String = "")
 ## for a club. A season answers with the games its clock still holds; the
 ## snapshot answers with the remaining schedule it ships.
 func upcoming(club_id: String = "", limit: int = 6, competition_id: String = "") -> Array:
-	if LeagueLedger.bound():
+	if PLCompetitions.season_owns(competition_id):
 		return LeagueLedger.upcoming(club_id, limit, competition_id)
 	var sql := (
 		"SELECT f.*, h.abbr AS home_abbr, a.abbr AS away_abbr, h.name AS home_name, "

@@ -8,11 +8,12 @@ extends RefCounted
 ## Rows keep a readable height and are allowed to run past the bottom of the
 ## viewport: LeagueBody clips them and scrolls. Only the bottom doors and the
 ## month chips are pinned in place.
+##
+## The month arithmetic (keys, stepping, labels, day counts) lives in
+## `LeagueMonth`; this book only places its cells and chips.
 
-const HEADER := 58.0
-const BAR_H := 52.0
-const MONTHS := ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
-	"AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"]
+const HEADER := LeagueChrome.HEADER
+const BAR_H := LeagueChrome.BAR_H
 
 var cache := {}
 ## Dates this book painted, with the strip each one occupies (#99): the screen's
@@ -21,8 +22,8 @@ var hints := DateHints.new()
 ## Club names this book painted, with the strip each one occupies (#107): the
 ## long press reads it, in the same design space the rows are laid out in.
 var names := InterestNames.new()
-## The table pose's geometry, sorting and paint (compact/full, header sort). It
-## lives in its own module because the book is at its method budget.
+## The table pose's geometry, sorting and paint (compact/full, header sort), in
+## its own module because a table is a reading of its own.
 var table := LeagueTableView.new()
 ## The match report pose, with its own two event columns (#168).
 var report_sheet := LeagueReportSheet.new()
@@ -50,9 +51,8 @@ func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 	var grid_top := HEADER + 50.0
 	var cw := (vp.x - 48.0) / 7.0
 	var ch: float = 30.0 if vp.y < 620.0 else 34.0
-	var count := month_days(month)
-	var first := int(Time.get_datetime_dict_from_unix_time(
-		Time.get_unix_time_from_datetime_string(month + "-01T00:00:00"))["weekday"])
+	var count := LeagueMonth.days(month)
+	var first := LeagueMonth.first_weekday(month)
 	for i in range(count):
 		var slot := first + i
 		var col := slot % 7
@@ -129,45 +129,13 @@ static func _podium_sections(summary: Dictionary) -> Array:
 		sections = [summary]
 	return sections
 
-## "2026-08" -> [year, month]; a missing month falls back to today.
-
-static func parse_month(month: String) -> Array:
-	if month.length() == 7 and month.substr(4, 1) == "-":
-		return [int(month.substr(0, 4)), int(month.substr(5, 2))]
-	var now := Time.get_date_dict_from_system()
-	return [int(now["year"]), int(now["month"])]
-
-static func month_key(year: int, month: int) -> String:
-	var m := ((month - 1) % 12 + 12) % 12 + 1
-	var y := year + int(floor(float(month - 1) / 12.0))
-	return "%04d-%02d" % [y, m]
-
-static func shift_month(month: String, delta: int) -> String:
-	var bits := parse_month(month)
-	return month_key(int(bits[0]), int(bits[1]) + delta)
-
-static func month_label(month: String) -> String:
-	var bits := parse_month(month)
-	return "%s %d" % [MONTHS[int(bits[1]) - 1], int(bits[0])]
-
-static func month_days(month: String) -> int:
-	var bits := parse_month(month)
-	return _days_in_month(int(bits[0]), int(bits[1]))
-
-## The season clock's month, or the month the screen last showed when there is
-## no season loaded.
-static func state_month(season, fallback: String) -> String:
-	if season == null:
-		return fallback
-	var date := str(season.state().get("date", ""))
-	return date.substr(0, 7) if date.length() >= 7 else fallback
-
-static func _days_in_month(year: int, month: int) -> int:
-	var next := month_key(year, month + 1)
-	var stamp := Time.get_unix_time_from_datetime_string(next + "-01T00:00:00") - 86400
-	return int(Time.get_datetime_dict_from_unix_time(stamp)["day"])
-
-# gd-tools: no cover start
+## Paste `body` into the paint path inside the header band. `body` is a bound
+## callable — `_draw_calendar_body.bind(vp, fonts, items, view)` — so the first
+## painted frame reuses the `_draw` call already entered instead of calling
+## `draw_*` (and its measured run) again. The headless suite never paints, so
+## this is the only branch there; see docs/testing.md.
+func _paint_band(c: CanvasItem, body: Callable) -> void:
+	body.call(c)
 
 func draw_table_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
@@ -181,9 +149,14 @@ func draw_table_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 func draw_calendar_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
 	LeagueExtra.header(c, vp, fonts, "CALENDAR")
-	UiChrome.text(c, Vector2(24.0, HEADER + 25.0), month_label(str(view.get("month", ""))), 13, UiChrome.C_TEXT, fonts["bold"])
+	UiChrome.text(c, Vector2(24.0, HEADER + 25.0), LeagueMonth.label(str(view.get("month", ""))),
+		13, UiChrome.C_TEXT, fonts["bold"])
 
 func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
+	_paint_band(c, _draw_calendar_body.bind(vp, fonts, items, view))
+
+func _draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
+		view: Dictionary) -> void:
 	hints.clear()
 	names.clear()
 	var interest := LeagueInterestMark.set_of(view.get("interests", []))
@@ -290,6 +263,9 @@ func draw_podium_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dic
 	LeagueExtra.header(c, vp, fonts, "SEASON COMPLETE", str(view.get("name", "")))
 
 func draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, _items: Array, view: Dictionary) -> void:
+	_paint_band(c, _draw_podium_body.bind(vp, fonts, view))
+
+func _draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary) -> void:
 	hints.clear()
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
@@ -317,7 +293,7 @@ func draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, _items: Arr
 			var row: Dictionary = zone_rows[i]
 			var club := _club_row(section, str(row["zone"]))
 			var band := LeagueRules.zone(int(row["position"]), section_rules)
-			c.draw_rect(Rect2(24.0, y + 2.0, 3.0, 12.0), LeagueSheet.zone_color(band))
+			c.draw_rect(Rect2(24.0, y + 2.0, 3.0, 12.0), LeagueChrome.zone_color(band))
 			UiChrome.text(c, Vector2(32.0, y + 12.0), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
 			UiChrome.text(c, Vector2(54.0, y + 12.0), str(row["club"]), 11, UiChrome.C_TEXT, med)
 			UiChrome.text_r(c, vp.x - 24.0, y + 12.0, str(club.get("points", "")), 10, UiChrome.C_SOFT, bold)

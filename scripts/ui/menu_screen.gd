@@ -24,6 +24,27 @@ const FADE := 1.8
 ## Footer copy sits on the stills, so it gets a lighter tone than panel dim.
 const FOOT := Color(0.66, 0.73, 0.77)
 
+## The title block and the door column never touch (#199): the wordmark keeps
+## this much air above its cap line, and this much between the block's foot and
+## the first door.
+const TITLE_AIR := 9.0
+const TITLE_GAP := 8.0
+## The shortest door still worth a tap. The column never trades a door for the
+## title: on a window too short for both, the title gives way.
+const DOOR_MIN := 44.0
+const DOOR_MAX := 56.0
+const DOOR_GAP_MAX := 12.0
+## The tagline's baseline, its type size and the gold rule under it, all
+## measured from the wordmark's baseline.
+const TAGLINE_DROP := 25.0
+const TAGLINE_SIZE := 13
+const RULE_DROP := 36.0
+## What the title block takes under the wordmark's baseline (the rule's foot).
+const TAGLINE_FOOT := RULE_DROP + 3.0
+## Wordmark sizes, largest first. A narrow or short window falls down this list
+## before it gives the wordmark up, so the brand never runs off the sheet.
+const SIZES := [96, 72, 64, 56, 48, 40, 32]
+
 var mouse := Vector2(-1000, -1000)
 var has_match := false
 var _cache := {}
@@ -72,28 +93,61 @@ static func door_ids(has_match_now: bool) -> Array:
 	ids.append("quit")
 	return ids
 
-static func door_rects(vp: Vector2, has_match_now: bool) -> Array:
+## The one layout the paint pass, the hit-test pass and the tests read: a title
+## block above, the door column below, and never the two crossing (#199).
+##
+## `title.size` is 0 when the window leaves no band at all above the doors. The
+## doors keep their floor first (every one on screen at `DOOR_MIN`), so a very
+## short handset still navigates; the title then shrinks and finally leaves.
+static func layout(vp: Vector2, has_match_now: bool, font: Font = null) -> Dictionary:
 	var compact: bool = vp.y < 620.0
 	var mx: float = clampf(vp.x * 0.07, 24.0, 96.0)
 	var ids := door_ids(has_match_now)
 	var n: float = float(ids.size())
 	var w: float = minf(340.0, vp.x - 2.0 * mx)
 	var bottom_pad: float = 18.0 if compact else 60.0
-	var top: float = vp.y * (0.40 if compact else 0.50)
-	# Never trade a door for the title: on a short design viewport (a 720p
-	# handset) the column slides up until every door stays on screen at tap size.
-	var stacked: float = 44.0 * n + 10.0 * (n - 1.0)
-	if compact:
-		top = clampf(minf(top, vp.y - bottom_pad - stacked), 8.0, vp.y)
+	# Never trade a door for the title: the column may start no higher than the
+	# place that still fits every door at tap size. On a short design viewport
+	# (a 720p handset) that is above its natural line, so the column slides up.
+	var top: float = clampf(minf(vp.y * (0.40 if compact else 0.50),
+		vp.y - bottom_pad - DOOR_MIN * n), 8.0, vp.y)
 	var avail: float = maxf(vp.y - top - bottom_pad, 0.0)
 	# Gaps take what is left after the minimum tap height, never a fixed guess:
 	# six doors must still fit a landscape phone.
-	var gap: float = clampf((avail - 44.0 * n) / maxf(n - 1.0, 1.0), 0.0, 12.0)
-	var h: float = clampf((avail - gap * (n - 1.0)) / n, 44.0, 56.0)
-	var out: Array = []
+	var gap: float = clampf((avail - DOOR_MIN * n) / maxf(n - 1.0, 1.0), 0.0, DOOR_GAP_MAX)
+	var h: float = clampf((avail - gap * (n - 1.0)) / n, DOOR_MIN, DOOR_MAX)
+	var doors: Array = []
 	for i in range(ids.size()):
-		out.append({"id": ids[i], "rect": Rect2(mx, top + float(i) * (h + gap), w, h)})
-	return out
+		doors.append({"id": ids[i], "rect": Rect2(mx, top + float(i) * (h + gap), w, h)})
+	return {"doors": doors, "title": title_pose(vp, top, compact, font)}
+
+## Where the wordmark (and its tagline) sit above the doors. The natural pose is
+## kept whenever it clears the column; otherwise the block is lifted, then the
+## tagline is dropped, then a smaller wordmark is tried, and only on a window
+## with room for neither does the wordmark leave (`size` 0).
+static func title_pose(vp: Vector2, doors_top: float, compact: bool,
+		font: Font = null) -> Dictionary:
+	var short: bool = vp.y < 400.0
+	var natural_y: float = vp.y * (0.22 if short else (0.28 if compact else 0.335))
+	var ideal: int = 48 if short else (64 if compact else 96)
+	# The tagline is player copy, not decoration: a caller that does not pass
+	# fonts still measures it, so the paint and the tests agree.
+	var bold: Font = font if font != null else UiChrome.fonts()["bold"]
+	var room: float = vp.x - 2.0 * clampf(vp.x * 0.07, 24.0, 96.0)
+	for candidate in SIZES:
+		var size := int(candidate)
+		if size > ideal or UiChrome.wordmark_width(size, bold) > room:
+			continue
+		var wants: Array = [false] if short else [true, false]
+		for tagline in wants:
+			var foot: float = TAGLINE_FOOT if bool(tagline) else 0.0
+			var y: float = minf(natural_y, doors_top - TITLE_GAP - foot)
+			if y - float(size) >= TITLE_AIR:
+				return {"size": size, "y": y, "tagline": bool(tagline)}
+	return {"size": 0, "y": natural_y, "tagline": false}
+
+static func door_rects(vp: Vector2, has_match_now: bool) -> Array:
+	return layout(vp, has_match_now)["doors"]
 
 # ------------------------------------------------------------------ input ---
 
@@ -116,27 +170,31 @@ func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, has_match_now: bool, vo
 	var med: Font = fonts["med"]
 	var compact: bool = vp.y < 620.0
 	var mx: float = clampf(vp.x * 0.07, 24.0, 96.0)
-	var short: bool = vp.y < 400.0
-	var title_size: int = 48 if short else (64 if compact else 96)
-	var y: float = vp.y * (0.22 if short else (0.28 if compact else 0.335))
-	UiChrome.wordmark(c, Vector2(mx, y), title_size, bold)
-	if not short:
-		UiChrome.text(c, Vector2(mx + 2.0, y + 25.0), "PREMIER LEAGUE MATCH SIMULATOR", 13, FOOT, med)
-		c.draw_rect(Rect2(mx + 2.0, y + 36.0, 88.0, 3.0), UiChrome.C_GOLD)
-	_draw_doors(c, vp, fonts, has_match_now, touch)
+	# The title reads the same layout the doors do, so the two can never be
+	# painted over each other (#199).
+	var sheet := layout(vp, has_match_now, bold)
+	var title: Dictionary = sheet["title"]
+	if int(title["size"]) > 0:
+		var ty: float = float(title["y"])
+		UiChrome.wordmark(c, Vector2(mx, ty), int(title["size"]), bold)
+		if bool(title["tagline"]):
+			UiChrome.text(c, Vector2(mx + 2.0, ty + TAGLINE_DROP),
+				"PREMIER LEAGUE MATCH SIMULATOR", TAGLINE_SIZE, FOOT, med)
+			c.draw_rect(Rect2(mx + 2.0, ty + RULE_DROP, 88.0, 3.0), UiChrome.C_GOLD)
+	_draw_doors(c, fonts, touch, sheet["doors"])
 	if not compact:
 		c.draw_rect(Rect2(mx, vp.y - 62.0, vp.x - 2.0 * mx, 1.0), Color(1, 1, 1, 0.07))
 		var hint := "TAP A DOOR TO BEGIN" if touch else "ENTER  START SIM     ESC  QUIT"
 		UiChrome.text(c, Vector2(mx, vp.y - 40.0), hint, 12, FOOT, med)
 		UiChrome.text_r(c, vp.x - mx, vp.y - 40.0, "MENU MUSIC  %d%%" % int(round(volume * 100.0)), 12, FOOT, bold)
 
-func _draw_doors(c: CanvasItem, vp: Vector2, fonts: Dictionary, has_match_now: bool, touch: bool) -> void:
+func _draw_doors(c: CanvasItem, fonts: Dictionary, touch: bool, doors: Array) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	var hints := {"start": "", "resume": "", "new_league": "", "load_league": "", "settings": "", "quit": ""}
 	if not touch:
 		hints = {"start": "ENTER", "resume": "", "new_league": "N", "load_league": "L", "settings": "S", "quit": "ESC"}
-	for b in door_rects(vp, has_match_now):
+	for b in doors:
 		var r: Rect2 = b["rect"]
 		var id: String = str(b["id"])
 		var hovered: bool = r.has_point(mouse)

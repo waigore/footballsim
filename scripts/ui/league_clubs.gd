@@ -24,8 +24,8 @@ static func search(query: String, exclude: Array) -> Array:
 		return []
 	var found: Array = []
 	var ids: Array = []
-	for comp_id in PLRepository.shared().active_competition_ids():
-		ids.append_array(PLRepository.shared().club_ids(str(comp_id)))
+	for row in PLRepository.shared().active_competitions():
+		ids.append_array(PLRepository.shared().club_ids(str(row["id"])))
 	for id in ids:
 		if exclude.has(str(id)):
 			continue

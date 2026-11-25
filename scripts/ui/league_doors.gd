@@ -2,12 +2,19 @@ class_name LeagueDoors
 extends RefCounted
 
 ## Every door of the season surface: the key map, the press dispatch, and the
-## season actions a press can reach.
+## page walk a press can take.
 ##
 ## Split out of `LeagueScreen` (the scene script is at its size budget) and
 ## written like `LeagueCalendar` / `LeagueSystemActions`: static helpers that
 ## work on the screen's own public fields and doors, so the screen keeps its
 ## state and paint while its dispatch table lives here.
+##
+## The table stays a table: this module only routes. A door that reaches into
+## the season lives in `LeagueSeasonDoors` (Continue, fixture rows, the calendar
+## day, the shortlist), a report's goal doors in `LeagueGoalDoors`, the panel's
+## destinations and the Stats reading in `LeaguePanelDoors`, and the System
+## dialog in `LeagueSystemActions`, so no one file carries both the dispatch and
+## the actions a door performs.
 ##
 ## The screen's `click()` and `key()` are one-line forwarders, so the host and the
 ## suite keep pressing the same surface. Row doors never repaint on their own:
@@ -23,8 +30,7 @@ const EDGE := 1.0e7
 
 # ------------------------------------------------------------------ keys ---
 
-## Run the key map against the screen. True when the key belonged to the surface
-## and the caller should not pass it on.
+## A key: the sheet's key map. `code` is the keycode the platform reports.
 static func key(screen, code: int) -> bool:
 	if _typed(screen, code):
 		return true
@@ -32,7 +38,7 @@ static func key(screen, code: int) -> bool:
 		back(screen)
 		return true
 	if screen.mode == screen.MODE_HUB and (code == KEY_ENTER or code == KEY_KP_ENTER):
-		continue_day(screen)
+		LeagueSeasonDoors.continue_day(screen)
 		return true
 	var page: float = screen.body.size.y * PAGE if screen.body != null else 0.0
 	match code:
@@ -52,20 +58,32 @@ static func key(screen, code: int) -> bool:
 			return false
 	return true
 
+## One typed character — what a soft keyboard sends, with no keycode of its own
+## (#201). `unicode` is the codepoint the platform reports, 0 when the key names
+## no character. A physical key keeps the letter printed on it instead, so a
+## letter the platform also names by keycode is left to the key map above and
+## this only takes the characters it does not know.
+static func text_key(screen, code: int, unicode: int) -> bool:
+	if unicode <= 0 or LeagueTextField.accepts(LeagueTextField.char_of(code)):
+		return false
+	return _typed(screen, 0, char(unicode))
+
 ## Text-entry sheets take their keys first: the wizard's name field, the System
 ## dialog's Save As name field, and the report's numbered goal doors. A key they
 ## do not own falls through to the map (so BACKSPACE on an empty field still
 ## leaves the sheet, and a digit with no clip stays a no-op).
-static func _typed(screen, code: int) -> bool:
+static func _typed(screen, code: int, ch: String = "") -> bool:
 	if screen.mode == screen.MODE_WIZARD:
-		if LeagueSheet.type_name_into(screen.wizard, code):
+		if _edit(screen.wizard, code, ch):
 			screen.refresh()
 			return true
-	if screen.mode == screen.MODE_SYSTEM and LeagueSystemActions.type_name(screen, code):
+	if screen.mode == screen.MODE_SYSTEM and LeagueSystemActions.type_name(screen, code, ch):
 		return true
 	# The shortlist's search field takes printable keys while the list is open.
 	if screen.mode == screen.MODE_INTEREST:
-		var typed: Array = LeagueSheet.type_name(str(screen.interest_query), code)
+		var query := str(screen.interest_query)
+		var typed: Array = LeagueTextField.type_char(query, ch) if ch != "" \
+			else LeagueTextField.type_name(query, code)
 		if bool(typed[0]):
 			screen.interest_query = str(typed[1]).to_lower()
 			screen.refresh()
@@ -80,10 +98,15 @@ static func _typed(screen, code: int) -> bool:
 	if screen.mode != screen.MODE_REPORT or code < KEY_1 or code > KEY_9:
 		return false
 	var want := code - KEY_1
-	if not has_clip(screen, want):
+	if not LeagueGoalDoors.has_clip(screen, want):
 		return false
-	play_goal(screen, want)
+	LeagueGoalDoors.play(screen, want)
 	return true
+
+## One edit of a field's state, from a keycode or from a typed character.
+static func _edit(state: Dictionary, code: int, ch: String) -> bool:
+	return LeagueTextField.type_char_into(state, ch) if ch != "" \
+		else LeagueTextField.type_name_into(state, code)
 
 # ----------------------------------------------------------------- press ---
 
@@ -92,6 +115,16 @@ static func _typed(screen, code: int) -> bool:
 static func press(screen, id: String) -> void:
 	if id == "":
 		return
+	# A painted text field is a door too (#201): pressing it puts the platform's
+	# keyboard up on the text it holds. Any other press puts the keyboard away,
+	# so it never stands over a sheet the player has moved on from.
+	if LeagueFieldFocus.kind_of(id) != "":
+		LeagueFieldFocus.press(screen, LeagueFieldFocus.kind_of(id))
+		screen.refresh()
+		return
+	screen.focus.blur()
+	# The delete confirmation's two doors answer before the sheet does. They carry
+	# no `delete:` prefix, so no save slug can ever be mistaken for an answer.
 	if id == "delete_yes":
 		screen.delete.answer(screen)
 		return
@@ -103,13 +136,14 @@ static func press(screen, id: String) -> void:
 	if id.begins_with("match:"):
 		screen.show_report(id.substr(6))
 	elif id.begins_with("goal:"):
-		play_goal(screen, int(id.substr(5)))
+		LeagueGoalDoors.play(screen, int(id.substr(5)))
 	elif id.begins_with("club:"):
 		screen.club_requested.emit(id.substr(5))
 	elif id.begins_with("toggle:"):
-		toggle_fixture(screen, id.substr(7))
+		LeagueSeasonDoors.toggle_fixture(screen, id.substr(7))
+		screen.refresh()
 	elif id.begins_with("fixture:"):
-		press_fixture(screen, id.substr(8))
+		LeagueSeasonDoors.press_fixture(screen, id.substr(8))
 	elif id.begins_with("open:"):
 		open_save(screen, id.substr(5))
 	elif id.begins_with("delete:"):
@@ -137,15 +171,16 @@ static func press(screen, id: String) -> void:
 		screen.panel.close()
 		screen.overlay.queue_redraw()
 	elif id.begins_with("nav:"):
-		nav(screen, id.substr(4))
+		LeaguePanelDoors.nav(screen, id.substr(4))
 	elif id.begins_with("stats:"):
-		stats(screen, id)
+		LeaguePanelDoors.stats(screen, id)
 	elif id.begins_with("statsday:"):
-		LeagueStatsActions.open_day(screen, id.substr(9))
+		LeagueSeasonDoors.open_day(screen, id.substr(9))
+		screen.refresh()
 	elif id.begins_with("interest:add:"):
-		set_interest(screen, id.substr(13), true)
+		_set_interest(screen, id.substr(13), true)
 	elif id.begins_with("interest:remove:"):
-		set_interest(screen, id.substr(16), false)
+		_set_interest(screen, id.substr(16), false)
 	elif id.begins_with("sys:"):
 		LeagueSystemActions.act(screen, id)
 	elif id == "back":
@@ -159,7 +194,7 @@ static func press(screen, id: String) -> void:
 	elif id == "podium":
 		read_podium(screen)
 	elif id == "continue":
-		continue_day(screen)
+		LeagueSeasonDoors.continue_day(screen)
 	elif id == "suggest":
 		screen.season.suggest()
 		screen.refresh()
@@ -167,14 +202,14 @@ static func press(screen, id: String) -> void:
 		LeagueSystemActions.open(screen)
 	elif id == "create":
 		create(screen)
-	elif id == "name":
-		screen.refresh()
 
 ## Leave the current page. The season walks its own history (#169): BACK is the
 ## previous page, at the root it does nothing, and the main menu is reached only
 ## through System → MAIN MENU. The menu-level sheets (New League, Load) are not
 ## pages of a season: their BACK returns to the caller that opened them.
 static func back(screen) -> void:
+	# BACK is also how a player puts the keyboard away before leaving the pose.
+	screen.focus.blur()
 	# The delete confirmation is the top-most surface: BACK puts it away and
 	# leaves the sheet it was raised over untouched.
 	if screen.delete_confirm_open():
@@ -230,7 +265,7 @@ static func go(screen, next: String) -> void:
 ## empty) rather than guessing one.
 static func open_table(screen) -> void:
 	go(screen, screen.MODE_TABLE)
-	screen.book.table.attach(screen.season.save if screen.season != null else null)
+	LeaguePanelDoors.attach_table(screen)
 	screen.refresh()
 
 static func open_calendar(screen) -> void:
@@ -258,7 +293,7 @@ static func create(screen) -> void:
 	screen.nav.clear()
 	screen.season_opened.emit(created)
 	screen.mode = screen.MODE_HUB
-	screen.month = LeagueBook.state_month(screen.season, screen.month)
+	screen.month = LeagueMonth.state_month(screen.season, screen.month)
 	screen.refresh()
 
 ## Load replaces the season outright: the old save, its ledger and every cached
@@ -283,111 +318,8 @@ static func delete_save(screen, slug: String) -> void:
 	screen.saves = LeagueSaveCatalog.list()
 	screen.refresh()
 
-## Continue: settle the auto-played day, or open the pending watch first (#100).
-static func continue_day(screen) -> void:
-	if screen.season == null or screen.season.finishing:
-		screen.refresh()
-		return
-	var result: Dictionary = screen.season.advance()
-	var played: Array = result.get("played", [])
-	if str(result.get("status", "")) == "complete" or bool(result.get("complete", false)):
-		go(screen, screen.MODE_PODIUM)
-		screen.month = LeagueBook.state_month(screen.season, screen.month)
-		screen.refresh()
-		return
-	var pending: Array = result.get("pending", [])
-	if not pending.is_empty():
-		var watch: Dictionary = screen.season.start_watch(str(pending[0]["id"]))
-		if not watch.is_empty():
-			request_watch(screen, watch)
-			return
-	if not played.is_empty():
-		screen.show_roundup(played)
-		return
-	screen.month = LeagueBook.state_month(screen.season, screen.month)
-	screen.refresh()
-
-## Hand a started watch to the host: it owns the match view and reports back.
-static func request_watch(screen, watch: Dictionary) -> void:
-	screen.match_requested.emit(str(watch["home"]), str(watch["away"]), str(watch["fixture_id"]))
-
-## Flip the watch flag of a pending fixture. A played fixture has no watch flag.
-static func toggle_fixture(screen, fixture_id: String) -> void:
-	if screen.season == null:
-		return
-	var fx: Dictionary = screen.season.record.fixtures.one(fixture_id)
-	if fx.is_empty() or str(fx["status"]) == "played":
-		return
-	screen.season.set_watch(fixture_id, int(fx["watched"]) != 1)
-	screen.refresh()
-
-## The panel's destinations, and the pose each one opens. The panel is closed on
-## the way so the sheet it opens is never covered by its own menu. Each jump is
-## one page of the season's history, so BACK undoes it like any other door.
-static func nav(screen, pose: String) -> void:
-	screen.panel.close()
-	if pose == "system":
-		LeagueSystemActions.open(screen)
-		return
-	if pose == "interest":
-		screen.interest_query = ""
-		go(screen, LeagueScreen.MODE_INTEREST)
-	elif pose == "fixtures":
-		go(screen, LeagueScreen.MODE_HUB)
-	elif pose == "table":
-		go(screen, LeagueScreen.MODE_TABLE)
-		screen.book.table.attach(screen.season.save if screen.season != null else null)
-	elif pose == "calendar":
-		go(screen, LeagueScreen.MODE_CALENDAR)
-		LeagueCalendar.open(screen)
-		return
-	elif pose == "stats":
-		go(screen, LeagueScreen.MODE_STATS)
-	screen.refresh()
-
-static func stats(screen, id: String) -> void:
-	if id == "stats:reports":
-		go(screen, LeagueScreen.MODE_STATS)
-	elif id == "stats:podium":
-		go(screen, LeagueScreen.MODE_PODIUM)
-	screen.refresh()
-
 ## Teams of Interest from the list: add or remove a club in this save (#104).
-static func set_interest(screen, club_id: String, follow: bool) -> void:
-	if screen.season == null or club_id == "":
-		return
-	if screen.season.set_interest(club_id, follow):
-		if follow:
-			screen.interest_query = ""
+## The list repaints only when the save took the change.
+static func _set_interest(screen, club_id: String, follow: bool) -> void:
+	if LeagueSeasonDoors.set_interest(screen, club_id, follow):
 		screen.refresh()
-
-static func press_fixture(screen, fixture_id: String) -> void:
-	if screen.season == null:
-		return
-	var fx: Dictionary = screen.season.record.fixtures.one(fixture_id)
-	if fx.is_empty():
-		return
-	if str(fx["status"]) == "played":
-		screen.show_report(fixture_id)
-	elif int(fx["watched"]) == 1:
-		var watch: Dictionary = screen.season.start_watch(fixture_id)
-		if not watch.is_empty():
-			request_watch(screen, watch)
-	else:
-		toggle_fixture(screen, fixture_id)
-
-# ------------------------------------------------------------ highlights ---
-
-## Play one goal of the report on screen. The host owns the viewer; the surface
-## only names the fixture and the goal's ordinal.
-static func play_goal(screen, index: int) -> void:
-	if screen.mode != screen.MODE_REPORT or not has_clip(screen, index):
-		return
-	var fixture: Dictionary = screen.report.get("fixture", {})
-	screen.goal_highlight_requested.emit(str(fixture.get("id", "")), index)
-
-static func has_clip(screen, index: int) -> bool:
-	for row in screen.report.get("highlights", []):
-		if int(row.get("goal_index", -1)) == index:
-			return true
-	return false

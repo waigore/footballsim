@@ -39,55 +39,29 @@ static func build(mode: String, rules: Dictionary, seed: int, competition_id: St
 ## results; a new save starts unplayed, so the results are deliberately left
 ## behind and the calendar and its dates are what a real-mode save inherits.
 ##
-## The snapshot stores no round number, and real fixtures move for cups and
-## postponements, so the gameweek is rebuilt from the pairings themselves: the
-## circle-method decomposition names every pairing once, the return leg is the
-## mirror, and the rounds are then ordered by their mean date. Every gameweek
-## therefore holds the games it should, and the dates stay exactly real.
+## The snapshot stores no round number, and a real season packs one gameweek
+## into the dates it was played on, so the gameweek is read off the calendar
+## itself: dates are walked oldest first and a new gameweek opens at the first
+## date that would not fit the one before it (see `date_rounds`). A date is
+## never split across two gameweeks, so the hub's `GW n`, the round's ten games
+## and the dates they are played on always name one weekend.
 static func real_rows(competition_id: String = "PL") -> Array:
 	var rows := PLDatabase.rows(
 		"SELECT * FROM fixture WHERE competition_id = ? ORDER BY kickoff, id;", [competition_id])
 	if rows.is_empty():
 		return []
-	var clubs: Array = []
+	var clubs := {}
 	for row in rows:
-		for key in ["home_club_id", "away_club_id"]:
-			var id := str(row[key])
-			if not clubs.has(id):
-				clubs.append(id)
-	clubs.sort()
-	var first := pairings(clubs)
-	var pivot := {}
-	for r in range(first.size()):
-		for pair in first[r]:
-			pivot[_pair_key(str(pair[0]), str(pair[1]))] = {"round": r, "home": str(pair[0])}
-	var dates := {}
-	for row in rows:
-		var h := str(row["home_club_id"])
-		var entry: Dictionary = pivot.get(_pair_key(h, str(row["away_club_id"])), {})
-		var round := int(entry.get("round", 0)) + 1
-		if str(entry.get("home", h)) != h:
-			round += first.size()
-		var stamp := days_from(str(row["kickoff"]))
-		if not dates.has(round):
-			dates[round] = [0, 0]
-		var slot: Array = dates[round]
-		slot[0] = int(slot[0]) + stamp
-		slot[1] = int(slot[1]) + 1
-		row["round"] = round
-		row["stamp"] = stamp
-	var keys := dates.keys()
-	keys.sort_custom(func(a, b):
-		return float(dates[a][0]) / float(dates[a][1]) < float(dates[b][0]) / float(dates[b][1]))
-	var number := {}
-	for i in range(keys.size()):
-		number[int(keys[i])] = i + 1
+		clubs[str(row["home_club_id"])] = true
+		clubs[str(row["away_club_id"])] = true
+	var numbers := date_rounds(rows, maxi(clubs.size() / 2, 1))
 	var tag := "" if competition_id == "PL" else slug_key(competition_id) + "-"
 	var out: Array = []
-	for row in rows:
+	for i in range(rows.size()):
+		var row: Dictionary = rows[i]
 		out.append({
 			"id": "real-" + tag + str(row["id"]),
-			"matchday": int(number.get(int(row["round"]), 1)),
+			"matchday": int(numbers[i]),
 			"kickoff": str(row["kickoff"]),
 			"kickoff_time": "",
 			"home": str(row["home_club_id"]),
@@ -98,9 +72,42 @@ static func real_rows(competition_id: String = "PL") -> Array:
 static func slug_key(text: String) -> String:
 	return text.to_lower()
 
-
-static func _pair_key(a: String, b: String) -> String:
-	return (a + "|" + b) if a < b else (b + "|" + a)
+## The gameweek of every snapshot row, in the order the rows arrive (kickoff,
+## then id).
+##
+## Rows are grouped by date and a whole date joins one round, so a weekend's
+## games are never divided between two gameweeks. A new round opens when the
+## date would take the round past `per_round` games, or when a club on the date
+## is already playing in that round — a rearranged fixture dropped among
+## another weekend's games files itself into the next one. Consecutive dates
+## therefore stay in one round until it is full, which is how a real weekend
+## spreads ten games over Friday to Monday.
+static func date_rounds(rows: Array, per_round: int) -> Array:
+	var out: Array = []
+	var round := 1
+	var count := 0
+	var playing := {}
+	var i := 0
+	while i < rows.size():
+		var day := str((rows[i] as Dictionary)["kickoff"])
+		var day_rows: Array = []
+		while i < rows.size() and str((rows[i] as Dictionary)["kickoff"]) == day:
+			day_rows.append(rows[i])
+			i += 1
+		var clash := false
+		for row in day_rows:
+			if playing.has(str(row["home_club_id"])) or playing.has(str(row["away_club_id"])):
+				clash = true
+		if clash or (count > 0 and count + day_rows.size() > per_round):
+			round += 1
+			count = 0
+			playing = {}
+		for row in day_rows:
+			playing[str(row["home_club_id"])] = true
+			playing[str(row["away_club_id"])] = true
+			count += 1
+			out.append(round)
+	return out
 
 
 # ------------------------------------------------------------- generated ---

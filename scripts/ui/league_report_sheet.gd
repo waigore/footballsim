@@ -10,9 +10,9 @@ extends RefCounted
 ## stored clip keeps its ▶ door beside it, in the same column. BACK is the
 ## league's header door, never a bottom bar (#162).
 ##
-## It lives beside `LeagueBook` (which was at its size budget) and follows the
-## same contract: `layout()` turns the report into rows with rects, `draw_*`
-## paints exactly those rects.
+## It is a sheet of its own, laid and painted for the book's report pose, and
+## follows the same contract: `layout()` turns the report into rows with rects,
+## `draw_*` paints exactly those rects.
 
 const HEADER := 58.0
 ## The ▶ hit target beside a goal: thumb-sized, never hover-only.
@@ -178,6 +178,13 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 				LeagueInterestMark.ink(interest, away_id))
 		elif kind == "event":
 			_draw_event(c, rect, item, fonts, interest)
+
+## The ▶ beside a goal: a bordered gold chip, sized by the layout so the door
+## stays thumb-sized on every platform.
+func _draw_play(c: CanvasItem, rect: Rect2, bold: Font) -> void:
+	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, Color(0.96, 0.78, 0.30, 0.55), 1)
+	var mid: float = rect.position.y + rect.size.y * 0.5 + UiChrome.RISE
+	UiChrome.text_c(c, rect.get_center().x, mid, "▶ PLAY", 10, UiChrome.C_GOLD, bold)
 
 func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
 		interest: Dictionary) -> void:

@@ -55,7 +55,9 @@ func test_repository_serves_the_engine_shape() -> void:
 ## The seed carries more than one competition, and a La Liga club's ids never
 ## collide with an English one's.
 func test_the_seed_ships_two_competitions() -> void:
-	var comps := PLRepository.shared().active_competition_ids()
+	var comps: Array = []
+	for row in PLRepository.shared().active_competitions():
+		comps.append(str(row["id"]))
 	assert_true(comps.has("PL"), "the seed has no Premier League")
 	assert_true(comps.has("LL"), "the seed has no La Liga")
 	var ll := TeamData.team_ids("LL")

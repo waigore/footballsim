@@ -113,8 +113,8 @@ static func apply(club_id: String) -> bool:
 static func apply_all() -> int:
 	var count := 0
 	var ids: Array = []
-	for cid in PLRepository.shared().active_competition_ids():
-		ids.append_array(TeamData.team_ids(str(cid)))
+	for row in PLRepository.shared().active_competitions():
+		ids.append_array(TeamData.team_ids(str(row["id"])))
 	if ids.is_empty():
 		ids = TeamData.team_ids()
 	PLDatabase.transaction("BEGIN TRANSACTION;")

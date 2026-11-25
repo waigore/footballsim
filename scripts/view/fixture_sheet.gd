@@ -62,12 +62,17 @@ func close() -> void:
 ## A confirmed fixture opens the pre-match briefing (#157). Its KICK OFF starts
 ## the match on a fresh seed; BACK returns to this picker with its clubs, and the
 ## match never starts.
+##
+## The picker's match is a friendly (#209): no league fixture behind it, so the
+## briefing, the broadcast's fixture card and the team sheet all name one — and
+## the same — competition.
 func confirm(home: String, away: String) -> void:
 	game.home_id = home
 	game.away_id = away
 	game.select_open = false
 	if game.sel_layer != null:
 		game.sel_layer.visible = false
+	MatchBilling.bind_scene(game, home, {})
 	if game.prematch != null:
 		var req := PreMatchModel.build(home, away, {}, LeagueSeason.active)
 		game.prematch.ask(req, Callable(self, "start_confirmed"), Callable(self, "back_from_briefing"))

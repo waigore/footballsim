@@ -233,14 +233,11 @@ func text_c(center_x: float, y: float, s: String, size: int, color: Color = C_TE
 	var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	text(Vector2(center_x - w * 0.5, y), s, px, color, f)
 
-func _add_button(id: String, r: Rect2) -> void:
-	buttons.append({"id": id, "rect": r})
-
 func _arrow(r: Rect2, glyph: String, id: String) -> void:
 	var hovered := r.has_point(mouse)
 	rect(C_PANEL_LIGHT if hovered else C_PANEL, r, 8, Color(1, 1, 1, 0.14 if hovered else 0.07))
 	text_c(r.position.x + r.size.x * 0.5, r.position.y + r.size.y * 0.66, glyph, 24, C_TEXT if hovered else C_DIM, f_bold)
-	_add_button(id, r)
+	buttons.append({"id": id, "rect": r})
 
 ## Competition chips over the cards: ALL, then each league the seed (or the open
 ## save) carries. The pool the arrows walk is the selected set, so picking both
@@ -263,7 +260,7 @@ func _draw_league_chips(vp: Vector2) -> void:
 		var name := str(row.get("short_name", row.get("name", "")))
 		text_c(chip.get_center().x, chip.position.y + 16.0, name, 10,
 			Color(0.06, 0.06, 0.05) if on else C_DIM, f_bold)
-		_add_button("league:" + str(row["id"]), chip)
+		buttons.append({"id": "league:" + str(row["id"]), "rect": chip})
 		x += w + gap
 
 func _card(r: Rect2, t: Dictionary, side: int) -> void:
@@ -282,6 +279,14 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 10, C_DIM, f_bold)
 	var label := "HOME" if side == 0 else "AWAY"
 	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
+
+## How many clubs the picker offers, and the competition it files them under —
+## read from the file, not hard-coded (#209): a multi-competition seed names its
+## own league here. Pure, so a suite can pin it.
+static func clubs_line(count: int, competition_name: String) -> String:
+	if competition_name == "":
+		return "%d CLUBS" % count
+	return "%d %s CLUBS" % [count, competition_name.to_upper()]
 
 ## Design space this sheet draws in (the layer is scaled up by main.gd).
 func design_vp() -> Vector2:
@@ -324,8 +329,8 @@ func _draw() -> void:
 	_card(home_rect, home, 0)
 	_card(away_rect, away, 1)
 	# The cards are also encyclopedia doors: a club page is one tap away.
-	_add_button("team_home", home_rect)
-	_add_button("team_away", away_rect)
+	buttons.append({"id": "team_home", "rect": home_rect})
+	buttons.append({"id": "team_away", "rect": away_rect})
 
 	var arrow := 46.0
 	var ay := card_y + card_h * 0.5 - arrow * 0.5
@@ -363,7 +368,7 @@ func _draw() -> void:
 			if not touch:
 				text_c(r.get_center().x, middle + UiChrome.HINT_DROP, str(spec[3]), 10,
 					C_DIM, f_med)
-		_add_button(spec[0], r)
+		buttons.append({"id": spec[0], "rect": r})
 
 	if touch:
 		text_c(vp.x * 0.5, vp.y - 44, "TAP THE ARROWS TO CHANGE CLUBS  ·  TAP KICK OFF", 11, C_DIM, f_med)
@@ -378,7 +383,7 @@ func _draw() -> void:
 	var back_hover := back.has_point(mouse)
 	rect(C_PANEL_LIGHT if back_hover else C_PANEL, back, 8, Color(1, 1, 1, 0.14 if back_hover else 0.07))
 	text_c(back.position.x + back.size.x * 0.5, back.position.y + back.size.y * 0.66, "‹  MENU" if back_to_menu else "‹  BACK", 13, C_TEXT if back_hover else C_DIM, f_bold)
-	_add_button("back", back)
+	buttons.append({"id": "back", "rect": back})
 
 	# Encyclopedia door: the whole league is one tap from the fixture sheet, in
 	# the corner opposite BACK (#163).
@@ -386,4 +391,4 @@ func _draw() -> void:
 	var league_hover := league_btn.has_point(mouse)
 	rect(C_PANEL_LIGHT if league_hover else C_PANEL, league_btn, 8, Color(1, 1, 1, 0.14 if league_hover else 0.07))
 	text_c(league_btn.position.x + league_btn.size.x * 0.5, league_btn.position.y + league_btn.size.y * 0.66, "◈  LEAGUE", 13, C_TEXT if league_hover else C_DIM, f_bold)
-	_add_button("league", league_btn)
+	buttons.append({"id": "league", "rect": league_btn})
