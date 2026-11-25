@@ -11,8 +11,10 @@ extends RefCounted
 ##
 ## The table stays a table: this module only routes. A door that reaches into
 ## the season lives in `LeagueSeasonDoors` (Continue, fixture rows, the calendar
-## day, the shortlist) and a report's goal doors in `LeagueGoalDoors`, so no
-## one file carries both the dispatch and the season's own actions.
+## day, the shortlist), a report's goal doors in `LeagueGoalDoors`, the panel's
+## destinations and the Stats reading in `LeaguePanelDoors`, and the System
+## dialog in `LeagueSystemActions`, so no one file carries both the dispatch and
+## the actions a door performs.
 ##
 ## The screen's `click()` and `key()` are one-line forwarders, so the host and the
 ## suite keep pressing the same surface. Row doors never repaint on their own:
@@ -134,9 +136,9 @@ static func press(screen, id: String) -> void:
 		screen.panel.close()
 		screen.overlay.queue_redraw()
 	elif id.begins_with("nav:"):
-		nav(screen, id.substr(4))
+		LeaguePanelDoors.nav(screen, id.substr(4))
 	elif id.begins_with("stats:"):
-		stats(screen, id)
+		LeaguePanelDoors.stats(screen, id)
 	elif id.begins_with("statsday:"):
 		LeagueSeasonDoors.open_day(screen, id.substr(9))
 		screen.refresh()
@@ -228,7 +230,7 @@ static func go(screen, next: String) -> void:
 ## empty) rather than guessing one.
 static func open_table(screen) -> void:
 	go(screen, screen.MODE_TABLE)
-	_attach_table(screen)
+	LeaguePanelDoors.attach_table(screen)
 	screen.refresh()
 
 static func open_calendar(screen) -> void:
@@ -238,11 +240,6 @@ static func open_calendar(screen) -> void:
 static func read_podium(screen) -> void:
 	go(screen, screen.MODE_PODIUM)
 	screen.refresh()
-
-## The table is the save's: its sort and reading are written through to the same
-## save the sheet draws from, and nothing is attached when there is no season.
-static func _attach_table(screen) -> void:
-	screen.book.table.attach(screen.season.save if screen.season != null else null)
 
 ## New season from the wizard: the name, the calendar and the clock the player
 ## chose. A refusal stays on the wizard with its message.
@@ -281,37 +278,6 @@ static func delete_save(screen, slug: String) -> void:
 		LeagueSystemActions.unload(screen)
 	LeagueSave.remove(slug)
 	screen.saves = LeagueSave.list()
-	screen.refresh()
-
-## The panel's destinations, and the pose each one opens. The panel is closed on
-## the way so the sheet it opens is never covered by its own menu. Each jump is
-## one page of the season's history, so BACK undoes it like any other door.
-static func nav(screen, pose: String) -> void:
-	screen.panel.close()
-	if pose == "system":
-		LeagueSystemActions.open(screen)
-		return
-	if pose == "interest":
-		screen.interest_query = ""
-		go(screen, LeagueScreen.MODE_INTEREST)
-	elif pose == "fixtures":
-		go(screen, LeagueScreen.MODE_HUB)
-	elif pose == "table":
-		go(screen, LeagueScreen.MODE_TABLE)
-		_attach_table(screen)
-	elif pose == "calendar":
-		go(screen, LeagueScreen.MODE_CALENDAR)
-		LeagueCalendar.open(screen)
-		return
-	elif pose == "stats":
-		go(screen, LeagueScreen.MODE_STATS)
-	screen.refresh()
-
-static func stats(screen, id: String) -> void:
-	if id == "stats:reports":
-		go(screen, LeagueScreen.MODE_STATS)
-	elif id == "stats:podium":
-		go(screen, LeagueScreen.MODE_PODIUM)
 	screen.refresh()
 
 ## Teams of Interest from the list: add or remove a club in this save (#104).

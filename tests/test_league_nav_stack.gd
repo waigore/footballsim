@@ -104,6 +104,8 @@ func test_the_calendar_day_and_stats_are_pages_of_their_own() -> void:
 	assert_true(date != "", "the calendar lists no fixture day")
 	screen.click("day:" + date)
 	assert_eq(screen.day, date, "the day did not open")
+	screen.panel.open()
+	screen.panel.settle()
 	screen.click("nav:stats")
 	assert_eq(screen.mode, LeagueScreen.MODE_STATS, "Stats did not open")
 	# The calendar's selected day survives behind the Stats page.
