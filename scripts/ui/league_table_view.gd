@@ -14,8 +14,8 @@ extends RefCounted
 ## save that has never been touched opens on the device default: compact on a
 ## phone, full on a desktop.
 ##
-## Geometry, sorting and paint only. `LeagueBook` keeps the table pose and hands
-## geometry and paint here, because the book is already at its method budget.
+## Geometry, sorting and paint only: `LeagueBook` keeps the table pose and hands
+## geometry and paint here.
 
 const COMPACT := "compact"
 const FULL := "full"
@@ -146,10 +146,10 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 	# so the player never has to guess what a press will do.
 	items.append({"id": "tbl:mode:" + COMPACT, "kind": "button", "label": "COMPACT",
 		"pinned": true, "primary": reading == COMPACT,
-		"rect": Rect2(24.0, vp.y - LeagueSheet.BAR_H + 6.0, 104.0, LeagueSheet.BAR_H - 14.0)})
+		"rect": Rect2(24.0, vp.y - LeagueChrome.BAR_H + 6.0, 104.0, LeagueChrome.BAR_H - 14.0)})
 	items.append({"id": "tbl:mode:" + FULL, "kind": "button", "label": "FULL",
 		"pinned": true, "primary": reading == FULL,
-		"rect": Rect2(134.0, vp.y - LeagueSheet.BAR_H + 6.0, 78.0, LeagueSheet.BAR_H - 14.0)})
+		"rect": Rect2(134.0, vp.y - LeagueChrome.BAR_H + 6.0, 78.0, LeagueChrome.BAR_H - 14.0)})
 	return items
 
 ## The row pitch this sheet lays: a touch sheet asks for one club per finger,
@@ -162,7 +162,7 @@ static func row_height(view: Dictionary) -> float:
 ## the resolved value is what a mode press flips.
 func _reading(vp: Vector2) -> String:
 	if mode == "":
-		mode = COMPACT if LeagueSheet.compact(vp) else FULL
+		mode = COMPACT if LeagueChrome.compact(vp) else FULL
 	return mode
 
 ## Rows in the player's chosen order, each keeping its official position. Ties
@@ -275,7 +275,7 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 	LeagueExtra.header(c, vp, fonts, "LEAGUE TABLE", " · ".join(PackedStringArray(parts)))
 	if date != "":
 		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 34.0, 10), date)
-	var y := vp.y - LeagueSheet.BAR_H + 24.0
+	var y := vp.y - LeagueChrome.BAR_H + 24.0
 	# The legend shares the bar with the two reading doors on a wide sheet; a
 	# phone sheet has no room there, so it moves up beside the title.
 	if vp.x < 620.0:
@@ -303,7 +303,7 @@ func _legend(c: CanvasItem, anchor: float, y: float, fonts: Dictionary, narrow: 
 	var x: float = anchor - total if from_right else anchor
 	for i in range(labels.size()):
 		var label := str(labels[i])
-		UiChrome.text(c, Vector2(x, y), label, size, LeagueSheet.zone_color(str(bands[i])), bold)
+		UiChrome.text(c, Vector2(x, y), label, size, LeagueChrome.zone_color(str(bands[i])), bold)
 		x += bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + gap
 
 func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array,
@@ -333,7 +333,7 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
 	var band := str(item["zone"])
 	if band != "":
 		c.draw_rect(Rect2(rect.position.x, rect.position.y + 2.0, 4.0, rect.size.y - 4.0),
-			LeagueSheet.zone_color(band))
+			LeagueChrome.zone_color(band))
 	var places: Dictionary = item["places"]
 	var y := rect.position.y + rect.size.y * 0.5 + 4.0
 	UiChrome.text(c, Vector2(float(places["pos_x"]), y), "%d" % int(row["position"]), 10,

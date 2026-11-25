@@ -22,7 +22,7 @@ static func open(screen) -> void:
 			screen.days_cache[date]["n"] = int(screen.days_cache[date]["n"]) + 1
 			if str(fx["status"]) == "played":
 				screen.days_cache[date]["played"] = int(screen.days_cache[date]["played"]) + 1
-		screen.month = LeagueBook.state_month(season, screen.month)
+		screen.month = LeagueMonth.state_month(season, screen.month)
 	var chosen: String = str(screen.month) + "-01"
 	if season != null:
 		var current: String = str(season.state().get("date", ""))
@@ -40,7 +40,7 @@ static func open(screen) -> void:
 ## Move the grid a month and open the first day of the new month that has a
 ## fixture (or its first day when the month is empty).
 static func shift(screen, delta: int) -> void:
-	screen.month = LeagueBook.shift_month(screen.month, delta)
+	screen.month = LeagueMonth.shift(screen.month, delta)
 	var keys: Array = screen.days_cache.keys()
 	keys.sort()
 	var chosen: String = str(screen.month) + "-01"

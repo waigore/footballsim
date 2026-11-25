@@ -10,9 +10,9 @@ extends RefCounted
 ## stored clip keeps its ▶ door beside it, in the same column. BACK is the
 ## league's header door, never a bottom bar (#162).
 ##
-## It lives beside `LeagueBook` (which was at its size budget) and follows the
-## same contract: `layout()` turns the report into rows with rects, `draw_*`
-## paints exactly those rects.
+## It is a sheet of its own, laid and painted for the book's report pose, and
+## follows the same contract: `layout()` turns the report into rows with rects,
+## `draw_*` paints exactly those rects.
 
 const HEADER := 58.0
 ## The ▶ hit target beside a goal: thumb-sized, never hover-only.

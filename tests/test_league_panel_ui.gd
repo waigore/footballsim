@@ -110,8 +110,8 @@ func test_the_hub_has_no_bottom_door_bar_and_keeps_back_and_continue() -> void:
 	assert_true(ids.has("back"), "the hub lost BACK")
 	assert_almost_eq(back.position.x, 24.0, 0.5, "BACK is not top-left")
 	assert_almost_eq(cont.end.x, vp().x - 24.0, 0.5, "CONTINUE is not top-right")
-	assert_lte(back.end.y, LeagueSheet.HEADER, "BACK left the header")
-	assert_lte(cont.end.y, LeagueSheet.HEADER, "CONTINUE left the header")
+	assert_lte(back.end.y, LeagueChrome.HEADER, "BACK left the header")
+	assert_lte(cont.end.y, LeagueChrome.HEADER, "CONTINUE left the header")
 	# The body now runs to the window's bottom edge: no bar is reserved.
 	assert_almost_eq(screen().body.size.y, vp().y - LeagueBody.TOP, 0.5,
 		"the hub still reserves a bottom bar")
