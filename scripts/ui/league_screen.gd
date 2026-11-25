@@ -256,6 +256,9 @@ func refresh() -> void:
 	var content := body.set_sheet(items, vp, mode != _last_mode, _bottom_bar())
 	body.painter = Callable(sheet, str(pose[2])).bind(vp, UiChrome.fonts(), content, view)
 	panel.active = str(POSE_NAMES.get(mode, ""))
+	# The drawer door is the season's only way to its other readings, so it is
+	# sized for the pointer that will press it (#204).
+	panel.touch = touch
 	overlay.active_pose = panel.active
 	overlay.ui_scale = ui_scale
 	_last_mode = mode
