@@ -187,9 +187,10 @@ func _draw_side(pitch: Rect2, out_rect: Rect2, quote: Rect2, team: Dictionary,
 	var name_x := pitch.position.x + 10.0 + UiChrome.text_width(bold, str(team.get("abbr", "")), 20) + 10.0
 	UiChrome.text(self, Vector2(name_x, pitch.position.y - 7.0),
 		str(team.get("name", "")).to_upper(), 11, UiChrome.C_DIM, med)
-	var right := ""
+	# The shape the pitch is showing, then the table place and the form run.
+	var right := str(team.get("formation", ""))
 	if position > 0:
-		right = "%dTH" % position
+		right = (right + " · %dTH" % position) if right != "" else "%dTH" % position
 	if form != "":
 		right = (right + " · " + form) if right != "" else form
 	if right != "":
