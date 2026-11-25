@@ -46,7 +46,7 @@ const FINISH_EFFICIENCY := 1.0
 ## XG_CONTEST_ELASTICITY on the big-n census after the λ retune (#192): the
 ## engine's own chance creation already separates the sides, so the quality
 ## calibration is nearly level and the level carries the fit.
-const XG_SCALE := 0.57
+const XG_SCALE := 0.58
 ## A shot is also worth more when the defence facing it is weak and when the
 ## side taking it is strong — the same combined rating gradient the model puts
 ## into λ, read from one source (`PoissonModel.exponent_terms`). The engine's
@@ -55,7 +55,7 @@ const XG_SCALE := 0.57
 ## Elasticity is per 10 rating points of that derived gap. It sits well below the
 ## model's 0.98 because the engine's chance creation carries most of the
 ## gradient itself; the census fit (#192) is what sets it.
-const XG_CONTEST_ELASTICITY := 0.28
+const XG_CONTEST_ELASTICITY := 0.45
 ## Venue premium in chance quality, in log terms: the model builds the home edge
 ## into HOME_XG / AWAY_XG, and the engine's chance locations do not, so the
 ## finishing calibration carries the same split (home × e^edge, away ÷ e^edge).
