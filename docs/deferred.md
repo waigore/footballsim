@@ -10,7 +10,7 @@ Shipped (wiki domains playable; DRs accepted):
 
 | Area | Locus |
 |------|-------|
-| Match lifecycle, open play, restarts | `scripts/sim/`, wiki Match |
+| Match lifecycle, open play, restarts | `scripts/sim/`; wiki Match |
 | Added time, injuries, handball, pitch official | DR-20261122-03 |
 | Live tactics + IFAB substitutions | DR-20261122-05; MatchAI |
 | Poisson / Dixon–Coles outcomes | `poisson_model.gd`; DR-20261122-04 |
@@ -22,34 +22,34 @@ Shipped (wiki domains playable; DRs accepted):
 | Per-goal report playback packs | DR-20261124-04 |
 | Non-match type / viewport scale | DR-20261124-03 |
 | Live `tempo` on the tactics board | DR-20261122-02; drives play now |
-| Woodwork, interceptions, momentum, stored rating | DR-20261125-01; momentum on the broadcast stats card (DR-20261125-02) |
+| Woodwork, interceptions, momentum, stored rating | DR-20261125-01; momentum on stats card (DR-20261125-02) |
 | Whistle card lists the goals that made the score | `goal_sheet`; DR-20261125-04 |
 | Roundup scorers name their club, in minute order | [#125](https://github.com/waigore/footballsim/issues/125); DR-20261125-07 |
-| Encyclopedia reads the open season (table, results, scorers, player lines) | `league_ledger.gd`; DR-20261125-08 |
-| Teams of Interest: a followed club's games stay on Watch, gold names | `league_interest.gd`; DR-20261125-09; [#104](https://github.com/waigore/footballsim/issues/104) |
+| Encyclopedia reads the open season (table, results, scorers, lines) | `league_ledger.gd`; DR-20261125-08 |
+| Teams of Interest: followed club's games stay on Watch, gold names | `league_interest.gd`; DR-20261125-09; [#104](https://github.com/waigore/footballsim/issues/104) |
 | Shape pass shares one ball path per pass | DR-20261125-11 |
 | Encyclopedia competition hubs + index | `pl_competitions.gd`; DR-20261126-01; [#190](https://github.com/waigore/footballsim/issues/190) |
-| Engine priced onto the PL-envelope λ | DR-20261126-02; [#192](https://github.com/waigore/footballsim/issues/192) |
+| Engine priced onto the PL-envelope λ | DR-20261126-02; [#192](https://github.com/waigore/footballsim/issues/192) pricing half |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Native match hot loop | DR-20261123-02 “future tightening” under the 120 s budget. Shape-pass path shared (DR-20261125-11); tick still GDScript |
-| 2 | Engine creation gradient vs λ | DR-20261126-02 priced the level; a weak away side still takes fewer, worse chances than λ implies. Needs creation work, not pricing |
+| 1 | Engine creation gradient vs λ | [#192](https://github.com/waigore/footballsim/issues/192) pricing landed (DR-20261126-02). Even fixtures still ~30% above λ; weak away sides under-create — creation work, not another price cut |
+| 2 | Native match hot loop | DR-20261123-02 future tightening under the 120 s budget. Shape-pass shared (DR-20261125-11); tick still GDScript |
 
 ## Next pick
 
-**Native match hot loop** — the census sits inside its 120 s budget but the tick is
-still GDScript (P4, not rules). The residual creation gradient (rank 2) touches
-the watched game and wants design input before it moves.
+**Engine creation gradient vs λ** — watched matches still disagree with Auto on
+even/extreme fixtures (P2). Needs design input first. Native hot loop (rank 2)
+stays optional while the census fits 120 s.
 
 ## Out of scope / blocked
 
 | Item | Why |
 |------|-----|
 | Club-manager career; player tactics / XI | Product non-goal; Match playable-slice Out |
-| Cups, transfers, finances, training, other leagues, second season in one save, mid-season seed refresh of a save | Season Out of scope (v1); DR-20261124-01 |
+| Cups, transfers, finances, training, other leagues, second season in one save, mid-season seed refresh of a save | Season Out of scope (v1); DR-20261124-01. Multi-league (#185–#191) waits on #186 before a deferred row (DR-20261126-01) |
 | Extra time, shootouts, VAR; weather on the pitch; referee outcome bias | Match playable-slice Out |
 | Concussion subs; extra injury stoppage beyond the added-time formula | Substitutions Out of scope; DR-20261122-05 |
 | Licensed data beyond the shipped PL snapshot | requirements Non-goals; DR-20261123-01 |
