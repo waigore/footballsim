@@ -15,7 +15,7 @@ const FINISH_EFFICIENCY := 1.0
 ## Positional xG is calibrated down to real-football levels: the engine creates
 ## more chances than a real side, so each one is worth less. Fitted to the
 ## tier-2 census against the PL-envelope λ (wiki poisson-model, DR-20261126-06).
-const XG_SCALE := 0.54
+const XG_SCALE := 0.50
 ## A shot is also worth more when the defence facing it is weak and when the
 ## side taking it is strong — the same combined rating gradient the model puts
 ## into λ, read from one source (`PoissonModel.exponent_terms`). The engine's
