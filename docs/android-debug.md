@@ -36,18 +36,6 @@ Point events arrive in logical viewport units, so convert with `main.gd::_design
 
 `tools/android_playtest.sh [seconds]` exports, installs, launches and prints the engine log. On a desktop build `-- --ui-scale=2.19` forces the phone overlay in a 2400x1080 window, so screenshots need no device.
 
-## Device parity
-
-A 105x68 m pitch needs the long edge, and the desktop overlay's 10-unit type is a one-millimetre hairline on a 420 dpi panel. `project.godot` pins sensor landscape, `stretch/aspect = expand` (the 20:9 width is used instead of letterboxed), and ETC2/ASTC import, which an Android export requires.
-
-`HudLayout` owns the phone layout. `overlay_scale()` maps one design unit to about one density point (`900 / screen height in dp`, clamped 1–2.6); `main.gd` scales the overlay layer by it and every rect is then derived from the smaller design viewport. `is_compact()` switches to phone metrics: scoreboard beside a three-or-five-row stats card, a seven-door control bar (teams joins it), the horizontal player card, and no 20-unit row to tap. Tap targets stay ≥ 44 design units — `tests/test_hud_layout.gd` asserts it, with the card and the pitch band.
-
-Point events arrive in logical viewport units, so convert with `main.gd::_design(p)` before `hud.button_at()` or `selector.button_at()`. A tap picks a player from the tap point (`_pick`), never from a hover a finger never made.
-
-## Local playtest
-
-`tools/android_playtest.sh [seconds]` exports, installs, launches and prints the engine log. On a desktop build, `-- --ui-scale=2.19` forces the phone overlay in a 2400x1080 window, so phone screenshots and geometry need no device.
-
 ## Out of scope
 
 - Local JDK / Android SDK / Godot template install for this path

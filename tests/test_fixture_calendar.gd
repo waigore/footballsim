@@ -4,7 +4,7 @@ extends GdToolsTest
 ## generated PL-like double round robin that obeys the saved window and the
 ## weekend/midweek policy.
 
-const CACHE_DIR := "user://cache_test_calendar_issue58"
+var CACHE_DIR := TestScratch.dir("cache_test_calendar_issue58")
 
 func before_all() -> void:
 	PLDatabase.cache_dir = CACHE_DIR
@@ -128,7 +128,11 @@ func test_odd_club_counts_and_short_windows_still_build() -> void:
 		assert_true(str(dates[i]) > str(dates[i - 1]), "short-window dates are not increasing")
 
 func test_day_labels_are_readable() -> void:
-	assert_eq(FixtureCalendar.day_label("2026-08-15"), "SAT 15 AUG", "the date label is wrong")
+	assert_eq(FixtureCalendar.day_label("2026-08-15"), "15/AUG/2026", "the date label is wrong")
+	assert_eq(FixtureCalendar.day_label("2026-08-05"), "5/AUG/2026", "the day took a leading zero")
+	assert_eq(FixtureCalendar.day_label("2026-08"), "", "a month key produced a day label")
 	assert_eq(FixtureCalendar.day_label(""), "", "an empty date produced a label")
+	assert_eq(FixtureCalendar.weekday_label("2026-08-15"), "SAT", "the weekday hint is wrong")
+	assert_eq(FixtureCalendar.weekday_label(""), "", "an empty date produced a weekday")
 	assert_eq(FixtureCalendar.add_days("2026-08-15", 3), "2026-08-18", "date arithmetic is wrong")
 	assert_eq(FixtureCalendar.weekday_of(FixtureCalendar.days_from("2026-08-15")), 6, "Saturday is miscounted")

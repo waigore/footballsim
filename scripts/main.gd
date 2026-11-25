@@ -2,7 +2,9 @@ extends Node2D
 
 ## Playback controller + scene assembly.
 ## Owns the engine, the snapshot ring buffer that makes highlight replays possible,
-## the camera and every input binding.
+## the camera and every input binding. Screen/design-space arithmetic (overlay
+## doors, token picking, tick budget) lives in MatchView so the scene stays
+## inside its P3 size budget.
 
 const W := 68.0
 const L := 105.0
@@ -25,9 +27,10 @@ var replay_banner := 0.0
 var seeded := 1000
 
 var accumulator := 0.0
-var history: Array = []
-var hist_timer := 0.0
-var shown_triggers := {}
+## The broadcast ring and the goal captures it makes (see HighlightDirector).
+var highlights: HighlightDirector = null
+## A stored goal clip being played over the pitch, or null.
+var replay: GoalReplay = null
 var half_time_timer := -1.0
 var focus_id := -1
 var hover_id := -1
@@ -47,8 +50,13 @@ var elapsed_real := 0.0
 var match_time := 0.0
 var audio: MatchAudio = null
 var camera: MatchCamera = null
+var view: MatchView = null
+var input: MatchInput = null
+var fixture: FixtureSheet = null
 var batch_abort := false
 var hud_scale := 1.0
+## Reading scale for the non-match layers; the match HUD keeps HudLayout's.
+var chrome_scale := 1.0
 var token_scale := 1.0
 var pitch_shift := 0.0
 var touch := false
@@ -68,10 +76,14 @@ var match_started := false
 var wiki_host: WikiHost = null
 ## A finished match is written to the cached seed exactly once.
 var result_recorded := false
+## A league watch keeps its FULL TIME card until the player taps it away (#124);
+## LeagueHost owns the flag, the broadcast only reads it.
+var result_hold := false
 
 func _ready() -> void:
 	build_scene()
 	setup_audio()
+	highlights = HighlightDirector.new(self)
 	_parse_fixture_args()
 	new_match(seeded)
 	dev = DevCapture.new()
@@ -113,33 +125,40 @@ func build_scene() -> void:
 	hud.game = self
 	touch = OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
 	camera = MatchCamera.new(self)
+	view = MatchView.new(self)
+	input = MatchInput.new(self)
+	fixture = FixtureSheet.new(self)
 	_sync_overlay_scale()
 	camera.fit()
 	actors.game = self
 
-## Handhelds read the overlay at roughly one density point per design unit: the
-## layer is scaled up by HudLayout.overlay_scale() and every rect is derived
-## from the smaller design viewport, so type and tap targets grow with the
-## screen instead of shrinking with it.
+## Handhelds read the match overlay at one density point per design unit; the
+## non-match chrome (menus, settings, league and encyclopedia sheets) has its
+## own scale. Each layer keeps its own transform; MatchView owns the numbers and
+## the scene hands back the overlay layer it created.
 func _sync_overlay_scale() -> void:
-	hud_scale = HudLayout.overlay_scale()
-	if dev != null and dev.ui_scale > 0.0:
-		hud_scale = dev.ui_scale
-		touch = true
-	token_scale = 1.5 if HudLayout.is_compact(get_viewport_rect().size / hud_scale) else 1.0
+	var scales: Dictionary = view.overlay_scale(hud_layer, dev)
+	hud_scale = float(scales["hud"])
+	touch = bool(scales["touch"])
+	chrome_scale = float(scales["chrome"])
+	token_scale = float(scales["token"])
 	actors.token_scale = token_scale
 	hud.ui_scale = hud_scale
 	hud.touch = touch
-	var frame := Transform2D.IDENTITY.scaled(Vector2(hud_scale, hud_scale))
-	hud_layer.transform = frame
+	hud_layer.transform = Transform2D.IDENTITY.scaled(Vector2(hud_scale, hud_scale))
+	var frame := Transform2D.IDENTITY.scaled(Vector2(chrome_scale, chrome_scale))
 	if sel_layer != null:
 		sel_layer.transform = frame
+		selector.ui_scale = chrome_scale
 	if wiki_host != null:
 		wiki_host.sync_scale()
 	if menus != null:
-		menus.sync(frame, hud_scale, touch)
+		menus.sync(frame, chrome_scale, touch)
 
 func new_match(seed: int) -> void:
+	if replay != null:
+		replay.finish(false)
+		replay = null
 	if engine != null and engine.event_fired.is_connected(_on_engine_event):
 		engine.event_fired.disconnect(_on_engine_event)
 	engine = MatchEngine.new(seed, home_id, away_id)
@@ -149,8 +168,6 @@ func new_match(seed: int) -> void:
 	actors.engine = engine
 	actors.ball_trail.clear()
 	hud.engine = engine
-	history.clear()
-	shown_triggers.clear()
 	batch_abort = false
 	focus_id = -1
 	hover_id = -1
@@ -160,7 +177,6 @@ func new_match(seed: int) -> void:
 	paused = false
 	speed = 1.0
 	accumulator = 0.0
-	hist_timer = 0.0
 	half_time_timer = -1.0
 	replay_banner = 0.0
 	last_event_notice = 0.0
@@ -168,28 +184,12 @@ func new_match(seed: int) -> void:
 	cam.position = Vector2(L * 0.5, W * 0.5 + pitch_shift)
 	cam.zoom = Vector2(base_zoom, base_zoom)
 	result_recorded = false
-	_snapshot()
+	highlights.restart()
 
 # --------------------------------------------------------------- fixture ----
 
 func _build_selector() -> void:
-	if selector != null:
-		return
-	sel_layer = CanvasLayer.new()
-	sel_layer.layer = 20
-	add_child(sel_layer)
-	selector = Control.new()
-	selector.set_script(load("res://scripts/ui/team_select.gd"))
-	selector.set_anchors_preset(Control.PRESET_FULL_RECT)
-	selector.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sel_layer.add_child(selector)
-	selector.confirmed.connect(_on_fixture_confirmed)
-	selector.cancelled.connect(_close_select)
-	selector.browse.connect(wiki_host.open_page)
-	sel_layer.transform = Transform2D.IDENTITY.scaled(Vector2(hud_scale, hud_scale))
-	selector.ui_scale = hud_scale
-	selector.touch = touch
-	sel_layer.visible = false
+	fixture.build()
 
 # -------------------------------------------------------------- encyclopedia --
 
@@ -198,54 +198,16 @@ func _build_wiki() -> void:
 	wiki_host.build()
 
 func open_select(from_menu: bool = false) -> void:
-	if selector == null:
-		return
-	select_from_menu = from_menu
-	select_open = true
-	paused = true
-	if from_menu and menus != null:
-		menus.close(true)
-	selector.back_to_menu = from_menu
-	selector.setup(home_id, away_id)
-	if hud_layer != null:
-		hud_layer.visible = false
-	sel_layer.visible = true
-	selector.visible = true
+	fixture.open(from_menu)
 
 func _close_select() -> void:
-	select_open = false
-	if sel_layer != null:
-		sel_layer.visible = false
-	if select_from_menu:
-		select_from_menu = false
-		if menus != null:
-			menus.open_menu()
-		return
-	if hud_layer != null:
-		hud_layer.visible = true
-	paused = false
+	fixture.close()
 
 func _on_fixture_confirmed(h: String, a: String) -> void:
-	home_id = h
-	away_id = a
-	select_open = false
-	select_from_menu = false
-	if sel_layer != null:
-		sel_layer.visible = false
-	if hud_layer != null:
-		hud_layer.visible = true
-	if menus != null:
-		menus.close()
-	match_started = true
-	seeded += randi_range(1, 9999)
-	new_match(seeded)
+	fixture.confirm(h, a)
 
 func _parse_fixture_args() -> void:
-	var f := FixtureArgs.parse(OS.get_cmdline_user_args(), TeamData.team_ids(), {"seed": seeded, "home": home_id, "away": away_id})
-	seeded = int(f["seed"])
-	home_id = str(f["home"])
-	away_id = str(f["away"])
-	fixture_arg_given = bool(f["given"])
+	fixture_arg_given = fixture.parse_args()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
@@ -255,84 +217,13 @@ func _notification(what: int) -> void:
 
 # ------------------------------------------------------------------ input ----
 
+## Sheets, the wheel, the overlay bar and the one-key controls all route
+## through MatchInput; the scene only exposes its state.
 func _input(event: InputEvent) -> void:
-	if wiki_host != null and wiki_host.is_open():
-		wiki_host.handle_input(event)
-		return
-	if menus != null and menus.handle_input(event, _design(event.position) if event is InputEventMouse else Vector2.ZERO):
-		return
-	if select_open:
-		if event is InputEventMouseMotion:
-			mouse = event.position
-			selector.mouse = _design(event.position)
-			if not touch:
-				Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if selector.button_at(selector.mouse) != "" else Input.CURSOR_ARROW)
-		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			mouse = event.position
-			selector.mouse = _design(event.position)
-			var sid: String = selector.button_at(selector.mouse)
-			if sid != "":
-				selector.click(sid)
-		elif event is InputEventKey and event.pressed and not event.echo:
-			selector.key(event.keycode)
-		return
-	if event is InputEventMouseMotion:
-		mouse = event.position
-		_update_hover()
-	elif event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			zoom_scale = clampf(zoom_scale * 1.08, 0.65, 2.4)
-			_apply_camera(true)
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			zoom_scale = clampf(zoom_scale / 1.08, 0.65, 2.4)
-			_apply_camera(true)
-		elif event.button_index == MOUSE_BUTTON_LEFT:
-			mouse = event.position
-			_click(event.position)
-	elif event is InputEventKey and event.pressed and not event.echo:
-		# if/elif rather than match: the coverage injector cannot instrument a
-		# match statement, and an uninstrumentable main.gd fails the patch gate.
-		var k: int = event.keycode
-		if k == KEY_SPACE:
-			paused = not paused
-		elif k == KEY_1:
-			speed = 1.0
-		elif k == KEY_2:
-			speed = 2.0
-		elif k == KEY_3:
-			speed = 4.0
-		elif k == KEY_4:
-			speed = 8.0
-		elif k == KEY_H:
-			_toggle_mode()
-		elif k == KEY_S:
-			_skip()
-		elif k == KEY_R:
-			new_match(seeded + randi_range(0, 9999))
-		elif k == KEY_N:
-			names_visible = not names_visible
-			actors.names_visible = names_visible
-		elif k == KEY_C:
-			camera_follow = not camera_follow
-		elif k == KEY_M:
-			menus.open_menu()
-		elif k == KEY_T:
-			open_select()
-		elif k == KEY_L:
-			wiki_host.open_page(WikiModel.LEAGUE, "")
-		elif k == KEY_ESCAPE:
-			if focus_id >= 0:
-				focus_id = -1
-			else:
-				menus.ask_quit()
-
-## Overlay widgets live in design space; pointer events arrive in logical
-## viewport units.
-func _design(p: Vector2) -> Vector2:
-	return p / maxf(hud_scale, 0.001)
+	input.handle(event)
 
 func _click(p: Vector2) -> void:
-	var b: String = hud.button_at(_design(p))
+	var b: String = view.button_at(p)
 	if b == "pause":
 		paused = not paused
 	elif b == "speed":
@@ -363,13 +254,10 @@ func _click(p: Vector2) -> void:
 		new_match(seeded + randi_range(0, 9999))
 	if b != "":
 		return
-	hover_id = _pick(p)
-	if hover_id >= 0:
-		focus_id = -1 if focus_id == hover_id else hover_id
-		actors.focus_id = focus_id
-	else:
-		focus_id = -1
-		actors.focus_id = -1
+
+	hover_id = view.pick(p)
+	focus_id = -1 if hover_id < 0 or focus_id == hover_id else hover_id
+	actors.focus_id = focus_id
 
 func _cycle_speed() -> void:
 	var opts := [1.0, 2.0, 4.0, 8.0]
@@ -391,6 +279,11 @@ func _toggle_mode() -> void:
 			highlight_until = -1.0
 
 func _skip() -> void:
+	if replay != null:
+		# Skip inside a stored clip ends it and hands the report back.
+		replay.finish(true)
+		replay = null
+		return
 	if mode == "highlights":
 		if in_highlight:
 			_end_highlight()
@@ -398,29 +291,6 @@ func _skip() -> void:
 			_advance_ticks(60 * 10)
 	else:
 		_advance_ticks(60 * 10)
-
-## Nearest player to a logical-space point, within a radius a finger can hit.
-func _pick(p: Vector2) -> int:
-	var world: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * p
-	var best = null
-	var reach: float = 2.8 if touch else 1.7
-	var bd := reach * reach
-	for q in engine.players:
-		if q.sent_off:
-			continue
-		var d: float = q.pos.distance_squared_to(world)
-		if d < bd:
-			bd = d
-			best = q
-	return -1 if best == null else best.id
-
-func _update_hover() -> void:
-	hover_id = _pick(mouse)
-	actors.hover_id = hover_id
-	hud.mouse = _design(mouse)
-	if not touch:
-		var over_button: bool = hud.button_at(hud.mouse) != ""
-		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if (hover_id >= 0 or over_button) else Input.CURSOR_ARROW)
 
 # ------------------------------------------------------------------ loop ----
 
@@ -440,8 +310,14 @@ func _process(delta: float) -> void:
 		camera.update(delta)
 	_apply_camera(false)
 	if not dev.apply_hover(self):
-		_update_hover()
+		view.hover(mouse)
 
+	if replay != null:
+		# A stored clip owns the broadcast until it ends: the pack drives the
+		# bodies, so nothing here may tick the engine.
+		if replay.step(delta):
+			replay = null
+		return
 	if engine.phase == "full_time":
 		if not result_recorded:
 			result_recorded = PLSimStats.record_match(engine)
@@ -453,24 +329,12 @@ func _process(delta: float) -> void:
 		if half_time_timer <= 0.0 and not paused:
 			engine.begin_second_half()
 			half_time_timer = -1.0
-			history.clear()
-			_snapshot()
+			highlights.restart()
 		return
 	if paused:
 		return
 
-	var ticks := 0
-	if mode == "highlights" and fast_mode:
-		accumulator += delta * 60.0 * 24.0
-		ticks = int(accumulator)
-		accumulator -= ticks
-		ticks = mini(ticks, 60)
-	else:
-		accumulator += delta * 60.0 * speed
-		ticks = int(accumulator)
-		accumulator -= ticks
-		ticks = mini(ticks, 120)
-	_advance_ticks(ticks)
+	_advance_ticks(view.ticks_this_frame(delta))
 	_post_tick()
 
 func _advance_ticks(n: int) -> void:
@@ -480,10 +344,7 @@ func _advance_ticks(n: int) -> void:
 			batch_abort = false
 			break
 		engine.tick()
-		hist_timer += 1.0 / 60.0
-		if hist_timer >= 0.45:
-			hist_timer = 0.0
-			_snapshot()
+		highlights.sample()
 		if Time.get_ticks_usec() > budget and i > 2:
 			break
 
@@ -505,35 +366,20 @@ func _end_highlight() -> void:
 		fast_mode = true
 
 func _snapshot() -> void:
-	history.append(engine.to_dict())
-	if history.size() > 40:
-		history.pop_front()
+	highlights.snapshot()
 
-func _rewind_for(trigger_clock: float) -> bool:
-	if history.is_empty():
-		return false
-	var target := trigger_clock - 7.0
-	var best: Dictionary = history[0]
-	for s in history:
-		if float(s["clock"]) <= target:
-			best = s
-		else:
-			break
-	if float(best["clock"]) > trigger_clock - 1.0:
-		best = history[0]
-	var trimmed := []
-	for s2 in history:
-		if float(s2["clock"]) <= float(best["clock"]) + 0.01:
-			trimmed.append(s2)
-	history = trimmed
-	engine.from_dict(best)
-	actors.ball_trail.clear()
-	batch_abort = true
-	return true
+## Play one stored goal clip on the broadcast. The league hands the pack back
+## with `on_done`, which puts its report sheet back on screen when the clip ends.
+func play_goal_clip(pack: Dictionary, on_done := Callable()) -> void:
+	if replay != null:
+		replay.finish(false)
+		replay = null
+	replay = GoalReplay.open(self, pack, on_done)
+	if replay == null and on_done.is_valid():
+		on_done.call()
 
 func _on_engine_event(e: Dictionary) -> void:
 	var kind: String = e.get("type", "")
-	var key := "%d|%s|%d" % [int(float(e.get("clock", 0.0)) * 60.0), kind, int(e.get("player_id", -1))]
 	if kind == "goal":
 		last_event_notice = 3.0
 		audio.play("goal_roar", -4.0)
@@ -544,32 +390,7 @@ func _on_engine_event(e: Dictionary) -> void:
 		audio.play("whistle", -14.0, randf_range(0.97, 1.03))
 	elif kind == "miss":
 		audio.play("ooh", -12.0)
-	if mode != "highlights":
-		return
-	if shown_triggers.has(key):
-		return
-	var important: bool = kind in ["shot", "goal", "penalty", "penalty_taken", "card", "corner"]
-	if not important:
-		return
-	if in_highlight:
-		# extend the live window around goals and late chances
-		highlight_until = maxf(highlight_until, engine.clock + (5.0 if kind == "goal" else 3.0))
-		return
-	if kind in ["shot", "penalty", "corner"]:
-		shown_triggers[key] = true
-		if _rewind_for(engine.clock):
-			in_highlight = true
-			fast_mode = false
-			highlight_until = engine.clock + 12.0
-			replay_banner = 2.2
-			accumulator = 0.0
-	elif kind == "goal" or kind == "card":
-		shown_triggers[key] = true
-		if _rewind_for(engine.clock):
-			in_highlight = true
-			fast_mode = false
-			highlight_until = engine.clock + 12.0
-			replay_banner = 2.2
+	highlights.on_event(e)
 
 # ---------------------------------------------------------------- camera ----
 

@@ -17,9 +17,6 @@ extends RefCounted
 signal match_recorded(report: Dictionary)
 signal state_changed
 
-## Completed gameweeks before the planner starts suggesting watches.
-const SUGGEST_AFTER_ROUNDS := 5
-
 static var active: LeagueSeason = null
 
 var save: LeagueSave = null
@@ -28,6 +25,11 @@ var rules: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 ## Fixture the engine is currently playing back, if any.
 var watching_fixture := ""
+## True while a watch the player left early is being played out on the engine.
+var finishing := false
+## Live clips captured for the fixture being watched, keyed by the goal's own
+## minute and scorer; written when the result comes back at full time.
+var captured: Array = []
 var last_advance: Dictionary = {}
 
 # ------------------------------------------------------------------ setup ---
@@ -50,7 +52,7 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	var season := LeagueSeason.new()
 	season.save = save
 	season.record = LeagueRecord.new(save)
-	if not season.record.install(fixtures):
+	if not season.record.fixtures.install(fixtures):
 		LeagueSave.close()
 		return null
 	StrongestXI.apply_all()
@@ -70,6 +72,13 @@ static func open(slug: String) -> LeagueSeason:
 	season.record = LeagueRecord.new(save)
 	season.rules = save.rules
 	season.rng.seed = int(str(save.meta.get("seed", "0")))
+	# An older save may predate the home/away columns, and a hand-edited fixture
+	# ledger can drift: rebuild the aggregates now so the table (and its full
+	# reading) matches the played fixtures (#73).
+	season.record.standings.recompute()
+	# Interest is the save's, so a reopened season re-applies it before the clock
+	# rolls: a followed club's game is never left on Auto by a stale flag (#104).
+	season.record.interest.force_watch()
 	season.roll_clock()
 	active = season
 	return season
@@ -85,7 +94,7 @@ func close() -> void:
 		LeagueSave.close()
 
 func matches_remaining() -> int:
-	return record.unplayed() if record != null else 0
+	return record.fixtures.unplayed() if record != null else 0
 
 # ------------------------------------------------------------------ state ---
 
@@ -97,7 +106,6 @@ func state() -> Dictionary:
 	save.reload()
 	rules = save.rules
 	var date := save.current_date()
-	var fixtures := record.fixtures_on(date)
 	var complete := save.status() == "complete"
 	return {
 		"slug": save.slug,
@@ -106,13 +114,14 @@ func state() -> Dictionary:
 		"date": date,
 		"day": FixtureCalendar.day_label(date),
 		"matchday": save.matchday(),
-		"fixtures": fixtures,
-		"pending": record.pending_upto(date),
-		"table": record.table(),
-		"played": record.played(),
-		"total": record.played() + record.unplayed(),
-		"rounds": record.completed_matchdays(),
-		"can_suggest": record.completed_matchdays() >= SUGGEST_AFTER_ROUNDS,
+		"fixtures": record.fixtures.on(date),
+		"pending": record.fixtures.pending_upto(date),
+		"table": record.standings.table(),
+		"played": record.fixtures.played(),
+		"total": record.fixtures.played() + record.fixtures.unplayed(),
+		"rounds": record.fixtures.completed_matchdays(),
+		"can_suggest": record.fixtures.completed_matchdays() >= LeaguePlanner.SUGGEST_AFTER_ROUNDS,
+		"interests": record.interest.interests(),
 		"advance_mode": str(rules.get("advance_mode", "fixture_days")),
 		"rules": rules.duplicate(true),
 		"complete": complete,
@@ -124,15 +133,31 @@ func plan() -> Array:
 	if save == null or record == null:
 		return []
 	var out: Array = []
-	for fx in record.fixtures_on(save.current_date()):
+	for fx in record.fixtures.on(save.current_date()):
 		var item: Dictionary = fx.duplicate()
 		item["watch"] = int(fx["watched"]) == 1
 		item["suggested"] = int(fx["suggested"]) == 1
 		out.append(item)
 	return out
 
+## Mark or unmark a club: the write and the shortlist's Watch sync both happen
+## here, so a followed club's games are on Watch before the surface repaints.
+func set_interest(club_id: String, follow: bool) -> bool:
+	if record == null or not record.interest.has_club(club_id):
+		return false
+	if not record.interest.set_interest(club_id, follow):
+		return false
+	state_changed.emit()
+	return true
+
 func set_watch(fixture_id: String, watch: bool) -> bool:
-	var ok := record.set_watch(fixture_id, watch)
+	if finishing:
+		return false
+	# Interest wins: a followed club's game cannot be put back on Auto, or the
+	# season would auto-sim a match the player asked to see (#104).
+	if not watch and record.interest.holds(fixture_id):
+		return false
+	var ok := record.fixtures.set_watch(fixture_id, watch)
 	if ok:
 		state_changed.emit()
 	return ok
@@ -140,23 +165,7 @@ func set_watch(fixture_id: String, watch: bool) -> bool:
 ## After five completed gameweeks, flag the upcoming clashes between clubs in
 ## the current top six so the planner can point at the games worth watching.
 func suggest() -> Array:
-	if record.completed_matchdays() < SUGGEST_AFTER_ROUNDS:
-		return []
-	var top := _top_six()
-	var ids: Array = []
-	for fx in record.pending_upto(save.current_date()):
-		if top.has(str(fx["home_club_id"])) and top.has(str(fx["away_club_id"])):
-			ids.append(str(fx["id"]))
-	record.suggest(ids)
-	state_changed.emit()
-	return ids
-
-func _top_six() -> Dictionary:
-	var out := {}
-	var rows := record.table()
-	for i in range(mini(6, rows.size())):
-		out[str(rows[i]["club_id"])] = true
-	return out
+	return LeaguePlanner.suggest(self)
 
 # ------------------------------------------------------------------- clock ---
 
@@ -168,7 +177,7 @@ func advance() -> Dictionary:
 		return {"ok": false}
 	save.reload()
 	rules = save.rules
-	if save.status() == "complete" or record.unplayed() == 0:
+	if save.status() == "complete" or record.fixtures.unplayed() == 0:
 		save.set_status("complete")
 		return {"ok": true, "date": save.current_date(), "played": [], "pending": [], "complete": true}
 	var date := save.current_date()
@@ -177,7 +186,7 @@ func advance() -> Dictionary:
 	# One transaction per matchday: a dozen matches mean hundreds of rows, and
 	# an fsync per row would make the season crawl.
 	PLDatabase.transaction("BEGIN TRANSACTION;")
-	for fx in record.pending_upto(date):
+	for fx in record.fixtures.pending_upto(date):
 		if int(fx["watched"]) == 1:
 			pending.append(fx)
 		else:
@@ -201,10 +210,10 @@ func advance() -> Dictionary:
 func roll_clock() -> void:
 	if save == null or save.status() == "complete":
 		return
-	if record.unplayed() == 0:
+	if record.fixtures.unplayed() == 0:
 		save.set_status("complete")
 		return
-	if not record.pending_upto(save.current_date()).is_empty():
+	if not record.fixtures.pending_upto(save.current_date()).is_empty():
 		return
 	var next := _next_date(save.current_date())
 	if next == "":
@@ -216,13 +225,13 @@ func roll_clock() -> void:
 func _next_date(date: String) -> String:
 	if str(rules.get("advance_mode", "fixture_days")) == "every_day":
 		var d := FixtureCalendar.add_days(date, 1)
-		if d > str(rules.get("season_end", d)) and record.unplayed() == 0:
+		if d > str(rules.get("season_end", d)) and record.fixtures.unplayed() == 0:
 			return ""
 		return d
-	return record.next_date(date)
+	return record.fixtures.next_date(date)
 
 func _matchday_of(date: String) -> int:
-	var rows := record.fixtures_on(date)
+	var rows := record.fixtures.on(date)
 	for fx in rows:
 		return int(fx["matchday"])
 	return save.matchday()
@@ -241,9 +250,13 @@ func _sim_fixture(fx: Dictionary) -> Dictionary:
 	var events: Array = []
 	events.append_array(MatchEvents.side(seed + 11, fixture_id, home, hxi, score.x))
 	events.append_array(MatchEvents.side(seed + 23, fixture_id, away, axi, score.y))
-	record.save_result(fixture_id, score.x, score.y)
-	record.add_events(events)
+	record.report.save_result(fixture_id, score.x, score.y, "", "", record.standings)
+	record.report.add_events(events)
 	_add_xi_stats(events, {"home": hxi, "away": axi}, {"home": home, "away": away})
+	LeagueHighlights.store_auto(record, int(rng.seed), fixture_id, events, home, away)
+	# The encyclopedia reads this save's ledger, so forget what it read before
+	# this result landed (DR-20261125-08).
+	PLRepository.shared().invalidate()
 	return report(fixture_id)
 
 ## A side's XI all played 90 minutes; goals, assists and cards come off the
@@ -271,7 +284,7 @@ func _add_xi_stats(events: Array, sides: Dictionary, clubs: Dictionary) -> void:
 		for p in sides[side]:
 			var id := str(p["id"])
 			rows.append({"player_id": id, "club_id": str(clubs[side]), "line": lines[id]})
-	record.add_player_lines(rows)
+	record.report.add_player_lines(rows)
 
 func _seed_for(fixture_id: String) -> int:
 	var h := 0
@@ -283,95 +296,90 @@ func _seed_for(fixture_id: String) -> int:
 func report(fixture_id: String) -> Dictionary:
 	if record == null or fixture_id == "":
 		return {}
-	var fx := record.fixture(fixture_id)
+	var fx := record.fixtures.one(fixture_id)
 	if fx.is_empty():
 		return {}
 	return {
-		"fixture": fx,
-		"score": [int(fx["home_goals"]), int(fx["away_goals"])],
-		"events": record.events(fixture_id),
+		"fixture": fx, "score": [int(fx["home_goals"]), int(fx["away_goals"])],
+		"events": record.report.events(fixture_id), "highlights": record.report.clips.list(fixture_id),
 		"played": str(fx["status"]) == "played",
 	}
+
+## One stored goal clip, decoded and ready for the match viewer.
+func goal_clip(fixture_id: String, goal_index: int) -> Dictionary:
+	if record == null or fixture_id == "":
+		return {}
+	return record.report.clips.pack(fixture_id, goal_index)
 
 # ------------------------------------------------------------------ watch ---
 
 ## Hand one fixture to the match viewer. The screen starts the engine with these
 ## clubs; when it reaches full time, `engine_finished` records the result here.
 func start_watch(fixture_id: String) -> Dictionary:
-	if record == null or fixture_id == "":
+	if record == null or fixture_id == "" or finishing:
 		return {}
-	var fx := record.fixture(fixture_id)
+	var fx := record.fixtures.one(fixture_id)
 	if fx.is_empty():
 		return {}
 	watching_fixture = fixture_id
+	captured = []
 	return {
 		"fixture_id": fixture_id,
-		"home": str(fx["home_club_id"]),
-		"away": str(fx["away_club_id"]),
+		"home": str(fx["home_club_id"]), "away": str(fx["away_club_id"]),
 	}
+
+## The viewer's ring caught a goal during a watched fixture: hold the clip here
+## until full time, when it is written beside the report it belongs to.
+func capture_goal(pack: Dictionary) -> void:
+	if watching_fixture == "" or pack.is_empty():
+		return
+	captured.append(pack)
 
 func record_engine(engine) -> void:
 	var fixture_id := watching_fixture
 	if fixture_id == "":
 		return
 	watching_fixture = ""
-	var fx := record.fixture(fixture_id)
+	finishing = false
+	var fx := record.fixtures.one(fixture_id)
 	if fx.is_empty():
 		return
 	var home := int(engine.score[0])
 	var away := int(engine.score[1])
 	PLDatabase.transaction("BEGIN TRANSACTION;")
-	record.save_result(fixture_id, home, away)
-	record.add_events(_engine_events(engine, fixture_id))
+	record.report.save_result(fixture_id, home, away,
+		str(fx["home_club_id"]), str(fx["away_club_id"]), record.standings)
+	record.report.add_events(LeagueHighlights.engine_events(engine, fixture_id))
 	var lines: Array = []
 	for p in engine.players:
 		lines.append({
-			"player_id": str(p.key),
-			"club_id": str(engine.teams[p.team]["id"]),
+			"player_id": str(p.key), "club_id": str(engine.teams[p.team]["id"]),
 			"line": {
-				"apps": 1,
-				"goals": int(p.stats.get("goals", 0)),
-				"assists": int(p.stats.get("assists", 0)),
-				"yellow": int(p.yellow),
+				"apps": 1, "goals": int(p.stats.get("goals", 0)),
+				"assists": int(p.stats.get("assists", 0)), "yellow": int(p.yellow),
 				"red": 1 if p.red else 0,
 			},
 		})
-	record.add_player_lines(lines)
+	record.report.add_player_lines(lines)
+	LeagueHighlights.store_watch(record, int(rng.seed), fixture_id, captured,
+		str(fx["home_club_id"]), str(fx["away_club_id"]))
+	captured = []
 	PLDatabase.transaction("COMMIT;")
-	roll_clock()
+	# The encyclopedia reads this save's ledger: show it this result now.
+	PLRepository.shared().invalidate()
+	# The clock stays on the day just played so the hub can show its result, and
+	# the next Continue moves on (#124); `open()` still rolls a played day forward.
 	state_changed.emit()
 	match_recorded.emit(report(fixture_id))
-
-func _engine_events(engine, fixture_id: String) -> Array:
-	var rows: Array = []
-	for e in engine.events:
-		var kind := str(e.get("type", ""))
-		if kind != "goal" and kind != "card":
-			continue
-		var p = engine.by_id.get(int(e.get("player_id", -1)), null)
-		if p == null:
-			continue
-		var mapped := "goal"
-		if kind == "card":
-			mapped = "red" if p.red else "yellow"
-		rows.append({
-			"fixture_id": fixture_id,
-			"minute": int(e.get("minute", 0)),
-			"kind": mapped,
-			"player_id": str(p.key),
-			"club_id": str(engine.teams[int(e.get("team", 0))]["id"]),
-			"detail": str(p.name),
-		})
-	return rows
 
 # ------------------------------------------------------------ season end ---
 
 ## Champion, runner-up, European places and the drop, read from the saved
 ## regulations. Empty until every fixture is played.
 func summary() -> Dictionary:
-	if save == null or record == null or record.unplayed() > 0:
+	if save == null or record == null or record.fixtures.unplayed() > 0:
 		return {}
-	var rows := record.table()
+	var rows := record.standings.table()
 	if rows.size() < 20:
 		return {}
 	var places := LeagueRules.places(rules)
@@ -387,5 +395,5 @@ func summary() -> Dictionary:
 		"europe": europe,
 		"relegated": relegated,
 		"places": places,
-		"top_scorers": record.top_scorers(5),
+		"top_scorers": record.report.top_scorers(5),
 	}

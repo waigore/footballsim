@@ -12,10 +12,16 @@ var shell: AppShell = null
 ## The god-mode league surface: New/Setup, Load and the season hub.
 var league: LeagueHost = null
 
+## The shell sits under the season surface (`LeagueHost.LAYER`), so a season
+## sheet can own the screen — except the quit confirmation, which must draw
+## over the sheet that raised it and answer before it (#123).
+const SHEET_LAYER := 30
+const CONFIRM_LAYER := 40
+
 func attach(main_node) -> void:
 	game = main_node
 	layer = CanvasLayer.new()
-	layer.layer = 30
+	layer.layer = SHEET_LAYER
 	main_node.add_child(layer)
 	shell = AppShell.new()
 	shell.name = "Shell"
@@ -25,22 +31,39 @@ func attach(main_node) -> void:
 	shell.resume_requested.connect(_on_resume)
 	shell.new_league_requested.connect(_on_new_league)
 	shell.load_league_requested.connect(_on_load_league)
+	shell.screen_changed.connect(_restack)
 	shell.visible = false
 	league = LeagueHost.new()
 	league.attach(main_node)
 	league.build()
 
+## Keep the shell above the season surface while the quit confirmation is the
+## sheet on screen, and back under it the moment it is dismissed.
+func _restack() -> void:
+	if layer == null or shell == null:
+		return
+	layer.layer = CONFIRM_LAYER if shell.screen == AppShell.SCREEN_CONFIRM else SHEET_LAYER
+
 func active() -> bool:
-	return (shell != null and shell.active()) or league_active()
+	return (shell != null and shell.active()) or league_active() or league_holding()
 
 func league_active() -> bool:
 	return league != null and league.is_open()
+
+## A watched fixture's full-time card is up: no sheet is on screen, but the
+## season still owns input until the player dismisses it (#124).
+func league_holding() -> bool:
+	return league != null and league.is_holding()
 
 func open_league_menu() -> void:
 	if league != null:
 		league.open_wizard()
 
 func open_menu() -> void:
+	# MENU while a season fixture is being watched hands the season back: the
+	# rest of the match plays out at max speed and is saved (#100).
+	if league != null and league.watch != null and league.watch.leave():
+		return
 	if game.wiki_host != null and game.wiki_host.is_open():
 		game.wiki_host.close()
 	if league != null and league.is_open():
@@ -93,11 +116,23 @@ func sync(frame: Transform2D, scale: float, touch: bool) -> void:
 	shell.queue_redraw()
 
 ## Swallow every event while a sheet is up: nothing may reach the paused match.
-func handle_input(event: InputEvent, design_point: Vector2) -> bool:
-	if league_active():
-		return league.handle_input(event, design_point)
+## The scene reports pointer positions in window space; the shell reads its own
+## design space, so the host divides by the chrome scale it handed the layer.
+func handle_input(event: InputEvent, screen_point: Vector2) -> bool:
 	if not active():
 		return false
+	var design_point: Vector2 = screen_point / maxf(shell.ui_scale, 0.001)
+	# The quit confirmation is the top modal on screen: it answers before the
+	# season surface underneath, so QUIT raised from a season sheet is never
+	# trapped behind it (#123).
+	if shell != null and shell.screen == AppShell.SCREEN_CONFIRM:
+		if event is InputEventMouse:
+			shell.handle_input(event, design_point)
+		elif event is InputEventKey:
+			shell.handle_input(event, Vector2.ZERO)
+		return true
+	if league_active() or league_holding():
+		return league.handle_input(event, design_point)
 	if event is InputEventMouse:
 		shell.handle_input(event, design_point)
 	elif event is InputEventKey:

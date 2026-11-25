@@ -6,12 +6,30 @@ extends Control
 ## Chrome follows team_select: same palette, same type, same tap targets.
 
 signal closed()
+## The team page's follow door (#104): the club whose page is on screen. The
+## host answers it against the open season; the sheet never writes the save.
+signal interest_toggled(club_id: String)
 
 var ui_scale := 1.0
 var touch := false
 var mouse := Vector2(-1000, -1000)
+## The pointer's button is down. Touch has no hover, so a held press is what
+## reveals a date's weekday there (#99).
+var holding := false
 var buttons: Array = []
 var body: WikiBody = null
+## Snapshot dates the chrome painted, and the page's own date cells (#99): the
+## overlay paints the weekday for the one under the pointer.
+var hints := DateHints.new()
+var rows_hints: DateHints = null
+var tooltip: DateOverlay = null
+## Club names the sheet painted (#107): the page title of a team page, plus the
+## rows the body registered. A long press asks both.
+var names := InterestNames.new()
+## The long press itself: the clock, the menu and the one write it makes.
+var interest := InterestHold.new()
+## The layer that paints the menu above the body.
+var menu_layer: InterestLayer = null
 
 var stack: Array = []
 var page_data: Dictionary = {}
@@ -29,6 +47,24 @@ func _ready() -> void:
 	body.name = "Body"
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(body)
+	rows_hints = body.hints
+	tooltip = DateOverlay.attach(self, body, true)
+	# Where a club name is printed, which season owns the shortlist, and how to
+	# paint again once it moved (#107). The team page's own title is a name too.
+	interest.club_at = func(p: Vector2) -> String:
+		var own := names.at(p)
+		if own != "":
+			return own
+		return body.club_at(p) if body != null else ""
+	interest.season_of = func(): return LeagueSeason.active
+	interest.on_changed = func():
+		body.followed = WikiInterest.followed_set(LeagueSeason.active)
+		body.queue_redraw()
+		queue_redraw()
+	menu_layer = InterestLayer.new()
+	menu_layer.hold = interest
+	menu_layer.screen = self
+	add_child(menu_layer)
 
 # -------------------------------------------------------------------- pages --
 
@@ -80,11 +116,14 @@ func _refresh() -> void:
 		body.position = box.position
 		body.size = box.size
 		body.set_page(page_data, is_compact())
+		body.followed = WikiInterest.followed_set(LeagueSeason.active)
 	queue_redraw()
 
 # -------------------------------------------------------------------- input --
 
 func click(id: String) -> void:
+	if interest.click(id):
+		return
 	if id == "back":
 		back()
 	elif id == "close":
@@ -92,6 +131,8 @@ func click(id: String) -> void:
 	elif id.begins_with("crumb:"):
 		stack = stack.slice(0, int(id.substr(6)) + 1)
 		_refresh()
+	elif id.begins_with("interest:"):
+		interest_toggled.emit(id.substr(9))
 
 ## A tap anywhere in a table row or chip opens its page.
 func tap(p: Vector2) -> bool:
@@ -103,18 +144,24 @@ func tap(p: Vector2) -> bool:
 	push(str(target.get("page", "")), str(target.get("id", "")))
 	return true
 
-func wheel(delta: float) -> void:
+## Wheel, trackpad pan and drag travel arrives as one vertical step; the shared
+## pointer grammar also passes a horizontal step, which this sheet ignores.
+func scroll_by(delta: float, _dx: float = 0.0) -> void:
 	if body != null:
 		body.scroll_by(delta)
 
 ## One row of keys scrolls by a wheel notch, a page of keys by most of the sheet.
 func key(code: int) -> bool:
+	if interest.is_open() and (code == KEY_ESCAPE or code == KEY_BACKSPACE):
+		interest.close()
+		queue_redraw()
+		return true
 	if code == KEY_ESCAPE or code == KEY_BACKSPACE or code == KEY_LEFT:
 		back()
 	elif code == KEY_UP or code == KEY_W:
-		wheel(-120.0)
+		scroll_by(-120.0)
 	elif code == KEY_DOWN or code == KEY_S:
-		wheel(120.0)
+		scroll_by(120.0)
 	elif code == KEY_PAGEUP:
 		scroll_page(-1.0)
 	elif code == KEY_PAGEDOWN:
@@ -163,6 +210,8 @@ func body_rect(vp: Vector2) -> Rect2:
 func _draw() -> void:
 	var vp := design_vp()
 	buttons.clear()
+	hints.clear()
+	names.clear()
 	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.012, 0.020, 0.026, 0.985))
 	draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
 	draw_rect(Rect2(0, vp.y - 3, vp.x, 3), Color(0, 0, 0, 0.5))
@@ -178,10 +227,20 @@ func _draw() -> void:
 	_add("back", back_rect)
 	WikiChrome.button(self, f_bold, close_rect, "✕", close_rect.has_point(mouse))
 	_add("close", close_rect)
+	var follow := WikiInterest.door(current(), LeagueSeason.active, vp, back_rect, close_rect)
+	if not follow.is_empty():
+		WikiInterest.draw(self, f_bold, follow["rect"], str(follow["text"]),
+			bool(follow["followed"]), (follow["rect"] as Rect2).has_point(mouse))
+		_add(str(follow["id"]), follow["rect"])
 	WikiChrome.label(self, f_bold, Vector2(x, title_y - (32.0 if compact else 38.0)), str(page_data.get("eyebrow", "")), 10, accent.lightened(0.35))
 	draw_rect(Rect2(x, title_y - 28.0, 3, 28), accent)
-	WikiChrome.label(self, f_bold, Vector2(x + 12, title_y), str(page_data.get("title", "")), 26 if compact else 34)
-	WikiChrome.label(self, f_med, Vector2(x + 12, title_y + 18.0), str(page_data.get("subtitle", "")), 9, WikiChrome.DIM)
+	var title := str(page_data.get("title", ""))
+	var title_size := 26 if compact else 34
+	WikiChrome.label(self, f_bold, Vector2(x + 12, title_y), title, title_size)
+	if str(current().get("page", "")) == WikiModel.TEAM:
+		names.add(InterestNames.strip(f_bold, title, x + 12.0, title_y, title_size),
+			str(current().get("id", "")))
+	_draw_subtitle(x + 12.0, title_y + 18.0)
 	_draw_crumbs(body_rect(vp).position.y - 16.0)
 	var br := body_rect(vp)
 	draw_line(Vector2(br.position.x, br.position.y - 8.0), Vector2(br.position.x + br.size.x, br.position.y - 8.0), Color(1, 1, 1, 0.07), 1)
@@ -189,6 +248,20 @@ func _draw() -> void:
 
 func _add(id: String, r: Rect2) -> void:
 	buttons.append({"id": id, "rect": r})
+
+
+## The identity line, with the snapshot date as its own label so the overlay can
+## give that date its weekday (#99).
+func _draw_subtitle(sub_x: float, y: float) -> void:
+	var sub := str(page_data.get("subtitle", ""))
+	WikiChrome.label(self, f_med, Vector2(sub_x, y), sub, 10, WikiChrome.DIM)
+	var snap := str(page_data.get("snapshot", ""))
+	if snap == "":
+		return
+	var label := FixtureCalendar.day_label(snap)
+	var at := Vector2(sub_x + DateHints.width(f_med, sub, 10), y)
+	WikiChrome.label(self, f_med, at, label, 10, WikiChrome.DIM)
+	hints.add(DateHints.strip(f_med, label, at, 10), snap)
 
 func _draw_crumbs(y: float) -> void:
 	var trail: Array = crumb_pages()
@@ -218,11 +291,17 @@ func _draw_furniture(vp: Vector2, br: Rect2) -> void:
 		draw_rect(track, Color(1, 1, 1, 0.05))
 		draw_rect(Rect2(track.position.x, track.position.y + (track.size.y - h) * offset, 3.0, h), Color(1, 1, 1, 0.22))
 	var hint := "TAP A ROW TO OPEN  ·  DRAG OR KEYS SCROLL" if touch else "CLICK A ROW TO OPEN  ·  ESC BACK  ·  WHEEL, DRAG OR KEYS SCROLL"
-	WikiChrome.label(self, f_med, Vector2(br.position.x, vp.y - 14.0), hint, 9, WikiChrome.DIM)
-	var source := "SNAPSHOT %s" % str(WikiModel.repo().meta().get("snapshot_date", "")).to_upper()
-	WikiChrome.label_r(self, f_med, br.end.x, vp.y - 14.0, source, 9, Color(0.96, 0.78, 0.30, 0.55))
+	WikiChrome.label(self, f_med, Vector2(br.position.x, vp.y - 14.0), hint, 10, WikiChrome.DIM)
+	var snap := str(WikiModel.repo().meta().get("snapshot_date", ""))
+	var label := FixtureCalendar.day_label(snap)
+	WikiChrome.label_r(self, f_med, br.end.x, vp.y - 14.0, "SNAPSHOT %s" % label, 10,
+		Color(0.96, 0.78, 0.30, 0.55))
+	if snap != "":
+		hints.add(DateHints.strip_right(f_med, label, br.end.x, vp.y - 14.0, 10), snap)
 
-func _process(_d: float) -> void:
+func _process(d: float) -> void:
+	if interest.tick(d):
+		queue_redraw()
 	if body != null:
 		var box := body_rect(design_vp())
 		body.mouse = mouse
