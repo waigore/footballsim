@@ -85,6 +85,14 @@ static func _typed(screen, code: int) -> bool:
 static func press(screen, id: String) -> void:
 	if id == "":
 		return
+	# The delete confirmation's two doors answer before the sheet does. They carry
+	# no `delete:` prefix, so no save slug can ever be mistaken for an answer.
+	if id == "delete_yes":
+		screen.delete.answer(screen)
+		return
+	if id == "delete_no":
+		screen.delete.cancel(screen)
+		return
 	if id.begins_with("match:"):
 		screen.show_report(id.substr(6))
 	elif id.begins_with("goal:"):
@@ -98,7 +106,8 @@ static func press(screen, id: String) -> void:
 	elif id.begins_with("open:"):
 		open_save(screen, id.substr(5))
 	elif id.begins_with("delete:"):
-		delete_save(screen, id.substr(7))
+		screen.delete.ask_from(screen.saves, id.substr(7))
+		screen.refresh()
 	elif id.begins_with("mode:"):
 		screen.wizard["calendar_mode"] = id.substr(5)
 		screen.refresh()
@@ -157,6 +166,11 @@ static func press(screen, id: String) -> void:
 ## through System → MAIN MENU. The menu-level sheets (New League, Load) are not
 ## pages of a season: their BACK returns to the caller that opened them.
 static func back(screen) -> void:
+	# The delete confirmation is the top-most surface: BACK puts it away and
+	# leaves the sheet it was raised over untouched.
+	if screen.delete_confirm_open():
+		screen.delete.cancel(screen)
+		return
 	if screen.mode == screen.MODE_WIZARD:
 		screen.close()
 		return
@@ -247,8 +261,9 @@ static func open_save(screen, slug: String) -> void:
 		return
 	screen.open_season(opened, str(opened.state().get("status", "")) == "complete")
 
-## Remove a save file. The open season unloads first when it is the same file, so
-## a deleted save is never still bound in memory.
+## Remove a save file once the confirmation has been answered. The open season
+## unloads first when it is the same file, so a deleted save is never still bound
+## in memory.
 static func delete_save(screen, slug: String) -> void:
 	if screen.season != null and screen.season.save.slug == slug:
 		LeagueSystemActions.unload(screen)

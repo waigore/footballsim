@@ -152,13 +152,14 @@ func load_layout(vp: Vector2, view: Dictionary) -> Array:
 	var saves: Array = view.get("saves", [])
 	var w := minf(620.0, vp.x - 48.0)
 	var y := HEADER + 26.0
-	for i in range(mini(saves.size(), 7)):
+	# Every save is laid out; the body scrolls a library longer than one screen (REQ-P5-08).
+	for i in range(saves.size()):
 		var save: Dictionary = saves[i]
 		var row := Rect2(24.0, y, w, 40.0)
 		items.append({"id": "open:" + str(save["slug"]), "kind": "save_row",
 			"rect": row, "save": save})
 		items.append({"id": "delete:" + str(save["slug"]), "kind": "delete",
-			"rect": Rect2(row.end.x - 96.0, row.position.y + 5.0, 34.0, 30.0), "slug": str(save["slug"])})
+			"rect": Rect2(row.end.x - 84.0, row.position.y + 4.0, 40.0, 32.0), "slug": str(save["slug"])})
 		y += 46.0
 	items.append(LeagueExtra.back_item())
 	return items
@@ -188,18 +189,13 @@ func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dicti
 		rest += " · FINISHING THE WATCHED MATCH"
 	var bold: Font = fonts["bold"]
 	var name := str(state.get("name", "LEAGUE"))
-	# CONTINUE owns the top-right corner, so the caption stops short of it (#163).
+	# CONTINUE owns the top-right corner, so the title and the caption are fitted
+	# inside the lane it leaves (#163, #180).
 	var right: float = LeagueExtra.primary_rect(vp).size.x + 12.0
-	var room: float = (vp.x - 24.0 - right) - (136.0 + UiChrome.text_width(bold, name, 16) + 12.0)
-	var caption := label + rest
-	if room >= 160.0:
-		caption = LeagueColumns.fit_name(caption, bold, 10, room)
-	else:
-		caption = ""
-	_heading(c, vp, fonts, name, caption, right)
-	if date != "" and caption != "":
-		var whole: float = DateHints.width(bold, caption, 10)
-		hints.add(Rect2(vp.x - 24.0 - right - whole, 24.0, DateHints.width(bold, label, 10), 14.0), date)
+	var band := _heading(c, vp, fonts, name, label + rest, right)
+	if date != "" and str(band["caption"]) != "":
+		var rect: Rect2 = band["caption_rect"]
+		hints.add(Rect2(rect.position.x, 24.0, DateHints.width(bold, label, 10), 14.0), date)
 
 func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, state: Dictionary) -> void:
 	hints.clear()
@@ -391,9 +387,10 @@ func draw_chip(c: CanvasItem, rect: Rect2, label: String, bold: Font) -> void:
 	UiChrome.chip(c, cache, rect, label, bold)
 
 func _heading(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String, caption: String,
-		right: float = 0.0) -> void:
+		right: float = 0.0) -> Dictionary:
 	# BACK owns the top-left corner on the hub, the wizard and the load list too
-	# (#163), so the title takes the same rail as every other league sheet.
-	LeagueExtra.header(c, vp, fonts, title, caption, right)
+	# (#163), so the title takes the same rail as every other league sheet. The
+	# header returns the band it really painted after fitting (#180).
+	return LeagueExtra.header(c, vp, fonts, title, caption, right)
 
 # gd-tools: no cover end

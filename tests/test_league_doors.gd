@@ -243,22 +243,75 @@ func test_a_goal_door_plays_a_stored_clip_and_names_its_fixture() -> void:
 	assert_eq(played.size(), 2, "the report's goal key did not play the clip")
 
 func test_deleting_the_open_save_unloads_it_first() -> void:
-	# The already-open season unloads before its file goes, so nothing keeps
-	# reading a save that no longer exists.
+	# The delete door asks first: the file stays until the answer is DELETE.
 	var throwaway := LeagueSeason.create("Doors Throwaway", "generated", "fixture_days", SEED + 1)
 	assert_not_null(throwaway, "the throwaway season was not created")
 	screen.season = throwaway
 	screen.mode = LeagueScreen.MODE_LOAD
+	screen.saves = LeagueSave.list()
+	screen.refresh()
 	var slug := throwaway.save.slug
 	screen.click("delete:" + slug)
+	assert_true(screen.delete.is_open(), "the delete door did not ask")
+	assert_eq(screen.delete.name, "Doors Throwaway", "the question did not name the save")
+	assert_true(screen.season == throwaway, "asking to delete unloaded the season already")
+	var still: Array = []
+	for row in LeagueSave.list():
+		still.append(str(row["slug"]))
+	assert_true(still.has(slug), "the save went before the answer")
+	# DELETE confirms: the already-open season unloads before its file goes, so
+	# nothing keeps reading a save that no longer exists.
+	screen.click("delete_yes")
 	assert_null(screen.season, "the deleted save stayed bound to the surface")
+	assert_false(screen.delete.is_open(), "the question outlived its answer")
 	var left: Array = []
 	for row in LeagueSave.list():
 		left.append(str(row["slug"]))
 	assert_false(left.has(slug), "the deleted save is still on disk")
-	# A save that is not the open one deletes straight off the load list.
+	# A save that is not the open one leaves the season alone.
 	var copy := season.save.write_copy("Doors other copy")
 	assert_true(copy != "", "the stand-in save was not written")
 	screen.season = season
+	screen.saves = LeagueSave.list()
+	screen.refresh()
 	screen.click("delete:" + copy)
+	assert_eq(screen.season, season, "asking to delete another save unloaded the open one")
+	screen.click("delete_yes")
 	assert_eq(screen.season, season, "deleting another save unloaded the open one")
+	assert_false(screen.delete.is_open(), "the question outlived its answer")
+
+func test_the_delete_question_is_a_door_of_its_own() -> void:
+	# Cancel is the safe answer: the save is untouched and the list stays put.
+	var copy := season.save.write_copy("Doors kept copy")
+	assert_true(copy != "", "the kept save was not written")
+	screen.season = season
+	screen.mode = LeagueScreen.MODE_LOAD
+	screen.saves = LeagueSave.list()
+	screen.refresh()
+	var vp: Vector2 = screen.design_vp()
+	screen.click("delete:" + copy)
+	assert_eq(screen.button_at(ConfirmPrompt.confirm_rect(vp).get_center()), "delete_yes",
+		"the dialog's DELETE is not its own door")
+	assert_eq(screen.button_at(ConfirmPrompt.cancel_rect(vp).get_center()), "delete_no",
+		"the dialog's CANCEL is not its own door")
+	assert_eq(screen.button_at(Vector2(4.0, vp.y - 4.0)), "", "a press behind the dialog reached the list")
+	screen.overlay._process(0.0)
+	assert_true(screen.key(KEY_ESCAPE), "Esc was not taken by the dialog")
+	assert_false(screen.delete.is_open(), "Esc did not put the question away")
+	var kept: Array = []
+	for row in LeagueSave.list():
+		kept.append(str(row["slug"]))
+	assert_true(kept.has(copy), "cancelling deleted the save")
+	# The dialog's own CANCEL is the other safe answer.
+	screen.click("delete:" + copy)
+	screen.click("delete_no")
+	assert_false(screen.delete.is_open(), "the dialog's CANCEL did not put the question away")
+	# Enter is the answer.
+	screen.click("delete:" + copy)
+	assert_true(screen.key(KEY_ENTER), "Enter was not taken by the dialog")
+	assert_false(screen.delete.is_open(), "Enter did not answer the dialog")
+	var gone: Array = []
+	for row in LeagueSave.list():
+		gone.append(str(row["slug"]))
+	assert_false(gone.has(copy), "Enter did not delete the save")
+	assert_eq(screen.mode, LeagueScreen.MODE_LOAD, "answering the dialog left the load list")

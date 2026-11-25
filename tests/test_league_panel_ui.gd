@@ -253,6 +253,38 @@ func test_stats_lists_reports_and_the_podium_when_available() -> void:
 	press_id("stats:podium")
 	assert_eq(screen().mode, "podium", "the Stats Podium door did not open")
 
+# ----------------------------------------------------------------- results ---
+
+## #180: RESULTS carries the hub's CONTINUE in the hub's corner, BACK stays the
+## leave control, and the press runs the hub door's season action — settle the
+## next day and show it.
+func test_results_keeps_the_hubs_continue_and_it_settles_the_next_day() -> void:
+	new_season()
+	press_id("continue")
+	assert_eq(screen().mode, "report", "CONTINUE did not land on the day's results")
+	assert_false(screen().roundup.is_empty(), "the results sheet has nothing to read")
+	var cont := Rect2()
+	var back := Rect2()
+	for item in screen().buttons:
+		if str(item["id"]) == "continue":
+			cont = item["rect"]
+		elif str(item["id"]) == "back":
+			back = item["rect"]
+	assert_true(cont.size.x > 0.0, "RESULTS lost the hub's CONTINUE")
+	assert_almost_eq(cont.end.x, vp().x - 24.0, 0.5, "RESULTS CONTINUE is not top-right")
+	assert_eq(back, LeagueExtra.back_rect(), "RESULTS BACK left the header lane")
+	assert_gt(cont.position.x, back.end.x, "the two header doors sit on each other")
+	var first := _roundup_day()
+	press_id("continue")
+	assert_eq(screen().mode, "report", "CONTINUE on RESULTS left the results reading")
+	assert_false(screen().roundup.is_empty(), "CONTINUE on RESULTS settled no next day")
+	assert_ne(_roundup_day(), first, "CONTINUE on RESULTS showed the same day again")
+
+func _roundup_day() -> String:
+	if screen().roundup.is_empty():
+		return ""
+	return str((screen().roundup[0].get("fixture", {}) as Dictionary).get("kickoff", ""))
+
 func _clean() -> void:
 	TestScratch.clear(SAVE_DIR)
 	TestScratch.clear(CACHE_DIR)

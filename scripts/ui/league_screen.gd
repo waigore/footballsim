@@ -46,6 +46,8 @@ var mode := MODE_WIZARD
 var season: LeagueSeason = null
 var wizard := {"name": "League 1", "calendar_mode": "generated", "advance_mode": "fixture_days", "error": ""}
 var saves: Array = []
+## The load list's delete question, over the sheet that raised it (DR-20261125-06).
+var delete := LeagueDelete.new()
 var report: Dictionary = {}
 var roundup: Array = []
 var month := ""
@@ -115,6 +117,8 @@ func _ready() -> void:
 	overlay.name = "Overlay"
 	overlay.panel = panel
 	overlay.fonts = UiChrome.fonts()
+	overlay.screen = self
+	overlay.delete = delete
 	add_child(overlay)
 	resized.connect(refresh)
 	# Where a club is printed, which season owns the shortlist, and how to paint
@@ -153,6 +157,7 @@ func is_open() -> bool:
 
 func open_wizard() -> void:
 	mode = MODE_WIZARD
+	delete.clear()
 	nav.clear()
 	wizard = {"name": "League %d" % (saves.size() + 1), "calendar_mode": "generated",
 		"advance_mode": "fixture_days", "error": ""}
@@ -161,6 +166,7 @@ func open_wizard() -> void:
 
 func open_load() -> void:
 	mode = MODE_LOAD
+	delete.clear()
 	nav.clear()
 	load_from = "menu"
 	saves = LeagueSave.list()
@@ -169,6 +175,7 @@ func open_load() -> void:
 
 func open_season(target: LeagueSeason, show_podium: bool = false) -> void:
 	season = target
+	delete.clear()
 	# A season opens at its own root: no history can point into a save that is
 	# not the one on screen.
 	nav.clear()
@@ -205,6 +212,7 @@ func push_page() -> void:
 func close() -> void:
 	visible = false
 	mode = MODE_HUB
+	delete.clear()
 	# Leaving the league ends its history: a reopened season starts at its root.
 	nav.clear()
 	closed.emit()
@@ -223,6 +231,9 @@ func current_view() -> Dictionary:
 func refresh() -> void:
 	var vp := design_vp()
 	var view := current_view()
+	# A confirmation belongs to the load list: any other pose puts it away.
+	if mode != MODE_LOAD:
+		delete.clear()
 	var pose: Array = _poses.get(mode, [])
 	if body == null or pose.is_empty():
 		return
@@ -264,9 +275,17 @@ func _sheet(pose: Array) -> RefCounted:
 			return sheet_extra
 	return hub
 
+## True while the load list is waiting for a delete confirmation. Everything
+## behind the dialog is frozen until it is answered.
+func delete_confirm_open() -> bool:
+	return mode == MODE_LOAD and delete.is_open()
+
 ## Hit test walks back to front so later items (e.g. a delete chip) win. The
-## open menu is in front of everything and answers every press itself (#107).
+## confirmation is a layer of its own: while it is up it is the only surface
+## that answers, and an open menu is in front of everything else (#107).
 func button_at(p: Vector2) -> String:
+	if delete_confirm_open():
+		return delete.hit(p, design_vp())
 	if interest.is_open():
 		return interest.menu.hit(p, design_vp())
 	var over_panel: String = panel.hit(p, design_vp())
@@ -277,6 +296,8 @@ func button_at(p: Vector2) -> String:
 ## Wheel, trackpad, drag and keys; wide tables also pan sideways. The sheet is
 ## frozen while the menu is up, so a press under it never scrolls the page.
 func scroll_by(delta: float, dx: float = 0.0) -> void:
+	if delete_confirm_open():
+		return
 	if interest.is_open():
 		return
 	if body != null:
@@ -291,11 +312,23 @@ func has_clip(index: int) -> bool:
 # ---------------------------------------------------------------- input ----
 
 func click(id: String) -> void:
+	if delete_confirm_open():
+		LeagueDoors.press(self, id)
+		return
 	if interest.click(id):
 		return
 	LeagueDoors.press(self, id)
 
 func key(code: int) -> bool:
+	# The delete confirmation is modal: Enter answers it, Esc/Backspace put it
+	# away, and every other key belongs to the dialog (nothing behind reacts).
+	if delete_confirm_open():
+		match code:
+			KEY_ENTER, KEY_KP_ENTER:
+				delete.answer(self)
+			KEY_ESCAPE, KEY_BACKSPACE:
+				delete.cancel(self)
+		return true
 	# ESC puts the menu away first: it is the top-most surface while it is up.
 	if interest.is_open() and (code == KEY_ESCAPE or code == KEY_BACKSPACE):
 		interest.close()
