@@ -103,6 +103,69 @@ func test_a_real_calendar_matches_the_snapshot() -> void:
 		assert_true(seen.has(key), "the real calendar invented a fixture: %s" % key)
 		assert_eq(int(fx["home_goals"]) if fx.has("home_goals") else 0, 0, "a real fixture kept a result")
 
+func test_a_real_calendar_keeps_one_gameweek_per_date() -> void:
+	## A gameweek is the weekend it was played on (#206): the ten games of one
+	## round sit on the same few days, and one date never carries two rounds.
+	var rows := FixtureCalendar.real_rows()
+	var rounds := {}
+	var dates := {}
+	for fx in rows:
+		var md := int(fx["matchday"])
+		var day := str(fx["kickoff"])
+		if not rounds.has(md):
+			rounds[md] = {"first": day, "last": day}
+		var span: Dictionary = rounds[md]
+		if day < str(span["first"]):
+			span["first"] = day
+		if day > str(span["last"]):
+			span["last"] = day
+		if dates.has(day) and int(dates[day]) != md:
+			assert_eq(md, int(dates[day]), "%s carries two gameweeks" % day)
+		dates[day] = md
+	for md in rounds:
+		var span: Dictionary = rounds[md]
+		var days := FixtureCalendar.days_from(str(span["last"])) - FixtureCalendar.days_from(str(span["first"]))
+		assert_lte(days, 4, "gameweek %d spreads over %d days" % [md, days])
+
+func test_real_gameweeks_follow_the_calendar() -> void:
+	## The round number only ever moves forward with the dates, so the hub's
+	## `GW n` and the STATS list read the season in the order it was played.
+	var rows := FixtureCalendar.build("real", _rules(), 1)
+	var last_md := 0
+	var last_day := ""
+	for fx in rows:
+		var day := str(fx["kickoff"])
+		var md := int(fx["matchday"])
+		if last_day != "":
+			assert_true(day >= last_day, "%s follows %s in the calendar" % [day, last_day])
+			assert_gte(md, last_md, "gameweek %d comes back after %d" % [md, last_md])
+		last_day = day
+		last_md = maxi(last_md, md)
+	var first_week := {}
+	for fx in rows:
+		if str(fx["kickoff"]) <= "2026-08-24":
+			first_week[int(fx["matchday"])] = true
+	assert_eq(first_week.keys(), [1], "the opening weekend is not gameweek one")
+
+func test_date_rounds_splits_dates_and_rolls_on_a_clash() -> void:
+	## The round walk: a date joins one round, a full round closes, and a
+	## rearranged fixture whose clubs already play that round waits for the next.
+	var rows := [
+		{"kickoff": "2026-08-21", "home_club_id": "A", "away_club_id": "B"},
+		{"kickoff": "2026-08-22", "home_club_id": "C", "away_club_id": "D"},
+		{"kickoff": "2026-08-22", "home_club_id": "E", "away_club_id": "F"},
+		{"kickoff": "2026-08-23", "home_club_id": "A", "away_club_id": "C"},
+	]
+	assert_eq(FixtureCalendar.date_rounds(rows, 4), [1, 1, 1, 2], "a clash did not open a round")
+	assert_eq(FixtureCalendar.date_rounds(rows, 2), [1, 2, 2, 3], "a full round did not close")
+	assert_eq(FixtureCalendar.date_rounds([], 10), [], "an empty calendar took rounds")
+	# Two games on one date never land in different rounds, however tight the cap.
+	var same_day := [
+		{"kickoff": "2026-08-22", "home_club_id": "A", "away_club_id": "B"},
+		{"kickoff": "2026-08-22", "home_club_id": "C", "away_club_id": "D"},
+	]
+	assert_eq(FixtureCalendar.date_rounds(same_day, 1), [1, 1], "a date was split across rounds")
+
 func test_the_calendar_builds_in_both_modes() -> void:
 	var real := FixtureCalendar.build("real", _rules(), 1)
 	assert_eq(real.size(), 380, "real mode did not build a calendar")
