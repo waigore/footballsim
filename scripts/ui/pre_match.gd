@@ -80,11 +80,11 @@ func layout(vp: Vector2) -> Dictionary:
 	var rows := 3 if compact else 4
 	# The pitch gets what is left after the club strip, the OUT list and the
 	# quote card, so nothing ever runs under the news strip or the doors.
-	var room := news_y - top - 26.0 - 16.0 - rows * ROW - 10.0 - QUOTE_H - 4.0
+	var room: float = news_y - top - 26.0 - 16.0 - rows * ROW - 10.0 - QUOTE_H - 4.0
 	var pitch_h := clampf(minf(col_w * 0.56, room), 76.0, 268.0)
 	var pitch_y := top + 26.0
 	var out_y := pitch_y + pitch_h + 16.0
-	var quote_y := out_y + rows * ROW + 10.0
+	var quote_y: float = out_y + rows * ROW + 10.0
 	var out := {
 		"compact": compact,
 		"home_pitch": Rect2(24.0, pitch_y, col_w, pitch_h),
