@@ -18,7 +18,6 @@ const W := 68.0
 const CENTRE := W * 0.5
 const POST := 3.66
 const BAR := 2.44
-const PRE_ROLL := 9.0
 const LENGTH := 10.0
 ## Two sim ticks per stored pose, so a pack is exactly twelve poses a second.
 const DT := 1.0 / 24.0
@@ -73,6 +72,7 @@ class Sim:
 	var carry_to := Vector2.ZERO
 	var meet := Vector2.ZERO
 	var strike_from := Vector2.ZERO
+	var goal_at := 6.0
 	var dive_y := 0.0
 	var react_at := 99.0
 	var shot := false
@@ -254,17 +254,16 @@ class Sim:
 			var k := (L - start.x) / maxf(ball.x - start.x, 0.0001)
 			var y := lerpf(start.y, ball.y, k)
 			scored = absf(y - CENTRE) < POST and lerpf(start.z, ball.z, k) < BAR
+			if scored:
+				goal_at = t
 		if scored:
-			# The net holds the ball: it may not roll back out of the goalmouth.
 			ball.x = minf(ball.x, L - 0.2)
 			ball.y = clampf(ball.y, CENTRE - POST + 0.2, CENTRE + POST - 0.2)
 			bvel *= 0.55
 		elif ball.x >= L:
-			# Off target: the ball meets the side netting and stays in play.
 			ball.x = L
 			bvel.x = -absf(bvel.x) * 0.3
 
-	## The assist releases the ball into the finisher's run: a ballistic solution.
 	func _pass() -> void:
 		owner = -1
 		var runner: Body = bodies[shooter]
@@ -333,7 +332,8 @@ class Sim:
 		var bx := L - ball.x if mirror else ball.x
 		frames.append({
 			"t": snappedf(t, 0.01),
-			"c": snappedf(float(minute) * 60.0 - PRE_ROLL + t, 0.01),
+			# The clip's clock meets the report's minute exactly at the finish.
+			"c": snappedf(float(minute) * 60.0 - goal_at + t, 0.01),
 			"s": [int(shown[0]), int(shown[1])],
 			"g": 1 if scored else 0,
 			"b": [snappedf(bx, 0.01), snappedf(ball.y, 0.01), snappedf(ball.z, 0.01)],
