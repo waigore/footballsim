@@ -255,7 +255,7 @@ static func create(screen) -> void:
 	screen.nav.clear()
 	screen.season_opened.emit(created)
 	screen.mode = screen.MODE_HUB
-	screen.month = LeagueBook.state_month(screen.season, screen.month)
+	screen.month = LeagueMonth.state_month(screen.season, screen.month)
 	screen.refresh()
 
 ## Load replaces the season outright: the old save, its ledger and every cached

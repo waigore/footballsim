@@ -5,10 +5,9 @@ extends RefCounted
 ## that ride above the rows, and the group labels the full reading puts over the
 ## overall, home and away splits.
 ##
-## It sits beside `LeagueTableView` because that sheet was at its size budget and
-## this is the half of it that is geometry rather than rows: the table still owns
-## the reading, the sort and the press; this module only says where the band goes
-## and how it is painted.
+## It sits beside `LeagueTableView` and owns the half of it that is band geometry
+## rather than rows: the table still owns the reading, the sort and the press;
+## this module only says where the band goes and how it is painted.
 ##
 ## On a touch sheet the band is a row-height handhold (#204): a header press is a
 ## sort — the table's other action — and a 12-unit line of type is not something a
@@ -31,7 +30,7 @@ static func height(touch: bool) -> float:
 ## Top of the band: under the sheet header, and under the group labels when the
 ## full reading prints them.
 static func top(full: bool) -> float:
-	return LeagueSheet.HEADER + 6.0 + (GROUPS_H if full else 0.0)
+	return LeagueChrome.HEADER + 6.0 + (GROUPS_H if full else 0.0)
 
 ## First row below the band.
 static func rows_top(full: bool, touch: bool) -> float:

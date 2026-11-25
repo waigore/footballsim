@@ -187,7 +187,7 @@ func open_season(target: LeagueSeason, show_podium: bool = false) -> void:
 		mode = MODE_PODIUM
 	else:
 		mode = MODE_HUB
-	month = LeagueBook.state_month(season, month)
+	month = LeagueMonth.state_month(season, month)
 	visible = true
 	refresh()
 
@@ -267,7 +267,7 @@ func refresh() -> void:
 
 ## Bottom chrome the pose reserves: only the table keeps its chips.
 func _bottom_bar() -> float:
-	return LeagueSheet.BAR_H if mode == MODE_TABLE else 0.0
+	return LeagueChrome.BAR_H if mode == MODE_TABLE else 0.0
 
 ## The sheet that owns a pose: the hub sheets, the reading book, or the System
 ## dialog (which is its own module).
