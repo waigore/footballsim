@@ -17,6 +17,12 @@ func before_all() -> void:
 	game = Node2D.new()
 	game.set_script(load("res://scripts/main.gd"))
 	add_child(game)
+	# The HUD's show/hide choice is a player preference (#158): keep the suite on
+	# its own file so the developer's last choice cannot hide the bands it drives.
+	var prefs := TestScratch.file("test_match_input_prefs.cfg")
+	for g in [game, game2]:
+		g.menus.shell.prefs_path = prefs
+		g.menus.restore_hud()
 	game._on_fixture_confirmed("MUN", "MCI")
 	game.paused = true
 	game.hud.queue_redraw()

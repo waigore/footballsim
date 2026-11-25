@@ -12,6 +12,11 @@ var game = null
 func _init(host) -> void:
 	game = host
 
+## A phone opens a match already tracking the ball; the desktop broadcast starts
+## wide (#158). Read once, when the scene initialises its camera state.
+static func default_follow() -> bool:
+	return OS.has_feature("mobile")
+
 ## Handhelds read the match overlay at one density point per design unit; the
 ## non-match chrome (menus, settings, league and encyclopedia sheets) has its
 ## own scale. `dev` may force the handheld overlay on desktop builds.

@@ -32,10 +32,31 @@ func attach(main_node) -> void:
 	shell.new_league_requested.connect(_on_new_league)
 	shell.load_league_requested.connect(_on_load_league)
 	shell.screen_changed.connect(_restack)
+	shell.hud_visibility_changed.connect(_on_hud_choice)
 	shell.visible = false
+	# The match HUD's show/hide choice lives in the same prefs file (#158): the
+	# overlay hands its toggles here to be written, and the settings switch comes
+	# back as a signal. Restore the saved choice before the first frame.
+	if game.hud != null:
+		game.hud.on_hud_changed = _persist_hud
+	restore_hud()
 	league = LeagueHost.new()
 	league.attach(main_node)
 	league.build()
+
+## Put the overlay in the state the prefs file asks for, without animating: the
+## restore happens before anything is on screen, and a switch from the settings
+## sheet arrives while the overlay is hidden under the shell.
+func restore_hud() -> void:
+	if game != null and game.hud != null and shell != null:
+		game.hud.set_hud_visible(Prefs.load_hud(shell.prefs_path), true)
+
+func _on_hud_choice(on: bool) -> void:
+	if game != null and game.hud != null:
+		game.hud.set_hud_visible(on, true)
+
+func _persist_hud(on: bool) -> void:
+	Prefs.save_hud(on, shell.prefs_path if shell != null else Prefs.PATH)
 
 ## Keep the shell above the season surface while the quit confirmation is the
 ## sheet on screen, and back under it the moment it is dismissed.

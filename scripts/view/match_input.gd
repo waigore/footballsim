@@ -75,6 +75,12 @@ func _pointer(event: InputEventMouseButton) -> void:
 				held_by = game.hud.interest
 				held_at = event.position
 				return
+			# The HUD show/hide pill is the overlay's own door (#158): it never
+			# hides, so the router answers it here and the scene's click table
+			# stays about the match.
+			if game.view.button_at(event.position) == "hud":
+				game.hud.toggle_hud()
+				return
 			game._click(event.position)
 		else:
 			_release(event.position)
@@ -122,6 +128,8 @@ func _key(k: int) -> void:
 		game.actors.names_visible = game.names_visible
 	elif k == KEY_C:
 		game.camera_follow = not game.camera_follow
+	elif k == KEY_U:
+		game.hud.toggle_hud()
 	elif k == KEY_M:
 		game.menus.open_menu()
 	elif k == KEY_T:
