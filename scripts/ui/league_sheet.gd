@@ -1,12 +1,16 @@
 class_name LeagueSheet
 extends RefCounted
 
-## Hub, setup wizard and load-list geometry and paint.
+## The season hub pose: today's plan beside the table, with CONTINUE.
 ##
-## The sheets are pure: `layout()` turns the season state into rows and chips
-## with rects (so a headless test can press them), and `draw()` paints exactly
-## those rects. No sim calls happen here. Doors that must not move (the bottom
-## bar and BACK) are tagged `pinned`; everything else scrolls inside LeagueBody.
+## The hub is pure: `layout()` turns the season state into rows and chips with
+## rects (so a headless test can press them), and `draw()` paints exactly those
+## rects. No sim calls happen here. Doors that must not move (the bottom bar and
+## BACK) are tagged `pinned`; everything else scrolls inside LeagueBody.
+##
+## The New League wizard and the Load library are the menu-level front door, not
+## the hub: they live in `LeagueStartSheet`. The constants below are the league
+## surface's shared chrome and are read by every sheet.
 
 const ROW_H := 26.0
 const ROW_GAP := 5.0
@@ -39,27 +43,6 @@ static func zone_color(band: String) -> Color:
 
 static func compact(vp: Vector2) -> bool:
 	return vp.y < 620.0
-
-## The wizard's name field: a key either edits the name or is left for the
-## screen. Returns `[handled, name]` so the caller never guesses.
-static func type_name(name: String, code: int) -> Array:
-	if code == KEY_BACKSPACE:
-		return [true, name.substr(0, maxi(name.length() - 1, 0))]
-	if name.length() >= 24:
-		return [false, name]
-	var ch := char(code)
-	if (ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") or (ch >= "0" and ch <= "9") or ch == " ":
-		return [true, name + (ch.to_upper() if name == "" else ch)]
-	return [false, name]
-
-## Edit the name in a wizard/field state dictionary. True when the key belonged
-## to the field, so the caller only has to repaint.
-static func type_name_into(state: Dictionary, code: int) -> bool:
-	var typed: Array = type_name(str(state.get("name", "")), code)
-	if not bool(typed[0]):
-		return false
-	state["name"] = str(typed[1])
-	return true
 
 # ------------------------------------------------------------------- hub ---
 
@@ -125,45 +108,6 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 		"pinned": true, "rect": LeagueExtra.primary_rect(vp)})
 	return items
 
-func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
-	var items: Array = []
-	var w := minf(520.0, vp.x - 48.0)
-	var y := HEADER + 30.0
-	items.append({"id": "name", "kind": "field", "label": "NAME",
-		"rect": Rect2(24.0, y, w, 38.0), "value": str(view.get("name", ""))})
-	y += 66.0
-	items.append({"id": "mode:real", "kind": "choice", "label": "REAL FIXTURES",
-		"rect": Rect2(24.0, y, w * 0.48, 40.0), "selected": str(view.get("calendar_mode", "")) == "real"})
-	items.append({"id": "mode:generated", "kind": "choice", "label": "GENERATED",
-		"rect": Rect2(24.0 + w * 0.52, y, w * 0.48, 40.0), "selected": str(view.get("calendar_mode", "")) == "generated"})
-	y += 52.0
-	items.append({"id": "adv:fixture_days", "kind": "choice", "label": "FIXTURE DAYS",
-		"rect": Rect2(24.0, y, w * 0.48, 40.0), "selected": str(view.get("advance_mode", "")) == "fixture_days"})
-	items.append({"id": "adv:every_day", "kind": "choice", "label": "EVERY DAY",
-		"rect": Rect2(24.0 + w * 0.52, y, w * 0.48, 40.0), "selected": str(view.get("advance_mode", "")) == "every_day"})
-	y += 54.0
-	items.append({"id": "create", "kind": "button", "label": "CREATE SEASON",
-		"rect": Rect2(24.0, y, minf(240.0, w), 46.0), "primary": true})
-	items.append(LeagueExtra.back_item())
-	return items
-
-func load_layout(vp: Vector2, view: Dictionary) -> Array:
-	var items: Array = []
-	var saves: Array = view.get("saves", [])
-	var w := minf(620.0, vp.x - 48.0)
-	var y := HEADER + 26.0
-	# Every save is laid out; the body scrolls a library longer than one screen (REQ-P5-08).
-	for i in range(saves.size()):
-		var save: Dictionary = saves[i]
-		var row := Rect2(24.0, y, w, 40.0)
-		items.append({"id": "open:" + str(save["slug"]), "kind": "save_row",
-			"rect": row, "save": save})
-		items.append({"id": "delete:" + str(save["slug"]), "kind": "delete",
-			"rect": Rect2(row.end.x - 84.0, row.position.y + 4.0, 40.0, 32.0), "slug": str(save["slug"])})
-		y += 46.0
-	items.append(LeagueExtra.back_item())
-	return items
-
 ## The lane the wide hub's side table occupies, beside the fixture list.
 func _hub_table_box(vp: Vector2) -> Rect2:
 	var left_w := (vp.x - 72.0) * 0.58
@@ -192,7 +136,7 @@ func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dicti
 	# CONTINUE owns the top-right corner, so the title and the caption are fitted
 	# inside the lane it leaves (#163, #180).
 	var right: float = LeagueExtra.primary_rect(vp).size.x + 12.0
-	var band := _heading(c, vp, fonts, name, label + rest, right)
+	var band := LeagueExtra.header(c, vp, fonts, name, label + rest, right)
 	if date != "" and str(band["caption"]) != "":
 		var rect: Rect2 = band["caption_rect"]
 		hints.add(Rect2(rect.position.x, 24.0, DateHints.width(bold, label, 10), 14.0), date)
@@ -297,100 +241,5 @@ func _draw_table_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictio
 		UiChrome.text_r(c, float(col["right"]), y, LeagueColumns.text(row, key),
 			11 if points else 10, UiChrome.C_TEXT if points else UiChrome.C_SOFT,
 			bold if points else med)
-
-# ---------------------------------------------------------------- wizard ---
-
-func draw_wizard_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
-		_hints: DateHints) -> void:
-	_heading(c, vp, fonts, "NEW LEAGUE", "GOD-MODE SEASON SETUP")
-	if str(view.get("error", "")) != "":
-		UiChrome.text(c, Vector2(24.0, vp.y - BAR_H - 10.0), str(view["error"]), 12, UiChrome.C_DANGER, fonts["med"])
-
-func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, _view: Dictionary) -> void:
-	hints.clear()
-	var bold: Font = fonts["bold"]
-	for item in items:
-		var rect: Rect2 = item["rect"]
-		var kind := str(item["kind"])
-		var id := str(item["id"])
-		if id == "mode:real":
-			UiChrome.text(c, Vector2(rect.position.x, rect.position.y - 8.0), "FIXTURES", 10, UiChrome.C_DIM, bold)
-		elif id == "adv:fixture_days":
-			UiChrome.text(c, Vector2(rect.position.x, rect.position.y - 8.0), "ADVANCE", 10, UiChrome.C_DIM, bold)
-		if kind == "field":
-			UiChrome.text(c, Vector2(rect.position.x, rect.position.y - 8.0), "SAVE NAME", 10, UiChrome.C_DIM, bold)
-			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_GOLD, 1)
-			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
-				str(item["value"]) if str(item["value"]) != "" else "League 1", 15, UiChrome.C_TEXT, bold)
-		elif kind == "choice":
-			var chosen := bool(item["selected"])
-			UiChrome.panel(c, cache, rect,
-				UiChrome.C_GOLD.darkened(0.1) if chosen else UiChrome.C_PANEL, 6,
-				UiChrome.C_GOLD if chosen else UiChrome.C_BORDER, 1)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 25.0, str(item["label"]), 12,
-				Color(0.06, 0.06, 0.05) if chosen else UiChrome.C_TEXT, bold)
-		elif kind == "button":
-			draw_button(c, rect, str(item["label"]), bold, bool(item.get("primary", false)))
-
-# ------------------------------------------------------------------ load ---
-
-func draw_load_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, _view: Dictionary,
-		_hints: DateHints) -> void:
-	_heading(c, vp, fonts, "LOAD LEAGUE", "NAMED SEASONS")
-
-func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
-	hints.clear()
-	var bold: Font = fonts["bold"]
-	var med: Font = fonts["med"]
-	if (view.get("saves", []) as Array).is_empty():
-		UiChrome.text(c, Vector2(24.0, HEADER + 34.0),
-			"No saves yet — start a New League from the menu.", 13, UiChrome.C_SOFT, med)
-	for item in items:
-		var rect: Rect2 = item["rect"]
-		if str(item["kind"]) == "save_row":
-			var save: Dictionary = item["save"]
-			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6)
-			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 17.0),
-				str(save["name"]), 14, UiChrome.C_TEXT, bold)
-			var current := str(save.get("current_date", ""))
-			var dated: String = FixtureCalendar.day_label(current)
-			var line: String = "%s · %s" % [dated, str(save.get("status", ""))] if dated != "" else str(save.get("status", ""))
-			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 32.0), line, 10,
-				UiChrome.C_DIM, med)
-			if current != "":
-				hints.add(DateHints.strip(med, dated,
-					Vector2(rect.position.x + 12.0, rect.position.y + 32.0), 10), current)
-		elif str(item["kind"]) == "delete":
-			UiChrome.panel(c, cache, rect, UiChrome.C_DANGER.darkened(0.35), 5, UiChrome.C_DANGER, 1)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 21.0, "X", 13, UiChrome.C_TEXT, bold)
-		elif str(item["kind"]) == "button":
-			draw_button(c, rect, str(item["label"]), bold, bool(item.get("primary", false)))
-
-# --------------------------------------------------------------- helpers ---
-
-## Bottom action bar: equal-width doors; the first one is the primary. The
-## grammar itself is `UiChrome.button`, shared with the menu, the System dialog,
-## the fixture picker and the encyclopedia.
-func draw_button(c: CanvasItem, rect: Rect2, label: String, bold: Font,
-		primary: bool, disabled: bool = false) -> void:
-	UiChrome.button(c, cache, rect, label, bold, primary, -1, "", not disabled)
-
-## The ▶ beside a goal on a match report: a bordered gold chip, sized by the
-## caller so the door stays thumb-sized on every platform.
-static func draw_play(c: CanvasItem, cache: Dictionary, rect: Rect2, bold: Font) -> void:
-	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, Color(0.96, 0.78, 0.30, 0.55), 1)
-	var mid: float = rect.position.y + rect.size.y * 0.5 + UiChrome.RISE
-	UiChrome.text_c(c, rect.get_center().x, mid, "▶ PLAY", 10, UiChrome.C_GOLD, bold)
-
-## Small fixed chips on a sheet header (the calendar's month doors).
-func draw_chip(c: CanvasItem, rect: Rect2, label: String, bold: Font) -> void:
-	UiChrome.chip(c, cache, rect, label, bold)
-
-func _heading(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String, caption: String,
-		right: float = 0.0) -> Dictionary:
-	# BACK owns the top-left corner on the hub, the wizard and the load list too
-	# (#163), so the title takes the same rail as every other league sheet. The
-	# header returns the band it really painted after fitting (#180).
-	return LeagueExtra.header(c, vp, fonts, title, caption, right)
 
 # gd-tools: no cover end

@@ -72,7 +72,7 @@ static func type_name(screen, code: int) -> bool:
 	if code == KEY_ENTER or code == KEY_KP_ENTER:
 		save_as(screen)
 		return true
-	var typed: Array = LeagueSheet.type_name(str(screen.sys["name"]), code)
+	var typed: Array = LeagueTextField.type_name(str(screen.sys["name"]), code)
 	if bool(typed[0]):
 		screen.sys["name"] = str(typed[1])
 		screen.refresh()

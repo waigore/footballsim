@@ -6,8 +6,8 @@ extends RefCounted
 ## copy under a typed name, Load swaps saves (the caller unloads the old one),
 ## Main Menu leaves the season and Quit asks the shell to close the game.
 ##
-## It sits beside `LeagueSheet` and `LeagueBook` because both are at their method
-## budget, and it is its own pose: geometry and paint only, no save calls.
+## It is its own pose beside the hub, the readings and the front door: geometry
+## and paint only, no save calls.
 
 const HEADER := 58.0
 const ROW_H := 46.0
@@ -25,8 +25,6 @@ const ACTIONS := [
 var cache := {}
 ## Dates the chrome painted, with the strip each one occupies (#99).
 var hints := DateHints.new()
-## The shared button paint lives on the hub sheet; one instance is enough.
-var chrome := LeagueSheet.new()
 
 func layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
@@ -93,7 +91,7 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array, _vi
 				UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
 					str(item["value"]), 15, UiChrome.C_TEXT, bold)
 			"button":
-				UiChrome.button(c, chrome.cache, rect, str(item["label"]), bold,
+				UiChrome.button(c, cache, rect, str(item["label"]), bold,
 					bool(item.get("primary", false)))
 
 # gd-tools: no cover end
