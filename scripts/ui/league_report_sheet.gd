@@ -44,10 +44,16 @@ static func block_fixture(report: Dictionary) -> Dictionary:
 
 func layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
-	# BACK keeps the league's header position on every reading (#162).
+	# BACK keeps the league's header position on every reading (#162). Results
+	# also carry CONTINUE in the hub's corner: a settled day is exactly when the
+	# season is ready to move on (#180).
 	items.append(LeagueExtra.back_item())
+	var roundup: Array = view.get("roundup", [])
+	if not roundup.is_empty():
+		items.append({"id": "continue", "kind": "button", "label": "CONTINUE", "primary": true,
+			"pinned": true, "rect": LeagueExtra.primary_rect(vp)})
 	var y := HEADER + 70.0
-	for report in view.get("roundup", []):
+	for report in roundup:
 		var fx := block_fixture(report)
 		var row := Rect2(24.0, y, vp.x - 48.0, LeagueBlock.height(fx) + 10.0)
 		items.append({"id": "match:" + str(fx.get("id", "")), "kind": "result",
@@ -94,10 +100,13 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 	var date := str(view.get("day", ""))
 	var kicker := "MATCH REPORT"
 	var caption := ""
+	var right := 0.0
 	if not roundup.is_empty():
 		kicker = "RESULTS"
 		caption = FixtureCalendar.day_label(date) if date != "" else date
-	LeagueExtra.header(c, vp, fonts, kicker, caption)
+		# The date stops short of CONTINUE, exactly like the hub's caption (#180).
+		right = LeagueExtra.primary_rect(vp).size.x + 12.0
+	LeagueExtra.header(c, vp, fonts, kicker, caption, right)
 
 func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()
