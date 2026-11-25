@@ -35,7 +35,7 @@ func _state(plan: Array, table: Array, complete: bool = false) -> Dictionary:
 	}
 
 func test_the_hub_lays_out_a_full_plan_wide_and_compact() -> void:
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueHubSheet.new()
 	var plan: Array = []
 	for i in range(10):
 		plan.append(_fixture(i, i % 2, 0))
@@ -54,7 +54,7 @@ func test_the_hub_lays_out_a_full_plan_wide_and_compact() -> void:
 ## #124: a played row is a result, not a plan — it keeps its row on the hub and
 ## loses the AUTO/WATCH chip, so the score sits where the chip was.
 func test_a_played_fixture_loses_its_watch_chip() -> void:
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueHubSheet.new()
 	var played := _fixture(1, 1)
 	played["status"] = "played"
 	played["home_goals"] = 2
@@ -74,12 +74,12 @@ func test_a_played_fixture_loses_its_watch_chip() -> void:
 		assert_false(chips.has("toggle:" + str(played["id"])), "a played row offers a watch chip at %s" % vp)
 		assert_true(chips.has("toggle:" + str(pending["id"])), "a pending row lost its watch chip at %s" % vp)
 	# CONTINUE's caption only promises a hand-off while a watch is still unplayed.
-	assert_false(LeagueSheet.watch_pending([played]), "a played watch still claims CONTINUE opens it")
-	assert_true(LeagueSheet.watch_pending(plan), "an unplayed watch lost its CONTINUE caption")
-	assert_false(LeagueSheet.watch_pending([]), "an empty day claims a pending watch")
+	assert_false(LeagueHubSheet.watch_pending([played]), "a played watch still claims CONTINUE opens it")
+	assert_true(LeagueHubSheet.watch_pending(plan), "an unplayed watch lost its CONTINUE caption")
+	assert_false(LeagueHubSheet.watch_pending([]), "an empty day claims a pending watch")
 
 func test_the_hub_lays_out_an_empty_day_and_no_table() -> void:
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueHubSheet.new()
 	var items: Array = sheet.hub_layout(Vector2(1600, 900), _state([], _table()))
 	var rows := 0
 	var tables := 0
@@ -99,7 +99,7 @@ func test_the_hub_lays_out_an_empty_day_and_no_table() -> void:
 ## club column gives the numbers more of the lane, and every column stays inside
 ## the row it belongs to.
 func test_the_hub_side_table_carries_the_compact_record() -> void:
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueHubSheet.new()
 	var keys: Array = []
 	for col in LeagueColumns.COMPACT_COLS:
 		if bool(col["num"]):
@@ -126,11 +126,11 @@ func test_the_hub_side_table_carries_the_compact_record() -> void:
 				"%s overlaps the club abbreviation at %s" % [col["label"], vp])
 			previous = float(col["right"])
 		assert_lte(previous, rect.end.x + 0.01, "PTS is drawn outside the hub row at %s" % vp)
-		assert_gte(float(places["club_w"]), LeagueSheet.HUB_CLUB_MIN - 0.01,
+		assert_gte(float(places["club_w"]), LeagueHubSheet.HUB_CLUB_MIN - 0.01,
 			"the abbreviation column is too narrow at %s" % vp)
 
 func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueWizardSheet.new()
 	for mode in ["real", "generated"]:
 		for advance in ["fixture_days", "every_day"]:
 			var items: Array = sheet.wizard_layout(Vector2(1280, 720),
@@ -143,7 +143,7 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			assert_eq(items.size(), 7, "the wizard is missing a control")
 
 func test_the_load_list_lays_out_zero_and_many_saves() -> void:
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueLoadSheet.new()
 	var empty: Array = sheet.load_layout(Vector2(1280, 720), {"saves": []})
 	assert_eq(empty.size(), 1, "an empty load list should only have BACK")
 	var saves: Array = []
@@ -295,7 +295,7 @@ func test_the_sheet_chrome_keeps_back_top_left_and_the_primary_top_right() -> vo
 			"system": LeagueSystemSheet.new().layout(vp, {"date": "2026-08-15", "name": "S"}),
 			"stats": LeagueExtra.new().stats_layout(vp, {"name": "S", "reports": []}),
 			"interest": LeagueExtra.new().interest_layout(vp, {"query": "", "results": [], "clubs": []}),
-			"hub": LeagueSheet.new().hub_layout(vp, _state([_fixture(1)], _table())),
+			"hub": LeagueHubSheet.new().hub_layout(vp, _state([_fixture(1)], _table())),
 		}
 		for label in sheets:
 			assert_eq(_item_rect(sheets[label], "back"), LeagueExtra.back_rect(),
@@ -334,7 +334,7 @@ func _item_rect(items: Array, id: String) -> Rect2:
 ## surface that carries them on a phone and on a desktop window.
 func test_the_shortest_captions_fit_after_the_floor() -> void:
 	var bold: Font = UiChrome.fonts()["bold"]
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueHubSheet.new()
 	var plan: Array = [_fixture(1, 0, 1)]
 	var chip_w := -1.0
 	for item in sheet.hub_layout(Vector2(1600, 900), _state(plan, _table())):
@@ -361,27 +361,28 @@ func test_the_shortest_captions_fit_after_the_floor() -> void:
 		assert_eq(cells, 31, "October should still have 31 cells at %s" % vp)
 
 func test_every_phone_sheet_overflows_into_the_scroll_window() -> void:
-	var sheet := LeagueSheet.new()
+	var hub_sheet := LeagueHubSheet.new()
+	var load_sheet := LeagueLoadSheet.new()
 	var book := LeagueBook.new()
 	var vp := Vector2(913, 411)
 	var window := vp.y - LeagueSheet.BAR_H
 	var plan: Array = []
 	for i in range(10):
 		plan.append(_fixture(i))
-	assert_gt(_bottom(sheet.hub_layout(vp, _state(plan, _table()))), window,
+	assert_gt(_bottom(hub_sheet.hub_layout(vp, _state(plan, _table()))), window,
 		"ten phone fixtures should scroll instead of being dropped")
 	var saves: Array = []
 	for i in range(7):
 		saves.append({"slug": "s%d" % i, "name": "Save %d" % i, "status": "in_progress",
 			"current_date": "2026-09-0%d" % (i + 1), "matchday": i + 1, "path": "", "modified": i})
-	assert_gt(_bottom(sheet.load_layout(vp, {"saves": saves})), window,
+	assert_gt(_bottom(load_sheet.load_layout(vp, {"saves": saves})), window,
 		"a full load list should scroll on a phone")
 	var events: Array = []
 	for i in range(14):
 		events.append({"minute": i, "kind": "goal", "player_name": "P%d" % i})
 	assert_gt(_bottom(book.report_layout(vp, {"fixture": _fixture(1), "events": events, "day": "x"})),
 		window, "a long report should scroll on a phone")
-	var hub: Array = sheet.hub_layout(vp, _state(plan, _table()))
+	var hub: Array = hub_sheet.hub_layout(vp, _state(plan, _table()))
 	for item in hub:
 		if str(item["kind"]) == "button":
 			assert_true(bool(item.get("pinned", false)), "a hub door was left to scroll away")
@@ -600,7 +601,7 @@ func test_the_report_keeps_back_in_the_top_left_chrome() -> void:
 ## #168: a played hub row is a block tall enough for both columns; a pending row
 ## keeps the planner's one line. The hub and the calendar read the same height.
 func test_a_played_row_grows_for_its_events() -> void:
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueHubSheet.new()
 	var played := _fixture(1)
 	played["status"] = "played"
 	played["home_goals"] = 1

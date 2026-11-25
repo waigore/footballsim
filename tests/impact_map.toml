@@ -156,8 +156,8 @@ suites = [
 
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
 # chosen XI and the league surfaces. One group, because a change in any layer
-# can move the season loop. The sheet-geometry suite rides here too: the hub's
-# rows, chips and doors are laid out by `league_sheet.gd`.
+# can move the season loop. The sheet-geometry suite rides here too: the hub,
+# wizard and load doors are laid out by the `league_*_sheet.gd` modules.
 [domains.league]
 suites = [
   "test_league_rules.gd",

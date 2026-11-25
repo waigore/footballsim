@@ -160,7 +160,7 @@ func test_the_hub_and_the_table_mark_a_followed_club() -> void:
 	season.set_interest(club_id, true)
 	var view := season.state().duplicate()
 	view["plan"] = season.plan()
-	var hub_items := LeagueSheet.new().hub_layout(Vector2(1200.0, 900.0), view)
+	var hub_items := LeagueHubSheet.new().hub_layout(Vector2(1200.0, 900.0), view)
 	var row := _hub_row(hub_items, str(view["plan"][0]["id"]))
 	assert_true((row.get("interest", {}) as Dictionary).has(club_id), "the hub row is missing the interest mark")
 	# The followed game's chip states the rule instead of offering a switch that

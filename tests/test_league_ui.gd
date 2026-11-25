@@ -440,7 +440,7 @@ func test_a_phone_viewport_still_hits_every_door() -> void:
 		"played": 0, "total": 380, "plan": fixtures, "table": table,
 		"rules": LeagueRules.defaults(), "can_suggest": false, "complete": false}
 	for size in [Vector2(1600, 900), Vector2(913, 411)]:
-		var sheet := LeagueSheet.new()
+		var sheet := LeagueHubSheet.new()
 		for item in sheet.hub_layout(size, state):
 			var rect: Rect2 = item["rect"]
 			assert_gte(rect.size.y, 16.0, "a hub row is too short at %s" % size)
