@@ -225,17 +225,23 @@ func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Ar
 func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
 	var info: Dictionary = item["info"]
 	var has := int(info.get("n", 0)) > 0
+	var selected := bool(item["selected"])
 	var fill: Color = UiChrome.C_PANEL_LIGHT if has else UiChrome.C_PANEL
-	if bool(item["selected"]):
+	if selected:
 		fill = UiChrome.C_GOLD.darkened(0.25)
 	UiChrome.panel(c, cache, rect, fill, 4, UiChrome.C_BORDER, 1)
+	# A selected cell is gold, so the sheet's light inks wash out on it: the day
+	# and its counter take the dark ink the gold doors and the WATCH chip use
+	# (#126). On a dark cell the counter keeps its live/planned colour.
+	var ink: Color = Color(0.06, 0.06, 0.05) if selected else (UiChrome.C_TEXT if has else UiChrome.C_DIM)
 	UiChrome.text(c, Vector2(rect.position.x + 4.0, rect.position.y + 12.0), "%d" % int(item["day"]), 10,
-		UiChrome.C_TEXT if has else UiChrome.C_DIM, fonts["med"])
+		ink, fonts["med"])
 	if has:
 		var done := int(info.get("played", 0))
 		var total := int(info.get("n", 0))
+		var count_ink: Color = ink if selected else (UiChrome.C_LIVE if done == total else UiChrome.C_GOLD)
 		UiChrome.text_r(c, rect.end.x - 3.0, rect.end.y - 4.0, "%d/%d" % [done, total], 10,
-			UiChrome.C_LIVE if done == total else UiChrome.C_GOLD, fonts["bold"])
+			count_ink, fonts["bold"])
 
 # ---------------------------------------------------------------- report ---
 
