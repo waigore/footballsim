@@ -202,6 +202,7 @@ func advance() -> Dictionary:
 		return last_advance
 	save.set_date(next)
 	save.set_matchday(_matchday_of(next))
+	SeasonAvailability.month_tick(date, next)
 	last_advance = {"ok": true, "date": date, "next_date": next, "played": played, "pending": [], "complete": false}
 	return last_advance
 
@@ -219,8 +220,10 @@ func roll_clock() -> void:
 	if next == "":
 		save.set_status("complete")
 		return
+	var crossed := save.current_date()
 	save.set_date(next)
 	save.set_matchday(_matchday_of(next))
+	SeasonAvailability.month_tick(crossed, next)
 
 func _next_date(date: String) -> String:
 	if str(rules.get("advance_mode", "fixture_days")) == "every_day":
@@ -252,40 +255,16 @@ func _sim_fixture(fx: Dictionary) -> Dictionary:
 	events.append_array(MatchEvents.side(seed + 23, fixture_id, away, axi, score.y))
 	record.report.save_result(fixture_id, score.x, score.y, "", "", record.standings)
 	record.report.add_events(events)
-	_add_xi_stats(events, {"home": hxi, "away": axi}, {"home": home, "away": away})
+	LeagueSettle.auto(record, fixture_id, home, away, hxi, axi, events, seed,
+		str(fx["kickoff"]), int(fx["matchday"]))
 	LeagueHighlights.store_auto(record, int(rng.seed), fixture_id, events, home, away)
 	# The encyclopedia reads this save's ledger, so forget what it read before
 	# this result landed (DR-20261125-08).
 	PLRepository.shared().invalidate()
 	return report(fixture_id)
 
-## A side's XI all played 90 minutes; goals, assists and cards come off the
-## synthetic event rows, so the season chart reads the same report the player saw.
-func _add_xi_stats(events: Array, sides: Dictionary, clubs: Dictionary) -> void:
-	var lines := {}
-	for side in ["home", "away"]:
-		for p in sides[side]:
-			lines[str(p["id"])] = {"apps": 1, "goals": 0, "assists": 0, "yellow": 0, "red": 0}
-	for e in events:
-		var id := str(e.get("player_id", ""))
-		if not lines.has(id):
-			continue
-		var kind := str(e.get("kind", ""))
-		if kind == "goal":
-			lines[id]["goals"] += 1
-		elif kind == "assist":
-			lines[id]["assists"] += 1
-		elif kind == "yellow":
-			lines[id]["yellow"] += 1
-		elif kind == "red":
-			lines[id]["red"] += 1
-	var rows: Array = []
-	for side in ["home", "away"]:
-		for p in sides[side]:
-			var id := str(p["id"])
-			rows.append({"player_id": id, "club_id": str(clubs[side]), "line": lines[id]})
-	record.report.add_player_lines(rows)
-
+## The season's own seed folded with the fixture id, so a fixture always draws
+## the same synthetic report.
 func _seed_for(fixture_id: String) -> int:
 	var h := 0
 	for i in range(fixture_id.length()):
@@ -321,12 +300,26 @@ func start_watch(fixture_id: String) -> Dictionary:
 	var fx := record.fixtures.one(fixture_id)
 	if fx.is_empty():
 		return {}
+	# The engine reads the save's own squad flags, so rebuild both elevens from
+	# who is available today before it is handed the fixture (#155, #156).
+	StrongestXI.apply(str(fx["home_club_id"]))
+	StrongestXI.apply(str(fx["away_club_id"]))
 	watching_fixture = fixture_id
 	captured = []
 	return {
 		"fixture_id": fixture_id,
 		"home": str(fx["home_club_id"]), "away": str(fx["away_club_id"]),
 	}
+
+## Back out of a pre-match briefing: the fixture never kicked off, so the season
+## stops waiting for it. The fixture keeps its Watch flag and the clock stays on
+## the day, so the next Continue offers the same game again.
+func cancel_watch() -> void:
+	if finishing:
+		return
+	watching_fixture = ""
+	captured = []
+	state_changed.emit()
 
 ## The viewer's ring caught a goal during a watched fixture: hold the clip here
 ## until full time, when it is written beside the report it belongs to.
@@ -346,21 +339,13 @@ func record_engine(engine) -> void:
 		return
 	var home := int(engine.score[0])
 	var away := int(engine.score[1])
+	var events := LeagueHighlights.engine_events(engine, fixture_id)
 	PLDatabase.transaction("BEGIN TRANSACTION;")
 	record.report.save_result(fixture_id, home, away,
 		str(fx["home_club_id"]), str(fx["away_club_id"]), record.standings)
-	record.report.add_events(LeagueHighlights.engine_events(engine, fixture_id))
-	var lines: Array = []
-	for p in engine.players:
-		lines.append({
-			"player_id": str(p.key), "club_id": str(engine.teams[p.team]["id"]),
-			"line": {
-				"apps": 1, "goals": int(p.stats.get("goals", 0)),
-				"assists": int(p.stats.get("assists", 0)), "yellow": int(p.yellow),
-				"red": 1 if p.red else 0,
-			},
-		})
-	record.report.add_player_lines(lines)
+	record.report.add_events(events)
+	LeagueSettle.watch(record, engine, events, int(rng.seed),
+		str(fx["kickoff"]), int(fx["matchday"]))
 	LeagueHighlights.store_watch(record, int(rng.seed), fixture_id, captured,
 		str(fx["home_club_id"]), str(fx["away_club_id"]))
 	captured = []

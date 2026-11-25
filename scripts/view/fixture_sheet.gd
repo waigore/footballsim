@@ -59,8 +59,31 @@ func close() -> void:
 		game.hud_layer.visible = true
 	game.paused = false
 
-## A confirmed fixture becomes the next match, on a fresh seed.
+## A confirmed fixture opens the pre-match briefing (#157). Its KICK OFF starts
+## the match on a fresh seed; BACK returns to this picker with its clubs, and the
+## match never starts.
 func confirm(home: String, away: String) -> void:
+	game.home_id = home
+	game.away_id = away
+	game.select_open = false
+	if game.sel_layer != null:
+		game.sel_layer.visible = false
+	if game.prematch != null:
+		var req := PreMatchModel.build(home, away, {}, LeagueSeason.active)
+		game.prematch.ask(req, Callable(self, "start_confirmed"), Callable(self, "back_from_briefing"))
+		return
+	start(home, away)
+
+## The briefing's KICK OFF: the confirmed fixture becomes the next match.
+func start_confirmed() -> void:
+	start(game.home_id, game.away_id)
+
+## The briefing's BACK: this picker comes back on the same two clubs.
+func back_from_briefing() -> void:
+	reopen()
+
+## The picker's own start: the confirmed fixture becomes the next match.
+func start(home: String, away: String) -> void:
 	game.home_id = home
 	game.away_id = away
 	game.select_open = false
@@ -74,6 +97,10 @@ func confirm(home: String, away: String) -> void:
 	game.match_started = true
 	game.seeded += randi_range(1, 9999)
 	game.new_match(game.seeded)
+
+## BACK from the briefing: the picker comes back on the same two clubs.
+func reopen() -> void:
+	open(game.select_from_menu)
 
 ## `--seed=`, `--home=` and `--away=` from the command line; report whether a
 ## fixture was named so the menu can stay closed on a scripted run.

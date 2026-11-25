@@ -22,6 +22,7 @@ func before_all() -> void:
 	game.dev.ui_scale = game.get_viewport_rect().size.y / 411.0
 	game._sync_overlay_scale()
 	game._on_fixture_confirmed("MUN", "MCI")
+	TestBriefing.kick(game)
 	game.paused = true
 
 func after_all() -> void:

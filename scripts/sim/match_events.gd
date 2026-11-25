@@ -91,6 +91,13 @@ static func side(seed: int, fixture_id: String, club_id: String, xi: Array, goal
 		var sent_off := pick(xi, CARD_SHARE, "def", rng)
 		if not sent_off.is_empty():
 			out.append(_row(fixture_id, _minute(rng), "red", sent_off, club_id))
+	# A body breaks down at the rate the engine's own fatigue path lands on, so an
+	# auto-simmed season loses players the way a watched one does (#155). The season
+	# grades the injury; this row only says who went down and when.
+	if rng.randf() < SeasonAvailability.INJURY_RATE:
+		var hurt := pick(xi, CARD_SHARE, "phy", rng)
+		if not hurt.is_empty():
+			out.append(_row(fixture_id, _minute(rng), "injury", hurt, club_id))
 	out.sort_custom(func(a, b): return int(a["minute"]) < int(b["minute"]))
 	return out
 

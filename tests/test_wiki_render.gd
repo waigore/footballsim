@@ -18,6 +18,7 @@ func before_all() -> void:
 	game.dev.ui_scale = 4.0
 	game._sync_overlay_scale()
 	game._on_fixture_confirmed("MUN", "MCI")
+	TestBriefing.kick(game)
 	game.paused = true
 
 func after_all() -> void:

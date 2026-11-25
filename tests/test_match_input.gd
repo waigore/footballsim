@@ -24,6 +24,8 @@ func before_all() -> void:
 		g.menus.shell.prefs_path = prefs
 		g.menus.restore_hud()
 	game._on_fixture_confirmed("MUN", "MCI")
+	# Every match opens the pre-match briefing first (#157): kick it off.
+	TestBriefing.kick(game)
 	game.paused = true
 	game.hud.queue_redraw()
 	await get_tree().process_frame

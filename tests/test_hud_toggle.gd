@@ -31,6 +31,8 @@ func before_all() -> void:
 	game.menus.close()
 	game.hud_layer.visible = true
 	game._on_fixture_confirmed("MUN", "MCI")
+	# #157: the briefing comes before the sim, so kick it off.
+	TestBriefing.kick(game)
 	game.paused = true
 	game.hud.queue_redraw()
 	await get_tree().process_frame

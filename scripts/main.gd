@@ -1,10 +1,8 @@
 extends Node2D
 
-## Playback controller + scene assembly.
-## Owns the engine, the snapshot ring buffer that makes highlight replays possible,
-## the camera and every input binding. Screen/design-space arithmetic (overlay
-## doors, token picking, tick budget) lives in MatchView so the scene stays
-## inside its P3 size budget.
+## Playback controller + scene assembly: the engine, the snapshot ring, the
+## camera and the input bindings. Design-space arithmetic and the sheet routing
+## live in MatchView / MatchInput so the scene stays inside its P3 size budget.
 
 const W := 68.0
 const L := 105.0
@@ -74,6 +72,9 @@ var select_from_menu := false
 var match_started := false
 ## Encyclopedia sheet: league / club / player pages over the paused broadcast.
 var wiki_host: WikiHost = null
+## The pre-match briefing (#157): the last screen before a watched or single
+## match starts. League watches and the fixture picker both ask it first.
+var prematch: PreMatchHost = null
 ## A finished match is written to the cached seed exactly once.
 var result_recorded := false
 ## A league watch keeps its FULL TIME card until the player taps it away (#124);
@@ -84,12 +85,14 @@ func _ready() -> void:
 	build_scene()
 	setup_audio()
 	highlights = HighlightDirector.new(self)
-	_parse_fixture_args()
+	fixture_arg_given = fixture.parse_args()
 	new_match(seeded)
 	dev = DevCapture.new()
 	dev.parse(self)
-	_build_wiki()
-	_build_selector()
+	wiki_host = WikiHost.new(self)
+	wiki_host.build()
+	fixture.build()
+	prematch = PreMatchHost.mount(self)
 	menus = MenuHost.new()
 	menus.attach(self)
 	_sync_overlay_scale()
@@ -152,8 +155,12 @@ func _sync_overlay_scale() -> void:
 		selector.ui_scale = chrome_scale
 	if wiki_host != null:
 		wiki_host.sync_scale()
+	if prematch != null:
+		prematch.sync(frame, chrome_scale, touch)
 	if menus != null:
 		menus.sync(frame, chrome_scale, touch)
+	if camera != null:
+		camera.fit()
 
 func new_match(seed: int) -> void:
 	if replay != null:
@@ -188,15 +195,6 @@ func new_match(seed: int) -> void:
 
 # --------------------------------------------------------------- fixture ----
 
-func _build_selector() -> void:
-	fixture.build()
-
-# -------------------------------------------------------------- encyclopedia --
-
-func _build_wiki() -> void:
-	wiki_host = WikiHost.new(self)
-	wiki_host.build()
-
 func open_select(from_menu: bool = false) -> void:
 	fixture.open(from_menu)
 
@@ -206,14 +204,9 @@ func _close_select() -> void:
 func _on_fixture_confirmed(h: String, a: String) -> void:
 	fixture.confirm(h, a)
 
-func _parse_fixture_args() -> void:
-	fixture_arg_given = fixture.parse_args()
-
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		_sync_overlay_scale()
-		if camera != null:
-			camera.fit()
 
 # ------------------------------------------------------------------ input ----
 
@@ -298,6 +291,8 @@ func _process(delta: float) -> void:
 	elapsed_real += delta
 	match_time += delta
 	dev.tick(self, delta)
+	if prematch != null and prematch.is_open():
+		return
 	if wiki_host != null and wiki_host.is_open():
 		return
 	if menus != null and menus.active():

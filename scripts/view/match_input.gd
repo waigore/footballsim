@@ -18,6 +18,14 @@ func _init(host) -> void:
 ## Route one event to whoever owns the screen. Returns true when a sheet over
 ## the pitch (encyclopedia, menus, fixture picker) swallowed it.
 func handle(event: InputEvent) -> bool:
+	# The pre-match briefing is the top modal while it is up: it answers every
+	# event, and nothing underneath it can start or scroll a match (#157).
+	if game.prematch != null and game.prematch.is_open():
+		var point: Vector2 = Vector2.ZERO
+		if event is InputEventMouse:
+			point = game.view.design(event.position, game.chrome_scale)
+		game.prematch.handle_input(event, point)
+		return true
 	if game.wiki_host != null and game.wiki_host.is_open():
 		game.wiki_host.handle_input(event)
 		return true
