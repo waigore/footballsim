@@ -259,12 +259,12 @@ func test_table_choices_belong_to_their_own_save() -> void:
 	var view := LeagueTableView.new()
 	view.attach(LeagueSave.open(first.slug))
 	assert_eq(view.mode, "full", "the first save lost its reading")
-	assert_eq(view.sort, "points", "the first save lost its sort")
-	assert_eq(view.dir, 1, "the first save lost its direction")
+	assert_eq(view.order.key, "points", "the first save lost its sort")
+	assert_eq(view.order.dir, 1, "the first save lost its direction")
 	view.attach(LeagueSave.open(second.slug))
 	assert_eq(view.mode, "", "a fresh save borrowed another save's reading")
-	assert_eq(view.sort, "", "a fresh save borrowed another save's sort")
-	assert_eq(view.dir, -1, "a fresh save borrowed another save's direction")
+	assert_eq(view.order.key, "", "a fresh save borrowed another save's sort")
+	assert_eq(view.order.dir, -1, "a fresh save borrowed another save's direction")
 
 func test_slugs_are_readable_and_files_stay_in_the_folder() -> void:
 	assert_eq(LeagueSave.slugify(""), "", "an empty name should fold to nothing")

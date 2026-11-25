@@ -271,7 +271,7 @@ func test_the_panel_doors_jump_pose_and_bind_the_table() -> void:
 	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table destination did not open the table")
 	# Closing is a slide the screen's own clock finishes: the door only aims it.
 	assert_false(screen.panel.is_open(), "the panel did not head back in")
-	assert_eq(screen.book.table.sort, str(season.save.read_meta().get(LeagueTableView.META_SORT, "")),
+	assert_eq(screen.book.table.order.key, str(season.save.read_meta().get(LeagueTableView.META_SORT, "")),
 		"the table did not read the season save's own sort")
 	assert_eq(screen.nav.depth(), depth + 1, "the jump did not become one page of history")
 	LeaguePanelDoors.nav(screen, "interest")

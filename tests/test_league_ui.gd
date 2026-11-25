@@ -897,8 +897,8 @@ func test_a_table_header_sorts_and_keeps_the_official_place() -> void:
 	assert_eq(str(stored.get("table_dir", "")), "desc", "the direction was not written to the save")
 	press_id("back")
 	press_id("table")
-	assert_eq(screen().book.table.sort, "club", "the table forgot its sort")
-	assert_eq(screen().book.table.dir, -1, "the table forgot its direction")
+	assert_eq(screen().book.table.order.key, "club", "the table forgot its sort")
+	assert_eq(screen().book.table.order.dir, -1, "the table forgot its direction")
 	press_id("back")
 	_leave_season()
 
