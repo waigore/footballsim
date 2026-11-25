@@ -150,7 +150,7 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
 		if kind == "play":
-			LeagueSheet.draw_play(c, cache, rect, bold)
+			_draw_play(c, rect, bold)
 		elif kind == "result":
 			var block := block_fixture(item["report"])
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 5)
@@ -161,6 +161,13 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 				LeagueInterestMark.ink(interest, away_id))
 		elif kind == "event":
 			_draw_event(c, rect, item, fonts, interest)
+
+## The ▶ beside a goal: a bordered gold chip, sized by the layout so the door
+## stays thumb-sized on every platform.
+func _draw_play(c: CanvasItem, rect: Rect2, bold: Font) -> void:
+	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, Color(0.96, 0.78, 0.30, 0.55), 1)
+	var mid: float = rect.position.y + rect.size.y * 0.5 + UiChrome.RISE
+	UiChrome.text_c(c, rect.get_center().x, mid, "▶ PLAY", 10, UiChrome.C_GOLD, bold)
 
 func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
 		interest: Dictionary) -> void:
