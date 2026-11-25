@@ -41,7 +41,9 @@ func ball_trajectory() -> Dictionary:
 func reach_time_on(p, path: Dictionary) -> float:
 	var pts: PackedVector2Array = path["points"]
 	var times: PackedFloat64Array = path["times"]
-	var spd: float = Attrs.max_speed(p) * (0.72 + 0.28 * p.stamina)
+	# The squad layer caches `Attrs.max_speed` per body (it is fixed once the
+	# attributes exist), and this read runs 22 times a shape pass.
+	var spd: float = p.spd_max * (0.72 + 0.28 * p.stamina)
 	for i in pts.size():
 		if p.pos.distance_to(pts[i]) <= spd * times[i] + 1.35:
 			return times[i]
@@ -51,7 +53,7 @@ func reach_time_on(p, path: Dictionary) -> float:
 func intercept_on(p, path: Dictionary) -> Vector2:
 	var pts: PackedVector2Array = path["points"]
 	var times: PackedFloat64Array = path["times"]
-	var spd: float = Attrs.max_speed(p) * (0.72 + 0.28 * p.stamina)
+	var spd: float = p.spd_max * (0.72 + 0.28 * p.stamina)
 	var last: Vector2 = e.ball.pos if pts.is_empty() else pts[pts.size() - 1]
 	for i in pts.size():
 		if p.pos.distance_to(pts[i]) <= spd * times[i] + 1.35:
