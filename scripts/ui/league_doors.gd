@@ -90,7 +90,9 @@ static func _typed(screen, code: int, ch: String = "") -> bool:
 			return true
 	# The STATS team filter is a typed field while that sheet is open.
 	if screen.mode == screen.MODE_STATS:
-		var typed_stats: Array = LeagueSheet.type_name(str(screen.stats_filter.get("team", "")), code)
+		var query := str(screen.stats_filter.get("team", ""))
+		var typed_stats: Array = LeagueTextField.type_char(query, ch) if ch != "" \
+			else LeagueTextField.type_name(query, code)
 		if bool(typed_stats[0]):
 			screen.stats_filter["team"] = str(typed_stats[1])
 			screen.refresh()

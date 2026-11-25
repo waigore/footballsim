@@ -207,11 +207,9 @@ func player_by_name(club_id: String, name: String) -> Dictionary:
 ## connection, otherwise the snapshot's table as of its snapshot date. An empty
 ## competition id reads every active league (the index), a competition id one.
 func table(competition_id: String = "") -> Array:
-	if competition_id == "":
-		if LeagueLedger.bound():
-			return _live_table("")
-		return _snapshot_table("")
-	if PLCompetitions.season_owns(competition_id):
+	# A bound save owns every reading: inactive leagues in the same file stay
+	# empty rather than falling back to the seed's snapshot (#185).
+	if LeagueLedger.bound():
 		return _live_table(competition_id)
 	return _snapshot_table(competition_id)
 

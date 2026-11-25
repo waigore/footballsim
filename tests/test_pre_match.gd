@@ -90,7 +90,8 @@ func test_a_league_briefing_reads_the_fixture_and_the_season() -> void:
 func test_a_single_match_briefing_says_kick_off_and_has_no_absences() -> void:
 	var view := PreMatchModel.build("MUN", "MCI", {}, null)
 	assert_eq(str(view["kick"]), "KICK OFF", "a single match does not say KICK OFF")
-	assert_eq(str(view["caption"]), MatchBilling.FRIENDLY_CAPTION, "a single match is not a friendly")
+	# Same-league pickers name the clubs' competition; they stay friendlies (#185/#209).
+	assert_eq(str(view["caption"]), "PREMIER LEAGUE · FRIENDLY", "a single match is not a friendly")
 	assert_eq((view["home_absences"] as Array).size(), 0, "a friendly has season absences")
 	assert_eq(str(view["date_label"]), "", "a friendly carries a league date")
 
@@ -432,12 +433,12 @@ func test_a_league_match_names_its_competition_everywhere() -> void:
 	assert_true(blurb.contains(billing.full_name), "the desk blurb does not name the competition")
 	assert_false(blurb.to_lower().contains("friendly"), "a league game was called a friendly")
 
-## The picker's match is a friendly, and a friendly never borrows a league's
-## competition or round: one match reads one way on every surface (#209).
+## The picker's match is a friendly: no matchday, chrome stays FRIENDLY, and a
+## same-league pair only names that competition on the caption (#185/#209).
 func test_a_single_match_names_one_competition_on_every_surface() -> void:
 	# A non-derby pair: a derby keeps its own title (pinned in the test below).
 	var view := PreMatchModel.build("MUN", "LIV", {}, null)
-	assert_eq(str(view["caption"]), MatchBilling.FRIENDLY_CAPTION, "the caption changed shape")
+	assert_eq(str(view["caption"]), "PREMIER LEAGUE · FRIENDLY", "the caption changed shape")
 	assert_eq(str(view["competition"]), MatchBilling.FRIENDLY, "the briefing claims a league")
 	assert_eq(int(view["matchday"]), 0, "a friendly was given a matchday")
 	assert_true(bool(view["friendly"]), "a single match is not marked a friendly")
@@ -516,8 +517,8 @@ func test_the_picker_rebinds_the_scene_to_a_friendly() -> void:
 	var sheet := FixtureSheet.new(game)
 	sheet.confirm("MUN", "MCI")
 	assert_true(game.billing.friendly, "the picker kept the season's competition")
-	assert_eq(str(game.prematch.asked["caption"]), MatchBilling.FRIENDLY_CAPTION,
-		"the picker's briefing still names a league")
+	assert_eq(str(game.prematch.asked["caption"]), "PREMIER LEAGUE · FRIENDLY",
+		"the picker's briefing lost its friendly caption")
 	game.free()
 
 ## The picker's own footer counts the clubs the file carries, and names the

@@ -71,17 +71,17 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 		"auto_seconds": 10.0,
 	}
 
-## League fixtures use MatchBilling; a cross-league friendly names both sides.
+## League fixtures use MatchBilling; a picker friendly names its competition(s).
 static func _caption(billing: MatchBilling, home: Dictionary, away: Dictionary,
 		cross_league: bool) -> String:
 	if not billing.friendly:
 		return billing.caption()
-	if not cross_league:
-		return billing.caption()
 	var home_comp := PLRepository.shared().competition_name(str(home.get("competition", "")))
 	var away_comp := PLRepository.shared().competition_name(str(away.get("competition", "")))
-	if home_comp != "" and away_comp != "":
+	if cross_league and home_comp != "" and away_comp != "":
 		return "FRIENDLY · %s v %s" % [home_comp, away_comp]
+	if home_comp != "":
+		return "%s · FRIENDLY" % home_comp
 	return billing.caption()
 
 ## The armband goes to the best-rated starter: the snapshot carries no captain,

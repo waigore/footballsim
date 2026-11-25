@@ -164,7 +164,7 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
 		if kind == "play":
-			LeagueSheet.draw_play(c, cache, rect, bold)
+			_draw_play(c, rect, bold)
 		elif kind == "league_head":
 			LeagueExtra.draw_league_head(c, rect, str(item.get("competition", "")),
 				int(item.get("matchday", 1)), fonts)
