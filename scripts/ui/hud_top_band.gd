@@ -54,23 +54,29 @@ func _possession(p: HudPaint, c: CanvasItem, engine, bar_r: Rect2, panel_bottom:
 	p.text(c, Vector2(bar_r.position.x, panel_bottom + 26), "%d%%" % pct_a, 11, UiChrome.C_DIM, f_bold)
 	p.text_r(c, bar_r.position.x + bar_r.size.x, panel_bottom + 26, "%d%%" % (100 - pct_a), 11, UiChrome.C_DIM, f_bold)
 
-## Highlights broadcast: the pulsing "next chance" chip while the director
-## fast-forwards, and the replay flag while a goal clip runs.
+## A replay mode fast-forwarding between the moments it replays: the pulsing
+## chip says which moment the director is waiting for (#164), and the replay flag
+## reads while a goal clip runs.
 func flags(p: HudPaint, c: CanvasItem, game, touch: bool, f_bold: Font) -> void:
-	if game.mode == "highlights" and game.fast_mode and not game.paused and game.match_time > 9.0:
+	if game.mode != "full" and game.fast_mode and not game.paused and game.match_time > 9.0:
 		var band := HudLayout.pitch_band(p.vp, touch)
 		var chip_y: float = band.position.y + 6.0 if p.compact() else p.vp.y - 156.0
 		var sw := 226.0
 		var sx := p.vp.x * 0.5 - sw * 0.5
 		var pulse := 0.55 + 0.25 * sin(Time.get_ticks_msec() * 0.006)
 		p.panel(c, Color(0.03, 0.05, 0.06, 0.82), Rect2(sx, chip_y, sw, 26), 6, Color(1, 1, 1, 0.10))
-		p.text_c(c, p.vp.x * 0.5, chip_y + 18.0, "SIMULATING  ·  NEXT CHANCE", 11, Color(0.62, 0.82, 0.86, pulse), f_bold)
+		p.text_c(c, p.vp.x * 0.5, chip_y + 18.0, sim_chip_label(game.mode), 11, Color(0.62, 0.82, 0.86, pulse), f_bold)
 	if game.replay_banner > 0.0:
 		var ry: float = HudLayout.scoreboard_rect(p.vp).end.y + 34
 		var rw := 126.0
 		var rxp := p.vp.x * 0.5 - rw * 0.5
 		p.panel(c, Color(0.12, 0.09, 0.03, 0.95), Rect2(rxp, ry, rw, 24), 6, Color(0.96, 0.78, 0.30, 0.35))
 		p.text_c(c, p.vp.x * 0.5, ry + 17, "◀  REPLAY", 12, UiChrome.C_GOLD, f_bold)
+
+## What the simulating chip is waiting for: a chance in Highlights, a goal in
+## Goals only.
+static func sim_chip_label(mode: String) -> String:
+	return "SIMULATING  ·  NEXT GOAL" if mode == "goals" else "SIMULATING  ·  NEXT CHANCE"
 
 func _badge(p: HudPaint, c: CanvasItem, engine, r: Rect2, t: int, f_bold: Font) -> void:
 	var d: Dictionary = engine.teams[t]["data"]

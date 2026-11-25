@@ -56,6 +56,7 @@ suites = [
   "test_touch_flow.gd",
   "test_wiki_entry.gd",
   "test_chrome_density.gd",
+  "test_match_mode.gd",
 ]
 
 [domains.tactics]
@@ -100,6 +101,8 @@ suites = [
   "test_chrome_density.gd",
   # Paint grammar of every door painted on a sheet (season, System, picker).
   "test_ui_chrome_doors.gd",
+  # The match view preference: the settings sheet and the broadcast's door.
+  "test_match_mode.gd",
 ]
 
 # Shared engine spine: laws + finishing + restart + managers when a core file moves.

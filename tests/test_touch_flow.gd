@@ -160,6 +160,8 @@ func test_key_bindings_cover_every_arm() -> void:
 	assert_almost_eq(game.speed, 8.0, 0.01, "8x not selected")
 	game.mode = "highlights"
 	_key(KEY_H)
+	assert_eq(game.mode, "goals", "H did not reach Goals only")
+	_key(KEY_H)
 	assert_eq(game.mode, "full", "H did not switch to the full match")
 	_key(KEY_H)
 	assert_eq(game.mode, "highlights", "H did not switch back to highlights")

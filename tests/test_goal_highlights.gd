@@ -387,6 +387,41 @@ func test_a_shot_rewinds_the_live_picture_once() -> void:
 	director.on_event({"type": "shot", "clock": trigger, "player_id": -1})
 	assert_false(host.in_highlight, "the same shot was replayed twice")
 
+## Goals only (#164): the ring replays the goal and nothing else, and the report
+## clip is still cut — the capture path never reads the live mode.
+func test_goals_only_rewinds_on_a_goal_and_not_on_a_chance() -> void:
+	var ring := _ring_host(606)
+	var host: FakeHost = ring[0]
+	var director: HighlightDirector = ring[1]
+	var engine = ring[2]
+	host.mode = "goals"
+	var trigger := float(engine.clock)
+	director.on_event({"type": "shot", "clock": trigger, "player_id": -1})
+	assert_false(host.in_highlight, "Goals only replayed a shot")
+	director.on_event({"type": "corner", "clock": trigger, "player_id": -1})
+	assert_false(host.in_highlight, "Goals only replayed a corner")
+	director.on_event({"type": "card", "clock": trigger, "player_id": -1})
+	assert_false(host.in_highlight, "Goals only replayed a card")
+	director.on_event({"type": "penalty_taken", "clock": trigger, "player_id": -1})
+	assert_false(host.in_highlight, "Goals only replayed a penalty that never scored")
+	director.on_event({"type": "goal", "clock": trigger, "player_id": -1, "team": 0, "text": "GOAL!"})
+	assert_true(host.in_highlight, "Goals only did not replay the goal")
+	assert_false(host.fast_mode, "the goal replay did not hold the fast-forward")
+	assert_gt(host.highlight_until, float(engine.clock), "the replay window is empty")
+
+func test_goals_only_still_cuts_the_report_clip() -> void:
+	var ring := _ring_host(707)
+	var host: FakeHost = ring[0]
+	var director: HighlightDirector = ring[1]
+	var engine = ring[2]
+	host.mode = "goals"
+	var fx := str((season.plan()[0] as Dictionary)["id"])
+	season.start_watch(fx)
+	var before := season.captured.size()
+	director.on_event({"type": "goal", "clock": float(engine.clock), "minute": 4,
+		"player_id": -1, "team": 0, "text": "GOAL!"})
+	assert_eq(season.captured.size(), before + 1, "Goals only stopped cutting the report clip")
+
 func test_a_watch_goal_keeps_the_captured_clip() -> void:
 	# A watched fixture the engine has just finished: its goal rows are written,
 	# one goal has a live capture and the other does not.

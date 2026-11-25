@@ -333,7 +333,6 @@ func test_closing_keeps_music_only_for_fixture_setup() -> void:
 
 func test_the_backdrop_falls_back_and_crossfades() -> void:
 	game.menus.open_menu()
-	assert_eq(game.menus.shell.volume_percent(), game.menus.shell.volume_percent(), "the volume readout is unstable")
 	var saved: Array = game.menus.shell.stills
 	game.menus.shell.stills = []
 	game.menus.shell.queue_redraw()
