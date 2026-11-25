@@ -9,6 +9,43 @@ extends RefCounted
 ## builder works on the screen's own fields, exactly like `LeagueCalendar`, so the
 ## screen and its tests keep reading the same state they always did.
 
+## Panel destination (LeaguePanel.pose) for each pose on screen.
+static func pose_names() -> Dictionary:
+	return {
+		LeagueScreen.MODE_HUB: "fixtures", LeagueScreen.MODE_TABLE: "table",
+		LeagueScreen.MODE_CALENDAR: "calendar", LeagueScreen.MODE_INTEREST: "interest",
+		LeagueScreen.MODE_STATS: "stats", LeagueScreen.MODE_SYSTEM: "system",
+		LeagueScreen.MODE_REPORT: "fixtures", LeagueScreen.MODE_PODIUM: "stats",
+	}
+
+## The sheet that owns a pose, in a fixed order: its name on the screen, the
+## layout it answers, the body it paints and the chrome it paints around it. One
+## table, read by `pose`, so the screen never decodes a dispatch of its own.
+static func sheets() -> Dictionary:
+	return {
+		LeagueScreen.MODE_HUB: ["hub", "hub_layout", "draw_hub_body", "draw_hub_chrome"],
+		LeagueScreen.MODE_WIZARD: ["start", "wizard_layout", "draw_wizard_body", "draw_wizard_chrome"],
+		LeagueScreen.MODE_LOAD: ["start", "load_layout", "draw_load_body", "draw_load_chrome"],
+		LeagueScreen.MODE_TABLE: ["book", "table_layout", "draw_table_body", "draw_table_chrome"],
+		LeagueScreen.MODE_CALENDAR: ["book", "calendar_layout", "draw_calendar_body",
+			"draw_calendar_chrome"],
+		LeagueScreen.MODE_REPORT: ["book", "report_layout", "draw_report_body", "draw_report_chrome"],
+		LeagueScreen.MODE_PODIUM: ["book", "podium_layout", "draw_podium_body", "draw_podium_chrome"],
+		LeagueScreen.MODE_SYSTEM: ["system", "layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_STATS: ["extra", "stats_layout", "draw_stats_body", "draw_stats_chrome"],
+		LeagueScreen.MODE_INTEREST: ["extra", "interest_layout", "draw_interest_body",
+			"draw_interest_chrome"],
+	}
+
+## The dispatch of one pose: `[sheet, layout, body, chrome]`, empty for a mode
+## no sheet owns.
+static func pose(mode: String) -> Array:
+	return sheets().get(mode, [])
+
+## The panel's reading for a pose, or "" when the panel has no door for it.
+static func panel_reading(mode: String) -> String:
+	return str(pose_names().get(mode, ""))
+
 static func build(screen) -> Dictionary:
 	var mode: String = str(screen.mode)
 	if mode == LeagueScreen.MODE_WIZARD or mode == LeagueScreen.MODE_LOAD:

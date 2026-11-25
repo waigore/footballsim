@@ -29,21 +29,21 @@ Shipped (wiki domains playable; DRs accepted):
 | Teams of Interest: followed club's games stay on Watch | `league_interest.gd`; DR-20261125-09; [#104](https://github.com/waigore/footballsim/issues/104) |
 | Shape pass shares one ball path per pass | DR-20261125-11 |
 | Encyclopedia competition hubs + index | `pl_competitions.gd`; DR-20261126-01; [#190](https://github.com/waigore/footballsim/issues/190) |
-| Engine priced onto the PL-envelope λ | DR-20261126-02; [#192](https://github.com/waigore/footballsim/issues/192) pricing half |
+| Engine λ, keeper dive, openness | DR-20261126-07/08; [#213](https://github.com/waigore/footballsim/pull/213)/[#221](https://github.com/waigore/footballsim/pull/221)/[#225](https://github.com/waigore/footballsim/pull/225); [#192](https://github.com/waigore/footballsim/issues/192) |
 | One competition per match; places as ordinals | `match_billing.gd`; DR-20261126-06; [#209](https://github.com/waigore/footballsim/issues/209), [#207](https://github.com/waigore/footballsim/issues/207) |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Engine creation gradient vs λ | [#192](https://github.com/waigore/footballsim/issues/192) pricing landed (DR-20261126-02). Even fixtures ~30% above λ; weak away sides under-create — creation work, not a price cut |
+| 1 | The weak away side's thin chances | [#192](https://github.com/waigore/footballsim/issues/192). Level closed (n=96: goals +6/−2, +5/−5% of λ; DR-20261126-08). Dominated side gets 5–6 shots/match — creation, not pricing |
 | 2 | Native match hot loop | DR-20261123-02 future tightening under the 120 s budget. Shape-pass shared (DR-20261125-11); tick still GDScript |
 
 ## Next pick
 
-**Engine creation gradient vs λ** — watched matches still disagree with Auto
-(P2). Needs design input first. Native hot loop (rank 2)
-stays optional while the census fits 120 s.
+**The weak away side's thin chances** — dominated sides take 5–6 shots/match vs
+λ's 6–7; level on λ (n=96). Needs creation design, not a price cut. Native hot
+loop optional while census fits 120 s.
 
 ## Out of scope / blocked
 

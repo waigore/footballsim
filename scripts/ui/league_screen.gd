@@ -30,12 +30,6 @@ const MODE_SYSTEM := "system"
 const MODE_STATS := "stats"
 const MODE_INTEREST := "interest"
 
-## Panel destination (LeaguePanel.pose) for each pose on screen.
-const POSE_NAMES := {
-	MODE_HUB: "fixtures", MODE_TABLE: "table", MODE_CALENDAR: "calendar",
-	MODE_INTEREST: "interest", MODE_STATS: "stats", MODE_SYSTEM: "system",
-	MODE_REPORT: "fixtures", MODE_PODIUM: "stats",
-}
 
 var ui_scale := 1.0
 var touch := false
@@ -98,19 +92,6 @@ var focus := LeagueFieldFocus.new()
 var menu_layer: InterestLayer = null
 var tooltip: DateOverlay = null
 var _last_mode := ""
-## Pose -> [sheet, layout, body painter, chrome painter].
-var _poses := {
-	MODE_HUB: ["hub", "hub_layout", "draw_hub_body", "draw_hub_chrome"],
-	MODE_WIZARD: ["start", "wizard_layout", "draw_wizard_body", "draw_wizard_chrome"],
-	MODE_LOAD: ["start", "load_layout", "draw_load_body", "draw_load_chrome"],
-	MODE_TABLE: ["book", "table_layout", "draw_table_body", "draw_table_chrome"],
-	MODE_CALENDAR: ["book", "calendar_layout", "draw_calendar_body", "draw_calendar_chrome"],
-	MODE_REPORT: ["book", "report_layout", "draw_report_body", "draw_report_chrome"],
-	MODE_PODIUM: ["book", "podium_layout", "draw_podium_body", "draw_podium_chrome"],
-	MODE_SYSTEM: ["system", "layout", "draw_body", "draw_chrome"],
-	MODE_STATS: ["extra", "stats_layout", "draw_stats_body", "draw_stats_chrome"],
-	MODE_INTEREST: ["extra", "interest_layout", "draw_interest_body", "draw_interest_chrome"],
-}
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -243,7 +224,7 @@ func refresh() -> void:
 	# A confirmation belongs to the load list: any other pose puts it away.
 	if mode != MODE_LOAD:
 		delete.clear()
-	var pose: Array = _poses.get(mode, [])
+	var pose: Array = LeagueView.pose(mode)
 	if body == null or pose.is_empty():
 		return
 	var sheet := _sheet(pose)
@@ -260,8 +241,15 @@ func refresh() -> void:
 		if str(item.get("id", "")) == "back":
 			item["disabled"] = not can_back
 	var content := body.set_sheet(items, vp, mode != _last_mode, _bottom_bar())
-	body.painter = Callable(sheet, str(pose[2])).bind(vp, UiChrome.fonts(), content, view)
-	panel.active = str(POSE_NAMES.get(mode, ""))
+	var fonts := UiChrome.fonts()
+	body.painter = Callable(sheet, str(pose[2])).bind(vp, fonts, content, view)
+	# The body paints its own pinned doors with the sheet's paint grammar, so it
+	# needs the font set and the hub's style cache, and it goes quiet while the
+	# delete question owns the press.
+	body.fonts = fonts
+	body.cache = hub.cache
+	body.frozen = delete_confirm_open()
+	panel.active = LeagueView.panel_reading(mode)
 	# The drawer door is the season's only way to its other readings, so it is
 	# sized for the pointer that will press it (#204).
 	panel.touch = touch
@@ -299,8 +287,9 @@ func delete_confirm_open() -> bool:
 	return mode == MODE_LOAD and delete.is_open()
 
 ## Hit test walks back to front so later items (e.g. a delete chip) win. The
-## confirmation is a layer of its own: while it is up it is the only surface
-## that answers, and an open menu is in front of everything else (#107).
+## layer stack above the body answers first: the delete question is the only
+## surface while it is up, and an open menu is in front of everything else
+## (#107); the body it covers is frozen and answers nothing.
 func button_at(p: Vector2) -> String:
 	if delete_confirm_open():
 		return delete.hit(p, design_vp())
@@ -369,19 +358,12 @@ func _draw() -> void:
 	if vp.x <= 1.0 or vp.y <= 1.0:
 		return
 	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.008, 0.014, 0.018, 0.94))
-	var pose: Array = _poses.get(mode, [])
+	var pose: Array = LeagueView.pose(mode)
 	if pose.is_empty():
 		return
 	var sheet := _sheet(pose)
 	var fonts := UiChrome.fonts()
 	hints.clear()
 	Callable(sheet, str(pose[3])).call(self, vp, fonts, current_view(), hints)
-	if body != null:
-		# Pinned doors keep the sheet's paint grammar (it owns the style cache).
-		for item in body.pinned:
-			var rect: Rect2 = item["rect"]
-			if str(item["kind"]) == "button":
-				UiChrome.button(self, hub.cache, rect, str(item["label"]), fonts["bold"],
-					bool(item.get("primary", false)), -1, "", not bool(item.get("disabled", false)))
-			elif str(item["kind"]) == "chip":
-				UiChrome.chip(self, hub.cache, rect, str(item["label"]), fonts["bold"])
+	# The sheet's pinned doors are the body's paint: it clips the scrolling rows
+	# around them, so it draws them itself (LeagueChrome.pinned_door).

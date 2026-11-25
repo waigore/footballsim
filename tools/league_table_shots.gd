@@ -105,8 +105,8 @@ func _head(screen: LeagueScreen, id: String) -> Dictionary:
 
 func _print_table(league: LeagueHost, label: String) -> void:
 	var screen: LeagueScreen = league.screen
-	print("TABLE ", label, " mode=", screen.book.table.mode, " sort=", screen.book.table.sort,
-		" dir=", screen.book.table.dir)
+	print("TABLE ", label, " mode=", screen.book.table.mode, " sort=", screen.book.table.order.key,
+		" dir=", screen.book.table.order.dir)
 	var lines: Array = []
 	for item in screen.buttons:
 		if str(item["kind"]) != "table_row":
