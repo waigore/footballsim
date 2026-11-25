@@ -59,6 +59,26 @@ func test_same_day_fixtures_are_grouped_by_league() -> void:
 			seen = cid
 	assert_eq(switches, 2, "the day is not grouped into two league blocks")
 
+func test_the_roundup_groups_by_league() -> void:
+	var reports: Array = []
+	for fx in season.plan():
+		reports.append({"fixture": fx, "events": []})
+	var items: Array = LeagueReportSheet.new().layout(Vector2(1000.0, 1400.0), {"roundup": reports})
+	var heads: Array = []
+	for item in items:
+		if str(item.get("kind", "")) == "league_head":
+			heads.append(item)
+	assert_eq(heads.size(), 2, "a mixed roundup should head each league once")
+	assert_eq(str(heads[0]["competition"]), "PL", "the roundup lost the first league's head")
+	assert_eq(str(heads[1]["competition"]), "LL", "the roundup lost the second league's head")
+	var single: Array = LeagueReportSheet.new().layout(Vector2(1000.0, 800.0),
+		{"roundup": [{"fixture": season.plan()[0], "events": []}]})
+	var single_heads := 0
+	for item in single:
+		if str(item.get("kind", "")) == "league_head":
+			single_heads += 1
+	assert_eq(single_heads, 0, "a one-league roundup does not need a head")
+
 func test_continue_sims_every_league_on_the_shared_clock() -> void:
 	var before := season.state()
 	var result := season.advance()

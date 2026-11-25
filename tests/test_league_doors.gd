@@ -248,7 +248,7 @@ func test_deleting_the_open_save_unloads_it_first() -> void:
 	assert_not_null(throwaway, "the throwaway season was not created")
 	screen.season = throwaway
 	screen.mode = LeagueScreen.MODE_LOAD
-	screen.saves = LeagueSave.list()
+	screen.saves = LeagueSaveCatalog.list()
 	screen.refresh()
 	var slug := throwaway.save.slug
 	screen.click("delete:" + slug)
@@ -256,7 +256,7 @@ func test_deleting_the_open_save_unloads_it_first() -> void:
 	assert_eq(screen.delete.name, "Doors Throwaway", "the question did not name the save")
 	assert_true(screen.season == throwaway, "asking to delete unloaded the season already")
 	var still: Array = []
-	for row in LeagueSave.list():
+	for row in LeagueSaveCatalog.list():
 		still.append(str(row["slug"]))
 	assert_true(still.has(slug), "the save went before the answer")
 	# DELETE confirms: the already-open season unloads before its file goes, so
@@ -272,7 +272,7 @@ func test_deleting_the_open_save_unloads_it_first() -> void:
 	var copy := season.save.write_copy("Doors other copy")
 	assert_true(copy != "", "the stand-in save was not written")
 	screen.season = season
-	screen.saves = LeagueSave.list()
+	screen.saves = LeagueSaveCatalog.list()
 	screen.refresh()
 	screen.click("delete:" + copy)
 	assert_eq(screen.season, season, "asking to delete another save unloaded the open one")
@@ -286,7 +286,7 @@ func test_the_delete_question_is_a_door_of_its_own() -> void:
 	assert_true(copy != "", "the kept save was not written")
 	screen.season = season
 	screen.mode = LeagueScreen.MODE_LOAD
-	screen.saves = LeagueSave.list()
+	screen.saves = LeagueSaveCatalog.list()
 	screen.refresh()
 	var vp: Vector2 = screen.design_vp()
 	screen.click("delete:" + copy)
@@ -299,7 +299,7 @@ func test_the_delete_question_is_a_door_of_its_own() -> void:
 	assert_true(screen.key(KEY_ESCAPE), "Esc was not taken by the dialog")
 	assert_false(screen.delete.is_open(), "Esc did not put the question away")
 	var kept: Array = []
-	for row in LeagueSave.list():
+	for row in LeagueSaveCatalog.list():
 		kept.append(str(row["slug"]))
 	assert_true(kept.has(copy), "cancelling deleted the save")
 	# The dialog's own CANCEL is the other safe answer.
@@ -311,7 +311,7 @@ func test_the_delete_question_is_a_door_of_its_own() -> void:
 	assert_true(screen.key(KEY_ENTER), "Enter was not taken by the dialog")
 	assert_false(screen.delete.is_open(), "Enter did not answer the dialog")
 	var gone: Array = []
-	for row in LeagueSave.list():
+	for row in LeagueSaveCatalog.list():
 		gone.append(str(row["slug"]))
 	assert_false(gone.has(copy), "Enter did not delete the save")
 	assert_eq(screen.mode, LeagueScreen.MODE_LOAD, "answering the dialog left the load list")

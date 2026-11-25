@@ -167,16 +167,11 @@ func load_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append(LeagueExtra.back_item())
 	return items
 
-## A league group's heading on a mixed day: the competition name, its gameweek,
-## and a rule line so the two groups never blur into one list.
+## A league group's heading on a mixed day (shared with the roundup, #189).
 func _draw_league_head(c: CanvasItem, rect: Rect2, item: Dictionary,
 		fonts: Dictionary) -> void:
-	var name: String = PLRepository.shared().competition_name(str(item.get("competition", "")))
-	UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
-		"%s  ·  GW %d" % [name, int(item.get("matchday", 1))], 10, UiChrome.C_GOLD, fonts["bold"])
-	var width := UiChrome.text_width(fonts["bold"], "%s  ·  GW 00" % name, 10)
-	c.draw_rect(Rect2(rect.position.x + width + 10.0, rect.position.y + 8.0,
-		maxf(rect.size.x - width - 10.0, 0.0), 1.0), Color(1, 1, 1, 0.10))
+	LeagueExtra.draw_league_head(c, rect, str(item.get("competition", "")),
+		int(item.get("matchday", 1)), fonts)
 
 # gd-tools: no cover start
 

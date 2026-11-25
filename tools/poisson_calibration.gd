@@ -138,7 +138,9 @@ static func _champion(points: Dictionary, goals_for: Dictionary, goals_against: 
 
 ## Seasons of sampled football, aggregated into the envelope's metrics.
 static func run(seasons: int, seed0: int, cal: Dictionary, clubs: Array = []) -> Dictionary:
-	var ids: Array = clubs.duplicate() if not clubs.is_empty() else TeamData.team_ids()
+	# The envelope gates the Premier League's scoring bands, so the sampled
+	# league is the Premier League even when the seed carries more competitions.
+	var ids: Array = clubs.duplicate() if not clubs.is_empty() else TeamData.team_ids("PL")
 	var fixtures := season_fixtures(ids)
 	var matches := 0
 	var goals := 0

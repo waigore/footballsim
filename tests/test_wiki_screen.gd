@@ -28,7 +28,7 @@ func after_all() -> void:
 func test_the_sheet_opens_on_the_league() -> void:
 	assert_true(wiki.is_open(), "the sheet did not open")
 	assert_eq(str(wiki.current()["page"]), "league", "the sheet did not land on the league")
-	assert_eq(str(wiki.page_data["title"]), "LEAGUES", "the index did not render")
+	assert_eq(str(wiki.page_data["title"]), "PREMIER LEAGUE", "the league page did not render")
 	assert_gte(wiki.body.rows().size(), 20, "the league page laid out no rows")
 
 func test_a_tap_on_a_table_row_opens_that_club() -> void:

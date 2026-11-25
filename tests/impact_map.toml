@@ -152,6 +152,9 @@ suites = [
   "test_kits.gd",
   "test_tactics.gd",
   "test_managers.gd",
+  # The competitions one database carries (#190): data reads and the pages
+  # that draw them, so it rides with the seed it proves.
+  "test_pl_competitions.gd",
 ]
 
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
@@ -161,6 +164,7 @@ suites = [
 [domains.league]
 suites = [
   "test_league_rules.gd",
+  "test_league_rules_migration.gd",
   "test_league_save.gd",
   "test_fixture_calendar.gd",
   "test_strongest_xi.gd",
@@ -175,6 +179,10 @@ suites = [
   "test_league_system.gd",
   "test_league_interest.gd",
   "test_league_sheets.gd",  "test_goal_highlights.gd",
+  # Multi-league saves and their chrome (#185): both calendars, the shared
+  # clock, the league-scoped tables/filters and the picker.
+  "test_multi_league.gd",
+  "test_multi_ui.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -188,6 +196,8 @@ suites = [
   "test_wiki_season.gd",
   # The club page reads the season ahead: results and the fixtures still to come.
   "test_wiki_upcoming.gd",
+  # The league index and the per-competition hubs (#190).
+  "test_pl_competitions.gd",
   "test_hud_layout.gd",
   "test_hud_chrome.gd",
   "test_touch_flow.gd",
@@ -380,6 +390,13 @@ domain = "pitch_queries"
 match = "scripts/data/league_*.gd*"
 domain = "league"
 
+# The competitions a database carries (#190): the list, the default and which
+# one the open season owns. Read by the encyclopedia's hubs and by the
+# repository's per-competition reads.
+[[rules]]
+match = "scripts/data/pl_competitions.gd*"
+domain = "pl_data"
+
 # Every other data module (clubs, squads, snapshot storage, in-sim ledger)
 # shares the same suites; the old per-shard rules are gone because the shards
 # are gone.
@@ -447,7 +464,7 @@ domain = "hud_chrome"
 
 [[rules]]
 match = "scripts/ui/team_select.gd*"
-domain = "hud_chrome"
+domain = "league"
 
 [[rules]]
 match = "scripts/ui/hud_player_card.gd*"

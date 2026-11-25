@@ -135,8 +135,12 @@ static func effective(s: Dictionary) -> Vector2:
 ## league, so a La Liga club is not read against an English average (or the
 ## reverse): the two top flights ship different squad strengths.
 static func league_means(competition_id: String = "PL") -> Dictionary:
-	if _means_cache.has(competition_id):
-		return _means_cache[competition_id]
+	# The cache is per bound file, not just per competition: a session opens the
+	# seed probe, the cached seed and a save, and a mean read before the clubs
+	# were there must never stick to the next file.
+	var key := PLDatabase.current_path() + "|" + competition_id
+	if _means_cache.has(key):
+		return _means_cache[key]
 	var att := 0.0
 	var dfn := 0.0
 	var n := 0
@@ -146,7 +150,7 @@ static func league_means(competition_id: String = "PL") -> Dictionary:
 		dfn += eff.y
 		n += 1
 	var out := {"attack": att / maxf(float(n), 1.0), "defence": dfn / maxf(float(n), 1.0), "clubs": n}
-	_means_cache[competition_id] = out
+	_means_cache[key] = out
 	return out
 
 ## The competition a fixture belongs to, read from the home club's own row: a

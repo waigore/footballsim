@@ -111,7 +111,7 @@ func club(club_id: String) -> Dictionary:
 	var out := {
 		"id": str(row["id"]),
 		"competition_id": str(row.get("competition_id", "")),
-		"competition": competition_name(str(row.get("competition_id", ""))),
+		"competition": str(row.get("competition_id", "")),
 		"name": str(row["name"]),
 		"short": str(row["short"]),
 		"abbr": str(row["abbr"]),

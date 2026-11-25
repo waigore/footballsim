@@ -73,18 +73,14 @@ static func competition_blocks(competition_id: String = "") -> Array:
 	if top.is_empty():
 		return []
 	var label := "FOOTBALLSIM  ·  IN-SIM SCORERS"
-	if competition_id == "":
-		return [{"k": "section", "text": label},
-			{"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"], "widths": [0.36, 0.22, 0.20, 0.22], "text_cols": [0, 1], "rows": top}]
-	var comp := repo().competition(competition_id)
 	return [
-		{"k": "section", "text": "%s  ·  %s" % [str(comp.get("short_name", "")), label]},
+		{"k": "section", "text": label},
 		{"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"], "widths": [0.36, 0.22, 0.20, 0.22], "text_cols": [0, 1], "rows": top},
 	]
 
-## The index page's in-sim block (every active competition).
-static func league_blocks() -> Array:
-	return competition_blocks("")
+## The hub's in-sim block, scoped to the competition it belongs to.
+static func league_blocks(competition_id: String = "") -> Array:
+	return competition_blocks(competition_id)
 
 ## A club page's in-sim blocks. While a season is open the record is already in
 ## the page's season header, so only the club's scorer chart is appended here.

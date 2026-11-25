@@ -153,6 +153,26 @@ func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(24.0, y + float(i) * 24.0, vp.x - 48.0, 23.0)})
 	return items
 
+## A league group's heading on a mixed day: the competition name, its gameweek,
+## and a rule line so two groups never blur into one list (#189).
+static func draw_league_head(c: CanvasItem, rect: Rect2, competition_id: String,
+		matchday: int, fonts: Dictionary) -> void:
+	var name: String = PLRepository.shared().competition_name(competition_id)
+	var text := "%s  ·  GW %d" % [name, matchday]
+	UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
+		text, 10, UiChrome.C_GOLD, fonts["bold"])
+	var width := UiChrome.text_width(fonts["bold"], "%s  ·  GW 00" % name, 10)
+	c.draw_rect(Rect2(rect.position.x + width + 10.0, rect.position.y + 8.0,
+		maxf(rect.size.x - width - 10.0, 0.0), 1.0), Color(1, 1, 1, 0.10))
+
+## How many competitions a day's fixtures span: a head is only worth its line
+## when the list really holds two leagues.
+static func distinct_competitions(fixtures: Array) -> int:
+	var ids := {}
+	for fx in fixtures:
+		ids[str(fx.get("competition_id", ""))] = true
+	return ids.size()
+
 static func _month_label(month: String) -> String:
 	var parts := month.split("-")
 	if parts.size() < 2:

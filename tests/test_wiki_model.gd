@@ -13,32 +13,19 @@ func after_all() -> void:
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
 
-func test_the_leagues_index_has_every_agreed_section() -> void:
+func test_the_league_page_has_every_agreed_section() -> void:
 	var page := WikiModel.page(WikiModel.LEAGUE, "")
 	assert_eq(page["page"], "league", "wrong page kind")
-	assert_eq(str(page["title"]), "LEAGUES", "the index lost its title")
+	assert_eq(str(page["title"]), "PREMIER LEAGUE", "the league page lost its title")
 	var kinds := _kinds(page)
-	assert_has(kinds, "table", "no table on the index")
-	assert_has(kinds, "chips", "no competition index on the index")
-	assert_gte(_rows_in(page, "PREMIER LEAGUE  ·  TABLE"), 6, "the Premier League table is short")
-	assert_gte(_rows_in(page, "LA LIGA  ·  TABLE"), 6, "the La Liga table is short")
-	assert_gte(_rows_in(page, "PREMIER LEAGUE  ·  TOP SCORERS"), 5, "no Premier League leaders")
+	assert_has(kinds, "table", "no table on the league page")
+	assert_has(kinds, "chips", "no club index on the league page")
+	assert_gte(_rows_in(page, "LEAGUE TABLE"), 20, "the league table is short")
+	assert_gte(_rows_in(page, "TOP SCORERS  ·  SNAPSHOT"), 5, "no player leaders")
+	assert_gte(_rows_in(page, "LATEST RESULTS  ·  SNAPSHOT"), 5, "no recent results")
 	assert_eq(PLRepository.shared().table("PL").size(), 20, "the table behind the page changed size")
 
-func test_a_competition_hub_has_every_agreed_section() -> void:
-	var page := WikiModel.page(WikiModel.COMPETITION, "LL")
-	assert_eq(str(page["title"]), "LA LIGA", "the hub lost its title")
-	var kinds := _kinds(page)
-	assert_has(kinds, "table", "no table on the hub")
-	assert_has(kinds, "chips", "no club index on the hub")
-	assert_gte(_rows_in(page, "LEAGUE TABLE"), 20, "the hub table is short")
-	assert_gte(_rows_in(page, "TOP SCORERS  ·  SNAPSHOT"), 5, "no scorer chart")
-	assert_gte(_rows_in(page, "TOP ASSISTS  ·  SNAPSHOT"), 1, "no assist chart")
-	assert_gte(_rows_in(page, "LATEST RESULTS  ·  SNAPSHOT"), 5, "no recent results")
-	for target in _targets(page):
-		assert_true(WikiModel.has_page(str(target["page"]), str(target["id"])), "dead link %s" % str(target))
-
-func test_every_link_on_the_index_resolves() -> void:
+func test_every_link_on_the_league_page_resolves() -> void:
 	var page := WikiModel.page(WikiModel.LEAGUE, "")
 	for target in _targets(page):
 		assert_true(WikiModel.has_page(str(target["page"]), str(target["id"])), "dead link %s" % str(target))
@@ -82,9 +69,8 @@ func test_unknown_targets_are_rejected() -> void:
 	assert_false(WikiModel.has_page(WikiModel.PLAYER, "NOPE-x"), "a missing player resolved")
 	assert_false(WikiModel.has_page(WikiModel.TEAM, "NOPE"), "a missing club resolved")
 	assert_false(WikiModel.has_page("banana", ""), "a made-up page kind resolved")
-	assert_false(WikiModel.has_page(WikiModel.COMPETITION, "NOPE"), "a missing competition resolved")
-	assert_eq(WikiModel.label(WikiModel.LEAGUE, ""), "LEAGUES", "the league crumb label changed")
-	assert_eq(WikiModel.label(WikiModel.COMPETITION, "LL"), "LA LIGA", "the competition crumb label changed")
+	assert_eq(WikiModel.label(WikiModel.LEAGUE, ""), "PREMIER LEAGUE",
+		"the league crumb should name the competition")
 	assert_eq(WikiModel.label(WikiModel.TEAM, "MUN"), "MUN", "the club crumb should be the abbreviation")
 
 func test_layout_fits_a_page_into_rows() -> void:

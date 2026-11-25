@@ -31,7 +31,7 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 		"matchday": int(fixture.get("matchday", 1)),
 		"home_position": home_pos,
 		"away_position": away_pos,
-		"competition": str(home.get("competition", "")),
+		"competition": PLRepository.shared().competition_name(str(home.get("competition", ""))),
 		"cross_league": str(home.get("competition", "")) != str(away.get("competition", "")),
 	}
 	var home_form := _form(season, home_id) if live else ""
@@ -70,9 +70,10 @@ static func _caption(fixture: Dictionary, home: Dictionary, away: Dictionary) ->
 		if comp == "":
 			comp = "PREMIER LEAGUE"
 		return "%s · MATCHDAY %d" % [comp, int(fixture.get("matchday", 1))]
-	var home_comp := str(home.get("competition", ""))
-	var away_comp := str(away.get("competition", ""))
-	if home_comp != "" and away_comp != "" and home_comp != away_comp:
+	var home_comp := PLRepository.shared().competition_name(str(home.get("competition", "")))
+	var away_comp := PLRepository.shared().competition_name(str(away.get("competition", "")))
+	var mixed := str(home.get("competition", "")) != str(away.get("competition", ""))
+	if home_comp != "" and away_comp != "" and mixed:
 		return "FRIENDLY · %s v %s" % [home_comp, away_comp]
 	if home_comp != "":
 		return "%s · FRIENDLY" % home_comp

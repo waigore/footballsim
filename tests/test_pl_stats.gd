@@ -61,8 +61,8 @@ func test_the_dashboards_see_the_ledger() -> void:
 	var text := _flatten(page)
 	assert_true(text.contains("IN FOOTBALLSIM"), "the club page does not show the sim ledger")
 	assert_true(text.contains("MUN-b-fernandes") or text.contains("B. Fernandes"), "the scorer chart is empty")
-	var league := _flatten(WikiModel.page(WikiModel.COMPETITION, "PL"))
-	assert_true(league.contains("IN-SIM"), "the competition hub does not show in-sim scorers")
+	var league := _flatten(WikiModel.page(WikiModel.LEAGUE, ""))
+	assert_true(league.contains("IN-SIM"), "the league page does not show in-sim scorers")
 	var player := _flatten(WikiModel.page(WikiModel.PLAYER, "MUN-b-fernandes"))
 	assert_true(player.contains("IN FOOTBALLSIM"), "the player page does not show its sim line")
 

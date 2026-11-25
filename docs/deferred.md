@@ -18,6 +18,7 @@ Former gaps now shipped (wiki domains playable; DRs accepted):
 | Poisson λ on the last-10 PL scoring envelope | DR-20261125-19; [#172](https://github.com/waigore/footballsim/issues/172) |
 | PL 2026-27 snapshot + encyclopedia | `data/`; DR-20261123-01 / 05 |
 | God-mode season saves, calendar, Continue/watch | `league_season.gd`; DR-20261124-01 / 06 |
+| Two leagues in one seed/save; league-scoped table, stats, calendar, encyclopedia | DR-20261126-01 / 02; [#185](https://github.com/waigore/footballsim/issues/185) |
 | System sheet (Quick Save / Save As / Load / Quit) | DR-20261124-07 |
 | Per-goal report playback packs | DR-20261124-04 |
 | Non-match type / viewport scale | DR-20261124-03 |
@@ -48,9 +49,9 @@ hot loop stays rank 2 (P4, not rules).
 | Item | Why |
 |------|-----|
 | Club-manager career; player tactics / XI | Product non-goal; Match playable-slice Out |
-| Cups, transfers, finances, training, other leagues, second season in one save, mid-season seed refresh of a save | Season Out of scope (v1); DR-20261124-01 |
+| Cups, transfers, finances, training, second season in one save, mid-season seed refresh of a save | Season Out of scope (v1); DR-20261124-01 |
 | Extra time, shootouts, VAR; weather on the pitch; referee outcome bias | Match playable-slice Out |
 | Concussion subs; extra injury stoppage beyond the added-time formula | Substitutions Out of scope; DR-20261122-05 |
-| Licensed data beyond the shipped PL snapshot | requirements Non-goals; DR-20261123-01 |
+| Licensed data beyond the shipped PL + La Liga snapshots | requirements Non-goals; DR-20261123-01 |
 | Match HUD under the non-match type rule | DR-20261124-03 |
 | Photoreal / 3D primary | requirements Non-goals |

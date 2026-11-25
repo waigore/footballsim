@@ -120,3 +120,60 @@ func test_the_podium_frames_one_block_per_league() -> void:
 	var one_h: float = book.frame_height({"summary": one})
 	assert_gt(two_h, one_h * 1.8, "the podium did not make room for a second league")
 	assert_eq(LeagueBook._podium_sections(summary).size(), 2, "the podium lost a league block")
+
+func test_the_stats_doors_write_their_filter() -> void:
+	var screen := FakeStats.new()
+	screen.stats_filter = {"league": "", "month": "", "team": "", "stat": "goals"}
+	assert_true(LeagueStatsActions.press(screen, "statsleague:LL"), "the league door was not handled")
+	assert_eq(str(screen.stats_filter["league"]), "LL", "the league filter did not change")
+	assert_true(LeagueStatsActions.press(screen, "statsstat:assists"), "the stat door was not handled")
+	assert_eq(str(screen.stats_filter["stat"]), "assists", "the leader stat did not change")
+	assert_true(LeagueStatsActions.press(screen, "statsteam"), "the team field press was not handled")
+	assert_false(LeagueStatsActions.press(screen, "back"), "a foreign door was swallowed")
+	assert_eq(screen.refreshes, 3, "a filter door did not repaint")
+	# A month step reads the clock only while a season is open; with none it still
+	# answers the press without inventing a date.
+	assert_true(LeagueStatsActions.press(screen, "statsmonth:1"), "the month door was not handled")
+	assert_eq(str(screen.stats_filter["month"]), "", "a month was invented with no season")
+
+func test_the_month_door_steps_from_the_clock() -> void:
+	var season := LeagueSeason.create("Month World", "generated", "fixture_days", 9101, ["PL"])
+	assert_not_null(season, "the month season was not created")
+	var screen := FakeStats.new()
+	screen.season = season
+	screen.stats_filter = {"league": "", "month": "", "team": "", "stat": "goals"}
+	assert_true(LeagueStatsActions.press(screen, "statsmonth:1"), "the month door was not handled")
+	var date := str(season.state().get("date", ""))
+	var base := date.substr(0, 7)
+	assert_eq(str(screen.stats_filter["month"]), LeagueBook.shift_month(base, 1),
+		"the month door did not step once from the clock")
+	season.close()
+
+func test_the_system_sheet_can_switch_the_advance_mode() -> void:
+	var season := LeagueSeason.create("Advance World", "generated", "fixture_days", 9102, ["PL", "LL"])
+	assert_not_null(season, "the advance season was not created")
+	var screen := FakeSys.new()
+	screen.season = season
+	screen.sys = {"status": "", "error": ""}
+	LeagueSystemActions.toggle_advance(screen)
+	assert_eq(season.save.advance_mode(), "every_day", "the clock policy did not switch")
+	assert_true(str(screen.sys["status"]).begins_with("ADVANCE:"), "the switch was silent")
+	LeagueSystemActions.toggle_advance(screen)
+	assert_eq(season.save.advance_mode(), "fixture_days", "the clock policy did not switch back")
+	season.close()
+
+class FakeStats:
+	var stats_filter := {}
+	var season = null
+	var refreshes := 0
+
+	func refresh() -> void:
+		refreshes += 1
+
+class FakeSys:
+	var season = null
+	var sys := {}
+	var refreshes := 0
+
+	func refresh() -> void:
+		refreshes += 1

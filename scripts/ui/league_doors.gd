@@ -116,7 +116,7 @@ static func press(screen, id: String) -> void:
 		screen.delete.ask_from(screen.saves, id.substr(7))
 		screen.refresh()
 	elif id.begins_with("wleague:"):
-		toggle_wizard_league(screen, id.substr(8))
+		LeagueWizardActions.toggle_league(screen, id.substr(8))
 	elif id.begins_with("mode:"):
 		screen.wizard["calendar_mode"] = id.substr(5)
 		screen.refresh()
@@ -259,21 +259,6 @@ static func create(screen) -> void:
 	screen.season_opened.emit(created)
 	screen.mode = screen.MODE_HUB
 	screen.month = LeagueBook.state_month(screen.season, screen.month)
-	screen.refresh()
-
-## Toggle one league in the New League wizard. At least one league always stays
-## on: a save with no competition has nothing to play.
-static func toggle_wizard_league(screen, competition_id: String) -> void:
-	if competition_id == "":
-		return
-	var comps: Array = screen.wizard.get("competitions", ["PL"]).duplicate()
-	if comps.has(competition_id):
-		if comps.size() <= 1:
-			return
-		comps.erase(competition_id)
-	else:
-		comps.append(competition_id)
-	screen.wizard["competitions"] = comps
 	screen.refresh()
 
 ## Load replaces the season outright: the old save, its ledger and every cached
