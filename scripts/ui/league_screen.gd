@@ -60,6 +60,8 @@ var buttons: Array:
 		return body.button_rects() if body != null else []
 var body: LeagueBody = null
 var hub: LeagueSheet = LeagueSheet.new()
+## The menu-level front door: New League and Load are their own pose sheet.
+var start := LeagueStartSheet.new()
 var book: LeagueBook = LeagueBook.new()
 ## The season's own save/exit dialog (#109), its own pose beside hub and book.
 var system := LeagueSystemSheet.new()
@@ -94,8 +96,8 @@ var _last_mode := ""
 ## Pose -> [sheet, layout, body painter, chrome painter].
 var _poses := {
 	MODE_HUB: ["hub", "hub_layout", "draw_hub_body", "draw_hub_chrome"],
-	MODE_WIZARD: ["hub", "wizard_layout", "draw_wizard_body", "draw_wizard_chrome"],
-	MODE_LOAD: ["hub", "load_layout", "draw_load_body", "draw_load_chrome"],
+	MODE_WIZARD: ["start", "wizard_layout", "draw_wizard_body", "draw_wizard_chrome"],
+	MODE_LOAD: ["start", "load_layout", "draw_load_body", "draw_load_chrome"],
 	MODE_TABLE: ["book", "table_layout", "draw_table_body", "draw_table_chrome"],
 	MODE_CALENDAR: ["book", "calendar_layout", "draw_calendar_body", "draw_calendar_chrome"],
 	MODE_REPORT: ["book", "report_layout", "draw_report_body", "draw_report_chrome"],
@@ -267,6 +269,8 @@ func _bottom_bar() -> float:
 ## dialog (which is its own module).
 func _sheet(pose: Array) -> RefCounted:
 	match str(pose[0]):
+		"start":
+			return start
 		"book":
 			return book
 		"system":
@@ -355,7 +359,7 @@ func _draw() -> void:
 		for item in body.pinned:
 			var rect: Rect2 = item["rect"]
 			if str(item["kind"]) == "button":
-				hub.draw_button(self, rect, str(item["label"]), fonts["bold"],
-					bool(item.get("primary", false)), bool(item.get("disabled", false)))
+				UiChrome.button(self, hub.cache, rect, str(item["label"]), fonts["bold"],
+					bool(item.get("primary", false)), -1, "", not bool(item.get("disabled", false)))
 			elif str(item["kind"]) == "chip":
-				hub.draw_chip(self, rect, str(item["label"]), fonts["bold"])
+				UiChrome.chip(self, hub.cache, rect, str(item["label"]), fonts["bold"])

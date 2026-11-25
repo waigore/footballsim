@@ -58,14 +58,14 @@ static func key(screen, code: int) -> bool:
 ## leaves the sheet, and a digit with no clip stays a no-op).
 static func _typed(screen, code: int) -> bool:
 	if screen.mode == screen.MODE_WIZARD:
-		if LeagueSheet.type_name_into(screen.wizard, code):
+		if LeagueTextField.type_name_into(screen.wizard, code):
 			screen.refresh()
 			return true
 	if screen.mode == screen.MODE_SYSTEM and LeagueSystemActions.type_name(screen, code):
 		return true
 	# The shortlist's search field takes printable keys while the list is open.
 	if screen.mode == screen.MODE_INTEREST:
-		var typed: Array = LeagueSheet.type_name(str(screen.interest_query), code)
+		var typed: Array = LeagueTextField.type_name(str(screen.interest_query), code)
 		if bool(typed[0]):
 			screen.interest_query = str(typed[1]).to_lower()
 			screen.refresh()

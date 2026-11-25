@@ -130,7 +130,7 @@ func test_the_hub_side_table_carries_the_compact_record() -> void:
 			"the abbreviation column is too narrow at %s" % vp)
 
 func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueStartSheet.new()
 	for mode in ["real", "generated"]:
 		for advance in ["fixture_days", "every_day"]:
 			var items: Array = sheet.wizard_layout(Vector2(1280, 720),
@@ -143,7 +143,7 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			assert_eq(items.size(), 7, "the wizard is missing a control")
 
 func test_the_load_list_lays_out_zero_and_many_saves() -> void:
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueStartSheet.new()
 	var empty: Array = sheet.load_layout(Vector2(1280, 720), {"saves": []})
 	assert_eq(empty.size(), 1, "an empty load list should only have BACK")
 	var saves: Array = []
@@ -368,6 +368,7 @@ func test_the_shortest_captions_fit_after_the_floor() -> void:
 
 func test_every_phone_sheet_overflows_into_the_scroll_window() -> void:
 	var sheet := LeagueSheet.new()
+	var start := LeagueStartSheet.new()
 	var book := LeagueBook.new()
 	var vp := Vector2(913, 411)
 	var window := vp.y - LeagueSheet.BAR_H
@@ -380,7 +381,7 @@ func test_every_phone_sheet_overflows_into_the_scroll_window() -> void:
 	for i in range(7):
 		saves.append({"slug": "s%d" % i, "name": "Save %d" % i, "status": "in_progress",
 			"current_date": "2026-09-0%d" % (i + 1), "matchday": i + 1, "path": "", "modified": i})
-	assert_gt(_bottom(sheet.load_layout(vp, {"saves": saves})), window,
+	assert_gt(_bottom(start.load_layout(vp, {"saves": saves})), window,
 		"a full load list should scroll on a phone")
 	var events: Array = []
 	for i in range(14):
