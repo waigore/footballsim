@@ -66,6 +66,9 @@ var sheet_extra := LeagueExtra.new()
 ## The shortlist search field, and where BACK from a report returns (#103).
 var interest_query := ""
 var report_back := MODE_HUB
+## The season's page history (#169): session state only, never saved. BACK walks
+## it; MAIN MENU closes the season and empties it.
+var nav := LeagueNavStack.new()
 ## The left slide panel and the layer that paints it above the body.
 var panel := LeaguePanel.new()
 var overlay: LeagueOverlay = null
@@ -150,6 +153,7 @@ func is_open() -> bool:
 
 func open_wizard() -> void:
 	mode = MODE_WIZARD
+	nav.clear()
 	wizard = {"name": "League %d" % (saves.size() + 1), "calendar_mode": "generated",
 		"advance_mode": "fixture_days", "error": ""}
 	visible = true
@@ -157,6 +161,7 @@ func open_wizard() -> void:
 
 func open_load() -> void:
 	mode = MODE_LOAD
+	nav.clear()
 	load_from = "menu"
 	saves = LeagueSave.list()
 	visible = true
@@ -164,6 +169,9 @@ func open_load() -> void:
 
 func open_season(target: LeagueSeason, show_podium: bool = false) -> void:
 	season = target
+	# A season opens at its own root: no history can point into a save that is
+	# not the one on screen.
+	nav.clear()
 	season_opened.emit(target)
 	if show_podium or (target != null and str(target.state().get("status", "")) == "complete"):
 		mode = MODE_PODIUM
@@ -176,20 +184,29 @@ func open_season(target: LeagueSeason, show_podium: bool = false) -> void:
 func show_report(fixture_id: String) -> void:
 	if season == null:
 		return
+	push_page()
 	report = season.report(fixture_id)
 	roundup = []
 	mode = MODE_REPORT
 	refresh()
 
 func show_roundup(reports: Array) -> void:
+	push_page()
 	report = {}
 	roundup = reports
 	mode = MODE_REPORT
 	refresh()
 
+## Remember the page on screen so BACK can return to it. The one place that
+## pushes, so every door down into a sheet leaves the same trail (#169).
+func push_page() -> void:
+	nav.push(LeagueNavStack.snapshot(self))
+
 func close() -> void:
 	visible = false
 	mode = MODE_HUB
+	# Leaving the league ends its history: a reopened season starts at its root.
+	nav.clear()
 	closed.emit()
 
 ## Open a saved season, replacing the one on screen. The doors own the swap.
@@ -216,6 +233,12 @@ func refresh() -> void:
 	if mode != _last_mode:
 		interest.close()
 	var items: Array = Callable(sheet, str(pose[1])).call(vp, view)
+	# BACK is visible at the root of the season's history, but not actionable:
+	# nothing behind it, and the main menu is not a page of the league (#169).
+	var can_back := LeagueDoors.can_back(self)
+	for item in items:
+		if str(item.get("id", "")) == "back":
+			item["disabled"] = not can_back
 	var content := body.set_sheet(items, vp, mode != _last_mode, _bottom_bar())
 	body.painter = Callable(sheet, str(pose[2])).bind(vp, UiChrome.fonts(), content, view)
 	panel.active = str(POSE_NAMES.get(mode, ""))
@@ -299,6 +322,7 @@ func _draw() -> void:
 		for item in body.pinned:
 			var rect: Rect2 = item["rect"]
 			if str(item["kind"]) == "button":
-				hub.draw_button(self, rect, str(item["label"]), fonts["bold"], bool(item.get("primary", false)))
+				hub.draw_button(self, rect, str(item["label"]), fonts["bold"],
+					bool(item.get("primary", false)), bool(item.get("disabled", false)))
 			elif str(item["kind"]) == "chip":
 				hub.draw_chip(self, rect, str(item["label"]), fonts["bold"])

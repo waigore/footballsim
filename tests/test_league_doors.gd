@@ -46,6 +46,9 @@ func _clean() -> void:
 func _hub() -> void:
 	screen.season = season
 	screen.mode = LeagueScreen.MODE_HUB
+	# An open surface: a case that closed it earlier must not change what the
+	# next one is testing.
+	screen.visible = true
 
 func _fixture(watched: int = 0) -> Dictionary:
 	for fx in season.record.fixtures.all():
@@ -66,15 +69,23 @@ func test_the_key_map_walks_a_sheet_without_a_window() -> void:
 	assert_true(screen.key(KEY_DOWN), "a screen without a window stopped taking scroll keys")
 	screen.body = body
 
-func test_enter_continues_the_hub_and_escape_leaves_it() -> void:
+func test_enter_continues_the_hub_and_escape_walks_it_back() -> void:
 	_hub()
+	screen.nav.clear()
 	assert_true(screen.key(KEY_ENTER), "Enter did not press Continue")
 	assert_ne(screen.mode, LeagueScreen.MODE_HUB, "Continue left the hub without settling")
-	screen.mode = LeagueScreen.MODE_TABLE
+	# A reading opens over the hub, so BACK has a page to return to (#169).
+	screen.mode = LeagueScreen.MODE_HUB
+	screen.nav.clear()
+	screen.click("table")
+	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table door did not open the table")
 	assert_true(screen.key(KEY_ESCAPE), "Esc was not taken on a reading")
 	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "Esc did not return to the hub")
+	# At the root BACK is consumed but does nothing: it is not a way out.
 	assert_true(screen.key(KEY_BACKSPACE), "Backspace was not taken on the hub")
-	assert_false(screen.visible, "the hub did not close the surface")
+	assert_true(screen.visible, "BACK at the root closed the season")
+	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "BACK at the root moved the sheet")
+	screen.close()
 
 func test_the_wizard_and_the_report_take_their_own_keys() -> void:
 	screen.mode = LeagueScreen.MODE_WIZARD
@@ -88,19 +99,28 @@ func test_the_wizard_and_the_report_take_their_own_keys() -> void:
 
 func test_the_pose_doors_move_the_surface_between_its_sheets() -> void:
 	_hub()
+	screen.nav.clear()
 	screen.click("table")
 	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table door did not open the table")
 	screen.click("calendar")
 	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR, "the calendar door did not open the calendar")
 	screen.click("podium")
 	assert_eq(screen.mode, LeagueScreen.MODE_PODIUM, "the podium door did not open the podium")
+	# BACK unwinds the trail one page at a time; the season stays open (#169).
 	screen.click("back")
-	assert_false(screen.visible, "BACK on the podium did not close the surface")
-	_hub()
-	screen.click("menu")
-	assert_false(screen.visible, "MENU did not close the surface")
+	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR, "BACK did not return to the calendar")
+	screen.click("back")
+	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "BACK did not return to the table")
+	screen.click("back")
+	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "BACK did not return to the hub")
+	assert_true(screen.visible, "BACK at the root closed the surface")
 	screen.click("")
-	assert_false(screen.visible, "an empty press reopened something")
+	assert_true(screen.visible, "an empty press reopened something")
+	# The podium's own MAIN MENU door is a leave action, not BACK.
+	screen.mode = LeagueScreen.MODE_PODIUM
+	screen.refresh()
+	screen.click("menu")
+	assert_false(screen.visible, "MAIN MENU did not close the surface")
 
 func test_the_table_door_opens_without_a_season() -> void:
 	screen.season = null
