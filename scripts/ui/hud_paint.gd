@@ -9,6 +9,8 @@ const BORDER := HudChrome.BORDER
 
 var ink: HudChrome = null
 var vp := Vector2(1600, 900)
+## Followed club ids as a set (#107): a followed club's name paints gold.
+var followed := {}
 
 func _init(surface: HudChrome, viewport_size: Vector2) -> void:
 	ink = surface

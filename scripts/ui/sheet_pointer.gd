@@ -20,6 +20,9 @@ const PAN_STEP := 60.0
 const WHEEL_STEP := 110.0
 
 var sheet = null
+## Optional long-press handler (#107): while it watches a press the sheet's click
+## waits for the release, so a club name can be held instead of pressed.
+var hold = null
 var pressing := false
 var dragged := false
 var press_at := Vector2.ZERO
@@ -33,6 +36,8 @@ func _init(target) -> void:
 func reset() -> void:
 	pressing = false
 	dragged = false
+	if hold != null:
+		hold.clear()
 	if sheet != null:
 		sheet.holding = false
 
@@ -69,11 +74,16 @@ func _down(p: Vector2) -> void:
 	last_at = p
 	sheet.mouse = p
 	sheet.holding = true
+	if hold != null:
+		hold.press_at(p)
 
 ## Hover is free; holding the button turns the pointer into a scroll drag, and
 ## the travel since the last frame is charged to the body in one step.
 func _motion(p: Vector2) -> void:
 	sheet.mouse = p
+	# The menu is modal: a pointer over it never reaches the sheet underneath.
+	if hold != null and hold.is_open():
+		return
 	if not pressing:
 		if not sheet.touch:
 			Input.set_default_cursor_shape(
@@ -84,6 +94,8 @@ func _motion(p: Vector2) -> void:
 			return
 		dragged = true
 		sheet.holding = false
+	if hold != null:
+		hold.move(p)
 	sheet.scroll_by(last_at.y - p.y, last_at.x - p.x)
 	last_at = p
 
@@ -92,6 +104,9 @@ func _up() -> void:
 		return
 	pressing = false
 	sheet.holding = false
+	# A long press (or the menu it raised) owns the gesture: no click, no tap.
+	if hold != null and hold.release_at(press_at):
+		return
 	if dragged:
 		return
 	var id: String = sheet.button_at(press_at)

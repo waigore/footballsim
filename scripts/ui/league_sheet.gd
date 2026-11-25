@@ -22,6 +22,9 @@ var cache := {}
 ## Dates this sheet painted, with the strip each one occupies (#99): the screen's
 ## overlay paints the weekday for the one under the pointer.
 var hints := DateHints.new()
+## Club names this sheet painted, with the strip each one occupies (#107): a long
+## press on one raises the Teams of Interest menu. Design space, like `hints`.
+var names := InterestNames.new()
 
 static func zone_color(band: String) -> Color:
 	if band == "ucl":
@@ -190,6 +193,7 @@ func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dicti
 
 func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, state: Dictionary) -> void:
 	hints.clear()
+	names.clear()
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	## The plan hint rides the caption: the first fixture row starts right under
@@ -244,9 +248,11 @@ func _draw_fixture_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dict
 		# as a results column once the day is done (#124).
 		UiChrome.text(c, Vector2(rect.position.x + 8.0, line_y), "FT" if played else time, 10,
 			UiChrome.C_GOLD if played else UiChrome.C_DIM, bold if played else med)
-	UiChrome.text(c, Vector2(rect.position.x + 60.0, line_y), str(fx["home_abbr"]), 13, home_ink, bold)
+	InterestNames.run(c, names, str(fx.get("home_club_id", "")), str(fx["home_abbr"]),
+		Vector2(rect.position.x + 60.0, line_y), 13, home_ink, bold)
 	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 46.0, line_y), "v", 10, UiChrome.C_DIM, med)
-	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 66.0, line_y), str(fx["away_abbr"]), 13, away_ink, bold)
+	InterestNames.run(c, names, str(fx.get("away_club_id", "")), str(fx["away_abbr"]),
+		Vector2(rect.position.x + 60.0 + 66.0, line_y), 13, away_ink, bold)
 	if played:
 		UiChrome.text_r(c, rect.end.x - 12.0, line_y, "%d  –  %d" % [
 			int(fx.get("home_goals", 0)), int(fx.get("away_goals", 0))], 14, UiChrome.C_TEXT, bold)
@@ -270,9 +276,9 @@ func _draw_table_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictio
 	var places: Dictionary = item["places"]
 	var y := rect.position.y + 14.0
 	UiChrome.text(c, Vector2(float(places["pos_x"]), y), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
-	UiChrome.text(c, Vector2(float(places["club_x"]), y),
-		LeagueColumns.fit_name(str(row["club_abbr"]), bold, 12, float(places["club_w"])),
-		12, UiChrome.C_GOLD if bool(item.get("interested", false)) else UiChrome.C_TEXT, bold)
+	var label: String = LeagueColumns.fit_name(str(row["club_abbr"]), bold, 12, float(places["club_w"]))
+	InterestNames.run(c, names, str(row["club_id"]), label, Vector2(float(places["club_x"]), y), 12,
+		UiChrome.C_GOLD if bool(item.get("interested", false)) else UiChrome.C_TEXT, bold)
 	for col in places["cols"]:
 		var key := str(col["key"])
 		var points := key == "points"

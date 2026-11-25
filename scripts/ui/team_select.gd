@@ -27,6 +27,11 @@ var mouse := Vector2(-1000, -1000)
 var buttons: Array = []
 ## Opened from the main menu, so its way out is the menu rather than the match.
 var back_to_menu := false
+## The long press on a club card (#107), and the layer that paints its menu.
+var interest := InterestHold.new()
+var menu_layer: InterestLayer = null
+## The followed club ids as a set: their card names print gold.
+var followed := {}
 
 var f_bold: FontFile
 var f_med: FontFile
@@ -39,6 +44,21 @@ func _ready() -> void:
 	f_body = load("res://fonts/Inter-Regular.ttf")
 	ids = TeamData.team_ids()
 	ids.sort()
+	# A held card opens the Teams of Interest menu (#107); the card is already the
+	# club's own door, so the hold reads it back.
+	interest.club_at = func(p: Vector2) -> String:
+		var id := button_at(p)
+		if id == "team_home":
+			return home_id()
+		if id == "team_away":
+			return away_id()
+		return ""
+	interest.season_of = func(): return LeagueSeason.active
+	interest.on_changed = func(): queue_redraw()
+	menu_layer = InterestLayer.new()
+	menu_layer.hold = interest
+	menu_layer.screen = self
+	add_child(menu_layer)
 
 func setup(home_id: String, away_id: String) -> void:
 	if ids.is_empty():
@@ -86,6 +106,8 @@ func confirm() -> void:
 ## if/elif rather than match: the coverage injector cannot instrument a match
 ## statement, and an uninstrumentable file fails the patch gate.
 func click(id: String) -> void:
+	if interest.click(id):
+		return
 	if id == "back" or id == "cancel":
 		cancelled.emit()
 	elif id == "home_prev":
@@ -129,6 +151,9 @@ func key(code: int) -> bool:
 	return true
 
 func button_at(p: Vector2) -> String:
+	# The open menu answers every press itself (#107).
+	if interest.is_open():
+		return interest.menu.hit(p, design_vp())
 	for b in buttons:
 		if (b["rect"] as Rect2).has_point(p):
 			return b["id"]
@@ -136,7 +161,9 @@ func button_at(p: Vector2) -> String:
 
 # ------------------------------------------------------------------ drawing --
 
-func _process(_d: float) -> void:
+func _process(d: float) -> void:
+	if interest.tick(d):
+		queue_redraw()
 	queue_redraw()
 
 var style_cache := {}
@@ -179,8 +206,13 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	rect(C_PANEL, r, 14, Color(1, 1, 1, 0.10))
 	draw_rect(Rect2(r.position.x + 1, r.position.y + 1, 6, r.size.y - 2), t["color"])
 	var cx := r.position.x + r.size.x * 0.5
-	text_c(cx, r.position.y + r.size.y * 0.30, str(t["abbr"]), 54, C_TEXT, f_bold)
-	text_c(cx, r.position.y + r.size.y * 0.50, str(t["name"]).to_upper(), 17, C_TEXT, f_med)
+	# A followed club's card wears the interest mark (#107).
+	var club := str(t.get("id", ""))
+	if club == "":
+		club = home_id() if side == 0 else away_id()
+	var name_ink: Color = C_GOLD if followed.has(club) else C_TEXT
+	text_c(cx, r.position.y + r.size.y * 0.30, str(t["abbr"]), 54, name_ink, f_bold)
+	text_c(cx, r.position.y + r.size.y * 0.50, str(t["name"]).to_upper(), 17, name_ink, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.64, str(t["nickname"]).to_upper(), 11, C_DIM, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.80, "%s  ·  %s" % [str(t["formation"]), str(t["manager"]).to_upper()], 10, C_GOLD, f_med)
 	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 10, C_DIM, f_bold)
@@ -218,6 +250,9 @@ func _draw() -> void:
 		text_c(vp.x * 0.5, vp.y * 0.55, "NO SQUAD DATA", 20, C_DIM, f_bold)
 		return
 
+	var season = LeagueSeason.active
+	followed = LeagueInterestMark.set_of(season.state().get("interests", [])) \
+		if season != null else {}
 	var home := TeamData.get_team(home_id())
 	var away := TeamData.get_team(away_id())
 	_card(home_rect, home, 0)

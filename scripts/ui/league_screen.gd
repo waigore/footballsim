@@ -77,6 +77,13 @@ var load_from := "menu"
 ## Date strips: the chrome's own, and the active sheet's rows on screen (#99).
 var hints := DateHints.new()
 var rows_hints: DateHints = null
+## Club names the sheet on screen painted (#107): the long press reads them to
+## know which club is under the finger.
+var rows_names: InterestNames = null
+## The long press itself: the clock, the menu and the one write it makes.
+var interest := InterestHold.new()
+## The layer that paints the menu above the body and the panel.
+var menu_layer: InterestLayer = null
 var tooltip: DateOverlay = null
 var _last_mode := ""
 ## Pose -> [sheet, layout, body painter, chrome painter].
@@ -107,10 +114,26 @@ func _ready() -> void:
 	overlay.fonts = UiChrome.fonts()
 	add_child(overlay)
 	resized.connect(refresh)
+	# Where a club is printed, which season owns the shortlist, and how to paint
+	# the sheet again once it moved (#107).
+	interest.club_at = func(p: Vector2) -> String:
+		if rows_names == null or body == null:
+			return ""
+		if not Rect2(body.position, body.size).has_point(p):
+			return ""
+		return rows_names.at(p + Vector2(body.hscroll, body.scroll))
+	interest.season_of = func(): return season
+	interest.on_changed = refresh
+	menu_layer = InterestLayer.new()
+	menu_layer.hold = interest
+	menu_layer.screen = self
+	add_child(menu_layer)
 
 ## The slide animates on its own clock; a settled panel costs nothing and never
 ## blocks input.
 func _process(delta: float) -> void:
+	if interest.tick(delta):
+		overlay.queue_redraw()
 	if visible and panel.update(delta):
 		overlay.queue_redraw()
 
@@ -188,6 +211,10 @@ func refresh() -> void:
 		return
 	var sheet := _sheet(pose)
 	rows_hints = sheet.hints
+	rows_names = sheet.get("names") if sheet.get("names") is InterestNames else null
+	interest.vp = vp
+	if mode != _last_mode:
+		interest.close()
 	var items: Array = Callable(sheet, str(pose[1])).call(vp, view)
 	var content := body.set_sheet(items, vp, mode != _last_mode, _bottom_bar())
 	body.painter = Callable(sheet, str(pose[2])).bind(vp, UiChrome.fonts(), content, view)
@@ -214,15 +241,21 @@ func _sheet(pose: Array) -> RefCounted:
 			return sheet_extra
 	return hub
 
-## Hit test walks back to front so later items (e.g. a delete chip) win.
+## Hit test walks back to front so later items (e.g. a delete chip) win. The
+## open menu is in front of everything and answers every press itself (#107).
 func button_at(p: Vector2) -> String:
+	if interest.is_open():
+		return interest.menu.hit(p, design_vp())
 	var over_panel: String = panel.hit(p, design_vp())
 	if over_panel != "":
 		return over_panel
 	return body.hit(p) if body != null else ""
 
-## Wheel, trackpad, drag and keys; wide tables also pan sideways.
+## Wheel, trackpad, drag and keys; wide tables also pan sideways. The sheet is
+## frozen while the menu is up, so a press under it never scrolls the page.
 func scroll_by(delta: float, dx: float = 0.0) -> void:
+	if interest.is_open():
+		return
 	if body != null:
 		body.pan_by(Vector2(dx, delta))
 
@@ -235,9 +268,16 @@ func has_clip(index: int) -> bool:
 # ---------------------------------------------------------------- input ----
 
 func click(id: String) -> void:
+	if interest.click(id):
+		return
 	LeagueDoors.press(self, id)
 
 func key(code: int) -> bool:
+	# ESC puts the menu away first: it is the top-most surface while it is up.
+	if interest.is_open() and (code == KEY_ESCAPE or code == KEY_BACKSPACE):
+		interest.close()
+		refresh()
+		return true
 	return LeagueDoors.key(self, code)
 
 # ----------------------------------------------------------------- paint ---

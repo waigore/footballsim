@@ -20,6 +20,13 @@ static func target(top: Dictionary, season) -> String:
 		return ""
 	return str(top.get("id", ""))
 
+## The shortlist as a set for a page's paint (#107): read when a page opens and
+## after the long press writes, so no paint pass ever reads the save.
+static func followed_set(season) -> Dictionary:
+	if season == null:
+		return {}
+	return LeagueInterestMark.set_of(season.state().get("interests", []))
+
 static func followed(season, club_id: String) -> bool:
 	if season == null or season.record == null or club_id == "":
 		return false

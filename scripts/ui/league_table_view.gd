@@ -73,6 +73,9 @@ const FULL_COLS := [
 var mode := ""
 var sort := ""
 var dir := -1
+## Club names this table painted, with the strip each one occupies (#107): the
+## long press reads it, in the same design space the rows are laid out in.
+var names := InterestNames.new()
 
 ## Take the reading, sort and direction the save remembers. Called when the
 ## table opens, so two saves never share one table's choices.
@@ -331,11 +334,13 @@ func _legend(c: CanvasItem, anchor: float, y: float, fonts: Dictionary, narrow: 
 		x += bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + gap
 
 func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array,
-		_view: Dictionary) -> void:
+		_view: Dictionary, strips: InterestNames = null) -> void:
+	if strips != null:
+		strips.clear()
 	for item in items:
 		var kind := str(item["kind"])
 		if kind == "table_row":
-			_draw_row(c, item["rect"], item, fonts)
+			_draw_row(c, item["rect"], item, fonts, strips)
 		elif kind == "head":
 			_draw_head(c, item["rect"], item, fonts)
 		elif kind == "caption":
@@ -356,7 +361,8 @@ func _draw_head(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 	if bool(item["sorted"]):
 		c.draw_rect(Rect2(rect.position.x, rect.end.y - 1.0, rect.size.x, 1.0), UiChrome.C_GOLD)
 
-func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
+func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
+		strips: InterestNames = null) -> void:
 	var row: Dictionary = item["row"]
 	var band := str(item["zone"])
 	if band != "":
@@ -368,11 +374,14 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) 
 		UiChrome.C_DIM, fonts["med"])
 	# A followed club's name is gold here too: the shortlist is the season's, and
 	# the table is where a club is found (#104).
-	UiChrome.text(c, Vector2(float(places["club_x"]), y),
-		LeagueColumns.fit_name(str(row["club_name"]), fonts["bold"],
-			12 if mode == COMPACT else 11, float(places["club_w"])),
-		12 if mode == COMPACT else 11,
+	var size: int = 12 if mode == COMPACT else 11
+	var club_x: float = float(places["club_x"])
+	var label: String = LeagueColumns.fit_name(str(row["club_name"]), fonts["bold"], size,
+		float(places["club_w"]))
+	UiChrome.text(c, Vector2(club_x, y), label, size,
 		UiChrome.C_GOLD if bool(item.get("interested", false)) else UiChrome.C_TEXT, fonts["bold"])
+	if strips != null:
+		strips.add(InterestNames.strip(fonts["bold"], label, club_x, y, size), str(row["club_id"]))
 	for col in places["cols"]:
 		var key := str(col["key"])
 		var points := key == "points"
