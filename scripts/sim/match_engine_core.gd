@@ -42,8 +42,10 @@ const SUB_LIMIT := 5
 ## p = FINISH_EFFICIENCY · xG, so a match's goals track its expected goals (the
 ## model's λ) instead of the old keeper-steer hack.
 const FINISH_EFFICIENCY := 1.0
-## Positional xG is calibrated down to real-football levels.
-const XG_SCALE := 0.43
+## Positional xG is calibrated down to real-football levels: the engine creates
+## more chances than a real side, so each one is worth less. Fitted to the
+## tier-2 census against the PL-envelope λ (wiki poisson-model, DR-20261126-02).
+const XG_SCALE := 0.335
 ## A shot is also worth more when the defence facing it is weak and when the
 ## side taking it is strong — the same combined rating gradient the model puts
 ## into λ, read from one source (`PoissonModel.exponent_terms`). The engine's
@@ -51,13 +53,14 @@ const XG_SCALE := 0.43
 ## line and keeper move *where* chances happen but never how good a chance is.
 ## Elasticity is per 10 rating points of that derived gap; it sits below the
 ## model's 0.98 because the engine's chance creation already carries part of the
-## gradient. Fitted to the tier-2 census (wiki poisson-model); the PL-scoring
-## retune sets that census-follow-up work, not this constant.
-const XG_CONTEST_ELASTICITY := 0.95
-## Venue premium in chance quality, in log terms: the model builds the home edge
-## into HOME_XG / AWAY_XG, and the engine's chance locations do not, so the
-## finishing calibration carries the same split (home × e^edge, away ÷ e^edge).
-const XG_HOME_EDGE := 0.02
+## gradient. Fitted to the tier-2 census (wiki poisson-model, DR-20261126-02).
+const XG_CONTEST_ELASTICITY := 0.78
+## Venue premium in chance quality, in log terms. It is zero because the home
+## side already gets its edge in *creation* — it holds the ball higher up and
+## shoots from better positions — so pricing the venue again in the finishing
+## multiplier double-counted it and left the even anchor's home side above λ;
+## the model keeps its own edge in HOME_XG / AWAY_XG.
+const XG_HOME_EDGE := 0.0
 ## Per-side shot-contest multiplier, exp(XG_CONTEST_ELASTICITY · the side's
 ## share of the model's rating gradient ± XG_HOME_EDGE). Rebuilt by
 ## `_calibrate_finishing`.
