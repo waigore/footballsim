@@ -66,7 +66,7 @@ func test_a_touch_header_press_still_sorts_while_it_sits_above_its_rows() -> voi
 	assert_lte((head["rect"] as Rect2).end.y, (first_row["rect"] as Rect2).position.y,
 		"the touch header band overlaps the first row")
 	assert_true(view.press("tbl:sort:points", null), "the touch header press did nothing")
-	assert_eq(view.sort, "points", "the touch header press did not sort")
+	assert_eq(view.order.key, "points", "the touch header press did not sort")
 
 func test_a_desktop_table_keeps_its_dense_pitch() -> void:
 	var view := LeagueTableView.new()

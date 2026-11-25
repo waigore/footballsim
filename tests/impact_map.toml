@@ -173,6 +173,8 @@ suites = [
   "test_season_availability.gd",
   "test_pre_match.gd",
   "test_league_sheets.gd",
+  "test_league_table_order.gd",
+  "test_league_table_chrome.gd",
   "test_league_panel_ui.gd",
   "test_league_ui.gd",
   "test_league_doors.gd",

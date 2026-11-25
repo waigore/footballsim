@@ -9,21 +9,22 @@ extends RefCounted
 ## the save computed, so the `#` column and the zone bands always show the real
 ## place (the list order is the player's, the numbers are the league's).
 ##
-## The reading, the sorted column and the direction live in the save's
-## `save_meta`, so leaving the sheet or reopening the save brings them back. A
-## save that has never been touched opens on the device default: compact on a
+## The reading lives here; the sorted column and the direction are the save's
+## own choices and live in `LeagueTableSort`, so two saves never share them.
+## A save that has never been touched opens on the device default: compact on a
 ## phone, full on a desktop.
 ##
 ## Geometry, sorting and paint only: `LeagueBook` keeps the table pose and hands
-## geometry and paint here.
+## geometry and paint here. The sheet's chrome — title, date hint, zone legend —
+## lives in `LeagueTableChrome`, so the rows and the band never crowd each other.
 
 const COMPACT := "compact"
 const FULL := "full"
 const MODES := [COMPACT, FULL]
 
 const META_MODE := "table_mode"
-const META_SORT := "table_sort"
-const META_DIR := "table_dir"
+const META_SORT := LeagueTableSort.META_SORT
+const META_DIR := LeagueTableSort.META_DIR
 
 const ROW_H := 22.0
 ## The pitch a touch sheet lays its club rows on: 48 density points of hit area
@@ -73,47 +74,26 @@ const FULL_COLS := [
 	{"key": "away_ga", "label": "GA", "num": true, "group": "AWAY"},
 ]
 
-## Reading, sorted column ("": official order) and direction (1 asc, -1 desc).
+## Reading on screen ("" until the first layout picks one) and the player's sort.
 var mode := ""
-var sort := ""
-var dir := -1
+var order := LeagueTableSort.new()
 ## Club names this table painted, with the strip each one occupies (#107): the
 ## long press reads it, in the same design space the rows are laid out in.
 var names := InterestNames.new()
 
-## Take the reading, sort and direction the save remembers. Called when the
-## table opens, so two saves never share one table's choices.
+## Take the reading and the sort the save remembers. Called when the table
+## opens, so two saves never share one table's choices.
 func attach(save: LeagueSave) -> void:
 	mode = ""
-	sort = ""
-	dir = -1
 	if save == null:
+		order.attach(null)
 		return
-	var meta := save.read_meta()
-	var saved_mode := str(meta.get(META_MODE, ""))
+	var saved_mode := str(save.read_meta().get(META_MODE, ""))
 	mode = saved_mode if MODES.has(saved_mode) else ""
-	var saved_sort := str(meta.get(META_SORT, ""))
-	sort = saved_sort if sortable(saved_sort) else ""
-	dir = 1 if str(meta.get(META_DIR, "desc")) == "asc" else -1
+	order.attach(save)
 
 static func columns(reading: String) -> Array:
 	return FULL_COLS if reading == FULL else COMPACT_COLS
-
-## Keys a header can sort by: every visible field except the official place.
-static func sortable(key: String) -> bool:
-	if key == "" or key == "position":
-		return false
-	for col in FULL_COLS:
-		if str(col["key"]) == key:
-			return true
-	return false
-
-## A row's value for one column. Goal difference is derived, the club column
-## sorts by name, everything else is a saved integer.
-static func cell(row: Dictionary, key: String) -> int:
-	if key == "gd":
-		return int(row.get("gf", 0)) - int(row.get("ga", 0))
-	return int(row.get(key, 0))
 
 static func numeric(cols: Array) -> int:
 	var count := 0
@@ -126,12 +106,12 @@ static func numeric(cols: Array) -> int:
 
 func layout(vp: Vector2, view: Dictionary) -> Array:
 	var reading := _reading(vp)
-	var rows := ordered(view.get("table", []))
+	var rows := order.ordered(view.get("table", []), columns(reading))
 	var row_h := row_height(view)
 	var row_w := maxf(vp.x - 48.0, _min_row_w(reading))
 	var places := _places(Rect2(24.0, 0.0, row_w, row_h))
 	var top: float = LeagueTableHead.rows_top(reading == FULL, bool(view.get("touch", false)))
-	var items := LeagueTableHead.cells(places, reading == FULL, sort, bool(view.get("touch", false)))
+	var items := LeagueTableHead.cells(places, reading == FULL, order.key, bool(view.get("touch", false)))
 	var interest := LeagueInterestMark.set_of(view.get("interests", []))
 	for i in range(rows.size()):
 		items.append({
@@ -170,31 +150,7 @@ func _reading(vp: Vector2) -> String:
 ## column the current reading does not show is left for the reading that does:
 ## the compact strip never sorts by a number the player cannot see.
 func ordered(rows: Array) -> Array:
-	if sort == "" or rows.size() < 2 or not _shown(sort):
-		return rows
-	var out := rows.duplicate()
-	var key := sort
-	var sign := dir
-	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		if key == "club":
-			var na := str(a["club_name"])
-			var nb := str(b["club_name"])
-			if na != nb:
-				return na < nb if sign > 0 else na > nb
-		else:
-			var va := cell(a, key)
-			var vb := cell(b, key)
-			if va != vb:
-				return va < vb if sign > 0 else va > vb
-		return int(a["position"]) < int(b["position"])
-	)
-	return out
-
-func _shown(key: String) -> bool:
-	for col in columns(mode):
-		if str(col["key"]) == key:
-			return true
-	return false
+	return order.ordered(rows, columns(mode if mode != "" else COMPACT))
 
 ## The narrowest row a reading needs. Compact walks the measured rail
 ## (`LeagueColumns`), which keeps the whole overall record and a readable club
@@ -229,29 +185,20 @@ func _places(row: Rect2) -> Dictionary:
 
 # ------------------------------------------------------------------- press ---
 
-## A reading or header press. Writes the choice through to the save so it is
-## the save's, not this run's, and returns true when anything changed.
+## A reading or header press. A reading is this sheet's; a header press belongs
+## to the save's sort (`LeagueTableSort`). Both write through to the save so the
+## choice is the save's, not this run's; true when anything changed.
 func press(id: String, save: LeagueSave) -> bool:
-	if id.begins_with("tbl:mode:"):
-		var wanted := id.substr(9)
-		var current: String = mode if mode != "" else COMPACT
-		if not MODES.has(wanted) or wanted == current:
-			return false
-		mode = wanted
-		_store(save, META_MODE, mode)
-		return true
-	if not id.begins_with("tbl:sort:"):
+	if id.begins_with("tbl:sort:"):
+		return order.press(id.substr(9), save)
+	if not id.begins_with("tbl:mode:"):
 		return false
-	var key := id.substr(9)
-	if not sortable(key):
+	var wanted := id.substr(9)
+	var current: String = mode if mode != "" else COMPACT
+	if not MODES.has(wanted) or wanted == current:
 		return false
-	if key == sort:
-		dir = -dir
-	else:
-		sort = key
-		dir = 1 if key == "club" else -1
-	_store(save, META_SORT, sort)
-	_store(save, META_DIR, "asc" if dir > 0 else "desc")
+	mode = wanted
+	_store(save, META_MODE, mode)
 	return true
 
 func _store(save: LeagueSave, key: String, value: String) -> void:
@@ -264,47 +211,7 @@ func _store(save: LeagueSave, key: String, value: String) -> void:
 
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
-	var bold: Font = fonts["bold"]
-	var date := str(view.get("date", ""))
-	var label := FixtureCalendar.day_label(date)
-	var parts: Array = []
-	if str(view.get("name", "")) != "":
-		parts.append(str(view.get("name", "")))
-	if label != "":
-		parts.append(label)
-	LeagueExtra.header(c, vp, fonts, "LEAGUE TABLE", " · ".join(PackedStringArray(parts)))
-	if date != "":
-		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 34.0, 10), date)
-	var y := vp.y - LeagueChrome.BAR_H + 24.0
-	# The legend shares the bar with the two reading doors on a wide sheet; a
-	# phone sheet has no room there, so it moves up beside the title.
-	if vp.x < 620.0:
-		_legend(c, vp.x - 24.0, 48.0, fonts, true, true)
-	else:
-		_legend(c, 350.0, y, fonts, false, false)
-		# The sentence only rides the legend when the sheet is wide enough for both.
-		if vp.x >= 760.0:
-			UiChrome.text_r(c, vp.x - 24.0, y, "TAP A COLUMN TO SORT · COLOURED BAND = PLACE",
-				8, UiChrome.C_DIM, fonts["med"])
-
-func _legend(c: CanvasItem, anchor: float, y: float, fonts: Dictionary, narrow: bool,
-		from_right: bool) -> void:
-	var labels: Array = ["UCL", "UEL", "UECL", "REL"]
-	var bands: Array = ["ucl", "uel", "uecl", "relegation"]
-	var size := 8
-	if not narrow:
-		labels = ["UCL", "UEL", "UECL", "RELEGATION"]
-		size = 9
-	var bold: Font = fonts["bold"]
-	var gap := 8.0
-	var total := -gap
-	for label in labels:
-		total += bold.get_string_size(str(label), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + gap
-	var x: float = anchor - total if from_right else anchor
-	for i in range(labels.size()):
-		var label := str(labels[i])
-		UiChrome.text(c, Vector2(x, y), label, size, LeagueChrome.zone_color(str(bands[i])), bold)
-		x += bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + gap
+	LeagueTableChrome.draw(c, vp, fonts, view, hints)
 
 func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array,
 		_view: Dictionary, strips: InterestNames = null) -> void:

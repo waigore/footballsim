@@ -49,7 +49,7 @@ func _initialize() -> void:
 	await _width(league, 1280.0)
 	league.screen.click("tbl:sort:gf")
 	await _shot("issue102_compact_sorted_by_gf")
-	print("SORTED heads=", _heads(league.screen), " sort=", league.screen.book.table.sort)
+	print("SORTED heads=", _heads(league.screen), " sort=", league.screen.book.table.order.key)
 	print("EXIT season=", season.save.slug)
 	quit()
 
