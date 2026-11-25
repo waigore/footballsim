@@ -195,6 +195,36 @@ func test_calibration_sits_inside_the_pl_scoring_envelope() -> void:
 		assert_true(bool(row["pass"]), "%s: %s outside %s .. %s" % [
 			str(row["name"]), fmt % float(row["value"]), fmt % float(row["lo"]), fmt % float(row["hi"])])
 
+func test_a_gate_reuses_one_model_per_pairing_without_changing_the_draw() -> void:
+	# The gate's speed-up (tools/poisson_calibration.gd `models_for`): λ and the
+	# 10x10 table read the two clubs and which is at home, not the season, so a
+	# fixture's model is reused across seasons. Reseeded each season, it must
+	# deal the same scorelines a fresh model per fixture did.
+	var clubs := ["MCI", "ARS", "IPS", "MUN"]
+	var fixtures := PoissonCalibration.season_fixtures(clubs)
+	var models := PoissonCalibration.models_for(fixtures, PoissonModel.DEFAULT_CALIBRATION)
+	# One table per fixture in the circle: λ swaps with the home end, so the
+	# two legs of a tie are not the same model.
+	assert_eq(models.size(), fixtures.size(), "a fixture lost its model")
+	var reference := _season_built_per_fixture(3, 7000, fixtures)
+	var shot := PoissonCalibration.shot_season(3, 7000, models, fixtures)
+	var shared := PoissonCalibration.season_from(shot[0], shot[1], fixtures)
+	for row in reference.keys():
+		assert_eq(shared[row], reference[row], "the shared models changed %s" % row)
+	assert_eq(shared["matches"], fixtures.size(), "the shared season skipped a fixture")
+
+## The same season the way the gate used to play it: a fresh model per fixture,
+## seeded with the fixture's own seed, playing one sampled scoreline.
+func _season_built_per_fixture(season: int, seed0: int, fixtures: Array) -> Dictionary:
+	var goals: Array = []
+	var lambdas: Array = []
+	for i in range(fixtures.size()):
+		var pair: Array = fixtures[i]
+		var model := PoissonModel.new(seed0 + season * 100003 + i, str(pair[0]), str(pair[1]))
+		lambdas.append([model.lambda_home, model.lambda_away])
+		goals.append(model.sample())
+	return PoissonCalibration.season_from(goals, lambdas, fixtures)
+
 func test_calibration_overrides_move_lambda_without_touching_defaults() -> void:
 	var base := _model()
 	var damped := PoissonModel.new(1, HOME, AWAY, "clear", {}, {"home_xg": 1.0})
