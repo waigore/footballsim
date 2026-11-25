@@ -99,6 +99,15 @@ suites = [
   "test_engine_rules.gd",
 ]
 
+# The geometry every shape pass asks: reach times over the ball's predicted path
+# and the line a back holds. Pinned against the per-player walk it replaced, so
+# the shared-path cache cannot drift from the answer it is caching.
+[domains.pitch_queries]
+suites = [
+  "test_pitch_queries.gd",
+  "test_engine_rules.gd",
+]
+
 [domains.match_engine]
 suites = [
   "test_match_laws.gd",
@@ -320,7 +329,7 @@ domain = "match_engine"
 
 [[rules]]
 match = "scripts/sim/pitch_queries.gd*"
-domain = "match_engine"
+domain = "pitch_queries"
 
 # ---------------------------------------------------------------- data ---
 
@@ -494,6 +503,12 @@ domain = "poisson"
 [[rules]]
 match = "tests/impact_map.toml"
 domain = "misc"
+
+# The pitch-query suite pins the shared-path reads; editing it re-runs itself
+# with the laws it stands beside.
+[[rules]]
+match = "tests/test_pitch_queries.gd*"
+domain = "pitch_queries"
 
 # ------------------------------------------------------------- project ---
 
