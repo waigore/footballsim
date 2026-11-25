@@ -342,6 +342,10 @@ match = "scripts/sim/goal_vignette.gd*"
 domain = "league"
 
 [[rules]]
+match = "scripts/sim/goal_vignette_penalty.gd*"
+domain = "league"
+
+[[rules]]
 match = "scripts/sim/league_highlights.gd*"
 domain = "league"
 

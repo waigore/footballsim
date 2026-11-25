@@ -133,6 +133,7 @@ static func _captured_row(pack: Dictionary, fixture_id: String, event: Dictionar
 		"assist_id": str(clip.get("assist_id", "")),
 		"assist_name": str(clip.get("assist", "")),
 		"commentary": commentary, "source": "watch",
+		"penalty": bool(event.get("penalty", false)),
 		"codec": str(clip.get("codec", GoalHighlight.CODEC)),
 		"version": int(clip.get("version", GoalHighlight.VERSION)),
 		"home_club_id": str(clip.get("home", "")), "away_club_id": str(clip.get("away", "")),
@@ -165,6 +166,7 @@ static func _generated_row(save_seed: int, fixture_id: String, event: Dictionary
 		"scorer_id": str(fields["player_id"]), "scorer_name": str(fields["player_name"]),
 		"assist_id": str(fields["assist_id"]), "assist_name": str(fields["assist_name"]),
 		"commentary": str(fields["commentary"]), "source": "auto",
+		"penalty": bool(fields.get("penalty", false)),
 		"codec": GoalHighlight.CODEC, "version": GoalHighlight.VERSION,
 		"home_club_id": home, "away_club_id": away,
 		"bytes": PackedByteArray(),
@@ -186,6 +188,7 @@ static func _goal_fields(source: Dictionary, event: Dictionary, fixture_id: Stri
 		"player_name": str(source.get("scorer", event.get("player_name", ""))),
 		"assist_id": str(source.get("assist_id", event.get("assist_id", ""))),
 		"assist_name": str(source.get("assist_name", event.get("assist_name", ""))),
+		"penalty": bool(event.get("penalty", source.get("penalty", false))),
 		"club_short": short_name(club), "opp_short": short_name(other),
 		"score_after": [int(score_after[0]), int(score_after[1])],
 	}

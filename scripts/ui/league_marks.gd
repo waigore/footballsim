@@ -6,9 +6,9 @@ extends RefCounted
 ## vector chrome as the rest of the season sheets, so no bitmap set has to match
 ## the palette and every mark stays crisp at any window size.
 ##
-## An own goal keeps the ball and carries the `(OG)` mark on its caption; the
-## assist rides in brackets. Paint only: the reading that decides what each entry
-## says lives in `LeagueRoundup`.
+## An own goal keeps the ball and carries the `(OG)` mark on its caption; a
+## converted penalty carries `(PEN)`; the assist rides in brackets. Paint only:
+## the reading that decides what each entry says lives in `LeagueRoundup`.
 
 ## The icon box each event reserves, and the caption's own size.
 const BOX := 10.0
@@ -54,6 +54,8 @@ static func line(c: CanvasItem, at: Vector2, e: Dictionary, fonts: Dictionary,
 	var tail := ""
 	if LeagueRoundup.is_own_goal(e):
 		tail += LeagueRoundup.OG
+	elif LeagueRoundup.is_penalty(e):
+		tail += LeagueRoundup.PEN
 	var assist := str(e.get("assist_name", ""))
 	if assist != "":
 		tail += " (%s)" % assist

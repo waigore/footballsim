@@ -21,6 +21,8 @@ const OWN_GOAL := "own_goal"
 ## The mark that names an own goal on the line, the grammar the broadcast card
 ## already uses.
 const OG := " (OG)"
+## The mark that names a converted penalty, on the scorer's name (#171).
+const PEN := " (PEN)"
 
 ## True when the row put the ball in the net: a goal, or an own goal that still
 ## counts for the side its club names.
@@ -31,6 +33,10 @@ static func is_goal(e: Dictionary) -> bool:
 ## True when the goal was put in off the conceding side's own player.
 static func is_own_goal(e: Dictionary) -> bool:
 	return str(e.get("kind", "")) == OWN_GOAL or bool(e.get("own_goal", false))
+
+## True when the goal came from the spot. A save hands the flag back as 1.
+static func is_penalty(e: Dictionary) -> bool:
+	return bool(e.get("penalty", false))
 
 ## The rows of a report in the order the report prints them: by minute, then by
 ## the order the ledger wrote them. Rows without an id (a test, a hand-made
@@ -106,11 +112,14 @@ static func goals(report: Dictionary) -> Array:
 			out.append(e)
 	return out
 
-## One line as a column prints it: `6' Y. Pino (J. Eze)`, `58' J. Mateta (OG)`.
+## One line as a column prints it: `6' Y. Pino (J. Eze)`, `58' J. Mateta (OG)`,
+## `23' V. Gyökeres (PEN)`.
 static func line(e: Dictionary) -> String:
 	var name := _player(e)
 	if is_own_goal(e):
 		name += OG
+	elif is_penalty(e):
+		name += PEN
 	var assist := str(e.get("assist_name", ""))
 	if assist != "":
 		name += " (%s)" % assist

@@ -54,7 +54,7 @@ static func commentary(goal: Dictionary, seed: int) -> String:
 	return Commentary.goal(rng, str(goal.get("player_name", "Unknown")),
 		str(goal.get("assist_name", "")), false, str(goal.get("club_short", "")),
 		str(goal.get("opp_short", "")), maxi(goals_for - 1, 0), goals_against,
-		int(goal.get("minute", 0)))
+		int(goal.get("minute", 0)), bool(goal.get("penalty", false)))
 
 # ------------------------------------------------------------------ build ---
 

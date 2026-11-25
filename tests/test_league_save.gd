@@ -165,9 +165,9 @@ func test_save_as_refuses_an_empty_name() -> void:
 
 # --------------------------------------------------- home/away table (#73) ---
 
-func _columns() -> Dictionary:
+func _columns(table: String = "league_table") -> Dictionary:
 	var out := {}
-	for row in PLDatabase.rows("PRAGMA table_info(league_table);"):
+	for row in PLDatabase.rows("PRAGMA table_info(%s);" % table):
 		out[str(row["name"])] = true
 	return out
 
@@ -200,6 +200,53 @@ func test_an_older_save_gains_the_side_columns_when_it_opens() -> void:
 	var row := PLDatabase.row("SELECT home_played, away_ga FROM league_table LIMIT 1;")
 	assert_eq(int(row["home_played"]), 0, "a migrated row should start on zero")
 	assert_eq(int(row["away_ga"]), 0, "a migrated row should start on zero")
+
+## #171: a report's penalty tag belongs to the save, not the session. Reopening
+## the file still marks the spot kick, and an open-play goal stays unmarked.
+func test_a_report_keeps_its_penalty_tag_across_a_reopen() -> void:
+	var save := LeagueSave.create("Penalty Tags", LeagueRules.defaults())
+	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
+	var record := LeagueRecord.new(save)
+	record.report.add_events([
+		{"fixture_id": "tag-fx", "minute": 12, "kind": "goal", "player_id": "p1",
+			"club_id": "MCI", "detail": "A. Striker", "penalty": true},
+		{"fixture_id": "tag-fx", "minute": 40, "kind": "goal", "player_id": "p2",
+			"club_id": "MCI", "detail": "B. Winger"},
+	])
+	LeagueSave.close()
+	var reopened := LeagueSave.open(save.slug)
+	assert_not_null(reopened, "the save did not reopen")
+	var rows := LeagueRecord.new(reopened).report.events("tag-fx")
+	assert_eq(rows.size(), 2, "the report lost rows")
+	assert_eq(int(rows[0].get("penalty", 0)), 1, "the penalty tag did not survive the save")
+	assert_eq(int(rows[1].get("penalty", 0)), 0, "an open-play goal was saved as a penalty")
+
+## A save written before penalties were tagged gets the column on open; its
+## existing report rows stay open-play goals.
+func test_an_older_save_gains_the_penalty_columns_when_it_opens() -> void:
+	var save := LeagueSave.create("Old Events", LeagueRules.defaults())
+	PLDatabase.execute("DROP TABLE match_event;")
+	PLDatabase.execute(
+		"CREATE TABLE match_event (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+		+ "fixture_id TEXT NOT NULL, minute INTEGER NOT NULL, kind TEXT NOT NULL, "
+		+ "player_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL DEFAULT '', "
+		+ "detail TEXT NOT NULL DEFAULT '');")
+	PLDatabase.execute("DROP TABLE goal_highlight;")
+	PLDatabase.execute(
+		"CREATE TABLE goal_highlight (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+		+ "fixture_id TEXT NOT NULL, goal_index INTEGER NOT NULL, "
+		+ "match_event_id INTEGER NOT NULL DEFAULT 0, minute INTEGER NOT NULL DEFAULT 0, "
+		+ "club_id TEXT NOT NULL DEFAULT '', scorer_id TEXT NOT NULL DEFAULT '', "
+		+ "scorer_name TEXT NOT NULL DEFAULT '', assist_id TEXT NOT NULL DEFAULT '', "
+		+ "assist_name TEXT NOT NULL DEFAULT '', commentary TEXT NOT NULL DEFAULT '', "
+		+ "source TEXT NOT NULL DEFAULT 'auto', codec TEXT NOT NULL DEFAULT '', "
+		+ "version INTEGER NOT NULL DEFAULT 0, home_club_id TEXT NOT NULL DEFAULT '', "
+		+ "away_club_id TEXT NOT NULL DEFAULT '', bytes BLOB, UNIQUE(fixture_id, goal_index));")
+	assert_false(_columns("match_event").has("penalty"), "the fixture did not start as an older save")
+	var reopened := LeagueSave.open(save.slug)
+	assert_not_null(reopened, "the older save did not open")
+	assert_true(_columns("match_event").has("penalty"), "opening an older save did not add the tag")
+	assert_true(_columns("goal_highlight").has("penalty"), "opening an older save did not add the clip tag")
 
 ## The table reading belongs to one save: two seasons remember different modes
 ## and sorts, and a save that was never changed has none.

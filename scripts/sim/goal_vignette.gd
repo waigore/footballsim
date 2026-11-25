@@ -12,7 +12,6 @@ extends RefCounted
 ## then flown through, and a planned strike is never intercepted (the engine's
 ## `planned_goal` rule). World space is the attacking frame; an away goal is
 ## mirrored once at sampling, like the engine's own direction switch.
-
 const L := 105.0
 const W := 68.0
 const CENTRE := W * 0.5
@@ -138,6 +137,7 @@ class Sim:
 		c.base = c.pos
 		ball = Vector3(c.pos.x, c.pos.y, 0.11)
 		owner = carrier
+		if bool(goal.get("penalty", false)): GoalVignettePenalty.lay_out(self, shooter, keeper, rng)
 
 	func run() -> void:
 		for i in range(int(round(LENGTH / DT)) + 1):

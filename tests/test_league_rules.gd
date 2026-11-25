@@ -155,6 +155,50 @@ func test_empty_sides_and_zero_weights_are_safe() -> void:
 	assert_true(MatchEvents.pick([], MatchEvents.GOAL_SHARE, "sho", rng).is_empty(),
 		"an empty XI returned a scorer")
 
+## #171: some synthetic goals are converted penalties. The row is still one
+## goal — the Poisson scoreline owns that — but a spot kick carries no assist,
+## so the report can mark it without inventing a set-up man.
+func test_penalty_goals_are_tagged_and_carry_no_assist() -> void:
+	var xi := _xi()
+	var goals := 0
+	var penalties := 0
+	for seed in range(1, 121):
+		for e in MatchEvents.side(seed, "gw08-MCI-MUN", "MCI", xi, 6):
+			if str(e["kind"]) != "goal":
+				continue
+			goals += 1
+			if not bool(e.get("penalty", false)):
+				continue
+			penalties += 1
+			assert_false(e.has("assist_id"), "a penalty carried an assist")
+			assert_false(e.has("assist_name"), "a penalty carried an assist")
+	assert_gt(penalties, 0, "not one synthetic goal was a penalty")
+	var share := float(penalties) / float(goals)
+	assert_between(share, 0.02, 0.20, "the penalty share is off the engine's own")
+
+## The scoreline comes only from the Poisson sample: tagging a goal as a penalty
+## never adds or removes one, whatever the seed.
+func test_penalty_tags_never_change_the_goal_count() -> void:
+	var xi := _xi()
+	for seed in range(1, 61):
+		var goals := 0
+		for e in MatchEvents.side(seed, "gw10-BUR-MCI", "BUR", xi, 5):
+			if str(e["kind"]) == "goal":
+				goals += 1
+		assert_eq(goals, 5, "a tagged report lost or added a goal at seed %d" % seed)
+
+## Same save seed and fixture, same tags: the report a player reopens reads the
+## way it did when the fixture settled.
+func test_penalty_tags_are_seeded_with_the_report() -> void:
+	var xi := _xi()
+	var a := MatchEvents.side(171, "gw09-MCI-ARS", "MCI", xi, 5)
+	var b := MatchEvents.side(171, "gw09-MCI-ARS", "MCI", xi, 5)
+	assert_eq(a.size(), b.size(), "one seed produced two reports")
+	for i in range(a.size()):
+		assert_eq(bool(a[i].get("penalty", false)), bool(b[i].get("penalty", false)),
+			"a penalty tag drifted between replays")
+		assert_eq(str(a[i]["player_id"]), str(b[i]["player_id"]), "a scorer drifted between replays")
+
 func _role_of(xi: Array, player_id: String) -> String:
 	for p in xi:
 		if str(p["id"]) == player_id:

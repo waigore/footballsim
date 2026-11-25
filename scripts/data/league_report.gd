@@ -55,13 +55,14 @@ func add_events(rows: Array) -> void:
 	var values: Array = []
 	var bindings: Array = []
 	for e in rows:
-		values.append("(?, ?, ?, ?, ?, ?)")
+		values.append("(?, ?, ?, ?, ?, ?, ?)")
 		bindings.append_array([
 			str(e.get("fixture_id", "")), int(e.get("minute", 0)), str(e.get("kind", "")),
 			str(e.get("player_id", "")), str(e.get("club_id", "")), str(e.get("detail", "")),
+			1 if bool(e.get("penalty", false)) else 0,
 		])
 	PLDatabase.execute(
-		"INSERT INTO match_event (fixture_id, minute, kind, player_id, club_id, detail) "
+		"INSERT INTO match_event (fixture_id, minute, kind, player_id, club_id, detail, penalty) "
 		+ "VALUES " + ", ".join(values) + ";",
 		bindings,
 	)

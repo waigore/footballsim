@@ -87,11 +87,14 @@ static func save(rng, gk: String, shooter: String, how: String, xg: float) -> St
 	])
 
 static func goal(rng, scorer: String, assist: String, own_goal: bool, team_short: String,
-		other_short: String, before_for: int, before_against: int, minute: int) -> String:
+		other_short: String, before_for: int, before_against: int, minute: int,
+		penalty: bool = false) -> String:
 	var after_for := before_for + 1
 	var score := "%s %d-%d %s" % [team_short, after_for, before_against, other_short]
 	if own_goal:
 		return "OWN GOAL! %s turns it into his own net. %s." % [scorer, score]
+	if penalty:
+		return "PENALTY! %s scores from the spot — %s." % [scorer, score]
 	var open := _pick(rng, ["GOAL!", "IT'S IN!", "GOAL!", "IT'S THERE!"])
 	var state := ""
 	if after_for == before_against:
