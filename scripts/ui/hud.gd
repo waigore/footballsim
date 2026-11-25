@@ -28,6 +28,9 @@ var menu_layer: InterestLayer = null
 ## paints every frame, so the shortlist is read when it moves, not per name.
 var followed := {}
 var followed_of = null
+## The season whose `state_changed` this overlay listens to, so a shortlist that
+## moves outside the menu (a save loaded, a club followed elsewhere) repaints.
+var _followed_bound = null
 
 ## Every door painted this frame, in draw order (`id`, `rect`, `label`, `hint`).
 var buttons: Array:
@@ -100,12 +103,21 @@ func _process(d: float) -> void:
 	queue_redraw()
 
 ## Re-read the shortlist when the season under the broadcast opens or closes, and
-## after the menu writes it (#107).
+## after anything writes it (#107): the overlay paints every frame, so it reads
+## the set once and listens to the season instead of querying per name.
 func _read_followed() -> void:
 	var season = LeagueSeason.active
+	if _followed_bound != season:
+		if _followed_bound != null and is_instance_valid(_followed_bound) \
+				and _followed_bound.state_changed.is_connected(_read_followed):
+			_followed_bound.state_changed.disconnect(_read_followed)
+		_followed_bound = season
+		if season != null and not season.state_changed.is_connected(_read_followed):
+			season.state_changed.connect(_read_followed)
 	followed_of = season
 	followed = LeagueInterestMark.set_of(season.state().get("interests", [])) \
 		if season != null else {}
+	queue_redraw()
 
 func _draw() -> void:
 	if game == null or engine == null:
