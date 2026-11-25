@@ -26,6 +26,7 @@ Former gaps now shipped (wiki domains playable; DRs accepted):
 | Roundup scorers name their club, in minute order | [#125](https://github.com/waigore/footballsim/issues/125); DR-20261125-07 |
 | Encyclopedia reads the open season (table, results, scorers, player lines) | `league_ledger.gd`; DR-20261125-08 |
 | Teams of Interest: a followed club's games stay on Watch, gold names | `league_interest.gd`; DR-20261125-09; [#104](https://github.com/waigore/footballsim/issues/104) |
+| Encyclopedia competition hubs + index | `pl_competitions.gd`; DR-20261126-01; [#190](https://github.com/waigore/footballsim/issues/190) |
 
 ## Remaining gaps (impact order)
 
