@@ -15,6 +15,9 @@ signal load_league_requested
 ## The sheet on screen changed: the host re-stacks the shell so the quit
 ## confirmation draws over whatever raised it (#123).
 signal screen_changed
+## The player switched the match HUD on or off from the settings sheet (#158);
+## the host hands it to the match, which owns the overlay.
+signal hud_visibility_changed(hud_on: bool)
 
 const SCREEN_MENU := "menu"
 const SCREEN_SETTINGS := "settings"
@@ -25,6 +28,10 @@ var screen := SCREEN_NONE
 var prev_screen := SCREEN_NONE
 var has_match := false
 var volume: float = Prefs.DEFAULT_BGM
+## The match HUD's show/hide choice, kept in the same prefs file as the volume
+## (#158). The shell reads and writes it for the settings sheet; the match scene
+## applies it.
+var hud_visible: bool = Prefs.DEFAULT_HUD
 var prefs_path: String = Prefs.PATH
 var ui_scale := 1.0
 var touch := false
@@ -50,6 +57,7 @@ func _ready() -> void:
 	music = MenuMusic.new()
 	add_child(music)
 	volume = Prefs.load_bgm(prefs_path)
+	hud_visible = Prefs.load_hud(prefs_path)
 	music.set_volume(volume)
 	for path in MenuScreen.STILL_PATHS:
 		var tex = load(path)
@@ -92,6 +100,10 @@ func open_menu(has_match_now: bool) -> void:
 func open_settings() -> void:
 	screen = SCREEN_SETTINGS
 	prev_screen = SCREEN_NONE
+	# The sheet reads both prefs the moment it opens, so it can never show a stale
+	# switch after the file was changed elsewhere.
+	volume = Prefs.load_bgm(prefs_path)
+	hud_visible = Prefs.load_hud(prefs_path)
 	if music != null:
 		music.play_menu()
 	visible = true
@@ -202,6 +214,12 @@ func _settings_click(p: Vector2) -> bool:
 		var v := settings.value_at(p, design_vp())
 		if v >= 0.0:
 			set_volume(v)
+	elif id == "hud":
+		# One preference, written here and handed to the scene to apply (#158).
+		hud_visible = not hud_visible
+		Prefs.save_hud(hud_visible, prefs_path)
+		hud_visibility_changed.emit(hud_visible)
+		queue_redraw()
 	return true
 
 func _confirm_click(p: Vector2) -> bool:
@@ -301,7 +319,7 @@ func _draw() -> void:
 		if under == SCREEN_MENU:
 			menu.draw(self, vp, fonts, has_match, volume, touch)
 		else:
-			settings.draw(self, vp, fonts, volume, touch)
+			settings.draw(self, vp, fonts, volume, touch, hud_visible)
 	elif screen == SCREEN_CONFIRM:
 		draw_rect(Rect2(Vector2.ZERO, vp), Color(0, 0, 0, 0.35))
 	if screen == SCREEN_CONFIRM:

@@ -12,6 +12,10 @@ func before_all() -> void:
 	game = Node2D.new()
 	game.set_script(load("res://scripts/main.gd"))
 	add_child(game)
+	# The match HUD's show/hide choice lives in the player's prefs file (#158);
+	# a test run must not inherit whatever the developer's last launch chose.
+	game.menus.shell.prefs_path = TestScratch.file("test_touch_flow_prefs.cfg")
+	game.menus.restore_hud()
 	# Force the handheld overlay, landing the design height on a phone's, so the
 	# point-to-design conversion is exercised rather than the identity. The test
 	# viewport is square, so the scale comes from its height.
