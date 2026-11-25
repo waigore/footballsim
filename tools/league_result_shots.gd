@@ -30,6 +30,7 @@ func _initialize() -> void:
 	# The main door settles the day's AUTO fixtures and hands over the watch, so
 	# the day ends up mixed: nine results and the match being watched.
 	league.screen.click("continue")
+	_kick_briefing()
 	await _frames(2)
 	print("WATCH date=", day, " fixture=", held, " viewer=", scene.home_id, " v ", scene.away_id,
 		" paused=", scene.paused)
@@ -69,6 +70,12 @@ func _initialize() -> void:
 	await _shot("issue-124-report")
 	print("EXIT ok fixture=", held)
 	quit()
+
+## Every watched match now opens the pre-match briefing first (#157): kick it off
+## so the pose this tool captures is the match, not the briefing.
+func _kick_briefing() -> void:
+	if scene.prematch != null and scene.prematch.is_open():
+		scene.prematch.screen.click("kick")
 
 func _frames(count: int) -> void:
 	for i in range(count):

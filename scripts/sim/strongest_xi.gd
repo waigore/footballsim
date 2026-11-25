@@ -28,19 +28,43 @@ const EXACT_BONUS := 12.0
 const FAMILY_BONUS := 5.0
 
 ## Best XI for a team dictionary (starters + bench), in formation-slot order.
+##
+## A player the season has ruled out — injured or suspended — is skipped, so the
+## eleven a club fields is its strongest *available* side (#155, #156). A club
+## that cannot field eleven fit bodies fills the gaps with whoever it has, which
+## is what a real squad does rather than playing short from kick-off.
 static func pick(team: Dictionary) -> Array:
 	var pool: Array = []
 	pool.append_array(team.get("starters", []))
 	pool.append_array(team.get("bench", []))
+	var out_ids := SeasonAvailability.unavailable(str(team.get("id", "")))
+	var fit: Array = []
+	var unfit: Array = []
+	for p in pool:
+		if out_ids.has(str(p.get("id", ""))):
+			unfit.append(p)
+		else:
+			fit.append(p)
 	var slots: Array = TeamData.slots(str(team.get("formation", "4-2-3-1"))).keys()
 	var used := {}
 	var out: Array = []
 	for slot in slots:
-		var best := _best(pool, used, str(slot))
+		var best := _best(fit, used, str(slot))
 		if best.is_empty():
 			continue
 		used[str(best["id"])] = true
 		out.append(best)
+	# Short of eleven: the remaining slots take the best ruled-out bodies, so
+	# the side still kicks off with eleven and the briefing still says why.
+	if out.size() < slots.size():
+		for slot in slots:
+			if out.size() >= slots.size():
+				break
+			var spare := _best(unfit, used, str(slot))
+			if spare.is_empty():
+				continue
+			used[str(spare["id"])] = true
+			out.append(spare)
 	return out
 
 static func _best(pool: Array, used: Dictionary, slot: String) -> Dictionary:

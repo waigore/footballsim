@@ -77,6 +77,16 @@ suites = [
   "test_touch_flow.gd",
   "test_menu_nav.gd",
   "test_league_ui.gd",
+  "test_pre_match.gd",
+]
+
+# The pre-match briefing: its model, its pitch and doors, and the availability
+# it reads (#155–#157). A change in either layer can move the other.
+[domains.pre_match]
+suites = [
+  "test_pre_match.gd",
+  "test_season_availability.gd",
+  "test_league_season.gd",
 ]
 
 [domains.shell]
@@ -150,6 +160,8 @@ suites = [
   "test_fixture_calendar.gd",
   "test_strongest_xi.gd",
   "test_league_season.gd",
+  "test_season_availability.gd",
+  "test_pre_match.gd",
   "test_league_sheets.gd",
   "test_league_panel_ui.gd",
   "test_league_ui.gd",
@@ -288,6 +300,20 @@ domain = "league"
 [[rules]]
 match = "scripts/sim/league_*.gd*"
 domain = "league"
+
+# Season availability and the pre-match briefing (#155–#157): the absence model,
+# its copy pack, the model/screen/host and the pitch all ride one domain.
+[[rules]]
+match = "scripts/sim/season_availability.gd*"
+domain = "pre_match"
+
+[[rules]]
+match = "scripts/ui/pre_match*.gd*"
+domain = "pre_match"
+
+[[rules]]
+match = "scripts/data/pre_match_copy.gd*"
+domain = "pre_match"
 
 [[rules]]
 match = "scripts/sim/fixture_calendar.gd*"

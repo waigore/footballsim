@@ -49,6 +49,7 @@ func _initialize() -> void:
 	# The same hold over the broadcast overlay's scoreboard.
 	scene.menus.league.close()
 	scene._on_fixture_confirmed(club, _other(club))
+	_kick_briefing()
 	scene.paused = true
 	scene.hud.queue_redraw()
 	await _frames(4)
@@ -85,6 +86,12 @@ func _hud_door(game, id: String) -> Rect2:
 func _frames(count: int) -> void:
 	for i in range(count):
 		await process_frame
+
+## Every watched match now opens the pre-match briefing first (#157): kick it off
+## so the pose this tool captures is the match, not the briefing.
+func _kick_briefing() -> void:
+	if scene.prematch != null and scene.prematch.is_open():
+		scene.prematch.screen.click("kick")
 
 func _shot(name: String) -> void:
 	await _frames(4)

@@ -52,6 +52,18 @@ const SCHEMA := [
 	+ "club_id TEXT NOT NULL, apps INTEGER NOT NULL DEFAULT 0, "
 	+ "goals INTEGER NOT NULL DEFAULT 0, assists INTEGER NOT NULL DEFAULT 0, "
 	+ "yellow INTEGER NOT NULL DEFAULT 0, red INTEGER NOT NULL DEFAULT 0);",
+	# Season availability (#155, #156): the injuries and suspensions a club
+	# carries between fixtures. `days_left` and `due_on` are the hidden injury
+	# clock — the screens only ever read weeks or months.
+	"CREATE TABLE IF NOT EXISTS league_absence (player_id TEXT PRIMARY KEY, "
+	+ "club_id TEXT NOT NULL, kind TEXT NOT NULL, grade TEXT NOT NULL DEFAULT '', "
+	+ "days_left INTEGER NOT NULL DEFAULT 0, matches_left INTEGER NOT NULL DEFAULT 0, "
+	+ "started_on TEXT NOT NULL DEFAULT '', due_on TEXT NOT NULL DEFAULT '', "
+	+ "rate REAL NOT NULL DEFAULT 1.0);",
+	# How far up the yellow table a player has already been punished: the mark
+	# that stops ten cards paying twice for five (#156).
+	"CREATE TABLE IF NOT EXISTS league_discipline (player_id TEXT PRIMARY KEY, "
+	+ "club_id TEXT NOT NULL, yellow_mark INTEGER NOT NULL DEFAULT 0);",
 	"CREATE TABLE IF NOT EXISTS goal_highlight (id INTEGER PRIMARY KEY AUTOINCREMENT, "
 	+ "fixture_id TEXT NOT NULL, goal_index INTEGER NOT NULL, "
 	+ "match_event_id INTEGER NOT NULL DEFAULT 0, minute INTEGER NOT NULL DEFAULT 0, "

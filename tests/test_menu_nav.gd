@@ -77,9 +77,12 @@ func test_start_sim_opens_the_fixture_sheet_and_back_returns_to_the_menu() -> vo
 	assert_true(game.menus.active(), "Back did not return to the main menu")
 	assert_eq(game.menus.shell.screen, AppShell.SCREEN_MENU, "Back did not land on the menu")
 
-func test_kick_off_closes_the_shell_and_stops_the_music() -> void:
+func test_kick_off_opens_the_briefing_then_closes_the_shell_and_stops_the_music() -> void:
 	game.open_select(true)
 	game._on_fixture_confirmed("ARS", "LIV")
+	# #157: KICK OFF opens the pre-match briefing; the match starts from it.
+	assert_true(TestBriefing.is_open(game), "KICK OFF skipped the pre-match briefing")
+	assert_true(TestBriefing.kick(game), "the briefing's KICK OFF did not start the match")
 	assert_false(game.menus.active(), "the shell stayed up after kick-off")
 	assert_true(game.match_started, "the match was not marked started")
 	assert_true(game.hud_layer.visible, "the match HUD did not come back for kick-off")

@@ -65,10 +65,14 @@ func key(code: int) -> void:
 func screen():
 	return game.menus.league.screen
 
+## A press that hands a watched fixture to the viewer now opens the pre-match
+## briefing (#157): the flow kicks it off so the suite keeps driving the sim.
 func press_id(id: String) -> void:
 	for item in screen().buttons:
 		if str(item["id"]) == id:
 			press((item["rect"] as Rect2).get_center())
+			if TestBriefing.is_open(game):
+				assert_true(TestBriefing.kick(game), "the briefing's CONTINUE did not start the match")
 			return
 	if PANEL_DOORS.has(id):
 		_press_panel_row(str(PANEL_DOORS[id]))

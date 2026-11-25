@@ -326,6 +326,8 @@ func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary
 		colour = Color(0.92, 0.84, 0.35)
 	elif kind == "red":
 		colour = UiChrome.C_DANGER
+	elif kind == "injury":
+		colour = UiChrome.C_SOFT
 	elif kind == "assist":
 		colour = UiChrome.C_SOFT
 	var name := str(e.get("player_name", e.get("detail", "")))
