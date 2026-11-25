@@ -142,12 +142,13 @@ static func wordmark_c(c: CanvasItem, center_x: float, y: float, size: int, font
 static func rule(c: CanvasItem, center_x: float, y: float, w: float = 64.0, col: Color = C_GOLD) -> void:
 	c.draw_rect(Rect2(center_x - w * 0.5, y, w, 3.0), col)
 
-## Sheet header used by settings and the fixture picker: product bar top-left,
-## a centred kicker + title, and an optional right-hand caption.
-static func sheet_header(c: CanvasItem, vp: Vector2, fonts: Dictionary, kicker: String, title: String, caption: String = "") -> void:
+## Sheet header used by settings and the fixture picker: a centred title and an
+## optional right-hand caption. BACK owns the top-left corner itself.
+static func sheet_header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
+		caption: String = "") -> void:
 	var bold: Font = fonts["bold"]
-	wordmark(c, Vector2(24.0, 40.0), 20, bold)
-	text(c, Vector2(24.0, 58.0), kicker, 10, C_DIM, fonts["med"])
+	# BACK owns the top-left corner on every sheet (#163), so the wordmark and
+	# kicker that used to sit there are gone; a caption can ride the right.
 	if caption != "":
 		text_r(c, vp.x - 24.0, 40.0, caption, 11, C_DIM, bold)
 	if vp.y < 620.0:

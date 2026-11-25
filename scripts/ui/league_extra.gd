@@ -27,20 +27,26 @@ static func back_item() -> Dictionary:
 	return {"id": "back", "kind": "button", "label": "BACK", "pinned": true,
 		"rect": back_rect()}
 
+## The primary door's corner: CONTINUE on the hub, KICK OFF on the pre-match
+## briefing. The same header band as BACK, on the other side of it (#163).
+static func primary_rect(vp: Vector2, width: float = 140.0) -> Rect2:
+	return Rect2(vp.x - 24.0 - width, 12.0, width, 32.0)
+
 static var header_cache := {}
 
 ## One header for every league season sheet: BACK top-left, the sheet's title
 ## in the gold kicker position, and an optional right-hand caption. Continue is
 ## the only control that ever shares the row, and the hub adds it itself.
+## `right` reserves room for a door in the corner so a caption never runs under it.
 static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
-		caption: String = "") -> void:
+		caption: String = "", right: float = 0.0) -> void:
 	var bold: Font = fonts["bold"]
 	var rect := back_rect()
 	UiChrome.panel(c, header_cache, rect, UiChrome.C_PANEL_LIGHT, 7)
 	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 21.0, "BACK", 12, UiChrome.C_TEXT, bold)
 	UiChrome.text(c, Vector2(136.0, 36.0), title.to_upper(), 16, UiChrome.C_GOLD, bold)
 	if caption != "":
-		UiChrome.text_r(c, vp.x - 24.0, 34.0, caption, 10, UiChrome.C_DIM, bold)
+		UiChrome.text_r(c, vp.x - 24.0 - right, 34.0, caption, 10, UiChrome.C_DIM, bold)
 	c.draw_rect(Rect2(24.0, HEADER - 8.0, vp.x - 48.0, 1.0), Color(1, 1, 1, 0.08))
 
 # ------------------------------------------------------------------- stats ---

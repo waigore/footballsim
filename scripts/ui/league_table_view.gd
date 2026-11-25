@@ -136,16 +136,15 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 			"interested": interest.has(str(rows[i]["club_id"])),
 		})
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": Rect2(24.0, vp.y - LeagueSheet.BAR_H + 6.0, 110.0, LeagueSheet.BAR_H - 14.0),
-		"primary": true})
+		"rect": LeagueExtra.back_rect()})
 	# Two doors rather than one toggle: the gold one is the reading on screen,
 	# so the player never has to guess what a press will do.
 	items.append({"id": "tbl:mode:" + COMPACT, "kind": "button", "label": "COMPACT",
 		"pinned": true, "primary": reading == COMPACT,
-		"rect": Rect2(142.0, vp.y - LeagueSheet.BAR_H + 6.0, 104.0, LeagueSheet.BAR_H - 14.0)})
+		"rect": Rect2(24.0, vp.y - LeagueSheet.BAR_H + 6.0, 104.0, LeagueSheet.BAR_H - 14.0)})
 	items.append({"id": "tbl:mode:" + FULL, "kind": "button", "label": "FULL",
 		"pinned": true, "primary": reading == FULL,
-		"rect": Rect2(252.0, vp.y - LeagueSheet.BAR_H + 6.0, 78.0, LeagueSheet.BAR_H - 14.0)})
+		"rect": Rect2(134.0, vp.y - LeagueSheet.BAR_H + 6.0, 78.0, LeagueSheet.BAR_H - 14.0)})
 	return items
 
 ## The reading this sheet draws. With no saved choice the device decides once;
@@ -289,8 +288,6 @@ func _store(save: LeagueSave, key: String, value: String) -> void:
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
 	var bold: Font = fonts["bold"]
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), "LEAGUE TABLE", 12, UiChrome.C_GOLD, bold)
 	var date := str(view.get("date", ""))
 	var label := FixtureCalendar.day_label(date)
 	var parts: Array = []
@@ -298,10 +295,9 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 		parts.append(str(view.get("name", "")))
 	if label != "":
 		parts.append(label)
-	UiChrome.text_r(c, vp.x - 24.0, 30.0, " · ".join(PackedStringArray(parts)), 10,
-		UiChrome.C_DIM, bold)
+	LeagueExtra.header(c, vp, fonts, "LEAGUE TABLE", " · ".join(PackedStringArray(parts)))
 	if date != "":
-		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 30.0, 10), date)
+		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 34.0, 10), date)
 	var y := vp.y - LeagueSheet.BAR_H + 24.0
 	# The legend shares the bar with the two reading doors on a wide sheet; a
 	# phone sheet has no room there, so it moves up beside the title.
