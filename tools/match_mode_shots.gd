@@ -89,6 +89,16 @@ func _initialize() -> void:
 	await _shot("issue164_phone_settings")
 	_print_settings("phone goals")
 	scene.menus.close()
+	# A portrait design space: the card is narrower than the inline threshold, so
+	# the MATCH VIEW title stacks above its segments instead of sharing the line.
+	DisplayServer.window_set_size(Vector2i(1200, 1400))
+	await _frames(4)
+	scene.dev.ui_scale = 3.2
+	scene._sync_overlay_scale()
+	scene.menus.open_settings()
+	await _shot("issue164_portrait_settings")
+	_print_settings("portrait goals")
+	scene.menus.close()
 	# Leave the developer's own prefs as they were: the captures must not decide
 	# how the next launch opens.
 	Prefs.save_mode(Prefs.DEFAULT_MODE)
