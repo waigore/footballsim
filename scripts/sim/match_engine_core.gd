@@ -42,18 +42,20 @@ const SUB_LIMIT := 5
 ## p = FINISH_EFFICIENCY · xG, so a match's goals track its expected goals (the
 ## model's λ) instead of the old keeper-steer hack.
 const FINISH_EFFICIENCY := 1.0
-## Positional xG is calibrated down to real-football levels.
-const XG_SCALE := 0.43
+## Positional xG is calibrated down to real-football levels. Fitted with
+## XG_CONTEST_ELASTICITY on the big-n census after the λ retune (#192): the
+## engine's own chance creation already separates the sides, so the quality
+## calibration is nearly level and the level carries the fit.
+const XG_SCALE := 0.57
 ## A shot is also worth more when the defence facing it is weak and when the
 ## side taking it is strong — the same combined rating gradient the model puts
 ## into λ, read from one source (`PoissonModel.exponent_terms`). The engine's
 ## positional xG knows only distance, angle and aim, so without this a good back
 ## line and keeper move *where* chances happen but never how good a chance is.
-## Elasticity is per 10 rating points of that derived gap; it sits below the
-## model's 0.98 because the engine's chance creation already carries part of the
-## gradient. Fitted to the tier-2 census (wiki poisson-model); the PL-scoring
-## retune sets that census-follow-up work, not this constant.
-const XG_CONTEST_ELASTICITY := 0.95
+## Elasticity is per 10 rating points of that derived gap. It sits well below the
+## model's 0.98 because the engine's chance creation carries most of the
+## gradient itself; the census fit (#192) is what sets it.
+const XG_CONTEST_ELASTICITY := 0.28
 ## Venue premium in chance quality, in log terms: the model builds the home edge
 ## into HOME_XG / AWAY_XG, and the engine's chance locations do not, so the
 ## finishing calibration carries the same split (home × e^edge, away ÷ e^edge).
