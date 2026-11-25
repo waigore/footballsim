@@ -1,0 +1,260 @@
+extends GdToolsTest
+
+## The match view (#164): Highlights, Goals only and the full match, driven
+## through the real main.gd. One preference, four doors to it — the `H` key, the
+## bar's mode door, the Settings segments and the Settings keys — and the copy
+## that tells the player which view they are watching.
+
+var PREFS := TestScratch.file("test_match_mode_issue164.cfg")
+var game = null
+
+func before_all() -> void:
+	if FileAccess.file_exists(PREFS):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
+	game = Node2D.new()
+	game.set_script(load("res://scripts/main.gd"))
+	add_child(game)
+	game.menus.shell.prefs_path = PREFS
+	game.menus.restore_mode()
+	game.menus.close()
+	game.hud_layer.visible = true
+	game._on_fixture_confirmed("MUN", "MCI")
+	# #157: the briefing comes before the sim, so kick it off.
+	TestBriefing.kick(game)
+	game.paused = true
+	game.hud.queue_redraw()
+	await get_tree().process_frame
+
+func after_all() -> void:
+	if FileAccess.file_exists(PREFS):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
+	if is_instance_valid(game):
+		game.queue_free()
+
+func after_each() -> void:
+	# Every test starts in the default view with no pref left behind by the one
+	# before it. `view.set_mode` applies the flags without writing the file.
+	if FileAccess.file_exists(PREFS):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
+	if game == null:
+		return
+	game.view.set_mode(Prefs.DEFAULT_MODE)
+	# A test may have swapped in a private engine for the ring; rebuild the live
+	# one so the next test starts from the scene's own match.
+	game.new_match(1000)
+	game.menus.close()
+	game.paused = true
+	game.hud_layer.visible = true
+
+func _key(code: int) -> void:
+	var ev := InputEventKey.new()
+	ev.keycode = code
+	ev.pressed = true
+	game._input(ev)
+
+func _door(id: String) -> Rect2:
+	for b in game.hud.buttons:
+		if str(b["id"]) == id:
+			return b["rect"]
+	return Rect2()
+
+func _tap_door(id: String) -> void:
+	var r := _door(id)
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = (r.position + r.size * 0.5) * game.hud_scale
+	game._input(ev)
+
+func _band_label(id: String) -> String:
+	var p := HudPaint.new(game.hud.chrome, game.hud.design_vp())
+	for spec in game.hud.controls_band.control_specs(p, game, game.touch):
+		if str(spec[0]) == id:
+			return str(spec[1])
+	return ""
+
+func _vps() -> Array:
+	return [Vector2(1600, 900), Vector2(1280, 720), Vector2(913, 411), Vector2(800, 360), Vector2(415, 923)]
+
+# ------------------------------------------------------------------- pref ---
+
+func test_a_missing_file_opens_in_highlights() -> void:
+	assert_false(FileAccess.file_exists(PREFS), "the probe file should start absent")
+	assert_eq(Prefs.load_mode(PREFS), "highlights", "a missing prefs file did not default to Highlights")
+	assert_eq(Prefs.mode_label(Prefs.load_mode(PREFS)), "HIGHLIGHTS", "the default view has no name")
+
+func test_every_view_survives_a_save_and_load() -> void:
+	for mode in Prefs.MODES:
+		assert_true(Prefs.save_mode(str(mode), PREFS), "saving %s failed" % mode)
+		assert_eq(Prefs.load_mode(PREFS), str(mode), "%s did not load back" % mode)
+
+func test_an_unknown_or_mistyped_view_opens_in_highlights() -> void:
+	assert_true(Prefs.save_mode("documentary", PREFS), "the save guarded an unknown view")
+	assert_eq(Prefs.load_mode(PREFS), "highlights", "an unknown view was stored instead of defaulting")
+	var cfg := ConfigFile.new()
+	cfg.set_value(Prefs.SECTION_UI, Prefs.KEY_MODE, 3)
+	assert_eq(cfg.save(PREFS), OK, "could not write the type probe")
+	assert_eq(Prefs.load_mode(PREFS), "highlights", "a number read as a match view")
+
+func test_the_door_cycles_three_views_and_names_each() -> void:
+	assert_eq(Prefs.next_mode("highlights"), "goals", "Highlights did not lead to Goals only")
+	assert_eq(Prefs.next_mode("goals"), "full", "Goals only did not lead to the full match")
+	assert_eq(Prefs.next_mode("full"), "highlights", "the full match did not lead back to Highlights")
+	assert_eq(Prefs.mode_label("goals"), "GOALS ONLY", "Goals only has the wrong name")
+	assert_eq(Prefs.mode_label("full"), "FULL MATCH", "the full match has the wrong name")
+	assert_eq(Prefs.mode_label("nonsense"), "HIGHLIGHTS", "an unknown view borrowed no name")
+
+func test_the_view_shares_the_file_with_the_other_two_prefs() -> void:
+	assert_true(Prefs.save_bgm(0.4, PREFS), "saving the volume failed")
+	assert_true(Prefs.save_hud(false, PREFS), "saving the HUD choice failed")
+	assert_true(Prefs.save_mode("goals", PREFS), "saving the view failed")
+	assert_almost_eq(Prefs.load_bgm(PREFS), 0.4, 0.0001, "the view save erased the volume")
+	assert_false(Prefs.load_hud(PREFS), "the view save erased the HUD choice")
+	assert_true(Prefs.save_bgm(0.9, PREFS), "re-saving the volume failed")
+	assert_eq(Prefs.load_mode(PREFS), "goals", "the volume save erased the view")
+
+# ------------------------------------------------------------------ match ---
+
+func test_the_bar_door_cycles_all_three_views() -> void:
+	game.view.set_mode("highlights")
+	assert_eq(_band_label("mode"), "HIGHLIGHTS", "the door opened on the wrong view")
+	_tap_door("mode")
+	assert_eq(game.mode, "goals", "the mode door skipped Goals only")
+	assert_eq(_band_label("mode"), "GOALS ONLY", "the door does not name Goals only")
+	assert_true(game.fast_mode, "Goals only did not fast-forward on open")
+	_tap_door("mode")
+	assert_eq(game.mode, "full", "Goals only did not lead to the full match")
+	assert_eq(_band_label("mode"), "FULL MATCH", "the door does not name the full match")
+	assert_false(game.fast_mode, "the full match kept the fast-forward")
+	_tap_door("mode")
+	assert_eq(game.mode, "highlights", "the full match did not lead back to Highlights")
+	assert_true(game.fast_mode, "Highlights did not resume fast-forwarding")
+
+func test_h_cycles_the_same_three_views() -> void:
+	game.view.set_mode("highlights")
+	_key(KEY_H)
+	assert_eq(game.mode, "goals", "H did not reach Goals only")
+	_key(KEY_H)
+	assert_eq(game.mode, "full", "H did not reach the full match")
+	_key(KEY_H)
+	assert_eq(game.mode, "highlights", "H did not come back to Highlights")
+
+func test_a_toggle_remembers_the_view_and_a_relaunch_restores_it() -> void:
+	game.view.set_mode("highlights")
+	_key(KEY_H)
+	assert_eq(Prefs.load_mode(PREFS), "goals", "the toggle did not save Goals only")
+	# The next launch: the scene starts on the default, then reads the file.
+	game.view.set_mode("highlights")
+	game.menus.restore_mode()
+	assert_eq(game.mode, "goals", "a relaunch did not restore Goals only")
+	assert_true(game.fast_mode, "a restored Goals only did not fast-forward")
+	# --clear-cache wipes the file: the broadcast opens in Highlights again.
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
+	game.menus.restore_mode()
+	assert_eq(game.mode, "highlights", "a cleared cache did not open in Highlights")
+
+func test_goals_only_fast_forwards_and_the_full_match_does_not() -> void:
+	game.view.set_mode("goals")
+	assert_true(game.fast_mode, "Goals only is not fast-forwarding")
+	assert_eq(game.view.ticks_this_frame(1.0 / 30.0), 48, "a Goals only frame ran the wrong number of ticks")
+	game.view.set_mode("full")
+	assert_false(game.fast_mode, "the full match is fast-forwarding")
+	game.speed = 2.0
+	assert_eq(game.view.ticks_this_frame(1.0 / 30.0), 4, "the full match ignored the chosen speed")
+	game.speed = 1.0
+
+func test_skip_ends_a_live_replay_in_goals_only() -> void:
+	game.view.set_mode("goals")
+	game.in_highlight = true
+	game.fast_mode = false
+	game.highlight_until = game.engine.clock + 12.0
+	_key(KEY_S)
+	assert_false(game.in_highlight, "Skip did not end the goal replay")
+	assert_true(game.fast_mode, "Skip left Goals only standing still")
+
+func test_goals_only_replays_only_scored_goals() -> void:
+	game.view.set_mode("goals")
+	# A private engine drives the ring so the scene's own events cannot open a
+	# replay behind this test; after_each rebuilds the live match.
+	var engine = MatchEngine.new(4242, "MUN", "MCI")
+	game.engine = engine
+	game.highlights.restart()
+	for i in range(60):
+		engine.tick()
+		game.highlights.sample()
+	var director: HighlightDirector = game.highlights
+	var clock := float(engine.clock)
+	director.on_event({"type": "shot", "clock": clock, "player_id": 7})
+	assert_false(game.in_highlight, "a shot opened a replay in Goals only")
+	director.on_event({"type": "corner", "clock": clock, "player_id": -1})
+	assert_false(game.in_highlight, "a corner opened a replay in Goals only")
+	director.on_event({"type": "card", "clock": clock, "player_id": 8})
+	assert_false(game.in_highlight, "a card opened a replay in Goals only")
+	director.on_event({"type": "penalty_taken", "clock": clock, "player_id": 9})
+	assert_false(game.in_highlight, "a penalty that missed opened a replay in Goals only")
+	director.on_event({"type": "goal", "clock": clock, "player_id": 9, "team": 0, "text": "GOAL!"})
+	assert_true(game.in_highlight, "a scored goal did not open a replay in Goals only")
+	game.in_highlight = false
+	game.view.set_mode("highlights")
+	director.on_event({"type": "shot", "clock": clock + 0.5, "player_id": 10})
+	assert_true(game.in_highlight, "Highlights stopped replaying shots")
+
+func test_the_state_line_names_the_view() -> void:
+	var band: HudRosterBand = game.hud.roster_band
+	game.view.set_mode("goals")
+	game.paused = false
+	assert_eq(band.state_label(game, "SIM"), "GOALS ONLY  ·  SIMMING 24x", "the simming line does not name Goals only")
+	game.fast_mode = false
+	assert_eq(band.state_label(game, "SIM"), "GOALS ONLY  ·  LIVE", "the live line does not name Goals only")
+	game.view.set_mode("full")
+	assert_eq(band.state_label(game, "2"), "FULL MATCH  ·  2x", "the full-match line lost its speed")
+	game.paused = true
+	assert_eq(band.state_label(game, "2"), "PAUSED", "the paused line lost its word")
+
+func test_the_simulating_chip_waits_for_a_goal_in_goals_only() -> void:
+	assert_true(HudTopBand.sim_chip_label("goals").contains("NEXT GOAL"), "Goals only still waits on the next chance")
+	assert_true(HudTopBand.sim_chip_label("highlights").contains("NEXT CHANCE"), "Highlights stopped waiting on chances")
+
+# --------------------------------------------------------------- settings ---
+
+func test_settings_shows_and_sets_the_same_view() -> void:
+	game.menus.open_settings()
+	var shell = game.menus.shell
+	assert_eq(shell.match_mode, "highlights", "the sheet did not read the saved view")
+	var segs: Array = SettingsScreen.seg_rects(shell.design_vp())
+	shell.click((segs[1] as Rect2).get_center())
+	assert_eq(shell.match_mode, "goals", "the Goals only segment did not take")
+	assert_eq(Prefs.load_mode(PREFS), "goals", "the segment did not save the view")
+	assert_eq(game.mode, "goals", "the match did not follow the settings choice")
+	shell.click((segs[2] as Rect2).get_center())
+	assert_eq(game.mode, "full", "the full-match segment did not reach the match")
+	assert_false(game.fast_mode, "the full match kept the fast-forward")
+	shell.click((segs[0] as Rect2).get_center())
+	assert_eq(game.mode, "highlights", "the Highlights segment did not take")
+	assert_eq(Prefs.load_mode(PREFS), "highlights", "the last segment did not save")
+
+func test_settings_keys_reach_the_three_views() -> void:
+	game.menus.open_settings()
+	var shell = game.menus.shell
+	assert_true(shell.key(KEY_2), "2 did not reach the view row")
+	assert_eq(shell.match_mode, "goals", "2 did not choose Goals only")
+	assert_true(shell.key(KEY_3), "3 did not reach the view row")
+	assert_eq(shell.match_mode, "full", "3 did not choose the full match")
+	assert_true(shell.key(KEY_1), "1 did not reach the view row")
+	assert_eq(shell.match_mode, "highlights", "1 did not choose Highlights")
+
+func test_the_segments_are_finger_sized_and_on_the_card() -> void:
+	for vp in _vps():
+		var card: Rect2 = SettingsScreen.card_rect(vp)
+		var segs: Array = SettingsScreen.seg_rects(vp)
+		assert_eq(segs.size(), 3, "the view row is not three segments at %s" % vp)
+		for i in range(segs.size()):
+			var r: Rect2 = segs[i]
+			assert_gte(r.size.y, 44.0, "a segment is under the 44-unit tap floor at %s" % vp)
+			assert_true(card.encloses(r), "a segment left the card at %s" % vp)
+			assert_false(r.intersects(SettingsScreen.track_rect(vp)), "a segment covers the volume track at %s" % vp)
+			assert_false(r.intersects(SettingsScreen.hud_toggle_rect(vp)), "a segment covers the HUD switch at %s" % vp)
+			assert_false(r.intersects(SettingsScreen.minus_rect(vp)), "a segment covers a volume step at %s" % vp)
+			assert_false(r.intersects(SettingsScreen.back_rect(vp)), "a segment covers BACK at %s" % vp)
+			assert_eq(game.menus.shell.settings.button_at(r.get_center(), vp), "mode:%s" % Prefs.MODES[i],
+				"segment %d did not answer a press at %s" % [i, vp])

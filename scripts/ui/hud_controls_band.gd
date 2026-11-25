@@ -33,7 +33,7 @@ func control_specs(p: HudPaint, game, touch: bool) -> Array:
 	var specs := [
 		["pause", "PAUSE" if not game.paused else "RESUME", "SPACE"],
 		["speed", "%sx" % speed_label(game), "1-4"],
-		["mode", "HIGHLIGHTS" if game.mode == "highlights" else "FULL MATCH", "H"],
+		["mode", Prefs.mode_label(game.mode), "H"],
 		["skip", "SKIP", "S"],
 		["camera", "FOLLOW" if game.camera_follow else "WIDE", "C"],
 		["league", "LEAGUE", "L"],
@@ -45,7 +45,7 @@ func control_specs(p: HudPaint, game, touch: bool) -> Array:
 	return specs
 
 func speed_label(game) -> String:
-	if game.mode == "highlights" and game.fast_mode:
+	if game.mode != "full" and game.fast_mode:
 		return "SIM"
 	var s: float = game.speed
 	if s == int(s):

@@ -18,6 +18,9 @@ signal screen_changed
 ## The player switched the match HUD on or off from the settings sheet (#158);
 ## the host hands it to the match, which owns the overlay.
 signal hud_visibility_changed(hud_on: bool)
+## The player chose a match view on the settings sheet (#164); the host hands it
+## to the match, which owns the broadcast.
+signal match_mode_changed(mode: String)
 
 const SCREEN_MENU := "menu"
 const SCREEN_SETTINGS := "settings"
@@ -32,6 +35,9 @@ var volume: float = Prefs.DEFAULT_BGM
 ## (#158). The shell reads and writes it for the settings sheet; the match scene
 ## applies it.
 var hud_visible: bool = Prefs.DEFAULT_HUD
+## The match view the player chose (#164), kept beside the HUD switch in the same
+## prefs file and shared with the broadcast's own mode door.
+var match_mode: String = Prefs.DEFAULT_MODE
 var prefs_path: String = Prefs.PATH
 var ui_scale := 1.0
 var touch := false
@@ -58,6 +64,7 @@ func _ready() -> void:
 	add_child(music)
 	volume = Prefs.load_bgm(prefs_path)
 	hud_visible = Prefs.load_hud(prefs_path)
+	match_mode = Prefs.load_mode(prefs_path)
 	music.set_volume(volume)
 	for path in MenuScreen.STILL_PATHS:
 		var tex = load(path)
@@ -104,6 +111,7 @@ func open_settings() -> void:
 	# switch after the file was changed elsewhere.
 	volume = Prefs.load_bgm(prefs_path)
 	hud_visible = Prefs.load_hud(prefs_path)
+	match_mode = Prefs.load_mode(prefs_path)
 	if music != null:
 		music.play_menu()
 	visible = true
@@ -156,8 +164,17 @@ func set_volume(v: float) -> void:
 		music.set_volume(volume)
 	queue_redraw()
 
-func volume_percent() -> int:
-	return int(round(volume * 100.0))
+## The match view, written to the same pref the broadcast's mode door writes
+## (#164). Pressing the segment already chosen is a no-op, so the sheet never
+## rewrites the file for nothing.
+func set_match_mode(mode: String) -> void:
+	var next := Prefs.normalize_mode(mode)
+	if next == match_mode:
+		return
+	match_mode = next
+	Prefs.save_mode(match_mode, prefs_path)
+	match_mode_changed.emit(match_mode)
+	queue_redraw()
 
 # ------------------------------------------------------------------ input ---
 
@@ -220,6 +237,8 @@ func _settings_click(p: Vector2) -> bool:
 		Prefs.save_hud(hud_visible, prefs_path)
 		hud_visibility_changed.emit(hud_visible)
 		queue_redraw()
+	elif id.begins_with("mode:"):
+		set_match_mode(id.substr(5))
 	return true
 
 func _confirm_click(p: Vector2) -> bool:
@@ -268,6 +287,9 @@ func _settings_key(code: int) -> bool:
 		set_volume(volume - 0.1)
 	elif code == KEY_RIGHT or code == KEY_D:
 		set_volume(volume + 0.1)
+	elif code >= KEY_1 and code <= KEY_3:
+		# The segments' printed key line: keyboard reaches the same three views.
+		set_match_mode(str(Prefs.MODES[code - KEY_1]))
 	else:
 		return false
 	return true
@@ -319,7 +341,7 @@ func _draw() -> void:
 		if under == SCREEN_MENU:
 			menu.draw(self, vp, fonts, has_match, volume, touch)
 		else:
-			settings.draw(self, vp, fonts, volume, touch, hud_visible)
+			settings.draw(self, vp, fonts, volume, touch, hud_visible, match_mode)
 	elif screen == SCREEN_CONFIRM:
 		draw_rect(Rect2(Vector2.ZERO, vp), Color(0, 0, 0, 0.35))
 	if screen == SCREEN_CONFIRM:
