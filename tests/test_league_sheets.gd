@@ -574,7 +574,64 @@ func test_the_report_lays_out_events_and_a_roundup() -> void:
 	var roundup: Array = book.report_layout(Vector2(1280, 720), {
 		"roundup": [{"fixture": _fixture(1), "events": events, "score": [1, 0], "played": true}],
 	})
-	assert_eq(roundup.size(), 2, "the roundup lost its row or the back door")
+	# One result block, BACK, and the hub's CONTINUE (#180).
+	assert_eq(roundup.size(), 3, "the roundup lost its row or a header door")
+
+## #180: a settled day's RESULTS carries the hub's CONTINUE in the hub's corner;
+## BACK stays the leave control beside it, and a single match report — a drill
+## into one fixture, not a day to move on from — stays read-only.
+func test_the_results_sheet_adds_the_hubs_continue_beside_back() -> void:
+	var book := LeagueBook.new()
+	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(730, 411)]:
+		var items: Array = book.report_layout(vp, {
+			"roundup": [{"fixture": _fixture(1), "events": [], "score": [1, 0], "played": true}],
+			"day": "2026-08-15",
+		})
+		var cont := _item_rect(items, "continue")
+		assert_eq(cont, LeagueExtra.primary_rect(vp), "RESULTS: CONTINUE is not in the hub's corner at %s" % vp)
+		assert_almost_eq(cont.end.x, vp.x - 24.0, 0.5, "RESULTS: CONTINUE is not top-right at %s" % vp)
+		assert_lte(cont.end.y, LeagueBook.HEADER, "RESULTS: CONTINUE left the header at %s" % vp)
+		assert_eq(_item_rect(items, "back"), LeagueExtra.back_rect(), "RESULTS: BACK moved at %s" % vp)
+		assert_gt(cont.position.x, LeagueExtra.back_rect().end.x,
+			"RESULTS: the two header doors sit on each other at %s" % vp)
+		var pinned := 0
+		for item in items:
+			if str(item["id"]) in ["back", "continue"] and bool(item.get("pinned", false)):
+				pinned += 1
+		assert_eq(pinned, 2, "a RESULTS header door scrolls away at %s" % vp)
+	var single: Array = book.report_layout(Vector2(1280, 720), {
+		"fixture": _fixture(1), "events": [], "day": "2026-08-15",
+	})
+	assert_eq(_item_rect(single, "continue"), Rect2(), "a single match report gained CONTINUE")
+
+## #180: whatever the save is called, the header's title and caption stay in the
+## lane between BACK and the right-hand door. The title is shortened instead of
+## painted under CONTINUE, and the caption starts only where the title ends.
+func test_the_header_title_and_caption_clear_the_header_doors() -> void:
+	var bold: Font = UiChrome.fonts()["bold"]
+	var long_name := "MANCHESTER DERBY LEAGUE"
+	var caption := "15/AUG/2026 · GW 1 · 0 OF 380 PLAYED"
+	var sheet := LeagueSheet.new()
+	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(730, 411), Vector2(460, 400)]:
+		var state := _state([_fixture(1)], _table())
+		state["name"] = long_name
+		var cont := _item_rect(sheet.hub_layout(vp, state), "continue")
+		var band := LeagueExtra.header_band(vp, bold, long_name, caption, cont.size.x + 12.0)
+		var title: Rect2 = band["title_rect"]
+		assert_gte(title.position.x, LeagueExtra.back_rect().end.x,
+			"the title starts on BACK at %s" % vp)
+		assert_lte(title.end.x, cont.position.x, "the title runs under CONTINUE at %s" % vp)
+		assert_true(str(band["title"]) == long_name or str(band["title"]).ends_with("…"),
+			"the title lost its name instead of being shortened at %s" % vp)
+		if str(band["caption"]) != "":
+			var strip: Rect2 = band["caption_rect"]
+			assert_lte(strip.end.x, cont.position.x - 12.0,
+				"the caption runs under CONTINUE at %s" % vp)
+			assert_gte(strip.position.x, title.end.x,
+				"the caption is painted through the title at %s" % vp)
+	# A desktop lane leaves the name whole, so fitting only touches what cannot fit.
+	var wide := LeagueExtra.header_band(Vector2(1280, 720), bold, long_name, "", 152.0)
+	assert_eq(str(wide["title"]), long_name, "a name that fits was shortened")
 
 ## #162: the report keeps the league's chrome — BACK top-left, not a bottom door.
 func test_the_report_keeps_back_in_the_top_left_chrome() -> void:
