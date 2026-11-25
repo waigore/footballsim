@@ -14,8 +14,8 @@ extends "res://scripts/sim/match_engine_core.gd"
 const FINISH_EFFICIENCY := 1.0
 ## Positional xG is calibrated down to real-football levels: the engine creates
 ## more chances than a real side, so each one is worth less. Fitted to the
-## tier-2 census against the PL-envelope λ (wiki poisson-model, DR-20261126-02).
-const XG_SCALE := 0.335
+## tier-2 census against the PL-envelope λ (wiki poisson-model, DR-20261126-06).
+const XG_SCALE := 0.56
 ## A shot is also worth more when the defence facing it is weak and when the
 ## side taking it is strong — the same combined rating gradient the model puts
 ## into λ, read from one source (`PoissonModel.exponent_terms`). The engine's
@@ -23,8 +23,8 @@ const XG_SCALE := 0.335
 ## line and keeper move *where* chances happen but never how good a chance is.
 ## Elasticity is per 10 rating points of that derived gap; it sits below the
 ## model's 0.98 because the engine's chance creation already carries part of the
-## gradient. Fitted to the tier-2 census (wiki poisson-model, DR-20261126-02).
-const XG_CONTEST_ELASTICITY := 0.78
+## gradient. Fitted to the tier-2 census (wiki poisson-model, DR-20261126-06).
+const XG_CONTEST_ELASTICITY := 0.25
 ## Venue premium in chance quality, in log terms. It is zero because the home
 ## side already gets its edge in *creation* — it holds the ball higher up and
 ## shoots from better positions — so pricing the venue again in the finishing
@@ -51,16 +51,22 @@ func push_of(p) -> float:
 	return Attrs.role_push(p.role) + manager.tactics_for(p.team).duty_offset(p.role)
 
 ## Reads each side's share of the model's rating gradient once per match, so the
-## same shot is a better chance for a strong attack against a weak defence than
-## for a weak one against a strong defence. Cheap: one squad reading per side,
-## then a per-shot multiply.
+## same shot is a better chance for a strong attack than a weak one, and scales
+## both sides by how open the model expects the fixture to be: the engine's chance
+## creation does not know the defence it faces, so an even game between two good
+## defences would otherwise score like an open one. One squad reading per side.
 func _calibrate_finishing() -> void:
-	var terms := PoissonModel.exponent_terms(str(teams[0]["id"]), str(teams[1]["id"]))
+	var h := str(teams[0]["id"])
+	var a := str(teams[1]["id"])
+	var terms := PoissonModel.exponent_terms(h, a)
 	var attack: Vector2 = terms["attack"]
 	var defence: Vector2 = terms["defence"]
+	var ex := PoissonModel.side_exponents(h, a)
+	var total: float = PoissonModel.HOME_XG + PoissonModel.AWAY_XG
+	var open: float = (PoissonModel.HOME_XG * exp(ex.x) + PoissonModel.AWAY_XG * exp(ex.y)) / total
 	var venue: float = exp(XG_HOME_EDGE)
-	xg_form[0] = exp(XG_CONTEST_ELASTICITY * (attack.x + defence.x)) * venue
-	xg_form[1] = exp(XG_CONTEST_ELASTICITY * (attack.y + defence.y)) / venue
+	xg_form[0] = exp(XG_CONTEST_ELASTICITY * (attack.x + defence.x)) * venue * open
+	xg_form[1] = exp(XG_CONTEST_ELASTICITY * (attack.y + defence.y)) / venue * open
 
 ## Squad cache ----------------------------------------------------------------
 
