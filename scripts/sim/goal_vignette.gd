@@ -254,9 +254,9 @@ class Sim:
 			var k := (L - start.x) / maxf(ball.x - start.x, 0.0001)
 			var y := lerpf(start.y, ball.y, k)
 			scored = absf(y - CENTRE) < POST and lerpf(start.z, ball.z, k) < BAR
-			goal_at = t if scored else goal_at
+			if scored:
+				goal_at = t
 		if scored:
-			# The net holds the ball: it may not roll back out of the goalmouth.
 			ball.x = minf(ball.x, L - 0.2)
 			ball.y = clampf(ball.y, CENTRE - POST + 0.2, CENTRE + POST - 0.2)
 			bvel *= 0.55
