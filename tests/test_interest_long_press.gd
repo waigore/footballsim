@@ -433,6 +433,23 @@ func test_the_hud_holds_a_club_name() -> void:
 		"the overlay did not pick up the club it just followed")
 	game.queue_free()
 
+func test_the_overlay_follows_a_season_opening_and_closing() -> void:
+	var game := await _match()
+	assert_true(game.hud.followed.is_empty(), "no season, yet the overlay held a shortlist")
+	season = LeagueSeason.create("Overlay Bind", "generated", "fixture_days", SEED)
+	season.set_interest("MUN", true)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_true(bool(game.hud.followed.get("MUN", false)),
+		"the overlay missed the season that opened under it")
+	season.close()
+	LeagueSeason.active = null
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_true(game.hud.followed.is_empty(),
+		"the overlay kept a shortlist after its season closed")
+	game.queue_free()
+
 func test_a_short_tap_on_a_club_name_still_opens_its_page() -> void:
 	var game := await _match()
 	var door := _hud_door(game, "team_0")
