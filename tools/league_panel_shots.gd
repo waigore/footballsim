@@ -32,9 +32,10 @@ func _initialize() -> void:
 	await _shot("league_panel_closed")
 	# Mid-slide and settled: the panel's own clock, not a jump cut (#110).
 	league.screen.panel.open()
-	league.screen.panel.update(0.09)
-	# Hold the panel where the clock left it so the shot lands mid-slide.
-	league.screen.panel.target = league.screen.panel.slide
+	_hold_mid_slide(league.screen)
+	# The panel clock only paints through the overlay's redraw, so ask for one
+	# and let the shot read the real frame (#103).
+	league.screen.overlay.queue_redraw()
 	await _shot("league_panel_sliding")
 	league.screen.panel.open()
 	league.screen.panel.settle()
@@ -86,6 +87,16 @@ func _initialize() -> void:
 	await _shot("league_stats_podium")
 	print("EXIT interest=", season.record.interest.interests(), " slug=", season.save.slug)
 	quit()
+
+## Advance the panel's own clock part of the way out and freeze it there, so a
+## screenshot catches a frame the slide really painted. A settled (0 or 1) value
+## would silently become a closed or open shot again.
+func _hold_mid_slide(screen: LeagueScreen) -> void:
+	screen.panel.update(LeaguePanel.SLIDE * 0.64)
+	screen.panel.target = screen.panel.slide
+	if screen.panel.slide <= 0.05 or screen.panel.slide >= 0.95:
+		print("WARN mid-slide hold landed at ", screen.panel.slide)
+	print("SLIDE held at ", screen.panel.slide)
 
 ## The first club name the hub painted, in design space.
 func _name(screen: LeagueScreen) -> Dictionary:
