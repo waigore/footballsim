@@ -42,27 +42,22 @@ const SUB_LIMIT := 5
 ## p = FINISH_EFFICIENCY · xG, so a match's goals track its expected goals (the
 ## model's λ) instead of the old keeper-steer hack.
 const FINISH_EFFICIENCY := 1.0
-## Positional xG is calibrated down to real-football levels. Fitted with
-## XG_CONTEST_ELASTICITY on the big-n census after the λ retune (#192): the
-## engine's own chance creation already separates the sides, so the quality
-## calibration is nearly level and the level carries the fit.
-const XG_SCALE := 0.58
-## A shot is also worth more when the defence facing it is weak and when the
-## side taking it is strong — the same combined rating gradient the model puts
-## into λ, read from one source (`PoissonModel.exponent_terms`). The engine's
-## positional xG knows only distance, angle and aim, so without this a good back
-## line and keeper move *where* chances happen but never how good a chance is.
-## Elasticity is per 10 rating points of that derived gap. It sits well below the
-## model's 0.98 because the engine's chance creation carries most of the
-## gradient itself; the census fit (#192) is what sets it.
-const XG_CONTEST_ELASTICITY := 0.45
+## Positional xG, calibrated to real-football levels. `expected_goals` is
+## positional xG × XG_SCALE × the side's multiplier (`_calibrate_finishing`).
+const XG_SCALE := 0.53
+## A shot is worth more when the defence facing it is weak and the side taking it
+## is strong: the same rating gradient the model puts into λ, from one source
+## (`PoissonModel.exponent_terms`). The engine's positional xG knows only
+## distance, angle and aim, so without it a good back line moves *where* chances
+## happen but never how good one is. Per 10 rating points, far below the model's
+## 0.98 because chance creation carries most of the gradient.
+const XG_CONTEST_ELASTICITY := 0.13
 ## Venue premium in chance quality, in log terms: the model builds the home edge
 ## into HOME_XG / AWAY_XG, and the engine's chance locations do not, so the
-## finishing calibration carries the same split (home × e^edge, away ÷ e^edge).
-const XG_HOME_EDGE := 0.02
-## Per-side shot-contest multiplier, exp(XG_CONTEST_ELASTICITY · the side's
-## share of the model's rating gradient ± XG_HOME_EDGE). Rebuilt by
-## `_calibrate_finishing`.
+## calibration carries the same split (home × e^edge, away ÷ e^edge).
+const XG_HOME_EDGE := 0.04
+## Per-side multiplier: exp(elasticity · the side's share of the model's rating
+## gradient ± XG_HOME_EDGE) × the fixture's openness. Rebuilt per match.
 var xg_form: Array = [1.0, 1.0]
 
 class Player:
@@ -235,16 +230,22 @@ func _fill_attr_cache(p: Player) -> void:
 	p.aerial = Attrs.aerial(p)
 
 ## Reads each side's share of the model's rating gradient once per match, so the
-## same shot is a better chance for a strong attack against a weak defence than
-## for a weak one against a strong defence. Cheap: one squad reading per side,
-## then a per-shot multiply.
+## same shot is a better chance for a strong attack than a weak one, and scales
+## both sides by how open the model expects the fixture to be: the engine's chance
+## creation does not know the defence it faces, so an even game between two good
+## defences would otherwise score like an open one. One squad reading per side.
 func _calibrate_finishing() -> void:
-	var terms := PoissonModel.exponent_terms(str(teams[0]["id"]), str(teams[1]["id"]))
+	var h := str(teams[0]["id"])
+	var a := str(teams[1]["id"])
+	var terms := PoissonModel.exponent_terms(h, a)
 	var attack: Vector2 = terms["attack"]
 	var defence: Vector2 = terms["defence"]
+	var ex := PoissonModel.side_exponents(h, a)
+	var total: float = PoissonModel.HOME_XG + PoissonModel.AWAY_XG
+	var open: float = (PoissonModel.HOME_XG * exp(ex.x) + PoissonModel.AWAY_XG * exp(ex.y)) / total
 	var venue: float = exp(XG_HOME_EDGE)
-	xg_form[0] = exp(XG_CONTEST_ELASTICITY * (attack.x + defence.x)) * venue
-	xg_form[1] = exp(XG_CONTEST_ELASTICITY * (attack.y + defence.y)) / venue
+	xg_form[0] = exp(XG_CONTEST_ELASTICITY * (attack.x + defence.x)) * venue * open
+	xg_form[1] = exp(XG_CONTEST_ELASTICITY * (attack.y + defence.y)) / venue * open
 
 ## Active (on-pitch) players of one side, cached per squad revision.
 ## Callers must treat the returned array as read-only.
