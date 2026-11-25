@@ -31,12 +31,14 @@ Former gaps now shipped (wiki domains playable; DRs accepted):
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Native match hot loop | DR-20261123-02 “future tightening” under the 120 s full-match budget |
+| 1 | Native match hot loop | DR-20261123-02 “future tightening” under the 120 s full-match budget. The shape pass now shares one ball path per pass (DR-20261125-11); the tick itself is still GDScript |
 
 ## Next pick
 
 **Native match hot loop** — only ranked gap left; cuts full-match wall clock under
-the census budget without changing the gated agreement story.
+the census budget without changing the gated agreement story. The repeated
+per-body work in the shape pass is gone ([DR-20261125-11](https://github.com/waigore/footballsim/wiki/dr-20261125-11));
+what remains is the tick body's own GDScript cost.
 
 ## Out of scope / blocked
 
