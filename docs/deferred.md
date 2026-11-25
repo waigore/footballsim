@@ -15,6 +15,7 @@ Former gaps now shipped (wiki domains playable; DRs accepted):
 | Live tactics + IFAB substitutions | DR-20261122-05; MatchAI |
 | Poisson / Dixon–Coles outcomes | `poisson_model.gd`; DR-20261122-04 |
 | Physics↔Poisson finishing + level/gradient | DR-20261124-08; [#33](https://github.com/waigore/footballsim/issues/33) closed; census green |
+| Poisson λ on the last-10 PL scoring envelope | DR-20261125-19; [#172](https://github.com/waigore/footballsim/issues/172) |
 | PL 2026-27 snapshot + encyclopedia | `data/`; DR-20261123-01 / 05 |
 | God-mode season saves, calendar, Continue/watch | `league_season.gd`; DR-20261124-01 / 06 |
 | System sheet (Quick Save / Save As / Load / Quit) | DR-20261124-07 |
@@ -26,19 +27,21 @@ Former gaps now shipped (wiki domains playable; DRs accepted):
 | Roundup scorers name their club, in minute order | [#125](https://github.com/waigore/footballsim/issues/125); DR-20261125-07 |
 | Encyclopedia reads the open season (table, results, scorers, player lines) | `league_ledger.gd`; DR-20261125-08 |
 | Teams of Interest: a followed club's games stay on Watch, gold names | `league_interest.gd`; DR-20261125-09; [#104](https://github.com/waigore/footballsim/issues/104) |
+| Shape pass shares one ball path per pass | DR-20261125-11 (hot-loop partial) |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Native match hot loop | DR-20261123-02 “future tightening” under the 120 s full-match budget. The shape pass now shares one ball path per pass (DR-20261125-11); the tick itself is still GDScript |
+| 1 | Physics engine retune to PL-envelope λ | [#192](https://github.com/waigore/footballsim/issues/192); wiki poisson-model after DR-20261125-19. Model moved; engine chance level still on the old census fit |
+| 2 | Native match hot loop | DR-20261123-02 “future tightening” under the 120 s budget. Shape-pass path shared (DR-20261125-11); tick still GDScript |
 
 ## Next pick
 
-**Native match hot loop** — only ranked gap left; cuts full-match wall clock under
-the census budget without changing the gated agreement story. The repeated
-per-body work in the shape pass is gone ([DR-20261125-11](https://github.com/waigore/footballsim/wiki/dr-20261125-11));
-what remains is the tick body's own GDScript cost.
+**Physics engine retune to PL-envelope λ** — restore physics↔Poisson agreement after
+the model landed on the last-10 PL envelope. Move the engine only
+([#192](https://github.com/waigore/footballsim/issues/192)); leave λ alone. Native
+hot loop stays rank 2 (P4, not rules).
 
 ## Out of scope / blocked
 
