@@ -10,6 +10,7 @@ lands everywhere at once.
 |------|------|
 | `data/pl_snapshot.json` | Readable snapshot: clubs, players, table, fixtures, season/career figures, `db_version` |
 | `data/pl_seed.sqlite` | Shipped seed built from the JSON; `res://` and read-only |
+| `data/pl_scoring_envelope.json` | Last-10 PL scoring bands and the frozen pre-tune 1X2 baseline for the Poisson calibration |
 | `user://cache/pl_seed_v<N>.sqlite` | Per-version working copy: in-sim stats are written here |
 
 `PLDatabase` copies the seed into the cache on first use and deletes copies from
@@ -36,6 +37,19 @@ Refreshing the snapshot is an agent workflow: see the
 [`update-pl-data-snapshot`](../.agents/skills/update-pl-data-snapshot/SKILL.md)
 project skill. Design rationale and the source policy: wiki
 [DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01).
+
+## Poisson scoring envelope
+
+`data/pl_scoring_envelope.json` carries the last-10 Premier League scoring bands
+and the frozen pre-tune win/draw/loss mix. It is the source of truth for the
+Poisson model's λ, and the only gate a constant change has to pass:
+
+```bash
+godot --headless --path . --script res://tools/poisson_calibrate.gd
+```
+
+The report audits λ for fixed pairings, then samples whole seasons and checks
+the league's goals, home share, champion goals, blowout rate and 1X2 drift.
 
 ## Schema
 
