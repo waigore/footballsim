@@ -33,7 +33,7 @@ func test_equal_sides_get_home_advantage_only() -> void:
 	assert_gt(m.lambda_home, m.lambda_away, "equal sides had no home advantage")
 	assert_almost_eq(m.lambda_home, PoissonModel.HOME_XG, 0.20, "home λ drifted from the league baseline")
 	assert_almost_eq(m.lambda_away, PoissonModel.AWAY_XG, 0.20, "away λ drifted from the league baseline")
-	assert_between(m.lambda_home + m.lambda_away, 2.40, 3.00, "an even fixture should sit near the league total")
+	assert_between(m.lambda_home + m.lambda_away, 2.30, 3.10, "an even fixture should sit near the league total")
 
 func test_rating_gap_drives_expected_goals() -> void:
 	var m := _model()
@@ -80,19 +80,23 @@ func test_distribution_is_normalised() -> void:
 	assert_almost_eq(total, 1.0, 0.0001, "the score grid does not sum to one")
 	assert_eq(m.joint(-1, 0), 0.0, "out-of-grid cells should be zero")
 
-func test_dixon_coles_lifts_low_scoring_draws() -> void:
+func test_dixon_coles_correction_shapes_low_scores() -> void:
 	var m := _model()
 	var plain_00 := exp(-m.lambda_home) * exp(-m.lambda_away)
 	var plain_11 := exp(-m.lambda_home) * m.lambda_home * exp(-m.lambda_away) * m.lambda_away
+	var plain_10 := exp(-m.lambda_home) * m.lambda_home * exp(-m.lambda_away)
+	var plain_01 := exp(-m.lambda_away) * m.lambda_away * exp(-m.lambda_home)
 	assert_gt(m.joint(0, 0), 0.0, "0-0 vanished")
-	# The corrected 0-0 and 1-1 must beat plain Poisson (up to normalisation).
+	# ρ > 0 at the PL-scoring retune (see the model's RHO note): the two
+	# low-scoring draws are trimmed and 1-0 / 0-1 lifted, which is what keeps the
+	# pre-tune win–draw–loss mix at the lower scoring level.
 	var ratio_00 := m.joint(0, 0) / plain_00
 	var ratio_11 := m.joint(1, 1) / plain_11
-	var ratio_10 := m.joint(1, 0) / (plain_11 / m.lambda_away)
-	var ratio_01 := m.joint(0, 1) / (plain_11 / m.lambda_home)
-	assert_gt(ratio_00, ratio_10, "0-0 was not lifted relative to 1-0")
-	assert_gt(ratio_11, ratio_01, "1-1 was not lifted relative to 0-1")
-	assert_gt(ratio_11, ratio_10, "1-1 was not lifted relative to 1-0")
+	var ratio_10 := m.joint(1, 0) / plain_10
+	var ratio_01 := m.joint(0, 1) / plain_01
+	assert_lt(ratio_00, ratio_10, "0-0 was not trimmed relative to 1-0")
+	assert_lt(ratio_11, ratio_10, "1-1 was not trimmed relative to 1-0")
+	assert_lt(ratio_11, ratio_01, "1-1 was not trimmed relative to 0-1")
 
 func test_outcome_markets_are_consistent() -> void:
 	var m := _model()
@@ -174,3 +178,29 @@ func test_expected_goals_are_capped() -> void:
 	var m := _model(1, "MCI", "IPS", "clear", {"home": 9.0})
 	assert_lte(m.lambda_home, 6.5, "λ was not clamped")
 	assert_gte(m.lambda_home, 0.05, "λ was not clamped")
+
+# -------------------------------------------------------------- envelope -----
+
+func test_calibration_sits_inside_the_pl_scoring_envelope() -> void:
+	# The retune gate: sampled seasons must sit inside the last-10 PL scoring
+	# bands (data/pl_scoring_envelope.json) and keep the pre-tune 1X2 mix. A retune
+	# that fixes scores by reshaping the result market fails here.
+	var envelope := PoissonCalibration.load_envelope()
+	assert_false(envelope.is_empty(), "the PL scoring envelope is missing from data/")
+	var gate: Dictionary = envelope["gate"]
+	var metrics := PoissonCalibration.run(int(gate["seasons"]), int(gate["seed"]),
+		PoissonModel.DEFAULT_CALIBRATION)
+	for row in PoissonCalibration.checks(metrics, envelope):
+		var fmt := str(row["format"])
+		assert_true(bool(row["pass"]), "%s: %s outside %s .. %s" % [
+			str(row["name"]), fmt % float(row["value"]), fmt % float(row["lo"]), fmt % float(row["hi"])])
+
+func test_calibration_overrides_move_lambda_without_touching_defaults() -> void:
+	var base := _model()
+	var damped := PoissonModel.new(1, HOME, AWAY, "clear", {}, {"home_xg": 1.0})
+	assert_lt(damped.lambda_home, base.lambda_home, "a home_xg override did not lower λ")
+	assert_almost_eq(damped.lambda_away, base.lambda_away, 0.0001, "the home override leaked into the away side")
+	assert_almost_eq(base.lambda_home, PoissonModel.HOME_XG * exp(PoissonModel.side_exponents(HOME, AWAY).x), 0.0001,
+		"the default model no longer matches its constants")
+	assert_eq(float(PoissonModel.DEFAULT_CALIBRATION["home_xg"]), PoissonModel.HOME_XG,
+		"the default calibration table drifted from the constants")

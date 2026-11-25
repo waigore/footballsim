@@ -50,8 +50,9 @@ const XG_SCALE := 0.43
 ## positional xG knows only distance, angle and aim, so without this a good back
 ## line and keeper move *where* chances happen but never how good a chance is.
 ## Elasticity is per 10 rating points of that derived gap; it sits below the
-## model's 1.15 because the engine's chance creation already carries part of the
-## gradient. Fitted to the tier-2 census (wiki poisson-model).
+## model's 0.98 because the engine's chance creation already carries part of the
+## gradient. Fitted to the tier-2 census (wiki poisson-model); the PL-scoring
+## retune sets that census-follow-up work, not this constant.
 const XG_CONTEST_ELASTICITY := 0.95
 ## Venue premium in chance quality, in log terms: the model builds the home edge
 ## into HOME_XG / AWAY_XG, and the engine's chance locations do not, so the
