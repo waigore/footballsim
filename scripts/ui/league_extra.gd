@@ -22,6 +22,11 @@ var hints := DateHints.new()
 static func back_rect() -> Rect2:
 	return Rect2(24.0, 12.0, 96.0, 32.0)
 
+## The one BACK door in the header lane: every league sheet builds the same row.
+static func back_item() -> Dictionary:
+	return {"id": "back", "kind": "button", "label": "BACK", "pinned": true,
+		"rect": back_rect()}
+
 ## The primary door's corner: CONTINUE on the hub, KICK OFF on the pre-match
 ## briefing. The same header band as BACK, on the other side of it (#163).
 static func primary_rect(vp: Vector2, width: float = 140.0) -> Rect2:
@@ -48,7 +53,7 @@ static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
 
 func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true, "rect": back_rect()})
+	items.append(back_item())
 	var y := HEADER + 14.0
 	items.append({"id": "stats:reports", "kind": "door", "label": "MATCHDAY REPORTS", "primary": true,
 		"rect": Rect2(24.0, y, minf(300.0, vp.x - 48.0), 44.0)})
@@ -107,7 +112,7 @@ func draw_stats_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 
 func interest_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true, "rect": back_rect()})
+	items.append(back_item())
 	var y := HEADER + 10.0
 	items.append({"id": "interest:search", "kind": "field", "value": str(view.get("query", "")),
 		"rect": Rect2(24.0, y, vp.x - 48.0, FIELD_H)})

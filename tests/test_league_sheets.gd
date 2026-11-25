@@ -523,6 +523,27 @@ func test_the_report_lays_out_events_and_a_roundup() -> void:
 	})
 	assert_eq(roundup.size(), 2, "the roundup lost its row or the back door")
 
+## #162: the report keeps the league's chrome — BACK top-left, not a bottom door.
+func test_the_report_keeps_back_in_the_top_left_chrome() -> void:
+	var book := LeagueBook.new()
+	var vp := Vector2(1280, 720)
+	var events := [{"minute": 12, "kind": "goal", "player_name": "A. Striker"}]
+	var items: Array = book.report_layout(vp, {
+		"fixture": _fixture(1), "events": events, "day": "2026-08-15",
+	})
+	var backs: Array = []
+	for item in items:
+		if str(item["id"]) == "back":
+			backs.append(item)
+	assert_eq(backs.size(), 1, "the report offers more than one BACK")
+	var back: Dictionary = backs[0]
+	assert_true(bool(back.get("pinned", false)), "the report's BACK scrolls away")
+	assert_eq(back["rect"], LeagueExtra.back_rect(), "the report's BACK left the header lane")
+	assert_lt((back["rect"] as Rect2).end.y, LeagueBook.HEADER,
+		"the report's BACK sits below the header rule")
+	assert_lt((back["rect"] as Rect2).position.y, vp.y - LeagueSheet.BAR_H,
+		"the report's BACK is still a bottom door")
+
 func test_the_podium_lays_out_with_and_without_a_summary() -> void:
 	var book := LeagueBook.new()
 	var empty: Array = book.podium_layout(Vector2(1280, 720), {"summary": {}})

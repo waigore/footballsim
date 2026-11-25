@@ -67,12 +67,13 @@ func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 		"rect": Rect2(vp.x - 24.0 - 132.0, HEADER + 8.0, 28.0, 24.0)})
 	items.append({"id": "month:1", "kind": "chip", "label": ">", "pinned": true,
 		"rect": Rect2(vp.x - 24.0 - 28.0, HEADER + 8.0, 28.0, 24.0)})
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": LeagueExtra.back_rect()})
+	items.append(LeagueExtra.back_item())
 	return items
 
 func report_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
+	# BACK keeps the league's header position, never a bottom door (#105, #162).
+	items.append(LeagueExtra.back_item())
 	var y := HEADER + 70.0
 	var clips := {}
 	for row in view.get("highlights", []):
@@ -96,8 +97,6 @@ func report_layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": "match:" + str(report["fixture"]["id"]), "kind": "result",
 			"report": report, "rect": Rect2(24.0, y, vp.x - 48.0, 44.0)})
 		y += 50.0
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": LeagueExtra.back_rect()})
 	return items
 
 func podium_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -106,8 +105,7 @@ func podium_layout(vp: Vector2, view: Dictionary) -> Array:
 	## its height into the scroll window.
 	items.append({"id": "", "kind": "extent",
 		"rect": Rect2(24.0, HEADER, vp.x - 48.0, frame_height(view))})
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": LeagueExtra.back_rect()})
+	items.append(LeagueExtra.back_item())
 	items.append({"id": "table", "kind": "button", "label": "TABLE", "primary": false, "pinned": true,
 		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 130.0, BAR_H - 14.0)})
 	items.append({"id": "menu", "kind": "button", "label": "MAIN MENU", "primary": true, "pinned": true,

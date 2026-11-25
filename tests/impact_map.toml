@@ -335,6 +335,11 @@ domain = "league"
 match = "scripts/sim/goal_highlight.gd*"
 domain = "league"
 
+# The AUTO clip's physics vignette: the same season theme as the pack it feeds.
+[[rules]]
+match = "scripts/sim/goal_vignette.gd*"
+domain = "league"
+
 [[rules]]
 match = "scripts/sim/league_highlights.gd*"
 domain = "league"
