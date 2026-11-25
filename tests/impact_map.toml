@@ -83,7 +83,9 @@ suites = [
 ]
 
 # The pre-match briefing: its model, its pitch and doors, and the availability
-# it reads (#155–#157). A change in either layer can move the other.
+# it reads (#155–#157). A change in either layer can move the other. The one
+# competition a match is billed in (#209) rides here too: the briefing's caption
+# is its first reader, and this suite pins every other surface's answer.
 [domains.pre_match]
 suites = [
   "test_pre_match.gd",
@@ -330,6 +332,13 @@ domain = "pre_match"
 
 [[rules]]
 match = "scripts/data/pre_match_copy.gd*"
+domain = "pre_match"
+
+# One competition per match (#209): the module the briefing, the broadcast's
+# fixture card, the opening team sheet and the picker all read. Its consumers
+# ride one domain, so the answer cannot drift between surfaces.
+[[rules]]
+match = "scripts/data/match_billing.gd*"
 domain = "pre_match"
 
 [[rules]]

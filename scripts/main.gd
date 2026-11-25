@@ -77,6 +77,11 @@ var wiki_host: WikiHost = null
 var prematch: PreMatchHost = null
 ## A finished match is written to the cached seed exactly once.
 var result_recorded := false
+## The competition this match is being played in (#209): the briefing, the
+## broadcast's fixture card and the opening team sheet all read it, so one match
+## can never be named two ways. A league watch rebinds it; the picker leaves it a
+## friendly.
+var billing: MatchBilling = MatchBilling.new()
 ## A league watch keeps its FULL TIME card until the player taps it away (#124);
 ## LeagueHost owns the flag, the broadcast only reads it.
 var result_hold := false

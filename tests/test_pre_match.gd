@@ -90,7 +90,7 @@ func test_a_league_briefing_reads_the_fixture_and_the_season() -> void:
 func test_a_single_match_briefing_says_kick_off_and_has_no_absences() -> void:
 	var view := PreMatchModel.build("MUN", "MCI", {}, null)
 	assert_eq(str(view["kick"]), "KICK OFF", "a single match does not say KICK OFF")
-	assert_eq(str(view["caption"]), "FRIENDLY · SINGLE MATCH", "a single match is not a friendly")
+	assert_eq(str(view["caption"]), MatchBilling.FRIENDLY_CAPTION, "a single match is not a friendly")
 	assert_eq((view["home_absences"] as Array).size(), 0, "a friendly has season absences")
 	assert_eq(str(view["date_label"]), "", "a friendly carries a league date")
 
@@ -385,3 +385,169 @@ func test_the_briefing_reads_form_and_places_once_results_are_in() -> void:
 	assert_true(str(view["home_form"]).length() > 0, "the briefing has no form line")
 	assert_gte(int(view["home_position"]), 1, "the home place is missing")
 	assert_lte(int(view["home_position"]), 20, "the home place is out of the table")
+
+# --------------------------------------------------- one competition (#209) ---
+
+## Every way of printing a place goes through one ordinal, and the suffix comes
+## from the number: the teens are the trap that a hard-coded "TH" walks into.
+func test_a_table_place_reads_as_a_real_ordinal() -> void:
+	var want := {
+		1: "1st", 2: "2nd", 3: "3rd", 4: "4th", 9: "9th", 10: "10th",
+		11: "11th", 12: "12th", 13: "13th", 14: "14th", 20: "20th",
+		21: "21st", 22: "22nd", 23: "23rd", 101: "101st", 111: "111th",
+	}
+	for n in want:
+		assert_eq(PreMatchCopy.place(int(n)), str(want[n]), "%d reads wrong" % int(n))
+	assert_eq(PreMatchCopy.place(0), "", "an unplaced club was given a place")
+	# The club strip prints the same ordinal in chrome caps, between the shape
+	# and the form run.
+	assert_eq(PreMatchScreen.strip_line({"formation": "4-2-3-1"}, 2, "W D L W W"),
+		"4-2-3-1 · 2ND · W D L W W", "the club strip lost its ordinal place")
+	assert_eq(PreMatchScreen.strip_line({"formation": "4-2-3-1"}, 0, ""), "4-2-3-1",
+		"an unplaced club grew a place out of nothing")
+	assert_eq(PreMatchScreen.strip_line({}, 11, ""), "11TH", "a place needs its shape to print")
+
+## Issue #207's own numbers: the briefing strip, not just the copy pack.
+func test_the_briefing_strip_never_prints_a_hard_coded_suffix() -> void:
+	for n in [1, 2, 3, 4, 7]:
+		var line := PreMatchScreen.strip_line({"formation": "4-2-3-1"}, n, "")
+		assert_false(line.ends_with("TH") and n <= 3, "place %d still reads TH" % n)
+	assert_eq(PreMatchScreen.strip_line({"formation": "4-2-3-1"}, 1, ""), "4-2-3-1 · 1ST",
+		"first place did not read 1ST")
+	assert_eq(PreMatchScreen.strip_line({"formation": "4-2-3-1"}, 2, ""), "4-2-3-1 · 2ND",
+		"second place did not read 2ND")
+
+## The competition is the home club's own, read from the file — a league watch
+## names it on the caption, the blurb and the broadcast card alike.
+func test_a_league_match_names_its_competition_everywhere() -> void:
+	var fx := _fixture()
+	var view := PreMatchModel.build(str(fx["home_club_id"]), str(fx["away_club_id"]), fx, season)
+	var billing := MatchBilling.new()
+	billing.bind_fixture(str(fx["home_club_id"]), fx)
+	assert_false(billing.friendly, "a league fixture was billed as a friendly")
+	assert_eq(str(view["caption"]), "%s · MATCHDAY %d" % [billing.chrome_name(), int(fx["matchday"])],
+		"the caption does not name the fixture's own competition and round")
+	assert_eq(str(view["competition"]), billing.chrome_name(), "the briefing lost its competition")
+	var blurb := str((view["news"] as Dictionary).get("line", ""))
+	assert_true(blurb.contains(billing.full_name), "the desk blurb does not name the competition")
+	assert_false(blurb.to_lower().contains("friendly"), "a league game was called a friendly")
+
+## The picker's match is a friendly, and a friendly never borrows a league's
+## competition or round: one match reads one way on every surface (#209).
+func test_a_single_match_names_one_competition_on_every_surface() -> void:
+	# A non-derby pair: a derby keeps its own title (pinned in the test below).
+	var view := PreMatchModel.build("MUN", "LIV", {}, null)
+	assert_eq(str(view["caption"]), MatchBilling.FRIENDLY_CAPTION, "the caption changed shape")
+	assert_eq(str(view["competition"]), MatchBilling.FRIENDLY, "the briefing claims a league")
+	assert_eq(int(view["matchday"]), 0, "a friendly was given a matchday")
+	assert_true(bool(view["friendly"]), "a single match is not marked a friendly")
+	var news: Dictionary = view["news"]
+	assert_false(str(news.get("line", "")).contains("matchday"), "a friendly's blurb announces a matchday")
+	assert_false(str(news.get("line", "")).contains("Premier League"), "a friendly's blurb names a league")
+	assert_eq(str(news.get("title", "")), PreMatchCopy.NEWS_TITLE_FRIENDLY,
+		"a friendly's blurb is not filed as a friendly")
+
+## Two clubs meeting outside a league are still a derby, so the title stays — but
+## the line must not promise points a friendly cannot award.
+func test_a_friendly_derby_promises_no_points() -> void:
+	var news := PreMatchCopy.news(5, TeamData.get_team("MUN"), TeamData.get_team("MCI"),
+		{"derby": true, "friendly": true})
+	assert_eq(str(news["title"]), PreMatchCopy.NEWS_TITLE_DERBY, "a derby lost its title in a friendly")
+	assert_false(str(news["line"]).contains("three points"), "a friendly promised league points")
+	assert_true(str(news["line"]).contains("friendly"), "a friendly derby does not say friendly")
+
+## A friendly's manager talks about the run-out, never about a table it is not in
+## — and never says there is no friendly in a friendly.
+func test_a_friendly_briefing_speaks_as_a_friendly() -> void:
+	var home := TeamData.get_team("MUN")
+	var away := TeamData.get_team("MCI")
+	var view := PreMatchModel.build("MUN", "MCI", {}, null)
+	var quote := str((view["home_quote"] as Dictionary).get("line", ""))
+	assert_true(quote != "", "a friendly's manager said nothing")
+	assert_false(quote.contains("no friendly"), "a friendly's manager denied it is a friendly")
+	assert_true(PreMatchCopy.FRIENDLY_LINES.has(quote), "a friendly took a league quote pack")
+	# The pack itself is reachable for both sides and reads the same way twice.
+	var again := PreMatchCopy.quote(3, home, away, {"friendly": true})
+	var twice := PreMatchCopy.quote(3, home, away, {"friendly": true})
+	assert_eq(str(again["line"]), str(twice["line"]), "a friendly quote is not seeded")
+	assert_eq(str(again["by"]), str(home["manager"]).to_upper(), "a friendly quote is not the manager's")
+
+## The broadcast reads the scene's binding: a friendly's card never claims the
+## Premier League while the briefing says FRIENDLY. (The paint lives in the HUD
+## suite, where the card is drawn.)
+func test_the_scene_binding_is_the_one_answer_every_surface_reads() -> void:
+	var game := StubScene.new()
+	assert_eq(game.billing.chrome_name(), MatchBilling.FRIENDLY, "the scene started billed as a league")
+	MatchBilling.bind_scene(game, "MUN", {"matchday": 5})
+	assert_eq(game.billing.chrome_name(), "PREMIER LEAGUE", "the league was not bound")
+	assert_eq(game.billing.caption(), "PREMIER LEAGUE · MATCHDAY 5", "the caption lost its round")
+	# A stand-in scene with no billing at all still gets one answer, not a crash.
+	var bare := MatchBilling.bind_scene(null, "MUN", {})
+	assert_true(bare.friendly, "a bare scene is not a friendly")
+	assert_eq(MatchBilling.bind_scene(null, "MUN", {"matchday": 2}).matchday, 2,
+		"a bare scene dropped its round")
+
+## One press of a league fixture binds the scene before the briefing paints.
+func test_a_league_watch_binds_the_competition_it_plays_in() -> void:
+	var fx := _fixture()
+	var game := StubScene.new()
+	game.prematch = StubPreMatch.new()
+	var host := LeagueHost.new()
+	host.attach(game)
+	host.season = season
+	var held := str(fx["id"])
+	assert_eq(game.billing.chrome_name(), MatchBilling.FRIENDLY, "the scene started billed as a league")
+	host._on_match_requested(str(fx["home_club_id"]), str(fx["away_club_id"]), held)
+	assert_false(game.billing.friendly, "a league watch left the match a friendly")
+	assert_eq(str(game.prematch.asked["caption"]), game.billing.caption(),
+		"the briefing and the scene disagree about the competition")
+	assert_eq(str(game.prematch.asked["competition"]), game.billing.chrome_name(),
+		"the briefing and the broadcast disagree about the competition")
+	game.free()
+
+## The picker rebinds to a friendly, so a season's last league name cannot leak
+## into the next single match.
+func test_the_picker_rebinds_the_scene_to_a_friendly() -> void:
+	var game := StubScene.new()
+	game.prematch = StubPreMatch.new()
+	game.selector = StubSelector.new()
+	MatchBilling.bind_scene(game, "MUN", {"matchday": 7})
+	assert_false(game.billing.friendly, "the scene did not start on a league")
+	var sheet := FixtureSheet.new(game)
+	sheet.confirm("MUN", "MCI")
+	assert_true(game.billing.friendly, "the picker kept the season's competition")
+	assert_eq(str(game.prematch.asked["caption"]), MatchBilling.FRIENDLY_CAPTION,
+		"the picker's briefing still names a league")
+	game.free()
+
+## The picker's own footer counts the clubs the file carries, and names the
+## competition from the file rather than a hard-coded league (#209). The picker
+## carries no `class_name`, so the suite reads its static off the script.
+func test_the_picker_footer_names_the_file_s_competition() -> void:
+	var picker := load("res://scripts/ui/team_select.gd")
+	assert_eq(picker.clubs_line(20, "Premier League"), "20 PREMIER LEAGUE CLUBS",
+		"the picker footer lost its league")
+	assert_eq(picker.clubs_line(20, ""), "20 CLUBS",
+		"a file with no competition still claimed one")
+	assert_eq(picker.clubs_line(18, "La Liga"), "18 LA LIGA CLUBS",
+		"the picker footer is hard-coded to one league")
+
+## A stand-in play scene: only the billing field and the two collaborators the
+## league host and the picker touch.
+class StubScene extends Node:
+	var billing := MatchBilling.new()
+	var prematch = null
+	var selector = null
+	var paused := false
+	var select_open := false
+	var select_from_menu := false
+	var home_id := "MUN"
+	var away_id := "MCI"
+	var seeded := 1000
+	var match_started := false
+	var hud_layer = null
+	var sel_layer = null
+	var menus = null
+	func new_match(seed: int) -> void:
+		seeded = seed
+		match_started = true

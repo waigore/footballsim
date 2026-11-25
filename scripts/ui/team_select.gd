@@ -219,6 +219,19 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	var label := "HOME" if side == 0 else "AWAY"
 	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
 
+## How many clubs the picker offers, and the competition it files them under —
+## read from the file, not hard-coded (#209): a multi-competition seed names its
+## own league here. Pure, so a suite can pin it.
+static func clubs_line(count: int, competition_name: String) -> String:
+	if competition_name == "":
+		return "%d CLUBS" % count
+	return "%d %s CLUBS" % [count, competition_name.to_upper()]
+
+## The clubs line under the doors: the count and the league, from the file (#209).
+func _clubs_line() -> String:
+	var name := str(TeamData.get_team(str(home_id())).get("competition_name", ""))
+	return clubs_line(ids.size(), name)
+
 ## Design space this sheet draws in (the layer is scaled up by main.gd).
 func design_vp() -> Vector2:
 	return get_viewport().get_visible_rect().size / maxf(ui_scale, 0.001)
@@ -302,11 +315,11 @@ func _draw() -> void:
 
 	if touch:
 		text_c(vp.x * 0.5, vp.y - 44, "TAP THE ARROWS TO CHANGE CLUBS  ·  TAP KICK OFF", 11, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
+		text_c(vp.x * 0.5, vp.y - 24, _clubs_line(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
 	else:
 		text_c(vp.x * 0.5, vp.y - 64, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, C_DIM, f_med)
 		text_c(vp.x * 0.5, vp.y - 44, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   ESC  %s" % ("MENU" if back_to_menu else "BACK"), 10, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
+		text_c(vp.x * 0.5, vp.y - 24, _clubs_line(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
 
 	# A touch build has no Escape key: the sheet needs a visible way out.
 	var back := back_rect(vp)

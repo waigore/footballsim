@@ -20,6 +20,8 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 	if home.is_empty() or away.is_empty():
 		return {}
 	var live := season != null and season.save != null
+	var billing := MatchBilling.new()
+	billing.bind_fixture(home_id, fixture)
 	var home_xi := StrongestXI.pick(home)
 	var away_xi := StrongestXI.pick(away)
 	var seed := _seed(home_id, away_id, fixture)
@@ -28,9 +30,13 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 	var away_pos := int(table.get(away_id, 0))
 	var ctx := {
 		"derby": PreMatchCopy.derby(home_id, away_id),
-		"matchday": int(fixture.get("matchday", 1)),
+		"matchday": billing.matchday,
 		"home_position": home_pos,
 		"away_position": away_pos,
+		# One competition per match (#209): the blurb, the caption and the
+		# broadcast all read it, so a friendly never borrows a league's round.
+		"friendly": billing.friendly,
+		"competition": billing.full_name,
 	}
 	var home_form := _form(season, home_id) if live else ""
 	var away_form := _form(season, away_id) if live else ""
@@ -52,18 +58,16 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 		"news": PreMatchCopy.news(seed, home, away, ctx),
 		"home_form": home_form, "away_form": away_form,
 		"home_position": home_pos, "away_position": away_pos,
-		"caption": _caption(fixture),
+		"caption": billing.caption(),
+		"competition": billing.chrome_name(),
+		"friendly": billing.friendly,
+		"matchday": billing.matchday,
 		"date_label": FixtureCalendar.day_label(date) if date != "" else "",
 		"time": str(fixture.get("kickoff_time", "")),
 		"kick": "CONTINUE" if live and not fixture.is_empty() else "KICK OFF",
 		"back": "BACK",
 		"auto_seconds": 10.0,
 	}
-
-static func _caption(fixture: Dictionary) -> String:
-	if fixture.is_empty():
-		return "FRIENDLY · SINGLE MATCH"
-	return "PREMIER LEAGUE · MATCHDAY %d" % int(fixture.get("matchday", 1))
 
 ## The armband goes to the best-rated starter: the snapshot carries no captain,
 ## so the eleven's own best player wears it (DR-20261125-13).

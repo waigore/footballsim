@@ -87,10 +87,12 @@ func _badge(p: HudPaint, c: CanvasItem, engine, r: Rect2, t: int, f_bold: Font) 
 	var col: Color = Kits.ink(d["color"].lightened(0.10))
 	p.text(c, Vector2(r.position.x + r.size.x * 0.5 - w * 0.5, r.position.y + r.size.y * 0.62), code, 17, col, f_bold)
 
-## Fixture card: venue, attendance, referee and the teams door. Desktop only:
-## phone metrics need the width for the scoreboard and stats, and a touch build
-## will not aim at a 20-unit row — the teams door moves onto the control bar.
-func meta(p: HudPaint, c: CanvasItem, engine, touch: bool, mouse: Vector2, f_bold: Font, f_med: Font) -> void:
+## Fixture card: venue, competition, attendance, referee and the teams door.
+## Desktop only: phone metrics need the width for the scoreboard and stats, and a
+## touch build will not aim at a 20-unit row — the teams door moves onto the
+## control bar. The competition is the match's own (#209), read from the scene's
+## `billing`, so a friendly's card never claims a league.
+func meta(p: HudPaint, c: CanvasItem, engine, game, touch: bool, mouse: Vector2, f_bold: Font, f_med: Font) -> void:
 	if touch or p.compact():
 		return
 	var x := 24.0
@@ -102,7 +104,7 @@ func meta(p: HudPaint, c: CanvasItem, engine, touch: bool, mouse: Vector2, f_bol
 	var city := str(home.get("city", "")).to_upper()
 	UiChrome.wordmark(c, Vector2(x + 14, y + 16), 13, f_bold)
 	p.text(c, Vector2(x + 14, y + 33), "%s  ·  %s" % [venue, city], 13, UiChrome.C_TEXT, f_bold)
-	p.text(c, Vector2(x + 14, y + 47), "PREMIER LEAGUE  ·  ATT. %s" % thousands(int(home.get("capacity", 0))), 9, UiChrome.C_DIM, f_med)
+	p.text(c, Vector2(x + 14, y + 47), "%s  ·  ATT. %s" % [billing_name(game, engine), thousands(int(home.get("capacity", 0)))], 9, UiChrome.C_DIM, f_med)
 	p.text(c, Vector2(x + 14, y + 60), "REFEREE", 9, UiChrome.C_DIM, f_bold)
 	p.text(c, Vector2(x + 70, y + 60), engine.referee_name, 10, UiChrome.C_TEXT, f_bold)
 	var btn := Rect2(x + 12, y + 68, 262, 20)
@@ -111,6 +113,17 @@ func meta(p: HudPaint, c: CanvasItem, engine, touch: bool, mouse: Vector2, f_bol
 	# Mirror the bar door's `[id, label, hint]` shape so probes reading `label`
 	# get "CHANGE TEAMS", never the key badge drawn on the right of the row.
 	p.add_button("teams", btn, "CHANGE TEAMS", "T")
+
+## The competition the scene's match is billed in (#209): the scene's own
+## `billing` when it has one, and the home club's own league when it does not —
+## a probe or a suite that builds the overlay without a scene still reads a name
+## rather than crashing on a missing field.
+static func billing_name(game, engine) -> String:
+	var binding = game.get("billing") if game != null else null
+	if binding is MatchBilling:
+		return (binding as MatchBilling).chrome_name()
+	var home: Dictionary = engine.teams[0]["data"]
+	return str(home.get("competition_short", MatchBilling.FRIENDLY))
 
 static func thousands(n: int) -> String:
 	var s := str(n)
