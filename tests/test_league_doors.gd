@@ -242,6 +242,26 @@ func test_a_goal_door_plays_a_stored_clip_and_names_its_fixture() -> void:
 	assert_true(screen.key(KEY_1), "the report's goal key was not taken")
 	assert_eq(played.size(), 2, "the report's goal key did not play the clip")
 
+func test_the_moved_doors_answer_on_their_own() -> void:
+	# The goal doors and the season doors live beside the press table, so each
+	# one is pinned without the dispatch in front of it.
+	LeagueGoalDoors.play(screen, 7)
+	assert_false(LeagueGoalDoors.has_clip(screen, 7), "an ordinal the report never stored claimed a clip")
+	screen.mode = LeagueScreen.MODE_REPORT
+	screen.report = {"fixture": {"id": "gw01-HOM-AWY"}, "highlights": [{"goal_index": 0}]}
+	assert_false(LeagueGoalDoors.has_clip(screen, 3), "a missing ordinal claimed a clip")
+	_hub()
+	assert_false(LeagueSeasonDoors.set_interest(screen, "", true), "an empty club is never a shortlist entry")
+	assert_true(LeagueSeasonDoors.set_interest(screen, "ARS", true), "an add was refused")
+	assert_eq(str(screen.interest_query), "", "an add kept the search")
+	assert_true(LeagueSeasonDoors.set_interest(screen, "ARS", false), "a remove was refused")
+	screen.season = null
+	assert_false(LeagueSeasonDoors.set_interest(screen, "ARS", true), "a surface with no season took a shortlist")
+	screen.mode = LeagueScreen.MODE_STATS
+	LeagueSeasonDoors.open_day(screen, "1990-01-01")
+	assert_eq(screen.mode, LeagueScreen.MODE_STATS, "a day with no season moved the sheet")
+	assert_eq(screen.report_back, LeagueScreen.MODE_HUB, "an inert day door moved the report's return")
+
 func test_deleting_the_open_save_unloads_it_first() -> void:
 	# The delete door asks first: the file stays until the answer is DELETE.
 	var throwaway := LeagueSeason.create("Doors Throwaway", "generated", "fixture_days", SEED + 1)

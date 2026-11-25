@@ -3,7 +3,8 @@ extends Control
 
 ## God-mode league surface: New/Setup, Load, Continue hub, table, calendar,
 ## reports and podium. The screen holds state and paint; the sheets draw a pose;
-## `LeagueDoors` owns the keys, presses and season actions; the season owns the
+## `LeagueDoors` owns the keys and presses, `LeagueSeasonDoors` the season's own
+## actions and `LeagueGoalDoors` the report's goal doors; the season owns the
 ## sim. Input arrives in design space from `LeagueHost`.
 
 signal closed
@@ -311,7 +312,7 @@ func scroll_by(delta: float, dx: float = 0.0) -> void:
 
 ## True when the report on screen carries a stored clip for a goal ordinal.
 func has_clip(index: int) -> bool:
-	return LeagueDoors.has_clip(self, index)
+	return LeagueGoalDoors.has_clip(self, index)
 
 # ---------------------------------------------------------------- input ----
 
