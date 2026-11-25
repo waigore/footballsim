@@ -40,9 +40,46 @@ static func season_fixtures(clubs: Array) -> Array:
 
 # -------------------------------------------------------------- seasons -----
 
-## Play one sampled season. Returns the season's totals plus the champion's
-## goal figures, which is where overscoring shows up first.
+## The `PoissonModel` objects a season needs, one per fixture. λ and the 10x10
+## score table read the two clubs, which side is at home and the calibration,
+## not the season, so a twenty-season gate reuses its 380 tables instead of
+## rebuilding them 7,600 times — the bulk of its run time under coverage.
+static func models_for(fixtures: Array, cal: Dictionary) -> Dictionary:
+	var out := {}
+	for pair in fixtures:
+		var key := pair_key(str(pair[0]), str(pair[1]))
+		if not out.has(key):
+			out[key] = PoissonModel.new(0, str(pair[0]), str(pair[1]), "clear", {}, cal)
+	return out
+
+## A fixture is home and away in order: the two legs of a tie read different λ.
+static func pair_key(home: String, away: String) -> String:
+	return home + "|" + away
+
+## One season's scorelines and λ pairs, in fixture order, drawn from the shared
+## models: each fixture reseeds its own model, so it draws what a fresh model on
+## that fixture's seed would draw.
+static func shot_season(season: int, seed0: int, models: Dictionary, fixtures: Array) -> Array:
+	var goals: Array = []
+	var lambdas: Array = []
+	for i in range(fixtures.size()):
+		var pair: Array = fixtures[i]
+		var model: PoissonModel = models[pair_key(str(pair[0]), str(pair[1]))]
+		model.rng.seed = seed0 + season * 100003 + i
+		lambdas.append([model.lambda_home, model.lambda_away])
+		goals.append(model.sample())
+	return [goals, lambdas]
+
+## Play one sampled season, a fresh model per fixture. Returns the season's
+## totals plus the champion's goal figures, which is where overscoring shows up
+## first.
 static func play_season(season: int, seed0: int, cal: Dictionary, fixtures: Array) -> Dictionary:
+	var shot := shot_season(season, seed0, models_for(fixtures, cal), fixtures)
+	return season_from(shot[0], shot[1], fixtures)
+
+## One season's totals from its scorelines, in fixture order, and each fixture's
+## λ pair: the aggregation a gate reads, with the models already gone.
+static func season_from(goals: Array, lambdas: Array, fixtures: Array) -> Dictionary:
 	var goals_for: Dictionary = {}
 	var goals_against: Dictionary = {}
 	var points: Dictionary = {}
@@ -58,9 +95,9 @@ static func play_season(season: int, seed0: int, cal: Dictionary, fixtures: Arra
 		var pair: Array = fixtures[i]
 		var home := str(pair[0])
 		var away := str(pair[1])
-		var model := PoissonModel.new(seed0 + season * 100003 + i, home, away, "clear", {}, cal)
-		lambda_sum += model.lambda_home + model.lambda_away
-		var score := model.sample()
+		var score: Vector2i = goals[i]
+		var lam: Array = lambdas[i]
+		lambda_sum += float(lam[0]) + float(lam[1])
 		var gh := score.x
 		var ga := score.y
 		home_goals += gh
@@ -140,6 +177,7 @@ static func _champion(points: Dictionary, goals_for: Dictionary, goals_against: 
 static func run(seasons: int, seed0: int, cal: Dictionary, clubs: Array = []) -> Dictionary:
 	var ids: Array = clubs.duplicate() if not clubs.is_empty() else TeamData.team_ids()
 	var fixtures := season_fixtures(ids)
+	var models := models_for(fixtures, cal)
 	var matches := 0
 	var goals := 0
 	var home_goals := 0
@@ -151,7 +189,8 @@ static func run(seasons: int, seed0: int, cal: Dictionary, clubs: Array = []) ->
 	var champion_gf := 0.0
 	var champion_best_15 := 0.0
 	for s in range(seasons):
-		var st := play_season(s, seed0, cal, fixtures)
+		var shot := shot_season(s, seed0, models, fixtures)
+		var st := season_from(shot[0], shot[1], fixtures)
 		matches += int(st["matches"])
 		goals += int(st["goals"])
 		home_goals += int(st["home_goals"])
