@@ -335,6 +335,90 @@ func _item_rect(items: Array, id: String) -> Rect2:
 			return item["rect"]
 	return Rect2()
 
+## The body clips the scrolling rows to the band between the header and the
+## bottom bar, so it paints the doors a sheet pins itself: BACK and CONTINUE in
+## the header, the table's readings in the bottom bar. Those doors stand outside
+## the clipped window and are laid out in screen space, so the body must keep
+## them out of its rows and out of its scroll — a door that rode the clip or the
+## scroll would drift off the corner the layout put it in.
+func test_the_body_keeps_the_pinned_doors_outside_the_clipped_window() -> void:
+	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
+		var hub: Array = LeagueSheet.new().hub_layout(vp, _state([_fixture(1)], _table()))
+		var table: Array = LeagueBook.new().table_layout(vp, {
+			"table": _table(), "rules": LeagueRules.defaults()})
+		var cont: Rect2 = _item_rect(hub, "continue")
+		var reading: Rect2 = _item_rect(table, "tbl:mode:full")
+		var body := _body(vp)
+		body.set_sheet(hub, vp, true, 0.0)
+		assert_lte(cont.end.y, LeagueChrome.HEADER, "CONTINUE left the header at %s" % vp)
+		assert_true(cont.end.y <= body.position.y, "the clip covers CONTINUE at %s" % vp)
+		assert_eq(body.content.size(), hub.size() - body.pinned.size(),
+			"a pinned door rode the scrolling rows at %s" % vp)
+		body.set_sheet(table, vp, true, LeagueChrome.BAR_H)
+		var window := Rect2(body.position, body.size)
+		assert_eq(window.end.y, vp.y - LeagueChrome.BAR_H, "the wrong band is clipped at %s" % vp)
+		assert_eq(body.pinned.size(), 3, "the table lost a pinned door at %s" % vp)
+		assert_gte(reading.position.y, window.end.y, "FULL is inside the scrolling band at %s" % vp)
+		# A scroll moves the rows and leaves the pinned doors where they were.
+		body.scroll_to(400.0)
+		var door := _body_item(body.pinned, "back")
+		var row := _body_item(body.button_rects(), "back")
+		assert_eq(door["rect"], row["rect"], "the scroll carried BACK off its corner at %s" % vp)
+		# The calendar pins chips instead of buttons; the body paints both.
+		var calendar: Array = LeagueBook.new().calendar_layout(vp, {
+			"month": "2026-10", "day": "", "days": {}, "day_fixtures": []})
+		body.set_sheet(calendar, vp, true, 0.0)
+		assert_false(_body_item(body.pinned, "month:1").is_empty(),
+			"the calendar's month chips were not pinned at %s" % vp)
+		body.free()
+
+## A body with the window `_ready` would give it, so its hit test has the band
+## the screen lays it in (a bare Control has no size yet).
+func _body(vp: Vector2) -> LeagueBody:
+	var body := LeagueBody.new()
+	body.position = Vector2(0.0, LeagueChrome.HEADER)
+	body.size = Vector2(vp.x, vp.y - LeagueChrome.HEADER)
+	return body
+
+func _body_item(items: Array, id: String) -> Dictionary:
+	for item in items:
+		if str(item["id"]) == id:
+			return item
+	return {}
+
+## A frozen body answers nothing: the delete question or the long-press menu
+## owns the press while it is up, and a door under it must never fire.
+func test_a_frozen_body_answers_no_door() -> void:
+	var vp := Vector2(1600, 900)
+	var hub: Array = LeagueSheet.new().hub_layout(vp, _state([_fixture(1)], _table()))
+	var body := _body(vp)
+	body.set_sheet(hub, vp, true, 0.0)
+	var at: Vector2 = _item_rect(hub, "continue").get_center() + Vector2(0.0, -6.0)
+	assert_eq(body.hit(at), "continue", "an unfrozen body lost its pinned door")
+	body.frozen = true
+	assert_eq(body.hit(at), "", "a frozen body still answered its doors")
+	body.free()
+
+## A page taller than the window scrolls: a row comes to the pointer as it
+## rides up, then goes quiet under the bar, and a point outside the body answers
+## nothing even while the page is scrolled.
+func test_a_scrolling_page_claims_its_rows_only_inside_the_window() -> void:
+	var vp := Vector2(1600, 260)
+	var body := _body(vp)
+	var items: Array = LeagueBook.new().table_layout(vp,
+		{"table": _table(), "rules": LeagueRules.defaults()})
+	body.set_sheet(items, vp, true, LeagueChrome.BAR_H)
+	assert_gt(body.max_scroll(), 0.0, "the page never needed a scroll")
+	var row: Rect2 = _item_rect(items, "club:C10")
+	assert_gte(row.position.y, LeagueChrome.HEADER, "the probe row starts on screen")
+	body.scroll_to(row.position.y + 10.0 - LeagueChrome.HEADER)
+	var at := Vector2(row.get_center().x, row.position.y + 10.0 - body.scroll)
+	assert_eq(body.hit(at), "club:C10", "a row that scrolled into the window did not answer")
+	assert_eq(body.hit(Vector2(at.x, vp.y - 8.0)), "",
+		"a row under the bottom bar still answered")
+	assert_eq(body.hit(Vector2(vp.x + 40.0, at.y)), "", "a point outside the body answered")
+	body.free()
+
 ## #126: the caption floor lifts the shortest type on the hub and the calendar to
 ## ten design units. The chip label and the day-cell counter must still fit the
 ## surface that carries them on a phone and on a desktop window.
