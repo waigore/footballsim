@@ -28,7 +28,7 @@ func _initialize() -> void:
 		return
 	# Eight rounds so the table has a shape worth reading.
 	var guard := 0
-	while season.record.completed_matchdays() < 8 and guard < 20:
+	while season.record.fixtures.completed_matchdays() < 8 and guard < 20:
 		season.advance()
 		guard += 1
 	league.show_season(season)

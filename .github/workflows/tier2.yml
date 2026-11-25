@@ -70,20 +70,33 @@ jobs:
           gd-tools test --coverage --parallel 4 --timeout 600 --junit-xml .gd-tools/results.xml
           gd-tools coverage show --min 80
 
-      - name: Poisson-agreement census (variance + per-match budget)
-        if: steps.project.outputs.ready == 'true'
-        run: |
-          set -euo pipefail
-          gd-tools test --parallel 2 --timeout 2400 --junit-xml .gd-tools/census.xml \
-            playtests/census
-
       - name: Skip complete
         if: steps.project.outputs.ready != 'true'
         run: echo 'tier 2 skipped (no project).'
 
-      # Sticky issue for fix-tests agent (at most one open ci-tier2).
+  # The census is its own reusable workflow: the fixed grid is sharded across
+  # jobs so a tens-of-seconds match does not blow a runner budget, and the same
+  # workflow is dispatchable for a bigger manual censuses (census.yml).
+  census:
+    name: census
+    uses: ./.github/workflows/census.yml
+    with:
+      n: 32
+      budget_ms: 120000
+
+  # Sticky issue for fix-tests agent (at most one open ci-tier2). Own job so a
+  # census failure raises it too, not just the full suite.
+  sticky:
+    name: sticky ci-tier2 issue
+    needs: [tests-full, census]
+    if: failure() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Open or refresh sticky ci-tier2 issue
-        if: failure() && steps.project.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

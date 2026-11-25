@@ -24,6 +24,16 @@ var _rows: Array = []
 var _height := 0.0
 var _focus := -1
 var mouse := Vector2(-1000, -1000)
+## Date strips this page painted, in body space (#99): the screen's overlay
+## paints the weekday for the one under the pointer.
+var hints := DateHints.new()
+## Club names this page painted, in body space (#107): a long press reads them
+## to know which club is under the finger.
+var names := InterestNames.new()
+## Followed club ids as a set (#107): their printed names are gold. The screen
+## hands it in whenever the page or the shortlist changes, so a paint pass never
+## reads the save.
+var followed := {}
 
 func _ready() -> void:
 	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
@@ -90,6 +100,7 @@ static func layout(blocks: Array, width: float, compact: bool = false) -> Dictio
 					"widths": widths, "cols": cols, "target": tr.get("target", {}),
 					"accent": str(tr.get("accent", "")), "index": i,
 					"text_cols": block.get("text_cols", [1]),
+					"dates": tr.get("dates", {}),
 				})
 				y += row_h
 			y += 6.0
@@ -142,6 +153,35 @@ func hit(p: Vector2) -> Dictionary:
 			return row["target"]
 	return {}
 
+## The club whose printed name is under a body point (#107). Only a cell that
+## prints one club counts: a fixture line that names both clubs has no answer,
+## so a hold there stays an ordinary press.
+func club_at(p: Vector2) -> String:
+	var local := p - position
+	if not Rect2(Vector2.ZERO, size).has_point(local):
+		return ""
+	return names.at(local)
+
+## Register the strip a row printed one club's name in. The painter knows the
+## cell's width; the model says which cell is the club's own name.
+func _name_strip(row: Dictionary, rect: Rect2) -> void:
+	var target: Dictionary = row.get("target", {})
+	if str(target.get("page", "")) != WikiModel.TEAM:
+		return
+	if str(row.get("k", "")) == "chip":
+		names.add(rect, str(target.get("id", "")))
+		return
+	var idx := int(row.get("club_cell", -1))
+	var cells: Array = row.get("cells", [])
+	if idx < 0 or idx >= cells.size():
+		return
+	var widths: Array = row["widths"]
+	var inner: float = rect.size.x - 6.0
+	var x: float = rect.position.x + 6.0
+	for i in range(idx):
+		x += inner * float(widths[i])
+	names.add(Rect2(x, rect.position.y, inner * float(widths[idx]), rect.size.y), str(target["id"]))
+
 func row_at(p: Vector2) -> int:
 	var local := _content_point(p)
 	if local.x < 0.0:
@@ -166,6 +206,8 @@ func _content_point(p: Vector2) -> Vector2:
 func _draw() -> void:
 	if _rows.is_empty():
 		return
+	hints.clear()
+	names.clear()
 	var focus_row := row_at(mouse) if mouse.x > -500.0 else -1
 	for i in range(_rows.size()):
 		var row: Dictionary = _rows[i]
@@ -174,6 +216,7 @@ func _draw() -> void:
 		if top + rect.size.y < 0.0 or top > size.y:
 			continue
 		var shifted := Rect2(rect.position.x, top, rect.size.x, rect.size.y)
+		_name_strip(row, shifted)
 		_draw_row(row, shifted, i == focus_row)
 
 ## The body owns its pixels: a page swap, a scroll or a hover change must ask
@@ -188,7 +231,7 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 		_text(Vector2(rect.position.x + 12, rect.position.y + 22), str(row["text"]), 11, Color(0.55, 0.64, 0.69), true)
 		draw_line(Vector2(rect.position.x, rect.position.y + 28), Vector2(rect.position.x + rect.size.x, rect.position.y + 28), Color(1, 1, 1, 0.07), 1)
 	elif kind == "note":
-		_text(Vector2(rect.position.x, rect.position.y + 16), _clip(str(row["text"]), 130), 9, Color(0.55, 0.64, 0.69), false)
+		_text(Vector2(rect.position.x, rect.position.y + 16), _clip(str(row["text"]), 130), 10, Color(0.55, 0.64, 0.69), false)
 	elif kind == "kv":
 		var items: Array = row["items"]
 		var cw: float = rect.size.x / float(row["cols"])
@@ -196,12 +239,12 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 			var item: Array = items[i]
 			var x: float = rect.position.x + cw * float(i)
 			var big: bool = item.size() > 2 and bool(item[2])
-			_text(Vector2(x, rect.position.y + 12), str(item[0]), 8, Color(0.55, 0.64, 0.69), true)
+			_text(Vector2(x, rect.position.y + 12), str(item[0]), 10, Color(0.55, 0.64, 0.69), true)
 			_text(Vector2(x, rect.position.y + 28), str(item[1]), 17 if big else 13, Color(0.92, 0.95, 0.96), true)
 	elif kind == "bar":
 		var label := str(row["label"])
 		var value := clampf(float(row["value"]), 0.0, 1.0)
-		_text(Vector2(rect.position.x, rect.position.y + 16), label, 9, Color(0.55, 0.64, 0.69), true)
+		_text(Vector2(rect.position.x, rect.position.y + 16), label, 10, Color(0.55, 0.64, 0.69), true)
 		var bar_x: float = rect.position.x + minf(150.0, rect.size.x * 0.30)
 		var bar_w: float = rect.size.x - (bar_x - rect.position.x) - 46.0
 		draw_rect(Rect2(bar_x, rect.position.y + 8, bar_w, 6), Color(1, 1, 1, 0.07))
@@ -211,7 +254,9 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 		var accent := Color(str(row["accent"])) if str(row["accent"]) != "" else Color(0.35, 0.45, 0.5)
 		draw_rect(rect, Color(0.075, 0.105, 0.125, 0.95 if not hovered else 1.0), true)
 		draw_rect(Rect2(rect.position, Vector2(4, rect.size.y)), accent)
-		_text(Vector2(rect.position.x + 14, rect.position.y + 19), str(row["text"]), 13, Color(0.92, 0.95, 0.96), true)
+		var chip_id := str((row.get("target", {}) as Dictionary).get("id", ""))
+		_text(Vector2(rect.position.x + 14, rect.position.y + 19), str(row["text"]), 13,
+			UiChrome.C_GOLD if followed.has(chip_id) else Color(0.92, 0.95, 0.96), true)
 	elif kind == "thead":
 		var cols: Array = row["cols"]
 		var widths: Array = row["widths"]
@@ -220,9 +265,9 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 		for i in range(cols.size()):
 			var cw: float = rect.size.x * float(widths[i])
 			if text_cols.has(i) or i == 0:
-				_text(Vector2(x, rect.position.y + 15), str(cols[i]), 9, Color(0.62, 0.72, 0.78), true)
+				_text(Vector2(x, rect.position.y + 15), str(cols[i]), 10, Color(0.62, 0.72, 0.78), true)
 			else:
-				_text_right(x + cw - 8.0, rect.position.y + 15.0, str(cols[i]), 9, Color(0.62, 0.72, 0.78), true)
+				_text_right(x + cw - 8.0, rect.position.y + 15.0, str(cols[i]), 10, Color(0.62, 0.72, 0.78), true)
 			x += cw
 		draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), Color(1, 1, 1, 0.10), 1)
 	elif kind == "trow":
@@ -237,13 +282,22 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 		var cells: Array = row["cells"]
 		var x := rect.position.x + 6.0
 		var text_cols: Array = row.get("text_cols", [1])
+		var dates: Dictionary = row.get("dates", {})
+		# A followed club's printed name is gold here too (#107), on the cell the
+		# model marked as that club's own name.
+		var mark := int(row.get("club_cell", -1))
+		var marked: bool = mark >= 0 and followed.has(str((row.get("target", {}) as Dictionary).get("id", "")))
 		for i in range(cells.size()):
 			var cw: float = (rect.size.x - 6.0) * float(widths[i])
+			# A date cell carries its weekday as a hint (#99), not in the text.
+			if dates.has(i):
+				hints.add(Rect2(x, rect.position.y + 2.0, cw, rect.size.y - 4.0), str(dates[i]))
+			var ink: Color = UiChrome.C_GOLD if marked and i == mark else Color(0.92, 0.95, 0.96)
 			var right: bool = not text_cols.has(i) and i != 0
 			if right:
-				_text_right(x + cw - 8.0, rect.position.y + 16.0, str(cells[i]), 11, Color(0.92, 0.95, 0.96), i == cells.size() - 1)
+				_text_right(x + cw - 8.0, rect.position.y + 16.0, str(cells[i]), 11, ink, i == cells.size() - 1)
 			else:
-				_text(Vector2(x, rect.position.y + 16), _clip(str(cells[i]), 34), 11, Color(0.92, 0.95, 0.96), i == 1 and cells.size() >= 4)
+				_text(Vector2(x, rect.position.y + 16), _clip(str(cells[i]), 34), 11, ink, i == 1 and cells.size() >= 4)
 			x += cw
 		draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), Color(1, 1, 1, 0.05), 1)
 
@@ -251,9 +305,10 @@ func _clip(s: String, max_chars: int) -> String:
 	return s if s.length() <= max_chars else s.substr(0, max_chars - 1) + "…"
 
 func _text(pos: Vector2, s: String, size_px: int, color: Color, bold: bool) -> void:
-	draw_string(f_bold if bold else f_body, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, color)
+	draw_string(f_bold if bold else f_body, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, WikiChrome.text_size(size_px), color)
 
 func _text_right(right_x: float, y: float, s: String, size_px: int, color: Color, bold: bool) -> void:
 	var font: Font = f_bold if bold else f_body
-	var w: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
-	draw_string(font, Vector2(right_x - w, y), s, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, color)
+	var px := WikiChrome.text_size(size_px)
+	var w: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	draw_string(font, Vector2(right_x - w, y), s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, color)

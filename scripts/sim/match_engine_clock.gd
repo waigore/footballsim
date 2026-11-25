@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_rules.gd"
+extends "res://scripts/sim/match_engine_bench.gd"
 
 ## Match lifecycle: kick-off, the tick loop, halves, and state snapshots.
 
@@ -18,6 +18,7 @@ func _init(seed_in: int = 4242, home_id: String = "MUN", away_id: String = "MCI"
 	Kits.assign(teams)
 	stats = [_blank_stats(), _blank_stats()]
 	home_team = 0
+	_calibrate_finishing()
 	_build_squads()
 	manager = MatchManager.new(self)
 	brain = MatchAI.new(self)
@@ -164,8 +165,29 @@ func begin_second_half() -> void:
 func _end_match() -> void:
 	phase = "full_time"
 	finished = true
+	# The summary carries the rating it is read by. One formula, the same one the
+	# player card and the in-sim ledger use, computed once at the final whistle
+	# (DR-20261125-01) instead of three times from three copies.
+	for p in players:
+		p.stats["rating"] = PLSimStats.rating(p.stats)
 	var line = Commentary.full_time(rng, teams[0]["data"]["short"], score[0], teams[1]["data"]["short"], score[1])
 	_emit("full_time", line, -1, null)
+
+## Play the rest of the match out with no presentation: a caller that has left
+## the viewer drives this in slices. `budget_usec` caps the work in one call so
+## the caller can keep painting; a negative budget runs to the end. Returns true
+## once the match is at full time.
+func run_to_full_time(budget_usec: int = -1) -> bool:
+	var started := Time.get_ticks_usec()
+	var guard := 0
+	while phase != "full_time" and guard < FAST_FORWARD_TICKS:
+		if phase == "half_time":
+			begin_second_half()
+		tick()
+		guard += 1
+		if budget_usec >= 0 and Time.get_ticks_usec() - started >= budget_usec:
+			break
+	return phase == "full_time"
 
 func to_dict() -> Dictionary:
 	var ps = []
@@ -191,13 +213,14 @@ func to_dict() -> Dictionary:
 			"last_touch_team": ball.last_touch_team, "last_kick_id": ball.last_kick_id,
 			"assist_id": ball.assist_id, "assist_time": ball.assist_time,
 			"shot_team": ball.shot_team, "shot_time": ball.shot_time, "shot_saved": ball.shot_saved,
-			"planned_goal": ball.planned_goal, "loose_t": ball.loose_t,
+			"planned_goal": ball.planned_goal, "planned_save": ball.planned_save, "loose_t": ball.loose_t,
 			"shot_xg": ball.shot_xg},
 		"players": ps, "stats": stats.duplicate(true), "events": events.duplicate(true),
 		"referee": {"pos": referee.pos, "vel": referee.vel, "whistle": referee.whistle,
 			"focus": referee.focus, "focus_t": referee.focus_t},
 		"ev_seq": ev_seq, "sim_tick": sim_tick, "goal_timer": goal_timer,
-		"last_goal": last_goal.duplicate(true), "rng": rng.state, "dirs": [teams[0]["dir"], teams[1]["dir"]],
+		"last_goal": last_goal.duplicate(true), "goal_sheet": goal_sheet.duplicate(true),
+		"rng": rng.state, "dirs": [teams[0]["dir"], teams[1]["dir"]],
 		"subs": [teams[0]["subs_made"], teams[1]["subs_made"]],
 		"subs_left": [teams[0]["subs_left"], teams[1]["subs_left"]], "finished": finished,
 		"stoppage_events": stoppage_events, "kickoff_team": kickoff_team,
@@ -235,6 +258,7 @@ func from_dict(d: Dictionary) -> void:
 	ball.shot_time = b.get("shot_time", -10.0)
 	ball.shot_saved = b.get("shot_saved", false)
 	ball.planned_goal = bool(b.get("planned_goal", false))
+	ball.planned_save = bool(b.get("planned_save", false))
 	ball.shot_xg = b.get("shot_xg", 0.0)
 	ball.loose_t = b.get("loose_t", 0.0)
 	var r: Dictionary = d.get("referee", {})
@@ -295,6 +319,9 @@ func from_dict(d: Dictionary) -> void:
 	sim_tick = d["sim_tick"]
 	goal_timer = d["goal_timer"]
 	last_goal = d["last_goal"].duplicate(true)
+	# Snapshots taken before the whistle card existed carry no sheet; the goals
+	# then rest with the event log they were cut from, so an empty sheet is right.
+	goal_sheet = d.get("goal_sheet", []).duplicate(true)
 	rng.state = d["rng"]
 	teams[0]["dir"] = d["dirs"][0]
 	teams[1]["dir"] = d["dirs"][1]

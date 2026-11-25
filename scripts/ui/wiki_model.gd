@@ -53,7 +53,10 @@ static func league_page() -> Dictionary:
 		"page": LEAGUE,
 		"title": str(meta.get("league_name", "Premier League")).to_upper(),
 		"eyebrow": "PREMIER LEAGUE  ·  %s" % season,
-		"subtitle": "20 CLUBS  ·  SNAPSHOT %s" % str(meta.get("snapshot_date", "")).to_upper(),
+		# The snapshot date is drawn as its own date label (#99), so the sheet can
+		# give it the weekday hint without hunting for it in the subtitle.
+		"subtitle": "20 CLUBS  ·  SNAPSHOT ",
+		"snapshot": str(meta.get("snapshot_date", "")),
 		"accent": Color("#f7c948"),
 		"blocks": [],
 	}
@@ -69,6 +72,7 @@ static func league_page() -> Dictionary:
 			],
 			"target": {"page": TEAM, "id": str(row["club_id"])},
 			"accent": str(row.get("club_color", "")),
+			"club_cell": 1,
 		})
 	out["blocks"].append({
 		"k": "table",
@@ -89,18 +93,22 @@ static func league_page() -> Dictionary:
 	for fx in repo().fixtures("", 10):
 		results.append({
 			"cells": [
-				_short_date(str(fx["kickoff"])), str(fx["home_abbr"]),
+				FixtureCalendar.day_label(str(fx["kickoff"])), str(fx["home_abbr"]),
 				"%d – %d" % [int(fx["home_goals"]), int(fx["away_goals"])], str(fx["away_abbr"]),
 			],
 			"target": {"page": TEAM, "id": str(fx["home_club_id"])},
+			"dates": {0: str(fx["kickoff"])}, "club_cell": 1,
 		})
-	out["blocks"].append({"k": "section", "text": "LATEST RESULTS  ·  SNAPSHOT"})
-	out["blocks"].append({
-		"k": "table", "cols": ["DATE", "HOME", "", "AWAY"],
-		"widths": [0.16, 0.28, 0.22, 0.34], "text_cols": [0, 1, 3],
-		"rows": results,
-	})
-	out["blocks"].append_array(_sim_blocks("", true))
+	out["blocks"].append({"k": "section", "text": "LATEST RESULTS  ·  %s" % WikiLedger.ledger_label()})
+	if results.is_empty():
+		out["blocks"].append({"k": "note", "text": "NO RESULTS YET  ·  PLAY A GAMEWEEK TO START THE RECORD"})
+	else:
+		out["blocks"].append({
+			"k": "table", "cols": ["DATE", "HOME", "", "AWAY"],
+			"widths": [0.16, 0.28, 0.22, 0.34], "text_cols": [0, 1, 3],
+			"rows": results,
+		})
+	out["blocks"].append_array(WikiLedger.league_blocks())
 	out["blocks"].append({"k": "note", "text": "SELECTED BY CLUB OR PLAYER  ·  ESC OR BACK RETURNS  ·  REAL DATA: %s" % str(meta.get("source", ""))})
 	return out
 
@@ -144,7 +152,7 @@ static func team_page(club_id: String) -> Dictionary:
 		"accent": club["color"],
 		"blocks": [],
 	}
-	out["blocks"].append({"k": "section", "text": "SEASON  ·  %s SNAPSHOT" % str(meta["season_label"])})
+	out["blocks"].append({"k": "section", "text": WikiLedger.record_label(str(meta["season_label"]))})
 	out["blocks"].append({
 		"k": "kv",
 		"items": [
@@ -177,22 +185,61 @@ static func team_page(club_id: String) -> Dictionary:
 		"widths": [0.09, 0.55, 0.19, 0.17], "text_cols": [1, 2],
 		"rows": squad_rows,
 	})
-	out["blocks"].append({"k": "section", "text": "RESULTS  ·  SNAPSHOT"})
+	out["blocks"].append({"k": "section", "text": "RESULTS  ·  %s" % WikiLedger.ledger_label()})
 	var results: Array = []
 	for fx in repo().fixtures(club_id, 8):
 		results.append({
 			"cells": [
-				_short_date(str(fx["kickoff"])),
+				FixtureCalendar.day_label(str(fx["kickoff"])),
 				"%s %d – %d %s" % [str(fx["home_abbr"]), int(fx["home_goals"]), int(fx["away_goals"]), str(fx["away_abbr"])],
 			],
 			"target": {"page": TEAM, "id": str(fx["away_club_id"] if str(fx["home_club_id"]) == club_id else fx["home_club_id"])},
+			"dates": {0: str(fx["kickoff"])},
 		})
-	out["blocks"].append({
-		"k": "table", "cols": ["DATE", "FIXTURE"],
-		"widths": [0.16, 0.84], "text_cols": [0, 1],
-		"rows": results,
-	})
-	out["blocks"].append_array(_sim_blocks(club_id, false))
+	if results.is_empty():
+		out["blocks"].append({"k": "note", "text": "NO RESULTS YET  ·  PLAY A GAMEWEEK TO START THE RECORD"})
+	else:
+		out["blocks"].append({
+			"k": "table", "cols": ["DATE", "FIXTURE"],
+			"widths": [0.16, 0.84], "text_cols": [0, 1],
+			"rows": results,
+		})
+	# What comes next, from the same ledger as the results above: the season's
+	# remaining schedule, or the snapshot's. A fixture ahead is not a result, so
+	# it never carries a score (DR-20261125-10).
+	out["blocks"].append({"k": "section", "text": "NEXT FIXTURES  ·  %s" % WikiLedger.ledger_label()})
+	# Only a save's ledger carries a gameweek; the snapshot ships its schedule
+	# without one, so the column is there only when every row has a figure.
+	var with_gw := repo().season_active()
+	var next: Array = []
+	for fx in repo().upcoming(club_id, 6):
+		var opponent := str(fx["away_club_id"] if str(fx["home_club_id"]) == club_id else fx["home_club_id"])
+		var cells := [FixtureCalendar.day_label(str(fx["kickoff"]))]
+		if with_gw:
+			cells.append("GW %d" % int(fx["matchday"]))
+		cells.append("%s v %s" % [str(fx["home_abbr"]), str(fx["away_abbr"])])
+		next.append({
+			"cells": cells,
+			"target": {"page": TEAM, "id": opponent},
+			"dates": {0: str(fx["kickoff"])},
+		})
+	if next.is_empty():
+		var done := "NO FIXTURES LEFT  ·  THE SEASON IS COMPLETE" if repo().season_active() \
+			else "NO FIXTURES LEFT  ·  THE SNAPSHOT ENDS HERE"
+		out["blocks"].append({"k": "note", "text": done})
+	elif with_gw:
+		out["blocks"].append({
+			"k": "table", "cols": ["DATE", "GW", "FIXTURE"],
+			"widths": [0.20, 0.14, 0.66], "text_cols": [0, 1, 2],
+			"rows": next,
+		})
+	else:
+		out["blocks"].append({
+			"k": "table", "cols": ["DATE", "FIXTURE"],
+			"widths": [0.20, 0.80], "text_cols": [0, 1],
+			"rows": next,
+		})
+	out["blocks"].append_array(WikiLedger.club_blocks(club_id))
 	return out
 
 ## A count that the snapshot may not carry: negative means "unknown", and a
@@ -252,7 +299,7 @@ static func player_page(player_id: String) -> Dictionary:
 		for pair in [["pac", "PACE"], ["sho", "SHOOTING"], ["pas", "PASSING"], ["dri", "DRIBBLING"], ["def", "DEFENDING"], ["phy", "PHYSICAL"]]:
 			bars.append([str(pair[1]), float(p[pair[0]]) / 100.0])
 	out["blocks"].append({"k": "bars", "items": bars})
-	out["blocks"].append({"k": "section", "text": "SEASON  ·  %s SNAPSHOT" % str(season.get("season_label", "2025-26"))})
+	out["blocks"].append({"k": "section", "text": "SEASON  ·  %s SNAPSHOT" % str(season.get("season_label", ""))})
 	if int(season.get("matches", 0)) > 0:
 		out["blocks"].append({
 			"k": "kv",
@@ -276,20 +323,9 @@ static func player_page(player_id: String) -> Dictionary:
 		})
 	else:
 		out["blocks"].append({"k": "note", "text": "NO CAREER TOTALS IN THE SNAPSHOT"})
-	out["blocks"].append({"k": "section", "text": "IN FOOTBALLSIM"})
-	if int(sim.get("apps", 0)) > 0:
-		var apps := maxf(1.0, float(sim["apps"]))
-		out["blocks"].append({
-			"k": "kv",
-			"items": [
-				["APPS", str(int(sim["apps"])), true], ["GOALS", str(int(sim["goals"])), true],
-				["ASSISTS", str(int(sim["assists"])), false], ["SHOTS", str(int(sim["shots"])), false],
-				["PASSES", "%d/%d" % [int(sim["passes_ok"]), int(sim["passes"])], false],
-				["RATING", "%.1f" % (float(sim["rating_sum"]) / apps), true],
-			],
-		})
-	else:
-		out["blocks"].append({"k": "note", "text": "NO MATCHES RECORDED YET  ·  PLAY A MATCH TO START THIS LEDGER"})
+	var season_open := repo().season_active()
+	out["blocks"].append({"k": "section", "text": WikiLedger.heading("IN FOOTBALLSIM")})
+	out["blocks"].append(WikiLedger.player_line(sim, season_open))
 	out["blocks"].append({"k": "chips", "items": [{
 		"text": str(club.get("name", "")).to_upper(),
 		"target": {"page": TEAM, "id": str(p["club_id"])},
@@ -299,55 +335,9 @@ static func player_page(player_id: String) -> Dictionary:
 
 # ---------------------------------------------------------------- shared bit --
 
-## In-sim block(s): the league-wide ledger on the league page, the club's own
-## record plus scorer chart on a team page. Empty until a match is recorded.
-static func _sim_blocks(club_id: String, league: bool) -> Array:
-	if league:
-		var top: Array = []
-		for row in repo().sim_leaders(5):
-			top.append({
-				"cells": [str(row["name"]), str(row["abbr"]), str(int(row["apps"])), str(int(row["goals"]))],
-				"target": {"page": PLAYER, "id": str(row["player_id"])},
-			})
-		if top.is_empty():
-			return []
-		return [
-			{"k": "section", "text": "FOOTBALLSIM  ·  IN-SIM SCORERS"},
-			{"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"], "widths": [0.36, 0.22, 0.20, 0.22], "text_cols": [0, 1], "rows": top},
-		]
-	var record := repo().sim_club(club_id)
-	if int(record.get("played", 0)) == 0:
-		return []
-	var blocks: Array = [
-		{"k": "section", "text": "IN FOOTBALLSIM  ·  RECORD"},
-		{"k": "kv", "items": [
-			["PLAYED", str(int(record["played"])), true], ["WON", str(int(record["won"])), false],
-			["DRAWN", str(int(record["drawn"])), false], ["LOST", str(int(record["lost"])), false],
-			["GF", str(int(record["gf"])), false], ["GA", str(int(record["ga"])), false],
-			["POINTS", str(int(record["points"])), true],
-		]},
-	]
-	var scorers: Array = []
-	for row in repo().sim_scorers(club_id, 5):
-		scorers.append({
-			"cells": [str(row["name"]), str(int(row["apps"])), str(int(row["goals"])), str(int(row["assists"]))],
-			"target": {"page": PLAYER, "id": str(row["player_id"])},
-		})
-	if not scorers.is_empty():
-		blocks.append({"k": "table", "cols": ["SCORER", "APPS", "GOALS", "ASSISTS"], "widths": [0.46, 0.16, 0.19, 0.19], "text_cols": [0], "rows": scorers})
-	return blocks
-
 static func _hex(col) -> String:
 	var c: Color = col if col is Color else Color.WHITE
 	return c.to_html(false)
-
-static func _short_date(iso: String) -> String:
-	var bits := iso.split("-")
-	if bits.size() < 3:
-		return iso
-	var months := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
-	var month: String = str(months[clampi(int(bits[1]) - 1, 0, 11)])
-	return "%s %s" % [bits[2].trim_prefix("0"), month]
 
 static func _thousands(n: int) -> String:
 	var s := str(n)

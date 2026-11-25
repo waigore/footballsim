@@ -52,7 +52,10 @@ func club(club_id: String) -> Dictionary:
 	var row := PLDatabase.row("SELECT * FROM club WHERE id = ?;", [club_id])
 	if row.is_empty():
 		return {}
-	var table := PLDatabase.row("SELECT * FROM table_row WHERE club_id = ?;", [club_id])
+	# A season save owns its own standings, so the header reads the row the
+	# season keeps; without one it is the snapshot's reading of the real table.
+	var table: Dictionary = LeagueLedger.club_record(club_id) if LeagueLedger.bound() \
+		else PLDatabase.row("SELECT * FROM table_row WHERE club_id = ?;", [club_id])
 	var style := {}
 	for key in ["possession", "tempo", "press", "line", "width", "directness", "crossing", "aggression"]:
 		style[key] = float(row.get("style_" + key, 0.5))
@@ -152,7 +155,7 @@ func player_by_name(club_id: String, name: String) -> Dictionary:
 	return player(str(row["id"])) if not row.is_empty() else {}
 
 ## League table: the save's live standings while a league season owns the
-## connection, otherwise the snapshot's finished table.
+## connection, otherwise the snapshot's table as of its snapshot date.
 func table() -> Array:
 	if _live_table_exists():
 		return _live_table()
@@ -195,9 +198,12 @@ func leaders(limit: int = 6, stat: String = "goals") -> Array:
 		out.append(row)
 	return out
 
-## Fixtures for one club (or the whole league), newest first. Played games
-## carry the real result; the rest are the snapshot's remaining schedule.
+## Fixtures for one club (or the whole league), newest first. Only a played game
+## is a result: an unplayed one is `upcoming()`'s reading, never a 0 – 0 line.
+## A season save answers with the fixtures it has actually played.
 func fixtures(club_id: String = "", limit: int = 8) -> Array:
+	if LeagueLedger.bound():
+		return LeagueLedger.fixtures(club_id, limit)
 	var sql := (
 		"SELECT f.*, h.abbr AS home_abbr, a.abbr AS away_abbr, h.name AS home_name, "
 		+ "a.name AS away_name FROM fixture f JOIN club h ON h.id = f.home_club_id "
@@ -206,17 +212,48 @@ func fixtures(club_id: String = "", limit: int = 8) -> Array:
 	if club_id.is_empty():
 		sql += "WHERE f.played = 1 ORDER BY f.kickoff DESC LIMIT ?;"
 		return PLDatabase.rows(sql, [limit])
-	sql += "WHERE f.home_club_id = ? OR f.away_club_id = ? ORDER BY f.kickoff DESC LIMIT ?;"
+	sql += "WHERE f.played = 1 AND (f.home_club_id = ? OR f.away_club_id = ?) "
+	sql += "ORDER BY f.kickoff DESC, f.id DESC LIMIT ?;"
 	return PLDatabase.rows(sql, [club_id, club_id, limit])
 
+## The fixtures still ahead, soonest first: what a page reads as what comes next
+## for a club. A season answers with the games its clock still holds; the
+## snapshot answers with the remaining schedule it ships.
+func upcoming(club_id: String = "", limit: int = 6) -> Array:
+	if LeagueLedger.bound():
+		return LeagueLedger.upcoming(club_id, limit)
+	var sql := (
+		"SELECT f.*, h.abbr AS home_abbr, a.abbr AS away_abbr, h.name AS home_name, "
+		+ "a.name AS away_name FROM fixture f JOIN club h ON h.id = f.home_club_id "
+		+ "JOIN club a ON a.id = f.away_club_id WHERE f.played = 0 "
+	)
+	if club_id.is_empty():
+		return PLDatabase.rows(sql + "ORDER BY f.kickoff ASC, f.id ASC LIMIT ?;", [limit])
+	sql += "AND (f.home_club_id = ? OR f.away_club_id = ?) ORDER BY f.kickoff ASC, f.id ASC LIMIT ?;"
+	return PLDatabase.rows(sql, [club_id, club_id, limit])
+
+## True while a league save owns the connection (DR-20261125-08): the pages
+## label which season their Footballsim readings belong to.
+func season_active() -> bool:
+	return LeagueLedger.bound()
+
+## One player's Footballsim line. While a season is open it is that season's own
+## ledger; without one it is the single-match ledger the cache keeps.
 func sim_player(player_id: String) -> Dictionary:
+	if LeagueLedger.bound():
+		return LeagueLedger.player_line(player_id)
 	return PLDatabase.row("SELECT * FROM sim_player_stat WHERE player_id = ?;", [player_id])
 
+## A club's Footballsim record: the season's league row, or the single-match one.
 func sim_club(club_id: String) -> Dictionary:
+	if LeagueLedger.bound():
+		return LeagueLedger.club_record(club_id)
 	return PLDatabase.row("SELECT * FROM sim_club_stat WHERE club_id = ?;", [club_id])
 
-## In-sim scorer chart for a club: the encyclopedia's "what happened here" view.
+## Footballsim scorer chart for a club: the season's, or the single-match one.
 func sim_scorers(club_id: String, limit: int = 5) -> Array:
+	if LeagueLedger.bound():
+		return LeagueLedger.scorers(club_id, limit)
 	return PLDatabase.rows(
 		"SELECT s.goals, s.assists, s.apps, p.name, p.id AS player_id FROM sim_player_stat s "
 		+ "JOIN player p ON p.id = s.player_id WHERE p.club_id = ? AND s.goals > 0 "
@@ -224,8 +261,10 @@ func sim_scorers(club_id: String, limit: int = 5) -> Array:
 		[club_id, limit],
 	)
 
-## In-sim top scorers across the league.
+## Footballsim top scorers across the league: the season's, or the single-match one.
 func sim_leaders(limit: int = 5) -> Array:
+	if LeagueLedger.bound():
+		return LeagueLedger.leaders(limit)
 	return PLDatabase.rows(
 		"SELECT s.goals, s.assists, s.apps, p.name, p.id AS player_id, c.abbr FROM sim_player_stat s "
 		+ "JOIN player p ON p.id = s.player_id JOIN club c ON c.id = p.club_id "

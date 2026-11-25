@@ -27,6 +27,11 @@ var mouse := Vector2(-1000, -1000)
 var buttons: Array = []
 ## Opened from the main menu, so its way out is the menu rather than the match.
 var back_to_menu := false
+## The long press on a club card (#107), and the layer that paints its menu.
+var interest := InterestHold.new()
+var menu_layer: InterestLayer = null
+## The followed club ids as a set: their card names print gold.
+var followed := {}
 
 var f_bold: FontFile
 var f_med: FontFile
@@ -39,6 +44,21 @@ func _ready() -> void:
 	f_body = load("res://fonts/Inter-Regular.ttf")
 	ids = TeamData.team_ids()
 	ids.sort()
+	# A held card opens the Teams of Interest menu (#107); the card is already the
+	# club's own door, so the hold reads it back.
+	interest.club_at = func(p: Vector2) -> String:
+		var id := button_at(p)
+		if id == "team_home":
+			return home_id()
+		if id == "team_away":
+			return away_id()
+		return ""
+	interest.season_of = func(): return LeagueSeason.active
+	interest.on_changed = func(): queue_redraw()
+	menu_layer = InterestLayer.new()
+	menu_layer.hold = interest
+	menu_layer.screen = self
+	add_child(menu_layer)
 
 func setup(home_id: String, away_id: String) -> void:
 	if ids.is_empty():
@@ -86,6 +106,8 @@ func confirm() -> void:
 ## if/elif rather than match: the coverage injector cannot instrument a match
 ## statement, and an uninstrumentable file fails the patch gate.
 func click(id: String) -> void:
+	if interest.click(id):
+		return
 	if id == "back" or id == "cancel":
 		cancelled.emit()
 	elif id == "home_prev":
@@ -129,6 +151,9 @@ func key(code: int) -> bool:
 	return true
 
 func button_at(p: Vector2) -> String:
+	# The open menu answers every press itself (#107).
+	if interest.is_open():
+		return interest.menu.hit(p, design_vp())
 	for b in buttons:
 		if (b["rect"] as Rect2).has_point(p):
 			return b["id"]
@@ -136,7 +161,9 @@ func button_at(p: Vector2) -> String:
 
 # ------------------------------------------------------------------ drawing --
 
-func _process(_d: float) -> void:
+func _process(d: float) -> void:
+	if interest.tick(d):
+		queue_redraw()
 	queue_redraw()
 
 var style_cache := {}
@@ -158,12 +185,13 @@ func rect(c: Color, r: Rect2, radius: int = 10, bc: Color = C_BORDER) -> void:
 
 func text(pos: Vector2, s: String, size: int, color: Color = C_TEXT, font: Font = null) -> void:
 	var f: Font = font if font != null else f_med
-	draw_string(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+	draw_string(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, ChromeDensity.read_size(size), color)
 
 func text_c(center_x: float, y: float, s: String, size: int, color: Color = C_TEXT, font: Font = null) -> void:
 	var f: Font = font if font != null else f_med
-	var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-	text(Vector2(center_x - w * 0.5, y), s, size, color, f)
+	var px := ChromeDensity.read_size(size)
+	var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	text(Vector2(center_x - w * 0.5, y), s, px, color, f)
 
 func _add_button(id: String, r: Rect2) -> void:
 	buttons.append({"id": id, "rect": r})
@@ -178,11 +206,16 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	rect(C_PANEL, r, 14, Color(1, 1, 1, 0.10))
 	draw_rect(Rect2(r.position.x + 1, r.position.y + 1, 6, r.size.y - 2), t["color"])
 	var cx := r.position.x + r.size.x * 0.5
-	text_c(cx, r.position.y + r.size.y * 0.30, str(t["abbr"]), 54, C_TEXT, f_bold)
-	text_c(cx, r.position.y + r.size.y * 0.50, str(t["name"]).to_upper(), 17, C_TEXT, f_med)
+	# A followed club's card wears the interest mark (#107).
+	var club := str(t.get("id", ""))
+	if club == "":
+		club = home_id() if side == 0 else away_id()
+	var name_ink: Color = C_GOLD if followed.has(club) else C_TEXT
+	text_c(cx, r.position.y + r.size.y * 0.30, str(t["abbr"]), 54, name_ink, f_bold)
+	text_c(cx, r.position.y + r.size.y * 0.50, str(t["name"]).to_upper(), 17, name_ink, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.64, str(t["nickname"]).to_upper(), 11, C_DIM, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.80, "%s  ·  %s" % [str(t["formation"]), str(t["manager"]).to_upper()], 10, C_GOLD, f_med)
-	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 9, C_DIM, f_bold)
+	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 10, C_DIM, f_bold)
 	var label := "HOME" if side == 0 else "AWAY"
 	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
 
@@ -217,6 +250,9 @@ func _draw() -> void:
 		text_c(vp.x * 0.5, vp.y * 0.55, "NO SQUAD DATA", 20, C_DIM, f_bold)
 		return
 
+	var season = LeagueSeason.active
+	followed = LeagueInterestMark.set_of(season.state().get("interests", [])) \
+		if season != null else {}
 	var home := TeamData.get_team(home_id())
 	var away := TeamData.get_team(away_id())
 	_card(home_rect, home, 0)
@@ -242,24 +278,34 @@ func _draw() -> void:
 	var by: float = minf(card_y + card_h + 54.0, vp.y - bh - 78.0)
 	var confirm_rect := Rect2(vp.x * 0.5 - bw - 8.0, by, bw, bh)
 	var random_rect := Rect2(vp.x * 0.5 + 8.0, by, bw, bh)
-	for spec in [["confirm", confirm_rect, "KICK OFF", "ENTER"], ["random", random_rect, "RANDOM", "TAB"]]:
+	# Doors take the shared grammar's radius so KICK OFF reads like every other
+	# primary; its ENTER hint is a keyboard-only affordance under the caption.
+	for spec in [["confirm", confirm_rect, "KICK OFF", "ENTER"],
+			["random", random_rect, "RANDOM", "TAB"]]:
 		var r: Rect2 = spec[1]
 		var hovered := r.has_point(mouse)
-		var bg: Color = Color(0.16, 0.13, 0.05, 0.98) if spec[0] == "confirm" else (C_PANEL_LIGHT if hovered else C_PANEL)
-		rect(bg, r, 10, Color(0.96, 0.78, 0.30, 0.55) if spec[0] == "confirm" else Color(1, 1, 1, 0.10 if hovered else 0.06))
-		var cap_y: float = r.position.y + (r.size.y * 0.5 + 6.0 if touch else 24.0)
-		text_c(r.position.x + r.size.x * 0.5, cap_y, spec[2], 16, C_GOLD if spec[0] == "confirm" else C_TEXT, f_bold)
-		if not touch:
-			text_c(r.position.x + r.size.x * 0.5, r.position.y + 39, spec[3], 9, C_DIM, f_med)
+		if spec[0] == "confirm":
+			UiChrome.button(self, style_cache, r, str(spec[2]), f_bold, true, 16,
+				"" if touch else str(spec[3]))
+		else:
+			# RANDOM stays the picker's quiet door: it keeps its hover fill.
+			rect(C_PANEL_LIGHT if hovered else C_PANEL, r, 10,
+				Color(1, 1, 1, 0.10 if hovered else 0.06))
+			var middle: float = r.position.y + r.size.y * 0.5
+			var cap_y: float = middle + (UiChrome.RISE if touch else -UiChrome.RISE)
+			text_c(r.get_center().x, cap_y, str(spec[2]), 16, C_TEXT, f_bold)
+			if not touch:
+				text_c(r.get_center().x, middle + UiChrome.HINT_DROP, str(spec[3]), 10,
+					C_DIM, f_med)
 		_add_button(spec[0], r)
 
 	if touch:
 		text_c(vp.x * 0.5, vp.y - 44, "TAP THE ARROWS TO CHANGE CLUBS  ·  TAP KICK OFF", 11, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 9, Color(0.96, 0.78, 0.30, 0.55), f_med)
+		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
 	else:
 		text_c(vp.x * 0.5, vp.y - 64, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, C_DIM, f_med)
 		text_c(vp.x * 0.5, vp.y - 44, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   ESC  %s" % ("MENU" if back_to_menu else "BACK"), 10, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 9, Color(0.96, 0.78, 0.30, 0.55), f_med)
+		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
 
 	# A touch build has no Escape key: the sheet needs a visible way out.
 	var back := back_rect(vp)

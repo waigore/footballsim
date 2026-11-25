@@ -13,9 +13,20 @@ extends RefCounted
 const DEFAULT_DIR := "user://saves"
 const EXT := ".sqlite"
 
+## Side aggregates added after the first season saves shipped (#73). A save
+## written before them gets the columns on open; the season then rebuilds every
+## row from its played fixtures, so no player-visible migration step is needed.
+const SIDE_COLUMNS := [
+	"home_played", "home_won", "home_drawn", "home_lost", "home_gf", "home_ga",
+	"away_played", "away_won", "away_drawn", "away_lost", "away_gf", "away_ga",
+]
+
 ## All league tables live beside the seed tables, in the same file.
 const SCHEMA := [
 	"CREATE TABLE IF NOT EXISTS save_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
+	# The clubs this season follows (#104). A set of club ids, so a save written
+	# before Teams of Interest simply opens with an empty shortlist.
+	"CREATE TABLE IF NOT EXISTS league_interest (club_id TEXT PRIMARY KEY);",
 	"CREATE TABLE IF NOT EXISTS league_fixture (id TEXT PRIMARY KEY, matchday INTEGER NOT NULL, "
 	+ "kickoff TEXT NOT NULL, kickoff_time TEXT NOT NULL DEFAULT '', "
 	+ "home_club_id TEXT NOT NULL, away_club_id TEXT NOT NULL, "
@@ -26,7 +37,13 @@ const SCHEMA := [
 	+ "played INTEGER NOT NULL DEFAULT 0, won INTEGER NOT NULL DEFAULT 0, "
 	+ "drawn INTEGER NOT NULL DEFAULT 0, lost INTEGER NOT NULL DEFAULT 0, "
 	+ "gf INTEGER NOT NULL DEFAULT 0, ga INTEGER NOT NULL DEFAULT 0, "
-	+ "points INTEGER NOT NULL DEFAULT 0);",
+	+ "points INTEGER NOT NULL DEFAULT 0, "
+	+ "home_played INTEGER NOT NULL DEFAULT 0, home_won INTEGER NOT NULL DEFAULT 0, "
+	+ "home_drawn INTEGER NOT NULL DEFAULT 0, home_lost INTEGER NOT NULL DEFAULT 0, "
+	+ "home_gf INTEGER NOT NULL DEFAULT 0, home_ga INTEGER NOT NULL DEFAULT 0, "
+	+ "away_played INTEGER NOT NULL DEFAULT 0, away_won INTEGER NOT NULL DEFAULT 0, "
+	+ "away_drawn INTEGER NOT NULL DEFAULT 0, away_lost INTEGER NOT NULL DEFAULT 0, "
+	+ "away_gf INTEGER NOT NULL DEFAULT 0, away_ga INTEGER NOT NULL DEFAULT 0);",
 	"CREATE TABLE IF NOT EXISTS match_event (id INTEGER PRIMARY KEY AUTOINCREMENT, "
 	+ "fixture_id TEXT NOT NULL, minute INTEGER NOT NULL, kind TEXT NOT NULL, "
 	+ "player_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL DEFAULT '', "
@@ -35,8 +52,19 @@ const SCHEMA := [
 	+ "club_id TEXT NOT NULL, apps INTEGER NOT NULL DEFAULT 0, "
 	+ "goals INTEGER NOT NULL DEFAULT 0, assists INTEGER NOT NULL DEFAULT 0, "
 	+ "yellow INTEGER NOT NULL DEFAULT 0, red INTEGER NOT NULL DEFAULT 0);",
+	"CREATE TABLE IF NOT EXISTS goal_highlight (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+	+ "fixture_id TEXT NOT NULL, goal_index INTEGER NOT NULL, "
+	+ "match_event_id INTEGER NOT NULL DEFAULT 0, minute INTEGER NOT NULL DEFAULT 0, "
+	+ "club_id TEXT NOT NULL DEFAULT '', scorer_id TEXT NOT NULL DEFAULT '', "
+	+ "scorer_name TEXT NOT NULL DEFAULT '', assist_id TEXT NOT NULL DEFAULT '', "
+	+ "assist_name TEXT NOT NULL DEFAULT '', commentary TEXT NOT NULL DEFAULT '', "
+	+ "source TEXT NOT NULL DEFAULT 'auto', codec TEXT NOT NULL DEFAULT '', "
+	+ "version INTEGER NOT NULL DEFAULT 0, home_club_id TEXT NOT NULL DEFAULT '', "
+	+ "away_club_id TEXT NOT NULL DEFAULT '', bytes BLOB, "
+	+ "UNIQUE(fixture_id, goal_index));",
 	"CREATE INDEX IF NOT EXISTS league_fixture_kickoff_idx ON league_fixture (kickoff);",
 	"CREATE INDEX IF NOT EXISTS match_event_fixture_idx ON match_event (fixture_id);",
+	"CREATE INDEX IF NOT EXISTS goal_highlight_fixture_idx ON goal_highlight (fixture_id);",
 ]
 
 ## Save directory this run uses (tests point it at a scratch folder).
@@ -132,9 +160,7 @@ static func create(name: String, rules: Dictionary, seed: int = 0) -> LeagueSave
 	if not PLDatabase.open_path(save.path):
 		last_error = "cannot open %s" % save.path
 		return null
-	for sql in SCHEMA:
-		PLDatabase.execute(sql)
-	PLDatabase.execute(LeagueRules.CREATE_SQL)
+	migrate()
 	save.rules = LeagueRules.normalize(rules)
 	LeagueRules.write(save.rules)
 	save.meta = {}
@@ -161,6 +187,7 @@ static func open(slug_or_path: String) -> LeagueSave:
 	if not PLDatabase.open_path(file):
 		return null
 	PLRepository.shared().invalidate()
+	migrate()
 	var save := LeagueSave.new()
 	save.path = file
 	save.slug = file.get_file().trim_suffix(EXT)
@@ -169,8 +196,17 @@ static func open(slug_or_path: String) -> LeagueSave:
 		PLDatabase.reset()
 		return null
 	save.rules = LeagueRules.read()
+	save.ensure_schema()
 	current = save
 	return save
+
+## Lay every season table onto whichever file is bound. Every statement is
+## `IF NOT EXISTS`, so this is both the create path and the migration that gives
+## a save written by an older build the tables it is missing (goal clips).
+static func migrate() -> void:
+	for sql in SCHEMA:
+		PLDatabase.execute(sql)
+	PLDatabase.execute(LeagueRules.CREATE_SQL)
 
 static func remove(slug: String) -> bool:
 	var file := dir.path_join(slug + EXT)
@@ -187,6 +223,52 @@ static func close() -> void:
 		PLDatabase.reset()
 	current = null
 	PLRepository.shared().invalidate()
+
+## Quick Save: play writes to the save as it goes, so this stamps the file and
+## proves it is still bound and writable. False means the write did not land.
+func touch() -> bool:
+	if not ensure_open():
+		return false
+	var stamp := Time.get_datetime_string_from_system(true, true)
+	if not put_meta("saved_at", stamp):
+		return false
+	meta["saved_at"] = stamp
+	return true
+
+## Save As: write this save's file under another name and leave the season on its
+## own file — the copy is a named restore point. Naming the season's own save
+## rewrites it in place. Returns the copy's slug, or "" when nothing was written.
+func write_copy(name: String) -> String:
+	var typed := name.strip_edges()
+	if typed == "" or not ensure_open():
+		return ""
+	var slug := slugify(typed)
+	if slug == "" or slug == self.slug:
+		return self.slug if touch() else ""
+	DirAccess.make_dir_recursive_absolute(dir)
+	var target := dir.path_join(slug + EXT)
+	# Close the live file first: a copy taken under an open handle can miss the
+	# last commit.
+	PLDatabase.close()
+	var bytes := FileAccess.get_file_as_bytes(path)
+	var out := FileAccess.open(target, FileAccess.WRITE)
+	if out == null or bytes.is_empty():
+		last_error = "cannot write %s" % target
+		ensure_open()
+		return ""
+	out.store_buffer(bytes)
+	out.close()
+	var copy := open(target)
+	if copy == null:
+		ensure_open()
+		return ""
+	copy.put_meta("name", typed)
+	copy.put_meta("saved_at", Time.get_datetime_string_from_system(true, true))
+	# Back to the season's own file so play continues where it was.
+	ensure_open()
+	current = self
+	PLRepository.shared().invalidate()
+	return slug
 
 # ------------------------------------------------------------------- meta ---
 
@@ -207,6 +289,20 @@ func read_meta() -> Dictionary:
 	for row in PLDatabase.rows("SELECT key, value FROM save_meta;"):
 		out[str(row["key"])] = str(row["value"])
 	return out
+
+## Bring a save written before the home/away columns up to the current table.
+## Adding a column leaves every existing row on zero; the season rebuilds the
+## aggregates from its played fixtures when it opens.
+func ensure_schema() -> void:
+	if not ensure_open():
+		return
+	var have := {}
+	for row in PLDatabase.rows("PRAGMA table_info(league_table);"):
+		have[str(row["name"])] = true
+	for column in SIDE_COLUMNS:
+		if not have.has(column):
+			PLDatabase.execute(
+				"ALTER TABLE league_table ADD COLUMN %s INTEGER NOT NULL DEFAULT 0;" % column)
 
 func put_meta(key: String, value: String) -> bool:
 	if not ensure_open():

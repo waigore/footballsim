@@ -4,7 +4,7 @@ extends GdToolsTest
 ## lives in user:// so the launcher's --clear-cache resets it with the rest of
 ## the product's local data.
 
-const P := "user://test_prefs_issue36.cfg"
+var P := TestScratch.file("test_prefs_issue36.cfg")
 
 func after_each() -> void:
 	if FileAccess.file_exists(P):

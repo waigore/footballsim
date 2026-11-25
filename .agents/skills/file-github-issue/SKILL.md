@@ -34,7 +34,7 @@ Repo: `waigore/footballsim` (or current `gh` remote). Use `gh`.
 | [`references/bug-template.md`](references/bug-template.md) | Bug issue body |
 | [`references/feature-template.md`](references/feature-template.md) | Feature issue body |
 
-**Not this skill:** large / multi-system / ambiguous **feature** capture → [`capture-requirements`](../capture-requirements/SKILL.md) (hands back here to file); implementing a filed `todo` → [`resolve-issue-agent`](../resolve-issue-agent/SKILL.md); verifying `resolved` → [`review-issue-agent`](../review-issue-agent/SKILL.md); hunting defects → hunt-defects; new features from gaps → implement-feature; unclear wiki design → [`elucidate-design-agent`](../elucidate-design-agent/SKILL.md) (files a `question` issue); product review of a `question` → [`clarify-github-issue`](../clarify-github-issue/SKILL.md).
+**Not this skill:** large / multi-system / ambiguous **feature** capture → [`capture-requirements`](../capture-requirements/SKILL.md) (hands back here to file); implementing a filed `todo` → [`resolve-issue-agent`](../resolve-issue-agent/SKILL.md); verifying `resolved` → [`review-issue-agent`](../review-issue-agent/SKILL.md); hunting defects → hunt-defects; autonomous live UX playtest → [`ux-playtest-agent`](../ux-playtest-agent/SKILL.md); new features from gaps → implement-feature; unclear wiki design → [`elucidate-design-agent`](../elucidate-design-agent/SKILL.md) (files a `question` issue); product review of a `question` → [`clarify-github-issue`](../clarify-github-issue/SKILL.md).
 
 Human-facing issue text: plain English ([`../_shared/plain-english.md`](../_shared/plain-english.md)).
 

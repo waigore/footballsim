@@ -3,8 +3,8 @@ extends GdToolsTest
 ## The save's chosen eleven: best player per formation slot, a keeper in goal,
 ## no duplicates, and the choice written back so both outcome paths field it.
 
-const SAVE_DIR := "user://saves_test_xi_issue58"
-const CACHE_DIR := "user://cache_test_xi_issue58"
+var SAVE_DIR := TestScratch.dir("saves_test_xi_issue58")
+var CACHE_DIR := TestScratch.dir("cache_test_xi_issue58")
 
 func before_all() -> void:
 	PLDatabase.cache_dir = CACHE_DIR
@@ -81,6 +81,4 @@ func test_an_unknown_club_is_not_applied() -> void:
 
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
-		DirAccess.make_dir_recursive_absolute(folder)
-		for name in DirAccess.get_files_at(folder):
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(folder.path_join(name)))
+		TestScratch.clear(folder)

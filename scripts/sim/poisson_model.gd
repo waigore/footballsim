@@ -119,21 +119,38 @@ static func league_means() -> Dictionary:
 
 # ---------------------------------------------------------------- lambdas ---
 
-## Per-side λ exponents for a pairing: what the model adds to (or subtracts
-## from) each side's goals relative to the league baselines, from the two
-## squads' effective attack/defence. Shared with the physics engine's
-## finishing-form calibration so both systems read one exponent source.
-static func side_exponents(home: String, away: String) -> Vector2:
+## The two halves of λ's exponent, per side, already divided by 10 rating
+## points: `attack` is how far the side's effective attack sits above the league
+## mean, `defence` how far the opposition's effective defence sits below it.
+## One exponent source: the model's λ and the engine's shot-contest calibration
+## both read these numbers instead of deriving rating gaps of their own.
+static func exponent_terms(home: String, away: String) -> Dictionary:
 	var m := league_means()
 	var h := effective(team_strength(TeamData.get_team(home)))
 	var a := effective(team_strength(TeamData.get_team(away)))
-	var h_att := (h.x - float(m["attack"])) / 10.0
-	var a_att := (a.x - float(m["attack"])) / 10.0
-	var h_def := (float(m["defence"]) - h.y) / 10.0
-	var a_def := (float(m["defence"]) - a.y) / 10.0
+	return {
+		"attack": Vector2(
+			(h.x - float(m["attack"])) / 10.0, (a.x - float(m["attack"])) / 10.0),
+		"defence": Vector2(
+			(float(m["defence"]) - a.y) / 10.0, (float(m["defence"]) - h.y) / 10.0),
+	}
+
+## How weak the defence each side faces is, in rating points / 10. The physics
+## engine scales a shot's quality by this, because its positional xG only knows
+## distance, angle and aim.
+static func defence_exponents(home: String, away: String) -> Vector2:
+	return exponent_terms(home, away)["defence"]
+
+## Per-side λ exponents for a pairing: what the model adds to (or subtracts
+## from) each side's goals relative to the league baselines, from the two
+## squads' effective attack/defence.
+static func side_exponents(home: String, away: String) -> Vector2:
+	var terms := exponent_terms(home, away)
+	var attack: Vector2 = terms["attack"]
+	var defence: Vector2 = terms["defence"]
 	return Vector2(
-		ATTACK_ELASTICITY * h_att + DEFENCE_ELASTICITY * a_def,
-		ATTACK_ELASTICITY * a_att + DEFENCE_ELASTICITY * h_def)
+		ATTACK_ELASTICITY * attack.x + DEFENCE_ELASTICITY * defence.x,
+		ATTACK_ELASTICITY * attack.y + DEFENCE_ELASTICITY * defence.y)
 
 func _recompute() -> void:
 	var m := league_means()

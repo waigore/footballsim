@@ -25,6 +25,42 @@ const PRODUCT := "FOOTBALL"
 const PRODUCT_TAIL := "SIM"
 const PRODUCT_FULL := "Football Sim"
 
+## A door's caption sits a few points under the box's middle: a text baseline
+## is not the glyph's optical centre, and the lift is a type measure, not a
+## fraction of the door's height (a 64-unit bar door must read the same as a
+## 26-unit chip).
+const RISE := 5.0
+## The key line under a two-line door (the picker's ENTER / TAB).
+const HINT_DROP := 14.0
+
+## A door on a sheet: the gold primary (dark ink on gold) or the quiet panel
+## button. Every screen paints its buttons through this one grammar so a
+## primary reads the same on a season sheet, the System dialog, the fixture
+## picker and the encyclopedia. `size > 0` overrides the door's type size;
+## `hint` adds the keyboard line under the caption (a desktop-only affordance).
+static func button(c: CanvasItem, cache: Dictionary, r: Rect2, label: String, font: Font,
+		primary: bool, size: int = -1, hint: String = "") -> void:
+	var px: int = size if size > 0 else (15 if primary else 12)
+	var cx: float = r.get_center().x
+	var middle: float = r.position.y + r.size.y * 0.5
+	# A door with a hint is a two-line door: the caption rides above the middle
+	# and the key sits under it, so neither line lands on the other.
+	var mid: float = middle - RISE if hint != "" else middle + RISE
+	var ink: Color = Color(0.06, 0.06, 0.05) if primary else C_TEXT
+	if primary:
+		panel(c, cache, r, C_GOLD, 7, Color(0.96, 0.78, 0.30, 0.85), 1)
+	else:
+		panel(c, cache, r, C_PANEL_LIGHT, 7)
+	text_c(c, cx, mid, label, px, ink, font)
+	if hint != "":
+		var hint_ink: Color = Color(0.06, 0.06, 0.05, 0.65) if primary else C_DIM
+		text_c(c, cx, middle + HINT_DROP, hint, 10, hint_ink, font)
+
+## The same quiet button used for small fixed chips on a sheet header.
+static func chip(c: CanvasItem, cache: Dictionary, r: Rect2, label: String, font: Font) -> void:
+	panel(c, cache, r, C_PANEL_LIGHT, 5)
+	text_c(c, r.get_center().x, r.position.y + r.size.y * 0.5 + RISE, label, 13, C_TEXT, font)
+
 static func fonts() -> Dictionary:
 	return {
 		"bold": load("res://fonts/BarlowCondensed-SemiBold.ttf"),
@@ -49,18 +85,25 @@ static func panel(c: CanvasItem, cache: Dictionary, r: Rect2, fill: Color, radiu
 
 static func text(c: CanvasItem, pos: Vector2, s: String, size: int, color: Color = C_TEXT, font: Font = null, outline: int = 0, outline_col: Color = Color(0, 0, 0, 0.5)) -> void:
 	var f: Font = font if font != null else fonts()["med"]
+	var px := ChromeDensity.read_size(size)
 	if outline > 0:
-		c.draw_string_outline(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, outline, outline_col)
-	c.draw_string(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+		c.draw_string_outline(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, outline, outline_col)
+	c.draw_string(f, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, color)
+
+## The width a caption paints at, measured at the size it is really drawn with:
+## an aligned caption must centre on the glyphs the player sees, not on a
+## hairline size the floor lifted away (#126).
+static func text_width(font: Font, s: String, size: int) -> float:
+	return font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, ChromeDensity.read_size(size)).x
 
 static func text_c(c: CanvasItem, center_x: float, y: float, s: String, size: int, color: Color = C_TEXT, font: Font = null) -> void:
 	var f: Font = font if font != null else fonts()["med"]
-	var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var w: float = text_width(f, s, size)
 	text(c, Vector2(center_x - w * 0.5, y), s, size, color, f)
 
 static func text_r(c: CanvasItem, right_x: float, y: float, s: String, size: int, color: Color = C_TEXT, font: Font = null) -> void:
 	var f: Font = font if font != null else fonts()["med"]
-	var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var w: float = text_width(f, s, size)
 	text(c, Vector2(right_x - w, y), s, size, color, f)
 
 ## "FOOTBALL" in chalk white with "SIM" in broadcast gold; returns the width.

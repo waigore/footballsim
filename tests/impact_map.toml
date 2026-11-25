@@ -26,6 +26,17 @@ suites = [
 suites = [
   "test_match_laws.gd",
   "test_engine_rules.gd",
+  "test_match_stats.gd",
+]
+
+# The readings a match summary carries: the frame a shot struck, the pass a
+# defender cut out, the momentum a side is carrying and the stored rating. They
+# sit beside the laws they are read from, so the laws still run with them.
+[domains.match_stats]
+suites = [
+  "test_match_stats.gd",
+  "test_engine_rules.gd",
+  "test_finishing.gd",
 ]
 
 [domains.restart]
@@ -43,41 +54,68 @@ suites = [
   "test_hud_chrome.gd",
   "test_touch_flow.gd",
   "test_wiki_entry.gd",
+  "test_chrome_density.gd",
 ]
 
 [domains.tactics]
 suites = [
   "test_tactics.gd",
-  "test_tactics_ai.gd",
 ]
 
 [domains.managers]
 suites = [
   "test_managers.gd",
-  "test_manager_subs.gd",
 ]
 
-# Menu shell: cold start, settings + BGM, quit confirm, HUD doors.
+# Menu shell: cold start, settings + BGM, quit confirm, HUD doors, and the
+# shared non-match reading density (ChromeDensity).
+# Play-scene glue — input routing, the fixture picker and the design-space
+# face — driven headlessly through the real main.gd.
+[domains.match_input]
+suites = [
+  "test_match_input.gd",
+  "test_touch_flow.gd",
+  "test_menu_nav.gd",
+  "test_league_ui.gd",
+]
+
 [domains.shell]
 suites = [
   "test_menu_nav.gd",
   "test_prefs.gd",
   "test_hud_layout.gd",
   "test_touch_flow.gd",
+  "test_chrome_density.gd",
+  # Paint grammar of every door painted on a sheet (season, System, picker).
+  "test_ui_chrome_doors.gd",
 ]
 
 # Shared engine spine: laws + finishing + restart + managers when a core file moves.
+# The on-ball half of the brain: possess, shoot, pass, cross, clear, dribble.
+[domains.match_ai_choices]
+suites = [
+  "test_match_ai_choices.gd",
+  "test_tactics.gd",
+  "test_engine_rules.gd",
+]
+
+# The geometry every shape pass asks: reach times over the ball's predicted path
+# and the line a back holds. Pinned against the per-player walk it replaced, so
+# the shared-path cache cannot drift from the answer it is caching.
+[domains.pitch_queries]
+suites = [
+  "test_pitch_queries.gd",
+  "test_engine_rules.gd",
+]
+
 [domains.match_engine]
 suites = [
   "test_match_laws.gd",
   "test_finishing.gd",
   "test_restart_judgement.gd",
   "test_tactics.gd",
-  "test_tactics_ai.gd",
   "test_managers.gd",
-  "test_manager_subs.gd",
   "test_attributes.gd",
-  "test_engine_contact.gd",
   "test_engine_rules.gd",
 ]
 
@@ -86,7 +124,6 @@ suites = [
   "test_poisson_model.gd",
   "test_kits.gd",
   "test_tactics.gd",
-  "test_tactics_ai.gd",
   "test_team_data.gd",
 ]
 
@@ -99,23 +136,27 @@ suites = [
   "test_poisson_model.gd",
   "test_kits.gd",
   "test_tactics.gd",
-  "test_tactics_ai.gd",
   "test_managers.gd",
-  "test_manager_subs.gd",
 ]
 
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
 # chosen XI and the league surfaces. One group, because a change in any layer
-# can move the season loop.
+# can move the season loop. The sheet-geometry suite rides here too: the hub's
+# rows, chips and doors are laid out by `league_sheet.gd`.
 [domains.league]
 suites = [
   "test_league_rules.gd",
   "test_league_save.gd",
   "test_fixture_calendar.gd",
-  "test_match_events.gd",
   "test_strongest_xi.gd",
   "test_league_season.gd",
+  "test_league_sheets.gd",
+  "test_league_panel_ui.gd",
   "test_league_ui.gd",
+  "test_league_doors.gd",
+  "test_league_system.gd",
+  "test_league_interest.gd",
+  "test_league_sheets.gd",  "test_goal_highlights.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -123,11 +164,32 @@ suites = [
 suites = [
   "test_wiki_model.gd",
   "test_wiki_screen.gd",
+  "test_wiki_interest.gd",
   "test_wiki_entry.gd",
   "test_wiki_render.gd",
+  "test_wiki_season.gd",
+  # The club page reads the season ahead: results and the fixtures still to come.
+  "test_wiki_upcoming.gd",
   "test_hud_layout.gd",
   "test_hud_chrome.gd",
   "test_touch_flow.gd",
+]
+
+# The pointer grammar the league and encyclopedia sheets share: a change moves
+# both modal surfaces' press/drag/wheel suites.
+[domains.sheet_pointer]
+suites = [
+  "test_sheet_pointer.gd",
+  "test_league_ui.gd",
+  "test_wiki_render.gd",
+]
+
+# The one date form and its weekday hint (#99): the league sheets and the
+# encyclopedia both paint it, so the formatter and the overlay ride together.
+[domains.dates]
+suites = [
+  "test_date_labels.gd",
+  "test_wiki_render.gd",
 ]
 
 # Lightest suite for tooling / project / addons / map edits.
@@ -155,8 +217,20 @@ match = "scripts/sim/match_engine_actions.gd*"
 domain = "finishing"
 
 [[rules]]
+match = "scripts/sim/match_engine_duels.gd*"
+domain = "match_engine"
+
+[[rules]]
 match = "scripts/sim/match_engine_rules.gd*"
 domain = "match_laws"
+
+[[rules]]
+match = "scripts/sim/match_engine_bench.gd*"
+domain = "match_laws"
+
+[[rules]]
+match = "scripts/sim/match_stats.gd*"
+domain = "match_stats"
 
 [[rules]]
 match = "scripts/sim/match_engine_clock.gd*"
@@ -168,6 +242,10 @@ domain = "match_engine"
 
 [[rules]]
 match = "scripts/sim/match_engine.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "scripts/sim/match_restarts.gd*"
 domain = "match_engine"
 
 [[rules]]
@@ -186,6 +264,12 @@ domain = "match_engine"
 match = "scripts/sim/match_ai.gd*"
 domain = "match_engine"
 
+# The on-ball half of the brain shares MatchAI's suite: off it no carrier
+# decision has a test.
+[[rules]]
+match = "scripts/sim/match_ai_choices.gd*"
+domain = "match_ai_choices"
+
 [[rules]]
 match = "scripts/sim/tactics.gd*"
 domain = "tactics"
@@ -193,6 +277,16 @@ domain = "tactics"
 # Season clock, calendar, synthetic events and the strongest XI: one theme.
 [[rules]]
 match = "scripts/sim/league_season.gd*"
+domain = "league"
+
+# The planner's suggested watches read the table and flag fixtures.
+[[rules]]
+match = "scripts/sim/league_planner.gd*"
+domain = "league"
+
+# Season helpers split out of the season loop to keep its P3 size ratchet.
+[[rules]]
+match = "scripts/sim/league_*.gd*"
 domain = "league"
 
 [[rules]]
@@ -207,6 +301,24 @@ domain = "league"
 match = "scripts/sim/strongest_xi.gd*"
 domain = "league"
 
+# Per-goal report clips: the pack generator, the store and the viewer that
+# plays one back. They all belong to the season theme.
+[[rules]]
+match = "scripts/sim/goal_highlight.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/league_highlights.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/view/goal_replay.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/view/highlight_director.gd*"
+domain = "league"
+
 [[rules]]
 match = "scripts/sim/match_manager.gd*"
 domain = "managers"
@@ -217,7 +329,7 @@ domain = "match_engine"
 
 [[rules]]
 match = "scripts/sim/pitch_queries.gd*"
-domain = "match_engine"
+domain = "pitch_queries"
 
 # ---------------------------------------------------------------- data ---
 
@@ -239,6 +351,10 @@ domain = "pl_data"
 [[rules]]
 match = "scripts/ui/hud_layout.gd*"
 domain = "hud_layout"
+
+[[rules]]
+match = "scripts/ui/chrome_density.gd*"
+domain = "shell"
 
 [[rules]]
 match = "scripts/ui/app_shell.gd*"
@@ -281,7 +397,7 @@ match = "scripts/ui/hud.gd*"
 domain = "hud_chrome"
 
 [[rules]]
-match = "scripts/ui/hud_commentary.gd*"
+match = "scripts/ui/hud*.gd*"
 domain = "hud_chrome"
 
 [[rules]]
@@ -300,9 +416,23 @@ domain = "hud_chrome"
 match = "scripts/ui/wiki_*.gd*"
 domain = "wiki"
 
+# The drag/wheel/click grammar the league and wiki hosts both delegate to.
+[[rules]]
+match = "scripts/ui/sheet_pointer.gd*"
+domain = "sheet_pointer"
+
 [[rules]]
 match = "scripts/ui/league_*.gd*"
 domain = "league"
+
+# Teams of Interest: the shared long-press menu and the HUD/picker entry points.
+[[rules]]
+match = "scripts/ui/interest_*.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/ui/date_*.gd*"
+domain = "dates"
 
 [[rules]]
 match = "scripts/view/actor_layer.gd*"
@@ -324,6 +454,20 @@ domain = "hud_chrome"
 match = "scripts/view/match_camera.gd*"
 domain = "hud_chrome"
 
+# The scene's presentation face and input router share main.gd's suite.
+[[rules]]
+match = "scripts/view/match_view.gd*"
+domain = "match_input"
+
+[[rules]]
+match = "scripts/view/match_input.gd*"
+domain = "match_input"
+
+# Fixture-picker glue rides the router domain: the same suites drive the sheet.
+[[rules]]
+match = "scripts/view/fixture_sheet.gd*"
+domain = "match_input"
+
 [[rules]]
 match = "scripts/platform/**"
 domain = "hud_chrome"
@@ -343,6 +487,12 @@ domain = "hud_chrome"
 match = "tests/check_poisson_agreement.gd*"
 domain = "poisson"
 
+# Shared test fixtures (TestScratch and friends) sit under every DB suite, so a
+# change there can move any of them: run the whole suite rather than guess.
+[[rules]]
+match = "tests/support/**"
+full = true
+
 # Tier-2 census drives (playtests/census): heavy full-match grids that must
 # never ride the PR tier-1 budget. Editing them re-runs the fast poisson
 # suite; the census itself runs in the tier-2 workflow only.
@@ -353,6 +503,12 @@ domain = "poisson"
 [[rules]]
 match = "tests/impact_map.toml"
 domain = "misc"
+
+# The pitch-query suite pins the shared-path reads; editing it re-runs itself
+# with the laws it stands beside.
+[[rules]]
+match = "tests/test_pitch_queries.gd*"
+domain = "pitch_queries"
 
 # ------------------------------------------------------------- project ---
 

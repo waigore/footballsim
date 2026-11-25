@@ -1,40 +1,31 @@
 class_name MatchAI
 extends RefCounted
 
-## Team brains: collective shape, pressing, marking, and on-ball decisions.
+## Team brain: collective shape, pressing, marking and keeper play. On-ball
+## decisions (shoot / pass / cross / clear / dribble) and their shared state live
+## in MatchAIPlanning so each half of the brain stays inside the P3 size budget.
 ## All reads/writes go through the engine `e` (untyped to keep the dependency one-way).
 
 var e = null
 var pq = null
+var on_ball: MatchAIPlanning = null
 var shape_timer = 0.0
 var mark_timer = 0.0
-var decide_cd = {}
 var gk_react_at = [-1.0, -1.0]
-var run_cd = {}
 var kickoff_lock = 0.0
-var pass_chain = [[], []]
-var chain_team = -1
-var last_shot := [-10.0, -10.0]
 
 func _init(engine) -> void:
 	e = engine
 	pq = PitchQueries.new(engine)
+	on_ball = MatchAIPlanning.new(self)
 
 func on_kickoff() -> void:
-	pass_chain = [[], []]
-	chain_team = -1
-	last_shot = [-10.0, -10.0]
-	decide_cd.clear()
-	run_cd.clear()
+	on_ball.reset_state()
 	gk_react_at = [-1.0, -1.0]
 	kickoff_lock = 1.2
 
 func on_restore() -> void:
-	pass_chain = [[], []]
-	chain_team = -1
-	last_shot = [-10.0, -10.0]
-	decide_cd.clear()
-	run_cd.clear()
+	on_ball.reset_state()
 
 func on_shot(shooter) -> void:
 	var t: int = 1 - shooter.team
@@ -54,10 +45,8 @@ func update(dt: float) -> void:
 		_update_shapes()
 		shape_timer = 0.11
 	var owner = e.ball_owner()
-	if owner != null and not owner.is_gk:
-		_carrier_decide(owner)
-	elif owner != null and owner.is_gk:
-		_gk_distribute(owner)
+	if owner != null:
+		on_ball.update(dt)
 
 func update_restart(dt: float, restart: Dictionary) -> void:
 	if restart.get("type", "") == "penalty":
@@ -73,6 +62,10 @@ func update_restart(dt: float, restart: Dictionary) -> void:
 func _update_shapes() -> void:
 	var bt: int = e.possession_team
 	var ball = e.ball
+	# One defensive-line read per side for the whole pass: no body moves inside
+	# it, so every back reads the same line. Filled lazily, so an attacking side
+	# pays nothing for it.
+	var dlines := {}
 	for p in e.players:
 		if p.sent_off or p.celebrate > 0.0:
 			continue
@@ -109,7 +102,7 @@ func _update_shapes() -> void:
 		if attacking:
 			target = _attack_shape(p, target)
 		else:
-			target = _defence_shape(p, target)
+			target = _defence_shape(p, target, dlines)
 		p.target = target
 		p.speed_scale = 0.86 if attacking else 0.94
 	_apply_pressing()
@@ -154,7 +147,7 @@ func _attack_shape(p, fallback: Vector2) -> Vector2:
 			target.x = capped if e.teams[p.team]["dir"] == 1 else e.L - capped
 	return target
 
-func _defence_shape(p, fallback: Vector2) -> Vector2:
+func _defence_shape(p, fallback: Vector2, dlines: Dictionary = {}) -> Vector2:
 	var own: Vector2 = e.own_goal_pos(p.team)
 	var ball = e.ball
 	var dist_to_own: float = ball.pos.distance_to(own)
@@ -208,7 +201,9 @@ func _defence_shape(p, fallback: Vector2) -> Vector2:
 	if dist_to_own < 26.0 and target.distance_to(own) > dist_to_own + 3.5:
 		target = own + (target - own).normalized() * (dist_to_own + 3.5)
 	if is_back:
-		var defensive_line: Vector2 = pq.defensive_line(p.team)
+		if not dlines.has(p.team):
+			dlines[p.team] = pq.defensive_line(p.team)
+		var defensive_line: Vector2 = dlines[p.team]
 		var ax2: float = e.attacking_x(p.team, target)
 		var line_ax: float = e.attacking_x(p.team, defensive_line)
 		ax2 = clampf(ax2, line_ax - 11.0, line_ax + 1.5)
@@ -217,6 +212,10 @@ func _defence_shape(p, fallback: Vector2) -> Vector2:
 
 func _apply_pressing() -> void:
 	var bt: int = e.possession_team
+	# Every "who gets to the ball first" question in this pass is a question
+	# about one path: the ball does not move inside a shape pass, so the walk is
+	# built once and every body reads it.
+	var path: Dictionary = pq.ball_trajectory()
 	# Each team sends its quickest player to the ball, with a second player covering.
 	for t in range(2):
 		if t == bt and e.ball.owner_id >= 0:
@@ -228,7 +227,7 @@ func _apply_pressing() -> void:
 		for p in e.players:
 			if p.team != t or p.sent_off or p.is_gk:
 				continue
-			var rt: float = pq.ball_reach_time(p)
+			var rt: float = pq.reach_time_on(p, path)
 			if rt < best_t:
 				second_t = best_t
 				second = presser
@@ -250,7 +249,7 @@ func _apply_pressing() -> void:
 				target = owner.pos + owner.vel * 0.20
 				target += (e.own_goal_pos(t) - owner.pos).normalized() * 0.5
 			else:
-				target = pq.intercept_point(presser)
+				target = pq.intercept_on(presser, path)
 			target.x = clampf(target.x, 0.5, e.L - 0.5)
 			target.y = clampf(target.y, 0.5, e.W - 0.5)
 			presser.target = target
@@ -273,7 +272,7 @@ func _apply_pressing() -> void:
 			for p in e.players:
 				if p.team != t or p.sent_off or p.is_gk or p == presser or p == second:
 					continue
-				var rt: float = pq.ball_reach_time(p)
+				var rt: float = pq.reach_time_on(p, path)
 				if rt < third_t:
 					third_t = rt
 					third = p
@@ -354,241 +353,3 @@ func _gk_shape(gk) -> void:
 	gk.target = guard
 	gk.speed_scale = 0.92
 	gk.state = "gk"
-
-func _gk_distribute(gk) -> void:
-	if gk.action_t > 0.0:
-		return
-	gk.action_t = 0.5
-	var style: Dictionary = e.style_of(gk.team)
-	var press: float = e.pressure_on(gk)
-	if style["possession"] > 0.58 and press < 0.9 and e.rng.randf() < 0.62:
-		var mate = e._best_short_outlet(gk.team, gk)
-		if mate != null:
-			e.pass_ball(gk, mate.pos + Vector2(e.teams[gk.team]["dir"] * 2.0, 0.0), false, mate)
-			gk.state = "gk"
-			return
-	e.clear_ball(gk, Vector2(e.L * 0.5 + e.teams[gk.team]["dir"] * 10.0, 34.0 + e.rng.randf_range(-18.0, 18.0)))
-
-# ---------------------------------------------------------------- on-ball ---
-
-func _carrier_decide(p) -> void:
-	var id: int = p.id
-	if p.action_t > 0.0:
-		return
-	var cd: float = decide_cd.get(id, 0.0)
-	if e.clock < cd:
-		return
-	var pressure: float = e.pressure_on(p)
-	var _deep_attack: bool = e.attacking_x(p.team, p.pos) > e.L * 0.62
-	var _base_cd: float = 0.30 if _deep_attack else 0.55
-	decide_cd[id] = e.clock + (_base_cd + pressure * 0.12 + e.rng.randf_range(0.0, 0.12))
-	var goal: Vector2 = e.target_goal_pos(p.team)
-	var dist: float = p.pos.distance_to(goal)
-	var angle: float = e.opponent_goal_angle(p)
-	var style: Dictionary = e.style_of(p.team)
-	var own_third: bool = e.attacking_x(p.team, p.pos) < e.L * 0.34
-	var final_third: bool = e.attacking_x(p.team, p.pos) > e.L * 0.66
-
-	# --- shoot -------------------------------------------------------------
-	if dist < 27.0 and angle > 0.04 and p.cooldown <= 0.0 and p.attr["sho"] >= 40.0 and e.clock - last_shot[p.team] > 5.0:
-		var blocked: float = 0.0
-		var to_goal: Vector2 = (goal - p.pos).normalized()
-		for q in e.players:
-			if q.team == p.team or q.is_gk or q.sent_off:
-				continue
-			var rel: Vector2 = q.pos - p.pos
-			var along: float = rel.dot(to_goal)
-			if along > 0.7 and along < 16.0:
-				var perp: float = absf(rel.cross(to_goal))
-				if perp < 1.6:
-					blocked += (1.0 - perp / 1.6) * (1.0 - along / 20.0)
-		var shoot_score: float = (p.attr["sho"] / 100.0) * 1.05 + angle * 1.55 - dist * 0.048 - pressure * 0.32 - blocked * 0.80
-		if dist < 17.0:
-			shoot_score += 0.45
-		if dist < 11.0:
-			shoot_score += 0.55
-		if p.attr["sho"] < 55.0:
-			shoot_score -= 0.30
-		if final_third and e.rng.randf() < 0.05:
-			shoot_score += 0.35
-		# A clear sight of goal: shoot. Strikers do not dribble this.
-		var facing_goal: float = p.facing.dot(to_goal)
-		var clear_chance: bool = dist < 12.5 and blocked < 0.10 and facing_goal > 0.25
-		if clear_chance and e.rng.randf() < 0.14:
-			_finish(p, dist)
-			return
-		if shoot_score > 1.90 + pressure * 0.18:
-			_finish(p, dist)
-			return
-
-	# Long shot from space (low xG, but it keeps defences honest).
-	if dist >= 19.0 and dist < 30.0 and pressure < 0.55 and angle > 0.10 and p.cooldown <= 0.0:
-		if p.attr["sho"] > 68.0 and e.rng.randf() < 0.010:
-			var lside: float = 1.0 if e.rng.randf() < 0.5 else -1.0
-			e.shoot_ball(p, lside * e.rng.randf_range(1.8, 3.0), e.rng.randf_range(0.4, 1.8), 1.0)
-			return
-
-	# --- pass --------------------------------------------------------------
-	var best = null
-	var best_s = -1e9
-	var best_point: Vector2 = Vector2.ZERO
-	var best_kind = "pass"
-	var best_loft = false
-	for q in e.teammates_of(p):
-		if q.is_gk and dist > 34.0:
-			continue
-		var d: float = p.pos.distance_to(q.pos)
-		if d < 2.6 or d > 48.0:
-			continue
-		# Avoid runners the referee would flag: better passers see the line
-		# better, so they skip the risky ball almost every time.
-		if e.would_be_offside(q) and e.rng.randf() < 0.55 + float(p.attr["pas"]) * 0.004:
-			continue
-		var flight: float = d / 14.0
-		var lead: Vector2 = q.vel * clampf(flight, 0.15, 1.1)
-		var pt: Vector2 = q.pos + lead
-		var lane: float = pq.lane_risk(p.pos, pt, p.team)
-		var open: float = minf(10.0, e.nearest_opponent_dist(q.pos, p.team))
-		var prog: float = (e.attacking_x(p.team, q.pos) - e.attacking_x(p.team, p.pos)) / 38.0
-		var dpen: float = maxf(0.0, d - 12.0) * 0.045
-		var s: float = -lane * 2.40 + open * 0.26 + prog * (0.55 + style["directness"] * 0.35) - dpen
-		if d < 16.0:
-			s += 0.20
-		s += e.push_of(q) * 0.18
-		if prog < -0.25:
-			s -= 0.35
-		if d > 34.0:
-			s -= 0.25
-		if absf(q.pos.y - p.pos.y) > 26.0 and open > 7.0 and d < 42.0:
-			s += 0.38
-		# Through ball into space behind the defence (short and sharp, not a punt).
-		if prog > 0.18 and e.push_of(q) > 0.6 and d < 24.0:
-			var space_behind: float = pq.space_behind(p.team, q)
-			if space_behind > 4.0:
-				var thru: Vector2 = q.pos + Vector2(e.teams[p.team]["dir"] * clampf(space_behind * 0.5, 4.0, 9.0), q.vel.y * 0.15)
-				var tlane: float = pq.lane_risk(p.pos, thru, p.team)
-				var ts: float = s + 0.20 - tlane * 1.2
-				if ts > best_s:
-					best_s = ts
-					best = q
-					best_point = thru
-					best_kind = "through"
-					best_loft = false
-		# Cross from wide areas to a runner in the box.
-		var wide: bool = absf(p.pos.y - 34.0) > 18.0
-		var in_box: bool = e.attacking_x(p.team, q.pos) > e.L - 18.0 and absf(q.pos.y - 34.0) < 13.0
-		if wide and in_box and d > 11.0 and d < 32.0:
-			var cross_pt: Vector2 = q.pos + Vector2(e.teams[p.team]["dir"] * 2.2, 0.0)
-			var cs: float = s + 0.28
-			if cs > best_s:
-				best_s = cs
-				best = q
-				best_point = cross_pt
-				best_kind = "cross"
-				best_loft = true
-		if s > best_s:
-			best_s = s
-			best = q
-			best_point = pt
-			best_kind = "pass"
-			best_loft = d > 30.0 or lane > 0.75
-
-	# --- dribble -----------------------------------------------------------
-	var space: float = pq.space_ahead(p)
-	var drib_score: float = (p.attr["dri"] / 100.0) * 1.18 + minf(space, 14.0) * 0.085 - pressure * 0.58
-	drib_score += _urgency(p.team) * 0.55
-	if dist < 16.0:
-		drib_score -= 0.45
-	drib_score += (1.0 - style["directness"]) * 0.10
-	if own_third and pressure > 1.0:
-		drib_score -= 0.55
-
-	var clear_score = -0.15
-	if own_third and pressure > 0.55 and p.role != "ST":
-		clear_score = 0.95 + pressure * 0.55
-	var deep_own: bool = e.attacking_x(p.team, p.pos) < e.L * 0.13
-	if deep_own:
-		clear_score += 0.55
-
-	# --- choose ------------------------------------------------------------
-	if clear_score > drib_score and clear_score > best_s:
-		var aim: Vector2 = Vector2(e.L * 0.5 + e.teams[p.team]["dir"] * 14.0, clampf(34.0 + e.rng.randf_range(-18.0, 18.0), 8.0, e.W - 8.0))
-		e.clear_ball(p, aim)
-		return
-	if best != null and best_s > drib_score and best_s > 0.40:
-		if e.verbose:
-			e._vlog("  decide-pass %s score=%.2f vs dribble %.2f (%s %.0fm)" % [best.name, best_s, drib_score, best_kind, p.pos.distance_to(best.pos)])
-		if chain_team != p.team:
-			chain_team = p.team
-			pass_chain[p.team] = []
-		pass_chain[p.team].append(p.id)
-		if pass_chain[p.team].size() > 3:
-			pass_chain[p.team].pop_front()
-		e.pass_ball(p, best_point, best_loft, best, best_kind)
-		return
-	# Dribble into space, steering away from the nearest opponent.
-	var dirv: Vector2 = (goal - p.pos).normalized()
-	var near = null
-	var nd: float = 1e9
-	for q in e.players:
-		if q.team == p.team or q.sent_off:
-			continue
-		var dq: float = p.pos.distance_to(q.pos)
-		if dq < nd:
-			nd = dq
-			near = q
-	if near != null and nd < 9.0:
-		var away: Vector2 = (p.pos - near.pos).normalized()
-		var w: float = clampf(1.0 - nd / 9.0, 0.0, 1.0)
-		dirv = (dirv * (1.0 - w * 0.55) + away * (w * 0.65)).normalized()
-	# Wingers head for the byline.
-	if p.role in ["RW", "LW"] and absf(p.pos.y - 34.0) > 16.0:
-		dirv = (dirv + Vector2(0, signf(p.pos.y - 34.0)) * 0.15).normalized()
-	p.target = p.pos + dirv * 9.0
-	p.speed_scale = 1.0
-	p.state = "dribble"
-	# Occasional heavy touch under pressure.
-	if pressure > 1.0 and e.rng.randf() < 0.012:
-		var loose_dir: Vector2 = dirv.rotated(e.rng.randf_range(-0.8, 0.8))
-		e.ball.owner_id = -1
-		e.ball.vel = loose_dir * e.rng.randf_range(2.0, 4.5)
-		e.ball.last_touch_id = p.id
-		e.ball.last_touch_team = p.team
-		p.has_ball = false
-
-var last_progress := [-1.0, -1.0]
-var last_progress_clock := [0.0, 0.0]
-
-func _urgency(t: int) -> float:
-	var ball_ax: float = e.attacking_x(t, e.ball.pos)
-	if last_progress[t] < 0.0:
-		last_progress[t] = ball_ax
-		last_progress_clock[t] = e.clock
-		return 0.0
-	if ball_ax > last_progress[t] + 9.0:
-		last_progress[t] = ball_ax
-		last_progress_clock[t] = e.clock
-		return 0.0
-	if ball_ax < last_progress[t] - 14.0:
-		last_progress[t] = ball_ax
-		last_progress_clock[t] = e.clock
-		return 0.0
-	var stale: float = e.clock - last_progress_clock[t]
-	return clampf((stale - 5.0) / 8.0, 0.0, 1.0)
-
-func _finish(p, dist: float) -> void:
-	last_shot[p.team] = e.clock
-	var gk = e._gk_of(1 - p.team)
-	var gk_y: float = 34.0 if gk == null else gk.pos.y
-	var side: float = 1.0 if gk_y >= 34.0 else -1.0
-	var aim_y: float = 0.0
-	var roll: float = e.rng.randf()
-	if roll < 0.45:
-		aim_y = side * e.rng.randf_range(2.4, 3.3)
-	elif roll < 0.70:
-		aim_y = -side * e.rng.randf_range(2.2, 3.2)
-	else:
-		aim_y = e.rng.randf_range(-1.2, 1.2)
-	var aim_z: float = e.rng.randf_range(0.25, 1.5) if dist > 12.0 else e.rng.randf_range(0.2, 1.1)
-	var power: float = clampf(0.88 + dist * 0.005, 0.85, 1.06)
-	e.shoot_ball(p, aim_y, aim_z, power)

@@ -4,16 +4,18 @@ extends RefCounted
 ## The two ways a league save gets its fixture list.
 ##
 ## **Real** copies the shipped snapshot's calendar — the pairings and the dates
-## of the 2025-26 Premier League season — and clears the results, so a new save
-## starts at gameweek one on real dates. **Generated** builds a PL-like schedule
-## from the saved regulations: a double round robin (every club home and away
-## against every other), mostly weekends from late August to May with the
-## regulated number of midweek rounds.
+## of the season it was taken from (2026-27) — and clears the results, so a new
+## save starts at gameweek one on real dates. **Generated** builds a PL-like
+## schedule from the saved regulations: a double round robin (every club home
+## and away against every other), mostly weekends from late August to May with
+## the regulated number of midweek rounds.
 ##
 ## Both modes produce the same rows, so everything downstream (planner, table,
 ## calendar) is mode-blind.
 
 const WEEKDAYS := ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+const MONTHS := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT",
+	"NOV", "DEC"]
 const KICKOFF_TIMES := ["12:30", "15:00", "17:30"]
 const SECONDS_PER_DAY := 86400
 
@@ -29,8 +31,9 @@ static func build(mode: String, rules: Dictionary, seed: int) -> Array:
 
 # ------------------------------------------------------------------ real ---
 
-## Pairings and dates from the shipped snapshot. The snapshot carries a whole
-## finished season, so results are deliberately left behind; the calendar and
+## Pairings and dates from the shipped snapshot. The snapshot is a reading of a
+## live season, so some fixtures already carry results; a new save starts
+## unplayed, so the results are deliberately left behind and the calendar and
 ## its dates are what a real-mode save inherits.
 ##
 ## The snapshot stores no round number, and real fixtures move for cups and
@@ -210,10 +213,26 @@ static func weekday_of(days: int) -> int:
 static func add_days(date: String, days: int) -> String:
 	return date_from(days_from(date) + days)
 
-## "SAT 15 AUG" — the calendar's day heading.
+## "15/AUG/2026" — the one display form for a calendar date. The day carries no
+## leading zero; months are the three-letter English name in upper case and the
+## year is always four digits. Internal storage stays ISO.
 static func day_label(date: String) -> String:
-	if date == "":
+	var d := _parts(date)
+	if d.is_empty():
 		return ""
-	var d := Time.get_datetime_dict_from_unix_time(days_from(date) * SECONDS_PER_DAY)
-	var months := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
-	return "%s %d %s" % [WEEKDAYS[int(d["weekday"])], int(d["day"]), months[int(d["month"]) - 1]]
+	return "%d/%s/%d" % [int(d["day"]), MONTHS[int(d["month"]) - 1], int(d["year"])]
+
+## "SAT" — the weekday a displayed date carries as its hover hint, never in the
+## date itself.
+static func weekday_label(date: String) -> String:
+	var d := _parts(date)
+	if d.is_empty():
+		return ""
+	return WEEKDAYS[int(d["weekday"])]
+
+## The calendar pieces of an ISO date, or an empty dictionary when there is no
+## date to read (a month key, a timeslot, an empty field).
+static func _parts(date: String) -> Dictionary:
+	if date.length() < 10:
+		return {}
+	return Time.get_datetime_dict_from_unix_time(days_from(date) * SECONDS_PER_DAY)
