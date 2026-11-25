@@ -69,7 +69,8 @@ func test_unknown_targets_are_rejected() -> void:
 	assert_false(WikiModel.has_page(WikiModel.PLAYER, "NOPE-x"), "a missing player resolved")
 	assert_false(WikiModel.has_page(WikiModel.TEAM, "NOPE"), "a missing club resolved")
 	assert_false(WikiModel.has_page("banana", ""), "a made-up page kind resolved")
-	assert_eq(WikiModel.label(WikiModel.LEAGUE, ""), "LEAGUE", "the league crumb label changed")
+	assert_eq(WikiModel.label(WikiModel.LEAGUE, ""), "PREMIER LEAGUE",
+		"the league crumb should name the competition")
 	assert_eq(WikiModel.label(WikiModel.TEAM, "MUN"), "MUN", "the club crumb should be the abbreviation")
 
 func test_layout_fits_a_page_into_rows() -> void:
