@@ -281,6 +281,54 @@ func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 		assert_eq(cells, 31, "October should have 31 cells")
 		assert_eq(matches, 2, "the day lost its fixtures")
 
+## #163: every sheet that shows BACK keeps it in the top-left corner, the hub's
+## CONTINUE and the pre-match kick door take the top-right corner, and the table
+## keeps only its two readings in the bottom bar.
+func test_the_sheet_chrome_keeps_back_top_left_and_the_primary_top_right() -> void:
+	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
+		var book := LeagueBook.new()
+		var sheets := {
+			"table": book.table_layout(vp, {"table": _table(), "rules": LeagueRules.defaults()}),
+			"calendar": book.calendar_layout(vp, {"month": "2026-10", "day": "", "days": {}, "day_fixtures": []}),
+			"report": book.report_layout(vp, {"fixture": _fixture(1), "events": [], "day": "x"}),
+			"podium": book.podium_layout(vp, {"summary": {}}),
+			"system": LeagueSystemSheet.new().layout(vp, {"date": "2026-08-15", "name": "S"}),
+			"stats": LeagueExtra.new().stats_layout(vp, {"name": "S", "reports": []}),
+			"interest": LeagueExtra.new().interest_layout(vp, {"query": "", "results": [], "clubs": []}),
+			"hub": LeagueSheet.new().hub_layout(vp, _state([_fixture(1)], _table())),
+		}
+		for label in sheets:
+			assert_eq(_item_rect(sheets[label], "back"), LeagueExtra.back_rect(),
+				"%s: BACK is not in the top-left corner at %s" % [label, vp])
+		var cont := _item_rect(sheets["hub"], "continue")
+		var kick := _item_rect(sheets["table"], "tbl:mode:full")
+		assert_almost_eq(cont.end.x, vp.x - 24.0, 0.5, "CONTINUE is not top-right")
+		assert_lte(cont.end.y, LeagueSheet.HEADER, "CONTINUE left the header")
+		assert_gt(kick.position.y, LeagueSheet.HEADER, "the reading doors left the bottom bar")
+		assert_almost_eq(_item_rect(sheets["table"], "tbl:mode:compact").end.y, vp.y - 8.0, 0.5,
+			"COMPACT left the bottom bar")
+		assert_almost_eq(kick.end.y, vp.y - 8.0, 0.5, "FULL left the bottom bar")
+		assert_eq(SettingsScreen.back_rect(vp), Rect2(24.0, 12.0, 116.0, 44.0),
+			"settings BACK is not top-left")
+		var picker = load("res://scripts/ui/team_select.gd").new()
+		assert_almost_eq(picker.back_rect(vp).position.x, 24.0, 0.5, "the picker's BACK is not top-left")
+		picker.free()
+		var pre := PreMatchScreen.new()
+		pre.setup({"kick": "KICK OFF"})
+		var doors: Array = pre.layout(vp)["buttons"]
+		assert_eq(_item_rect(doors, "back"), LeagueExtra.back_rect(), "pre-match BACK is not top-left")
+		assert_almost_eq(_item_rect(doors, "kick").end.x, vp.x - 24.0, 0.5, "the kick is not top-right")
+		assert_lte(_item_rect(doors, "kick").end.y, LeagueSheet.HEADER, "the kick left the header")
+		assert_gt(_item_rect(doors, "kick").position.x, _item_rect(doors, "back").end.x,
+			"the kick sits on BACK at %s" % vp)
+		pre.free()
+
+func _item_rect(items: Array, id: String) -> Rect2:
+	for item in items:
+		if str(item["id"]) == id:
+			return item["rect"]
+	return Rect2()
+
 ## #126: the caption floor lifts the shortest type on the hub and the calendar to
 ## ten design units. The chip label and the day-cell counter must still fit the
 ## surface that carries them on a phone and on a desktop window.
@@ -485,7 +533,7 @@ func test_the_podium_lays_out_with_and_without_a_summary() -> void:
 			doors += 1
 		elif str(item["kind"]) == "extent":
 			extent += 1
-	assert_eq(doors, 2, "the podium lost its doors")
+	assert_eq(doors, 3, "the podium lost a door (BACK, TABLE, MAIN MENU)")
 	assert_eq(extent, 1, "the podium lost its measured summary height")
 	var summary := {
 		"champion": {"club": "Arsenal", "club_id": "ARS", "points": 90},

@@ -68,7 +68,7 @@ func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append({"id": "month:1", "kind": "chip", "label": ">", "pinned": true,
 		"rect": Rect2(vp.x - 24.0 - 28.0, HEADER + 8.0, 28.0, 24.0)})
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
+		"rect": LeagueExtra.back_rect()})
 	return items
 
 func report_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -97,7 +97,7 @@ func report_layout(vp: Vector2, view: Dictionary) -> Array:
 			"report": report, "rect": Rect2(24.0, y, vp.x - 48.0, 44.0)})
 		y += 50.0
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
+		"rect": LeagueExtra.back_rect()})
 	return items
 
 func podium_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -106,6 +106,8 @@ func podium_layout(vp: Vector2, view: Dictionary) -> Array:
 	## its height into the scroll window.
 	items.append({"id": "", "kind": "extent",
 		"rect": Rect2(24.0, HEADER, vp.x - 48.0, frame_height(view))})
+	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
+		"rect": LeagueExtra.back_rect()})
 	items.append({"id": "table", "kind": "button", "label": "TABLE", "primary": false, "pinned": true,
 		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 130.0, BAR_H - 14.0)})
 	items.append({"id": "menu", "kind": "button", "label": "MAIN MENU", "primary": true, "pinned": true,
@@ -179,10 +181,8 @@ func draw_table_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 
 func draw_calendar_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	var bold: Font = fonts["bold"]
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), "CALENDAR", 12, UiChrome.C_GOLD, bold)
-	UiChrome.text(c, Vector2(24.0, HEADER + 25.0), month_label(str(view.get("month", ""))), 13, UiChrome.C_TEXT, bold)
+	LeagueExtra.header(c, vp, fonts, "CALENDAR")
+	UiChrome.text(c, Vector2(24.0, HEADER + 25.0), month_label(str(view.get("month", ""))), 13, UiChrome.C_TEXT, fonts["bold"])
 
 func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()
@@ -252,13 +252,13 @@ func draw_report_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dic
 	var date := str(view.get("day", ""))
 	var label := FixtureCalendar.day_label(date)
 	var kicker := "MATCH REPORT"
+	var caption := ""
 	if not roundup.is_empty():
-		kicker = "RESULTS · %s" % (label if label != "" else date)
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), kicker, 12, UiChrome.C_GOLD, bold)
-	if not roundup.is_empty() and date != "":
-		hints.add(DateHints.strip(bold, label,
-			Vector2(24.0 + DateHints.width(bold, "RESULTS · ", 12), 48.0), 12), date)
+		kicker = "RESULTS"
+		caption = label if label != "" else date
+	LeagueExtra.header(c, vp, fonts, kicker, caption)
+	if caption != "":
+		hints.add(DateHints.strip_right(bold, caption, vp.x - 24.0, 34.0, 10), date)
 
 func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()
@@ -349,9 +349,7 @@ func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary
 
 func draw_podium_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	var bold: Font = fonts["bold"]
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), "SEASON COMPLETE · %s" % str(view.get("name", "")), 12, UiChrome.C_GOLD, bold)
+	LeagueExtra.header(c, vp, fonts, "SEASON COMPLETE", str(view.get("name", "")))
 
 func draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, _items: Array, view: Dictionary) -> void:
 	hints.clear()

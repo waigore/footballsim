@@ -97,14 +97,19 @@ func layout(vp: Vector2) -> Dictionary:
 		"rows": rows,
 		"buttons": [],
 	}
-	var kick := Rect2(vp.x - 24.0 - 210.0, vp.y - 12.0 - BAR, 210.0, BAR)
-	var skip := Rect2(kick.position.x - 10.0 - 118.0, kick.position.y, 118.0, BAR)
+	var kick := LeagueExtra.primary_rect(vp, kick_width(vp))
+	var skip := Rect2(vp.x - 24.0 - 118.0, vp.y - 12.0 - BAR, 118.0, BAR)
 	out["buttons"] = [
 		{"id": "back", "rect": LeagueExtra.back_rect()},
 		{"id": "skip", "rect": skip},
 		{"id": "kick", "rect": kick},
 	]
 	return out
+
+## The kick door in the header's top-right corner (#163). It narrows with the
+## window so it never runs into BACK and the title on the other side.
+static func kick_width(vp: Vector2) -> float:
+	return clampf(vp.x * 0.28, 132.0, 210.0)
 
 ## The door under a design point. Read from the layout, not from the painted
 ## list: a headless suite (and a press that lands before the first frame) must
@@ -154,12 +159,7 @@ func _draw() -> void:
 	rects = layout(vp)
 	buttons = rects["buttons"]
 	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.008, 0.014, 0.018, 0.97))
-	var caption := str(view.get("caption", ""))
-	var when := str(view.get("date_label", ""))
-	if str(view.get("time", "")) != "":
-		when = when + " · " + str(view["time"]) if when != "" else str(view["time"])
-	var kicker := caption if when == "" else (caption + " · " + when)
-	LeagueExtra.header(self, vp, fonts, "PRE-MATCH", kicker)
+	_draw_header(vp, fonts)
 	_draw_side(rects["home_pitch"], rects["home_out"], rects["home_quote"],
 		view.get("home", {}), view.get("home_xi", []), str(view.get("home_captain", "")),
 		view.get("home_absences", []), view.get("home_quote", {}),
@@ -173,6 +173,23 @@ func _draw() -> void:
 
 func _view_text(key: String) -> String:
 	return str(view.get(key, ""))
+
+## BACK top-left and the kick door top-right (#163); the caption takes what the
+## middle of the header can spare, never the door's corner.
+func _draw_header(vp: Vector2, fonts: Dictionary) -> void:
+	var bold: Font = fonts["bold"]
+	var caption := str(view.get("caption", ""))
+	var when := str(view.get("date_label", ""))
+	if str(view.get("time", "")) != "":
+		when = when + " · " + str(view["time"]) if when != "" else str(view["time"])
+	var kicker := caption if when == "" else (caption + " · " + when)
+	var right: float = kick_width(vp) + 12.0
+	var title_end: float = 136.0 + UiChrome.text_width(bold, "PRE-MATCH", 16)
+	var room: float = (vp.x - 24.0 - right) - title_end - 12.0
+	var line := ""
+	if room >= 60.0:
+		line = LeagueColumns.fit_name(kicker, bold, 10, room)
+	LeagueExtra.header(self, vp, fonts, "PRE-MATCH", line, right)
 
 ## One side: the club strip, its pitch, the OUT list and the manager's line.
 func _draw_side(pitch: Rect2, out_rect: Rect2, quote: Rect2, team: Dictionary,
@@ -243,8 +260,9 @@ func _draw_doors(vp: Vector2, fonts: Dictionary) -> void:
 		var rect: Rect2 = b["rect"]
 		var id := str(b["id"])
 		if id == "kick":
-			UiChrome.button(self, cache, rect, kick_label, bold, true, 16,
-				"" if touch else "ENTER")
+			# The header band is 32 units: the door names the key in the line
+			# under the briefing instead of a second caption inside it.
+			UiChrome.button(self, cache, rect, kick_label, bold, true, 16)
 		elif id == "skip":
 			UiChrome.button(self, cache, rect, "SKIP", bold, false)
 		else:
@@ -252,14 +270,17 @@ func _draw_doors(vp: Vector2, fonts: Dictionary) -> void:
 			UiChrome.text_c(self, rect.get_center().x, rect.position.y + 21.0, "BACK", 12,
 				UiChrome.C_TEXT, bold)
 	var caption := ""
+	var bar_y: float = vp.y - 12.0 - BAR
 	if held:
 		caption = "BRIEFING HELD · %s WHEN READY" % kick_label
 	elif auto_left > 0.0:
 		caption = "%s IN %d s · SKIP HOLDS THE BRIEFING" % [kick_label, int(ceil(auto_left))]
-	UiChrome.text(self, Vector2(24.0 + 108.0, vp.y - 12.0 - BAR + 22.0), caption, 10,
-		UiChrome.C_DIM, bold)
+	if caption != "":
+		var room: float = vp.x - 24.0 - 118.0 - 36.0
+		caption = LeagueColumns.fit_name(caption, bold, 10, maxf(room, 60.0))
+	UiChrome.text(self, Vector2(24.0, bar_y + 22.0), caption, 10, UiChrome.C_DIM, bold)
 	if not touch:
-		UiChrome.text(self, Vector2(24.0 + 108.0, vp.y - 12.0 - BAR + 38.0),
+		UiChrome.text(self, Vector2(24.0, bar_y + 38.0),
 			"ENTER  %s   ·   ESC  BACK" % kick_label, 10, UiChrome.C_DIM, med)
 
 ## Greedy wrap into at most `max_lines` lines of `width` design units.

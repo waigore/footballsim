@@ -119,7 +119,7 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
 		"rect": LeagueExtra.back_rect()})
 	items.append({"id": "continue", "kind": "button", "label": "CONTINUE", "primary": true,
-		"pinned": true, "rect": Rect2(vp.x - 24.0 - 140.0, 12.0, 140.0, 32.0)})
+		"pinned": true, "rect": LeagueExtra.primary_rect(vp)})
 	return items
 
 func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -185,11 +185,20 @@ func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dicti
 	# A left-behind watch is still being played out: the result lands on its own.
 	if bool(state.get("settling", false)):
 		rest += " · FINISHING THE WATCHED MATCH"
-	_heading(c, vp, fonts, str(state.get("name", "LEAGUE")), label + rest)
-	if date != "":
-		var bold: Font = fonts["bold"]
-		var whole: float = DateHints.width(bold, label + rest, 10)
-		hints.add(Rect2(vp.x - 24.0 - whole, 20.0, DateHints.width(bold, label, 10), 14.0), date)
+	var bold: Font = fonts["bold"]
+	var name := str(state.get("name", "LEAGUE"))
+	# CONTINUE owns the top-right corner, so the caption stops short of it (#163).
+	var right: float = LeagueExtra.primary_rect(vp).size.x + 12.0
+	var room: float = (vp.x - 24.0 - right) - (136.0 + UiChrome.text_width(bold, name, 16) + 12.0)
+	var caption := label + rest
+	if room >= 160.0:
+		caption = LeagueColumns.fit_name(caption, bold, 10, room)
+	else:
+		caption = ""
+	_heading(c, vp, fonts, name, caption, right)
+	if date != "" and caption != "":
+		var whole: float = DateHints.width(bold, caption, 10)
+		hints.add(Rect2(vp.x - 24.0 - right - whole, 24.0, DateHints.width(bold, label, 10), 14.0), date)
 
 func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, state: Dictionary) -> void:
 	hints.clear()
@@ -374,10 +383,10 @@ static func draw_play(c: CanvasItem, cache: Dictionary, rect: Rect2, bold: Font)
 func draw_chip(c: CanvasItem, rect: Rect2, label: String, bold: Font) -> void:
 	UiChrome.chip(c, cache, rect, label, bold)
 
-func _heading(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String, caption: String) -> void:
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, fonts["bold"])
-	UiChrome.text(c, Vector2(24.0, 48.0), title.to_upper(), 12, UiChrome.C_GOLD, fonts["bold"])
-	UiChrome.text_r(c, vp.x - 24.0, 30.0, caption, 10, UiChrome.C_DIM, fonts["bold"])
-	c.draw_rect(Rect2(24.0, HEADER - 8.0, vp.x - 48.0, 1.0), Color(1, 1, 1, 0.08))
+func _heading(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String, caption: String,
+		right: float = 0.0) -> void:
+	# BACK owns the top-left corner on the hub, the wizard and the load list too
+	# (#163), so the title takes the same rail as every other league sheet.
+	LeagueExtra.header(c, vp, fonts, title, caption, right)
 
 # gd-tools: no cover end

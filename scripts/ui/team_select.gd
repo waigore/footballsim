@@ -224,9 +224,10 @@ func design_vp() -> Vector2:
 	return get_viewport().get_visible_rect().size / maxf(ui_scale, 0.001)
 
 ## A touch build has no Escape key, so the sheet needs a door that a tap can
-## reach; the layout test reads this rect instead of a screenshot.
+## reach; the layout test reads this rect instead of a screenshot. It sits in the
+## top-left corner every sheet puts BACK in (#163).
 func back_rect(vp: Vector2) -> Rect2:
-	return Rect2(vp.x - 24.0 - 116.0, 18.0, 116.0, 44.0)
+	return Rect2(24.0, 12.0, 116.0, 44.0)
 
 func _draw() -> void:
 	var vp := design_vp()
@@ -234,9 +235,9 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.015, 0.025, 0.032, 0.94))
 	draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
 	draw_rect(Rect2(0, vp.y - 3, vp.x, 3), Color(0, 0, 0, 0.5))
-	UiChrome.sheet_header(self, vp, {"bold": f_bold, "med": f_med, "body": f_body}, "PREMIER LEAGUE · 20 CLUBS", "SELECT FIXTURE")
-	# The top corners belong to the league and menu doors, so the wordmark rides
-	# the centre of the header where nothing covers it.
+	UiChrome.sheet_header(self, vp, {"bold": f_bold, "med": f_med, "body": f_body}, "SELECT FIXTURE")
+	# BACK owns the top-left corner on every sheet (#163); the league door takes
+	# the other one, so the wordmark rides the centre of the header.
 	UiChrome.wordmark_c(self, vp.x * 0.5, vp.y * (0.075 if vp.y < 620.0 else 0.105), 12, f_bold)
 
 	var card_w := minf(vp.x * 0.30, 460.0)
@@ -314,8 +315,9 @@ func _draw() -> void:
 	text_c(back.position.x + back.size.x * 0.5, back.position.y + back.size.y * 0.66, "‹  MENU" if back_to_menu else "‹  BACK", 13, C_TEXT if back_hover else C_DIM, f_bold)
 	_add_button("back", back)
 
-	# Encyclopedia door: the whole league is one tap from the fixture sheet.
-	var league_btn := Rect2(24.0, 18.0, 138.0, 44.0)
+	# Encyclopedia door: the whole league is one tap from the fixture sheet, in
+	# the corner opposite BACK (#163).
+	var league_btn := Rect2(vp.x - 24.0 - 138.0, 12.0, 138.0, 44.0)
 	var league_hover := league_btn.has_point(mouse)
 	rect(C_PANEL_LIGHT if league_hover else C_PANEL, league_btn, 8, Color(1, 1, 1, 0.14 if league_hover else 0.07))
 	text_c(league_btn.position.x + league_btn.size.x * 0.5, league_btn.position.y + league_btn.size.y * 0.66, "◈  LEAGUE", 13, C_TEXT if league_hover else C_DIM, f_bold)
