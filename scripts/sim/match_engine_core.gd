@@ -44,7 +44,7 @@ const SUB_LIMIT := 5
 const FINISH_EFFICIENCY := 1.0
 ## Positional xG, calibrated to real-football levels. `expected_goals` is
 ## positional xG × XG_SCALE × the side's multiplier (`_calibrate_finishing`).
-const XG_SCALE := 0.53
+const XG_SCALE := 0.58
 ## A shot is worth more when the defence facing it is weak and the side taking it
 ## is strong: the same rating gradient the model puts into λ, from one source
 ## (`PoissonModel.exponent_terms`). The engine's positional xG knows only
