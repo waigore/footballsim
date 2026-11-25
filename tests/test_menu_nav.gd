@@ -16,6 +16,9 @@ func before_all() -> void:
 	game.menus.shell.prefs_path = PREFS
 	if FileAccess.file_exists(PREFS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
+	# The HUD's show/hide choice is read from the same file (#158): restore it
+	# from the suite's own copy, not the developer's last launch.
+	game.menus.restore_hud()
 	game.menus.open_menu()
 
 func after_all() -> void:
