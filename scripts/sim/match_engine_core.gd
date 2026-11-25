@@ -45,7 +45,7 @@ const FINISH_EFFICIENCY := 1.0
 ## Positional xG is calibrated down to real-football levels: the engine creates
 ## more chances than a real side, so each one is worth less. Fitted to the
 ## tier-2 census against the PL-envelope λ (wiki poisson-model, DR-20261126-02).
-const XG_SCALE := 0.285
+const XG_SCALE := 0.335
 ## A shot is also worth more when the defence facing it is weak and when the
 ## side taking it is strong — the same combined rating gradient the model puts
 ## into λ, read from one source (`PoissonModel.exponent_terms`). The engine's
@@ -54,7 +54,7 @@ const XG_SCALE := 0.285
 ## Elasticity is per 10 rating points of that derived gap; it sits below the
 ## model's 0.98 because the engine's chance creation already carries part of the
 ## gradient. Fitted to the tier-2 census (wiki poisson-model, DR-20261126-02).
-const XG_CONTEST_ELASTICITY := 0.65
+const XG_CONTEST_ELASTICITY := 0.78
 ## Venue premium in chance quality, in log terms. It is zero because the home
 ## side already gets its edge in *creation* — it holds the ball higher up and
 ## shoots from better positions — so pricing the venue again in the finishing

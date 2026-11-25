@@ -184,5 +184,5 @@ func test_the_canonical_chance_sits_on_the_census_level() -> void:
 	var strong := MatchEngine.new(1, "MCI", "IPS")
 	var even_xg: float = even.expected_goals(even.target_goal_pos(0) + Vector2(-12.0, 0.0), 0.0, 0)
 	var strong_xg: float = strong.expected_goals(strong.target_goal_pos(0) + Vector2(-12.0, 0.0), 0.0, 0)
-	assert_between(even_xg, 0.022, 0.028, "the even fixture's chance left the calibrated level")
-	assert_between(strong_xg, 0.034, 0.042, "the rating-gap chance left the calibrated level")
+	assert_between(even_xg, 0.026, 0.032, "the even fixture's chance left the calibrated level")
+	assert_between(strong_xg, 0.044, 0.053, "the rating-gap chance left the calibrated level")
