@@ -12,8 +12,8 @@ const SMOTHER_RADIUS := 2.1
 const SMOTHER_BOX := 3.0
 
 func _move_players(dt: float) -> void:
-	# Flat position arrays for the separation pass (rebuilt per tick; see the
-	# squad layer). Same arithmetic, same order, fewer member lookups.
+	# Flat position arrays for the separation pass (rebuilt per tick; the arrays
+	# live on the core state). Same arithmetic, same order, fewer member lookups.
 	_sep_x.resize(players.size())
 	_sep_y.resize(players.size())
 	var idx := 0
