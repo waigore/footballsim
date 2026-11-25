@@ -262,6 +262,32 @@ func test_the_moved_doors_answer_on_their_own() -> void:
 	assert_eq(screen.mode, LeagueScreen.MODE_STATS, "a day with no season moved the sheet")
 	assert_eq(screen.report_back, LeagueScreen.MODE_HUB, "an inert day door moved the report's return")
 
+func test_the_panel_doors_jump_pose_and_bind_the_table() -> void:
+	# The panel's destinations live in their own module, so each jump is pinned
+	# without the dispatch in front of it.
+	_hub()
+	var depth: int = screen.nav.depth()
+	LeaguePanelDoors.nav(screen, "table")
+	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table destination did not open the table")
+	# Closing is a slide the screen's own clock finishes: the door only aims it.
+	assert_false(screen.panel.is_open(), "the panel did not head back in")
+	assert_eq(screen.book.table.sort, str(season.save.read_meta().get(LeagueTableView.META_SORT, "")),
+		"the table did not read the season save's own sort")
+	assert_eq(screen.nav.depth(), depth + 1, "the jump did not become one page of history")
+	LeaguePanelDoors.nav(screen, "interest")
+	assert_eq(screen.mode, LeagueScreen.MODE_INTEREST, "the shortlist does not open from its panel row")
+	assert_eq(str(screen.interest_query), "", "the shortlist kept a search it never asked for")
+	LeaguePanelDoors.nav(screen, "calendar")
+	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR, "the calendar does not open from its panel row")
+	assert_false(screen.days_cache.is_empty(), "the calendar opened with no day index")
+	LeaguePanelDoors.stats(screen, "stats:podium")
+	assert_eq(screen.mode, LeagueScreen.MODE_PODIUM, "the podium does not open from the Stats sheet")
+	LeaguePanelDoors.stats(screen, "stats:reports")
+	assert_eq(screen.mode, LeagueScreen.MODE_STATS, "the reports reading did not come back")
+	_hub()
+	LeaguePanelDoors.nav(screen, "fixtures")
+	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "Today's Fixtures did not land on the hub")
+
 func test_deleting_the_open_save_unloads_it_first() -> void:
 	# The delete door asks first: the file stays until the answer is DELETE.
 	var throwaway := LeagueSeason.create("Doors Throwaway", "generated", "fixture_days", SEED + 1)
