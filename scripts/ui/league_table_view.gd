@@ -73,6 +73,12 @@ const FULL_COLS := [
 var mode := ""
 var sort := ""
 var dir := -1
+## Competition tab on screen. Session state: the reading and sort are the save's
+## shared table prefs, the tab is which league is being read right now. Empty
+## means the save's primary league.
+var league_tab := ""
+## Panel style cache for the tab chips.
+var cache := {}
 ## Club names this table painted, with the strip each one occupies (#107): the
 ## long press reads it, in the same design space the rows are laid out in.
 var names := InterestNames.new()
@@ -83,50 +89,33 @@ func attach(save: LeagueSave) -> void:
 	mode = ""
 	sort = ""
 	dir = -1
+	league_tab = ""
 	if save == null:
 		return
 	var meta := save.read_meta()
 	var saved_mode := str(meta.get(META_MODE, ""))
 	mode = saved_mode if MODES.has(saved_mode) else ""
 	var saved_sort := str(meta.get(META_SORT, ""))
-	sort = saved_sort if sortable(saved_sort) else ""
+	sort = saved_sort if LeagueTableSort.sortable(saved_sort) else ""
 	dir = 1 if str(meta.get(META_DIR, "desc")) == "asc" else -1
 
 static func columns(reading: String) -> Array:
 	return FULL_COLS if reading == FULL else COMPACT_COLS
 
-## Keys a header can sort by: every visible field except the official place.
-static func sortable(key: String) -> bool:
-	if key == "" or key == "position":
-		return false
-	for col in FULL_COLS:
-		if str(col["key"]) == key:
-			return true
-	return false
-
-## A row's value for one column. Goal difference is derived, the club column
-## sorts by name, everything else is a saved integer.
-static func cell(row: Dictionary, key: String) -> int:
-	if key == "gd":
-		return int(row.get("gf", 0)) - int(row.get("ga", 0))
-	return int(row.get(key, 0))
-
-static func numeric(cols: Array) -> int:
-	var count := 0
-	for col in cols:
-		if bool(col["num"]):
-			count += 1
-	return count
-
 # ------------------------------------------------------------------ layout ---
 
 func layout(vp: Vector2, view: Dictionary) -> Array:
 	var reading := _reading(vp)
-	var rows := ordered(view.get("table", []))
+	var rows := LeagueTableSort.order(view.get("table", []), sort, dir, reading)
 	var row_w := maxf(vp.x - 48.0, _min_row_w(reading))
 	var places := _places(Rect2(24.0, 0.0, row_w, ROW_H))
-	var top: float = LeagueSheet.HEADER + (HEAD_TWO if reading == FULL else HEAD_ONE)
-	var items := _header(places)
+	var comps: Array = view.get("competitions", [])
+	var tab_h: float = 30.0 if comps.size() > 1 else 0.0
+	var top: float = LeagueSheet.HEADER + tab_h + (HEAD_TWO if reading == FULL else HEAD_ONE)
+	var items: Array = []
+	if tab_h > 0.0:
+		items.append_array(_tabs(comps, vp))
+	items.append_array(_header(places, tab_h))
 	var interest := LeagueInterestMark.set_of(view.get("interests", []))
 	for i in range(rows.size()):
 		items.append({
@@ -154,37 +143,6 @@ func _reading(vp: Vector2) -> String:
 		mode = COMPACT if LeagueSheet.compact(vp) else FULL
 	return mode
 
-## Rows in the player's chosen order, each keeping its official position. Ties
-## fall back to the official place so a re-sort is never arbitrary. A sort on a
-## column the current reading does not show is left for the reading that does:
-## the compact strip never sorts by a number the player cannot see.
-func ordered(rows: Array) -> Array:
-	if sort == "" or rows.size() < 2 or not _shown(sort):
-		return rows
-	var out := rows.duplicate()
-	var key := sort
-	var sign := dir
-	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		if key == "club":
-			var na := str(a["club_name"])
-			var nb := str(b["club_name"])
-			if na != nb:
-				return na < nb if sign > 0 else na > nb
-		else:
-			var va := cell(a, key)
-			var vb := cell(b, key)
-			if va != vb:
-				return va < vb if sign > 0 else va > vb
-		return int(a["position"]) < int(b["position"])
-	)
-	return out
-
-func _shown(key: String) -> bool:
-	for col in columns(mode):
-		if str(col["key"]) == key:
-			return true
-	return false
-
 ## The narrowest row a reading needs. Compact walks the measured rail
 ## (`LeagueColumns`), which keeps the whole overall record and a readable club
 ## name inside a phone sheet; the full sheet walks its own 22 columns from the
@@ -192,7 +150,7 @@ func _shown(key: String) -> bool:
 func _min_row_w(reading: String) -> float:
 	if reading == COMPACT:
 		return LeagueColumns.min_row(COMPACT_COLS)
-	return POS_W + CLUB_MIN + float(numeric(FULL_COLS)) * (NUM_W + NUM_GAP)
+	return POS_W + CLUB_MIN + float(LeagueTableSort.numeric(FULL_COLS)) * (NUM_W + NUM_GAP)
 
 ## Column rails for a row at this width. Compact keeps `LeagueColumns`, the
 ## measured layout #71 settled; the full sheet walks the columns from the club
@@ -201,7 +159,7 @@ func _places(row: Rect2) -> Dictionary:
 	if mode == COMPACT:
 		return LeagueColumns.of(row, COMPACT_COLS)
 	var club_x := row.position.x + POS_W
-	var club_w := row.size.x - POS_W - float(numeric(FULL_COLS)) * (NUM_W + NUM_GAP)
+	var club_w := row.size.x - POS_W - float(LeagueTableSort.numeric(FULL_COLS)) * (NUM_W + NUM_GAP)
 	var out := {"pos_x": row.position.x, "club_x": club_x, "club_w": club_w, "cols": []}
 	var x := club_x + club_w
 	for col in FULL_COLS:
@@ -211,11 +169,29 @@ func _places(row: Rect2) -> Dictionary:
 			x += NUM_W + NUM_GAP
 	return out
 
+## The league tabs above the table: one per active competition, the one being
+## read in gold. Shared prefs (reading, sort) do not change as the tab does.
+func _tabs(comps: Array, vp: Vector2) -> Array:
+	var items: Array = []
+	var current := league_tab
+	if current == "" and not comps.is_empty():
+		current = str(comps[0].get("id", ""))
+	var gap := 8.0
+	var w: float = minf(180.0, (vp.x - 48.0 - gap * float(comps.size() - 1)) / float(maxf(comps.size(), 1)))
+	var x := 24.0
+	for comp in comps:
+		var cid := str(comp.get("id", ""))
+		var on := cid == current
+		items.append({"id": "tbl:league:" + cid, "kind": "chip", "label": str(comp.get("short", cid)),
+			"selected": on, "rect": Rect2(x, LeagueSheet.HEADER + 2.0, w, 24.0)})
+		x += w + gap
+	return items
+
 ## The header is part of the scrolling content, so a column stays above its
 ## numbers when the sheet is panned sideways and its tap target travels with it.
-func _header(places: Dictionary) -> Array:
+func _header(places: Dictionary, offset: float = 0.0) -> Array:
 	var items: Array = []
-	var y := LeagueSheet.HEADER + 6.0
+	var y := LeagueSheet.HEADER + offset + 6.0
 	if mode == FULL:
 		items.append_array(_captions(places, y))
 		y += 12.0
@@ -255,6 +231,12 @@ func _head_cell(y: float, x: float, w: float, label: String, key: String,
 ## A reading or header press. Writes the choice through to the save so it is
 ## the save's, not this run's, and returns true when anything changed.
 func press(id: String, save: LeagueSave) -> bool:
+	if id.begins_with("tbl:league:"):
+		var tab := id.substr(11)
+		if tab == league_tab:
+			return false
+		league_tab = tab
+		return true
 	if id.begins_with("tbl:mode:"):
 		var wanted := id.substr(9)
 		var current: String = mode if mode != "" else COMPACT
@@ -266,7 +248,7 @@ func press(id: String, save: LeagueSave) -> bool:
 	if not id.begins_with("tbl:sort:"):
 		return false
 	var key := id.substr(9)
-	if not sortable(key):
+	if not LeagueTableSort.sortable(key):
 		return false
 	if key == sort:
 		dir = -dir
@@ -343,6 +325,14 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array,
 			UiChrome.text(c, Vector2((item["rect"] as Rect2).position.x + 2.0,
 				(item["rect"] as Rect2).position.y + 8.0), str(item["label"]), 7,
 				UiChrome.C_DIM, fonts["bold"])
+		elif kind == "chip":
+			var on := bool(item.get("selected", false))
+			UiChrome.panel(c, cache, item["rect"],
+				UiChrome.C_GOLD.darkened(0.1) if on else UiChrome.C_PANEL, 5,
+				UiChrome.C_GOLD if on else UiChrome.C_BORDER, 1)
+			UiChrome.text_c(c, (item["rect"] as Rect2).get_center().x,
+				(item["rect"] as Rect2).position.y + 16.0, str(item["label"]), 10,
+				Color(0.06, 0.06, 0.05) if on else UiChrome.C_SOFT, fonts["bold"])
 
 func _draw_head(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
 	var size := 9

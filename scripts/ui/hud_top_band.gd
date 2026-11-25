@@ -102,7 +102,7 @@ func meta(p: HudPaint, c: CanvasItem, engine, touch: bool, mouse: Vector2, f_bol
 	var city := str(home.get("city", "")).to_upper()
 	UiChrome.wordmark(c, Vector2(x + 14, y + 16), 13, f_bold)
 	p.text(c, Vector2(x + 14, y + 33), "%s  ·  %s" % [venue, city], 13, UiChrome.C_TEXT, f_bold)
-	p.text(c, Vector2(x + 14, y + 47), "PREMIER LEAGUE  ·  ATT. %s" % thousands(int(home.get("capacity", 0))), 9, UiChrome.C_DIM, f_med)
+	p.text(c, Vector2(x + 14, y + 47), "%s  ·  ATT. %s" % [str(home.get("competition", "PREMIER LEAGUE")), thousands(int(home.get("capacity", 0)))], 9, UiChrome.C_DIM, f_med)
 	p.text(c, Vector2(x + 14, y + 60), "REFEREE", 9, UiChrome.C_DIM, f_bold)
 	p.text(c, Vector2(x + 70, y + 60), engine.referee_name, 10, UiChrome.C_TEXT, f_bold)
 	var btn := Rect2(x + 12, y + 68, 262, 20)

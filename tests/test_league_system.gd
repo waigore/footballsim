@@ -102,7 +102,7 @@ func test_the_hub_opens_the_system_sheet_and_back_returns() -> void:
 	for item in screen().buttons:
 		if str(item["kind"]) == "row":
 			rows.append(str(item["id"]))
-	assert_eq(rows, ["sys:quick", "sys:save", "sys:load", "sys:menu", "sys:quit"],
+	assert_eq(rows, ["sys:quick", "sys:save", "sys:load", "sys:menu", "sys:quit", "sys:advance"],
 		"the System sheet is missing an action")
 	press_id("back")
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "BACK did not return to the hub")
@@ -141,7 +141,7 @@ func test_save_as_takes_a_typed_name_and_writes_a_copy() -> void:
 	assert_true(str(screen().sys["status"]).begins_with("SAVED AS"),
 		"SAVE AS gave no acknowledgement")
 	var slugs: Array = []
-	for entry in LeagueSave.list():
+	for entry in LeagueSaveCatalog.list():
 		slugs.append(str(entry["slug"]))
 	assert_true(slugs.has("named-origin-copy"), "the copy is not in the load list")
 	assert_eq(season.save.slug, "named-origin", "SAVE AS moved play onto the copy")
@@ -155,7 +155,7 @@ func test_save_as_writes_the_default_name_without_a_keyboard() -> void:
 	press_id("sys:commit")
 	assert_eq(screen().mode, LeagueScreen.MODE_SYSTEM, "SAVE AS left the sheet")
 	var slugs: Array = []
-	for entry in LeagueSave.list():
+	for entry in LeagueSaveCatalog.list():
 		slugs.append(str(entry["slug"]))
 	assert_true(slugs.has("no-keyboard-copy"), "the default name did not write a copy")
 	assert_eq(screen().season.save.slug, "no-keyboard", "the season followed its copy")

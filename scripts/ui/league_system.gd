@@ -46,6 +46,13 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": str(action["id"]), "kind": "row", "label": str(action["label"]),
 			"hint": str(action["hint"]), "rect": Rect2(x, y, w, ROW_H)})
 		y += ROW_H + ROW_GAP
+	# The shared clock policy is editable mid-season: the next Continue reads it.
+	var mode := str(view.get("advance_mode", "fixture_days"))
+	items.append({"id": "sys:advance", "kind": "row",
+		"label": "ADVANCE: %s" % ("FIXTURE DAYS" if mode == "fixture_days" else "EVERY DAY"),
+		"hint": "tap to switch to %s" % ("every day" if mode == "fixture_days" else "fixture days"),
+		"rect": Rect2(x, y, w, ROW_H)})
+	y += ROW_H + ROW_GAP
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
 		"rect": LeagueExtra.back_rect()})
 	return items

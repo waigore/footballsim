@@ -61,21 +61,30 @@ static func player_line(line: Dictionary, season_open: bool) -> Dictionary:
 		],
 	}
 
-## The league page's in-sim block: the season's scorer chart, or the
+## A competition hub's in-sim block: that league's scorer chart, or the
 ## single-match one. Absent (not an empty table) until someone has scored.
-static func league_blocks() -> Array:
+static func competition_blocks(competition_id: String = "") -> Array:
 	var top: Array = []
-	for row in repo().sim_leaders(5):
+	for row in repo().sim_leaders(5, competition_id):
 		top.append({
 			"cells": [str(row["name"]), str(row["abbr"]), str(int(row["apps"])), str(int(row["goals"]))],
 			"target": {"page": WikiModel.PLAYER, "id": str(row["player_id"])},
 		})
 	if top.is_empty():
 		return []
+	var label := "FOOTBALLSIM  ·  IN-SIM SCORERS"
+	if competition_id == "":
+		return [{"k": "section", "text": label},
+			{"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"], "widths": [0.36, 0.22, 0.20, 0.22], "text_cols": [0, 1], "rows": top}]
+	var comp := repo().competition(competition_id)
 	return [
-		{"k": "section", "text": "FOOTBALLSIM  ·  IN-SIM SCORERS"},
+		{"k": "section", "text": "%s  ·  %s" % [str(comp.get("short_name", "")), label]},
 		{"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"], "widths": [0.36, 0.22, 0.20, 0.22], "text_cols": [0, 1], "rows": top},
 	]
+
+## The index page's in-sim block (every active competition).
+static func league_blocks() -> Array:
+	return competition_blocks("")
 
 ## A club page's in-sim blocks. While a season is open the record is already in
 ## the page's season header, so only the club's scorer chart is appended here.

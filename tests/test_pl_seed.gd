@@ -42,8 +42,8 @@ func test_a_seed_version_bump_flushes_the_cache() -> void:
 	assert_true(FileAccess.file_exists(path), "the current cache copy is missing")
 
 func test_repository_serves_the_engine_shape() -> void:
-	var ids := TeamData.team_ids()
-	assert_eq(ids.size(), 20, "the league should ship twenty clubs")
+	var ids := TeamData.team_ids("PL")
+	assert_eq(ids.size(), 20, "the Premier League should ship twenty clubs")
 	for id in ids:
 		var team: Dictionary = TeamData.get_team(id)
 		assert_eq(team["starters"].size(), 11, "%s does not ship an XI" % id)
@@ -52,10 +52,24 @@ func test_repository_serves_the_engine_shape() -> void:
 		assert_has(team["style"], "possession", "%s has no style profile" % id)
 		assert_true(TeamData.FORMATIONS.has(str(team["formation"])), "%s prefers an unknown formation" % id)
 
+## The seed carries more than one competition, and a La Liga club's ids never
+## collide with an English one's.
+func test_the_seed_ships_two_competitions() -> void:
+	var comps := PLRepository.shared().active_competition_ids()
+	assert_true(comps.has("PL"), "the seed has no Premier League")
+	assert_true(comps.has("LL"), "the seed has no La Liga")
+	var ll := TeamData.team_ids("LL")
+	assert_eq(ll.size(), 20, "La Liga should ship twenty clubs")
+	var all_ids := TeamData.team_ids()
+	assert_eq(all_ids.size(), 40, "the seed should ship forty clubs")
+	for id in ll:
+		assert_true(str(id).begins_with("LL-"), "%s does not carry its competition namespace" % id)
+		assert_false(all_ids.has(str(id).trim_prefix("LL-")), "%s collides across competitions" % id)
+
 ## The snapshot is one date in a season, not the season's end: every club has
 ## played the same number of games and the table is ordered by points.
 func test_league_table_is_the_snapshot_reading() -> void:
-	var rows := PLRepository.shared().table()
+	var rows := PLRepository.shared().table("PL")
 	assert_eq(rows.size(), 20, "the table is short")
 	var played := -1
 	var points: Array = []
@@ -74,7 +88,7 @@ func test_league_table_is_the_snapshot_reading() -> void:
 ## The shipped calendar is the whole 2026-27 season; results lag the fixture
 ## list because the snapshot is taken mid-season.
 func test_fixtures_cover_the_season() -> void:
-	var all := PLDatabase.rows("SELECT * FROM fixture;")
+	var all := PLDatabase.rows("SELECT * FROM fixture WHERE competition_id = 'PL';")
 	assert_eq(all.size(), 380, "a twenty-club double round robin is 380 fixtures")
 	var per_club := {}
 	var played_per_club := {}
@@ -103,7 +117,7 @@ func test_fixtures_cover_the_season() -> void:
 			"%s has a different number of results than the rest of the league" % id)
 		played += int(played_per_club[id])
 	played = played / 2
-	assert_eq(played, PLRepository.shared().fixtures("", 500).size(),
+	assert_eq(played, PLRepository.shared().fixtures("", 500, "PL").size(),
 		"the results list does not match the played fixtures")
 	assert_lt(played, 380, "the snapshot claims a finished season")
 	assert_eq(played % 10, 0, "results do not come in whole gameweeks")
@@ -117,7 +131,7 @@ func test_player_dossier_carries_snapshot_and_career() -> void:
 	assert_gte(int(p["age"]), 18, "no identity line from the snapshot")
 
 func test_leaders_are_ordered() -> void:
-	var leaders := PLRepository.shared().leaders(6)
+	var leaders := PLRepository.shared().leaders(6, "goals", "PL")
 	assert_eq(leaders.size(), 6, "the scorer chart is short")
 	for i in range(1, leaders.size()):
 		assert_gte(int(leaders[i - 1]["goals"]), int(leaders[i]["goals"]), "scorers are out of order")

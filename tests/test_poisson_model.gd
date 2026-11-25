@@ -14,8 +14,10 @@ func _model(seed: int = 1, h: String = HOME, a: String = AWAY, weather: String =
 # ----------------------------------------------------------- rating model ---
 
 func test_league_means_cover_every_club() -> void:
-	var means := PoissonModel.league_means()
-	assert_eq(int(means["clubs"]), TeamData.team_ids().size(), "league means did not cover every club")
+	var means := PoissonModel.league_means("PL")
+	assert_eq(int(means["clubs"]), TeamData.team_ids("PL").size(), "league means did not cover every club")
+	var ll := PoissonModel.league_means("LL")
+	assert_eq(int(ll["clubs"]), TeamData.team_ids("LL").size(), "La Liga has no own rating mean")
 	assert_between(float(means["attack"]), 60.0, 95.0, "attack mean outside the rating scale")
 	assert_between(float(means["defence"]), 60.0, 95.0, "defence mean outside the rating scale")
 

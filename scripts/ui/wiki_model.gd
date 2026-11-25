@@ -7,6 +7,7 @@ extends RefCounted
 ## font, which is what keeps the dashboards testable without a screen.
 
 const LEAGUE := "league"
+const COMPETITION := "competition"
 const TEAM := "team"
 const PLAYER := "player"
 
@@ -23,6 +24,8 @@ static func repo() -> PLRepository:
 static func has_page(page: String, id: String) -> bool:
 	if page == LEAGUE:
 		return true
+	if page == COMPETITION:
+		return not repo().competition(id).is_empty()
 	if page == TEAM:
 		return not repo().club(id).is_empty()
 	if page == PLAYER:
@@ -35,112 +38,35 @@ static func page(page: String, id: String) -> Dictionary:
 		return team_page(id)
 	if page == PLAYER:
 		return player_page(id)
-	return league_page()
+	if page == COMPETITION:
+		return competition_page(id)
+	return leagues_index()
 
 static func label(page: String, id: String) -> String:
 	if page == TEAM:
 		return str(repo().club(id).get("abbr", id))
 	if page == PLAYER:
 		return str(repo().player(id).get("name", id))
-	return "LEAGUE"
+	if page == COMPETITION:
+		return str(repo().competition(id).get("short_name", id))
+	return "LEAGUES"
 
 # ------------------------------------------------------------------- league --
 
-static func league_page() -> Dictionary:
-	var meta := repo().meta()
-	var season := str(meta.get("season_label", ""))
-	var out := {
-		"page": LEAGUE,
-		"title": str(meta.get("league_name", "Premier League")).to_upper(),
-		"eyebrow": "PREMIER LEAGUE  ·  %s" % season,
-		# The snapshot date is drawn as its own date label (#99), so the sheet can
-		# give it the weekday hint without hunting for it in the subtitle.
-		"subtitle": "20 CLUBS  ·  SNAPSHOT ",
-		"snapshot": str(meta.get("snapshot_date", "")),
-		"accent": Color("#f7c948"),
-		"blocks": [],
-	}
-	out["blocks"].append({"k": "section", "text": "LEAGUE TABLE"})
-	var rows: Array = []
-	for row in repo().table():
-		rows.append({
-			"cells": [
-				str(int(row["position"])), str(row["club_abbr"]),
-				str(int(row["played"])), str(int(row["won"])), str(int(row["drawn"])),
-				str(int(row["lost"])), str(int(row["gf"])), str(int(row["ga"])),
-				str(int(row["points"])),
-			],
-			"target": {"page": TEAM, "id": str(row["club_id"])},
-			"accent": str(row.get("club_color", "")),
-			"club_cell": 1,
-		})
-	out["blocks"].append({
-		"k": "table",
-		"cols": ["#", "CLUB", "P", "W", "D", "L", "GF", "GA", "PTS"],
-		"widths": [0.05, 0.27, 0.09, 0.09, 0.09, 0.09, 0.10, 0.10, 0.12],
-		"text_cols": [1],
-		"rows": rows,
-	})
-	out["blocks"].append({"k": "section", "text": "TOP SCORERS  ·  SNAPSHOT"})
-	out["blocks"].append({
-		"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"],
-		"widths": [0.36, 0.22, 0.20, 0.22], "text_cols": [0, 1],
-		"rows": _leader_rows(6, "goals"),
-	})
-	out["blocks"].append({"k": "section", "text": "CLUB INDEX"})
-	out["blocks"].append({"k": "chips", "items": _club_chips()})
-	var results: Array = []
-	for fx in repo().fixtures("", 10):
-		results.append({
-			"cells": [
-				FixtureCalendar.day_label(str(fx["kickoff"])), str(fx["home_abbr"]),
-				"%d – %d" % [int(fx["home_goals"]), int(fx["away_goals"])], str(fx["away_abbr"]),
-			],
-			"target": {"page": TEAM, "id": str(fx["home_club_id"])},
-			"dates": {0: str(fx["kickoff"])}, "club_cell": 1,
-		})
-	out["blocks"].append({"k": "section", "text": "LATEST RESULTS  ·  %s" % WikiLedger.ledger_label()})
-	if results.is_empty():
-		out["blocks"].append({"k": "note", "text": "NO RESULTS YET  ·  PLAY A GAMEWEEK TO START THE RECORD"})
-	else:
-		out["blocks"].append({
-			"k": "table", "cols": ["DATE", "HOME", "", "AWAY"],
-			"widths": [0.16, 0.28, 0.22, 0.34], "text_cols": [0, 1, 3],
-			"rows": results,
-		})
-	out["blocks"].append_array(WikiLedger.league_blocks())
-	out["blocks"].append({"k": "note", "text": "SELECTED BY CLUB OR PLAYER  ·  ESC OR BACK RETURNS  ·  REAL DATA: %s" % str(meta.get("source", ""))})
-	return out
+## The index and a competition hub live in `WikiCompetitions`: the catalogue
+## page here stays a dispatcher, so one page kind never owns another's blocks.
+static func leagues_index() -> Dictionary:
+	return WikiCompetitions.index()
 
-static func _leader_rows(limit: int, stat: String) -> Array:
-	var rows: Array = []
-	for row in repo().leaders(limit, stat):
-		rows.append({
-			"cells": [
-				str(row["name"]), str(row["abbr"]), str(int(row["matches"])),
-				str(int(row["goals"] if stat == "goals" else row["assists"])),
-			],
-			"target": {"page": PLAYER, "id": str(row["player_id"])},
-		})
-	return rows
-
-static func _club_chips() -> Array:
-	var items: Array = []
-	for id in repo().club_ids():
-		var club := repo().club(id)
-		items.append({
-			"text": str(club.get("abbr", id)),
-			"target": {"page": TEAM, "id": str(id)},
-			"accent": _hex(club.get("color", Color.WHITE)),
-		})
-	return items
+static func competition_page(competition_id: String) -> Dictionary:
+	return WikiCompetitions.hub(competition_id)
 
 # --------------------------------------------------------------------- team --
 
 static func team_page(club_id: String) -> Dictionary:
 	var club := repo().club(club_id)
 	if club.is_empty():
-		return league_page()
+		return leagues_index()
 	var meta := repo().meta()
 	var table: Dictionary = club.get("table", {})
 	var out := {
@@ -152,10 +78,12 @@ static func team_page(club_id: String) -> Dictionary:
 		"accent": club["color"],
 		"blocks": [],
 	}
+	out["blocks"].append({"k": "chips", "items": WikiCompetitions.competition_chips_for(str(club.get("competition_id", "")))})
 	out["blocks"].append({"k": "section", "text": WikiLedger.record_label(str(meta["season_label"]))})
 	out["blocks"].append({
 		"k": "kv",
 		"items": [
+			["COMPETITION", str(club.get("competition", "")), false],
 			["POSITION", _or_dash(table, "position"), true],
 			["POINTS", _or_dash(table, "points"), true],
 			["PLAYED", _or_dash(table, "played"), false],
@@ -258,7 +186,7 @@ static func _or_dash(table: Dictionary, key: String) -> String:
 static func player_page(player_id: String) -> Dictionary:
 	var p := repo().player(player_id)
 	if p.is_empty():
-		return league_page()
+		return leagues_index()
 	var club := repo().club(str(p["club_id"]))
 	var season: Dictionary = p.get("season", {})
 	var career: Dictionary = p.get("career", {})
@@ -326,11 +254,18 @@ static func player_page(player_id: String) -> Dictionary:
 	var season_open := repo().season_active()
 	out["blocks"].append({"k": "section", "text": WikiLedger.heading("IN FOOTBALLSIM")})
 	out["blocks"].append(WikiLedger.player_line(sim, season_open))
-	out["blocks"].append({"k": "chips", "items": [{
-		"text": str(club.get("name", "")).to_upper(),
-		"target": {"page": TEAM, "id": str(p["club_id"])},
-		"accent": _hex(club.get("color", Color.WHITE)),
-	}]})
+	out["blocks"].append({"k": "chips", "items": [
+		{
+			"text": str(club.get("name", "")).to_upper(),
+			"target": {"page": TEAM, "id": str(p["club_id"])},
+			"accent": _hex(club.get("color", Color.WHITE)),
+		},
+		{
+			"text": str(club.get("competition", "")),
+			"target": {"page": COMPETITION, "id": str(club.get("competition_id", ""))},
+			"accent": _hex(Color("#f7c948")),
+		},
+	]})
 	return out
 
 # ---------------------------------------------------------------- shared bit --

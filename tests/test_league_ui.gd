@@ -629,8 +629,8 @@ func test_menu_keys_open_both_league_doors() -> void:
 
 func test_the_host_opens_a_save_by_slug_and_syncs() -> void:
 	game.menus.open_menu()
-	assert_gte(LeagueSave.list().size(), 1, "there is no save to open")
-	var slug := str(LeagueSave.list()[0]["slug"])
+	assert_gte(LeagueSaveCatalog.list().size(), 1, "there is no save to open")
+	var slug := str(LeagueSaveCatalog.list()[0]["slug"])
 	game.menus.league.open_save(slug)
 	assert_true(game.menus.league_active(), "the host did not open the save")
 	game.menus.league.sync(Transform2D.IDENTITY, 1.0, false)
@@ -668,23 +668,26 @@ func test_table_rows_and_the_podium_door() -> void:
 	screen().open_season(LeagueSeason.active)
 	_leave_season()
 
-func test_the_hub_table_row_opens_the_club_page_and_back_returns() -> void:
+## #189: the hub keeps no side table, so a club is reached from the TABLES
+## sheet. A row still opens the club page and BACK returns to the table.
+func test_the_table_row_opens_the_club_page_and_back_returns() -> void:
 	_open_hub()
+	press_id("table")
 	var club_id := ""
 	for item in screen().buttons:
 		if str(item["kind"]) == "table_row":
 			club_id = str(item["id"])
 			break
-	assert_true(club_id != "", "the wide hub laid out no club rows")
+	assert_true(club_id != "", "the table laid out no club rows")
 	press_id(club_id)
-	assert_true(game.wiki_host.is_open(), "a hub club row did not open the team page")
+	assert_true(game.wiki_host.is_open(), "a table club row did not open the team page")
 	var landed: Dictionary = game.wiki_host.screen.current()
-	assert_eq(str(landed["page"]), WikiModel.TEAM, "the hub row opened another page")
-	assert_eq(str(landed["id"]), club_id.substr(5), "the hub row opened another club")
+	assert_eq(str(landed["page"]), WikiModel.TEAM, "the table row opened another page")
+	assert_eq(str(landed["id"]), club_id.substr(5), "the table row opened another club")
 	assert_false(game.menus.league_active(), "the season stayed painted under the page")
 	game.wiki_host.screen.click("back")
 	assert_true(game.menus.league_active(), "Back from the page did not give the season back")
-	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Back from the page lost the hub")
+	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "Back from the page lost the table")
 	assert_true(game.paused, "the season resumed the match under it")
 	_leave_season()
 	assert_false(game.menus.league_active(), "MENU did not leave the season")
@@ -988,7 +991,7 @@ func _open_hub() -> void:
 ## clock like a player would until the hub lists a matchday with fixtures. A run
 ## whose earlier cases deleted every save starts a fresh season instead.
 func _matchday_hub() -> Array:
-	if LeagueSave.list().is_empty():
+	if LeagueSaveCatalog.list().is_empty():
 		_open_scroll_hub()
 	else:
 		_open_hub()

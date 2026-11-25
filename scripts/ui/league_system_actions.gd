@@ -32,6 +32,7 @@ static func view(screen) -> Dictionary:
 		"status": str(screen.sys["status"]), "error": str(screen.sys["error"]),
 		"naming": bool(screen.sys["naming"]), "save_name": str(screen.sys["name"]),
 		"name": str(state.get("name", "")), "date": str(state.get("date", "")),
+		"advance_mode": str(state.get("advance_mode", "fixture_days")),
 	}
 
 static func act(screen, id: String) -> void:
@@ -56,8 +57,10 @@ static func act(screen, id: String) -> void:
 			screen.load_from = "system"
 			screen.push_page()
 			screen.mode = LeagueScreen.MODE_LOAD
-			screen.saves = LeagueSave.list()
+			screen.saves = LeagueSaveCatalog.list()
 			screen.refresh()
+		"sys:advance":
+			toggle_advance(screen)
 		"sys:menu":
 			leave(screen)
 		"sys:quit":
@@ -114,6 +117,20 @@ static func save_as(screen) -> void:
 	screen.sys["naming"] = false
 	screen.sys["error"] = ""
 	screen.sys["status"] = "SAVED AS %s" % typed.to_upper()
+	screen.refresh()
+
+## Switch the shared clock policy mid-season. Every active league's rules row
+## carries the change, so the next Continue reads the new step.
+static func toggle_advance(screen) -> void:
+	if screen.season == null:
+		refuse(screen, "No season is open.")
+		return
+	var next := "every_day" if screen.season.save.advance_mode() == "fixture_days" else "fixture_days"
+	if not screen.season.set_advance_mode(next):
+		refuse(screen, "That change could not be saved.")
+		return
+	screen.sys["error"] = ""
+	screen.sys["status"] = "ADVANCE: %s" % ("EVERY DAY" if next == "every_day" else "FIXTURE DAYS")
 	screen.refresh()
 
 static func refuse(screen, reason: String) -> void:

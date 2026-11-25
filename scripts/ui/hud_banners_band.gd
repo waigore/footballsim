@@ -135,7 +135,7 @@ func intro(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) 
 	var away: Dictionary = engine.teams[1]["data"]
 	c.draw_rect(Rect2(x + 1, y + 1, 6, h - 2), _alpha(home["color"], a))
 	c.draw_rect(Rect2(x + w - 7, y + 1, 6, h - 2), _alpha(away["color"], a))
-	p.text(c, Vector2(x + 22, y + 26), "FOOTBALL SIM  ·  PREMIER LEAGUE  ·  %s  ·  %s" % [str(home.get("stadium", "")).to_upper(), str(home.get("city", "")).to_upper()], 11, _alpha(UiChrome.C_GOLD, a), f_bold)
+	p.text(c, Vector2(x + 22, y + 26), "FOOTBALL SIM  ·  %s  ·  %s  ·  %s" % [str(home.get("competition", "PREMIER LEAGUE")), str(home.get("stadium", "")).to_upper(), str(home.get("city", "")).to_upper()], 11, _alpha(UiChrome.C_GOLD, a), f_bold)
 	p.text(c, Vector2(x + 22, y + 56), str(home["name"]).to_upper(), 26, _alpha(UiChrome.C_TEXT, a), f_bold)
 	p.text_c(c, x + w * 0.5, y + 54, "v", 16, _alpha(UiChrome.C_DIM, a), f_med)
 	p.text_r(c, x + w - 22, y + 56, str(away["name"]).to_upper(), 26, _alpha(UiChrome.C_TEXT, a), f_bold)

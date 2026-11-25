@@ -92,7 +92,39 @@ static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
 func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 	items.append(back_item())
-	var y := HEADER + 14.0
+	var filters: Dictionary = view.get("filters", {})
+	var y := HEADER + 10.0
+	# Competition filter: ALL, then every active league.
+	var chips: Array = [{"id": "", "short": "ALL"}]
+	for comp in view.get("competitions", []):
+		chips.append({"id": str(comp["id"]), "short": str(comp.get("short", comp["id"]))})
+	var gap := 8.0
+	var cw: float = minf(150.0, (vp.x - 48.0 - gap * float(chips.size() - 1)) / float(maxf(chips.size(), 1)))
+	var x := 24.0
+	for chip in chips:
+		items.append({"id": "statsleague:" + str(chip["id"]), "kind": "choice",
+			"label": str(chip["short"]), "selected": str(filters.get("league", "")) == str(chip["id"]),
+			"rect": Rect2(x, y, cw, 30.0)})
+		x += cw + gap
+	y += 40.0
+	# Month filter: the report list narrows to one month, or reads them all.
+	items.append({"id": "statsmonth:-1", "kind": "chip", "label": "<",
+		"rect": Rect2(24.0, y, 34.0, 28.0)})
+	items.append({"id": "", "kind": "caption", "label": _month_label(str(filters.get("month", ""))),
+		"rect": Rect2(64.0, y, 130.0, 28.0)})
+	items.append({"id": "statsmonth:1", "kind": "chip", "label": ">",
+		"rect": Rect2(200.0, y, 34.0, 28.0)})
+	# Leader stat door: goals or assists, default all actives.
+	items.append({"id": "statsstat:goals", "kind": "chip", "label": "GOALS",
+		"selected": str(filters.get("stat", "goals")) == "goals",
+		"rect": Rect2(250.0, y, 72.0, 28.0)})
+	items.append({"id": "statsstat:assists", "kind": "chip", "label": "ASSISTS",
+		"selected": str(filters.get("stat", "goals")) == "assists",
+		"rect": Rect2(328.0, y, 78.0, 28.0)})
+	y += 38.0
+	items.append({"id": "statsteam", "kind": "field", "value": str(filters.get("team", "")),
+		"rect": Rect2(24.0, y, vp.x - 48.0, FIELD_H)})
+	y += FIELD_H + 12.0
 	items.append({"id": "stats:reports", "kind": "door", "label": "MATCHDAY REPORTS", "primary": true,
 		"rect": Rect2(24.0, y, minf(300.0, vp.x - 48.0), 44.0)})
 	if bool(view.get("complete", false)):
@@ -104,13 +136,28 @@ func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 	y += 26.0
 	var reports: Array = view.get("reports", [])
 	if reports.is_empty():
-		items.append({"id": "", "kind": "note", "label": "No matchdays played yet.",
+		items.append({"id": "", "kind": "note", "label": "No matchdays match these filters.",
 			"rect": Rect2(24.0, y, vp.x - 48.0, 24.0)})
 	for i in range(reports.size()):
 		var row: Dictionary = reports[i]
 		items.append({"id": "statsday:" + str(row["date"]), "kind": "day", "row": row,
 			"rect": Rect2(24.0, y + float(i) * (ROW_H + GAP), vp.x - 48.0, ROW_H)})
+	y += float(reports.size()) * (ROW_H + GAP) + 10.0
+	items.append({"id": "", "kind": "caption",
+		"label": "LEADERS  ·  %s" % str(filters.get("stat", "goals")).to_upper(),
+		"rect": Rect2(24.0, y, vp.x - 48.0, 20.0)})
+	y += 24.0
+	var leaders: Array = view.get("leaders", [])
+	for i in range(leaders.size()):
+		items.append({"id": "", "kind": "leader", "row": leaders[i], "rank": i + 1,
+			"rect": Rect2(24.0, y + float(i) * 24.0, vp.x - 48.0, 23.0)})
 	return items
+
+static func _month_label(month: String) -> String:
+	var parts := month.split("-")
+	if parts.size() < 2:
+		return "ALL MONTHS"
+	return "%s %s" % [LeagueBook.MONTHS[int(parts[1]) - 1], parts[0]]
 
 # gd-tools: no cover start
 
@@ -128,6 +175,19 @@ func draw_stats_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 		var kind := str(item["kind"])
 		if kind == "door":
 			sheet.draw_button(c, rect, str(item["label"]), bold, bool(item["primary"]))
+		elif kind == "choice" or kind == "chip":
+			var on := bool(item.get("selected", false))
+			UiChrome.panel(c, cache, rect,
+				UiChrome.C_GOLD.darkened(0.1) if on else UiChrome.C_PANEL, 6,
+				UiChrome.C_GOLD if on else UiChrome.C_BORDER, 1)
+			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 19.0,
+				str(item["label"]), 10, Color(0.06, 0.06, 0.05) if on else UiChrome.C_SOFT, bold)
+		elif kind == "field":
+			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_GOLD, 1)
+			var typed := str(item["value"])
+			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 25.0),
+				typed if typed != "" else "FILTER TEAMS (TYPE A CLUB)", 12,
+				UiChrome.C_TEXT if typed != "" else UiChrome.C_DIM, bold)
 		elif kind == "caption":
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), str(item["label"]), 10,
 				UiChrome.C_DIM, bold)
@@ -141,8 +201,34 @@ func draw_stats_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 				"MATCHDAY %d" % int(row.get("matchday", 1)), 12, UiChrome.C_TEXT, bold)
 			UiChrome.text(c, Vector2(rect.position.x + 132.0, rect.position.y + 16.0),
 				str(row.get("label", row.get("date", ""))), 10, UiChrome.C_DIM, med)
+			var leagues: Array = row.get("leagues", [])
+			if not leagues.is_empty():
+				UiChrome.text(c, Vector2(rect.position.x + 250.0, rect.position.y + 16.0),
+					_league_marks(leagues), 9, UiChrome.C_GOLD, bold)
 			UiChrome.text_r(c, rect.end.x - 10.0, rect.position.y + 16.0,
 				"%d RESULTS" % int(row.get("played", 0)), 9, UiChrome.C_GOLD, bold)
+		elif kind == "leader":
+			var leader: Dictionary = item["row"]
+			var rank := int(item["rank"])
+			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 15.0), "%d" % rank, 10,
+				UiChrome.C_DIM, med)
+			UiChrome.text(c, Vector2(rect.position.x + 24.0, rect.position.y + 15.0),
+				str(leader.get("name", "")), 11, UiChrome.C_TEXT, bold)
+			UiChrome.text(c, Vector2(rect.position.x + 260.0, rect.position.y + 15.0),
+				"%s  ·  %s" % [str(leader.get("abbr", "")), _comp_short(str(leader.get("competition_id", "")))],
+				9, UiChrome.C_DIM, med)
+			UiChrome.text_r(c, rect.end.x - 10.0, rect.position.y + 15.0,
+				str(int(leader.get("stat_value", leader.get("goals", 0)))), 11, UiChrome.C_GOLD, bold)
+
+static func _league_marks(leagues: Array) -> String:
+	var out: Array = []
+	for cid in leagues:
+		out.append(_comp_short(str(cid)))
+	return "  ·  ".join(PackedStringArray(out))
+
+static func _comp_short(competition_id: String) -> String:
+	var row := PLRepository.shared().competition(competition_id)
+	return str(row.get("short_name", competition_id))
 
 # gd-tools: no cover end
 

@@ -35,19 +35,19 @@ func after_all() -> void:
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
 
-func test_the_league_page_results_are_the_season_s_own_day() -> void:
-	var page := WikiModel.page(WikiModel.LEAGUE, "")
+func test_the_competition_page_results_are_the_season_s_own_day() -> void:
+	var page := WikiModel.page(WikiModel.COMPETITION, "PL")
 	assert_true(_flatten(page).contains("LATEST RESULTS  ·  SEASON"), "the results block is not labelled for the season")
 	var rows := _rows_below(page, "LATEST RESULTS  ·  SEASON")
 	assert_eq(rows.size(), 10, "the day's ten results are not the whole table")
 	var want := FixtureCalendar.day_label(str(first["kickoff"]))
 	for row in rows:
 		assert_eq(str(row["cells"][0]), want, "a result row is not from the season's own day")
-	assert_true(_flatten(page).contains("TOP SCORERS  ·  SNAPSHOT"), "the real-world scorer chart lost its label")
+	assert_true(_flatten(page).contains("TOP SCORERS  ·  SEASON"), "the scorer chart lost its ledger label")
 
-func test_the_league_page_scorer_chart_is_the_season_s() -> void:
-	var page := WikiModel.page(WikiModel.LEAGUE, "")
-	var rows := _rows_below(page, "FOOTBALLSIM  ·  IN-SIM SCORERS")
+func test_the_competition_page_scorer_chart_is_the_season_s() -> void:
+	var page := WikiModel.page(WikiModel.COMPETITION, "PL")
+	var rows := _rows_below(page, "PREMIER LEAGUE  ·  FOOTBALLSIM  ·  IN-SIM SCORERS")
 	assert_gte(rows.size(), 1, "the season scored no goals at all")
 	assert_eq(str(rows[0]["cells"][0]), str(scorers[0]["name"]), "the chart does not lead with the season's top scorer")
 	assert_eq(str(rows[0]["cells"][1]), str(scorers[0]["abbr"]), "the chart names the wrong club")
@@ -73,7 +73,7 @@ func test_the_player_page_reads_the_season_line() -> void:
 	var page := WikiModel.page(WikiModel.PLAYER, scorer)
 	var text := _flatten(page)
 	assert_true(text.contains("IN FOOTBALLSIM  ·  SEASON"), "the ledger block is not labelled for the season")
-	assert_true(text.contains("SEASON  ·  %s SNAPSHOT" % PLRepository.shared().season_label()), "the real-world season block lost its label")
+	assert_true(text.contains("SEASON  ·  %s SNAPSHOT" % PLRepository.shared().meta().get("season_label", "")), "the real-world season block lost its label")
 	assert_eq(_kv_value(page, "APPS", true), "1", "the season line lost the appearance")
 	assert_eq(_kv_value(page, "GOALS", true), str(int(scorers[0]["goals"])), "the season line lost his goals")
 	assert_ne(_kv_value(page, "CARDS", true), "", "the season line has no cards")
@@ -89,9 +89,9 @@ func test_a_player_who_has_not_played_says_so() -> void:
 func test_closing_the_season_returns_the_snapshot_pages() -> void:
 	season.close()
 	PLRepository.shared().invalidate()
-	var text := _flatten(WikiModel.page(WikiModel.LEAGUE, ""))
-	assert_true(text.contains("LATEST RESULTS  ·  SNAPSHOT"), "the league page did not fall back to the snapshot")
-	assert_false(text.contains("LATEST RESULTS  ·  SEASON"), "the league page kept the closed season's ledger")
+	var text := _flatten(WikiModel.page(WikiModel.COMPETITION, "PL"))
+	assert_true(text.contains("LATEST RESULTS  ·  SNAPSHOT"), "the competition page did not fall back to the snapshot")
+	assert_false(text.contains("LATEST RESULTS  ·  SEASON"), "the competition page kept the closed season's ledger")
 	assert_eq(_kv_value(WikiModel.page(WikiModel.TEAM, "MUN"), "PLAYED"), "11", "the club page did not fall back to the snapshot")
 	# Bind the season again so the shared fixture stays valid for any later read.
 	season = LeagueSeason.open(LeagueSave.current.slug if LeagueSave.current != null else season.save.slug)

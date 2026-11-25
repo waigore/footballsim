@@ -90,7 +90,7 @@ func test_a_league_briefing_reads_the_fixture_and_the_season() -> void:
 func test_a_single_match_briefing_says_kick_off_and_has_no_absences() -> void:
 	var view := PreMatchModel.build("MUN", "MCI", {}, null)
 	assert_eq(str(view["kick"]), "KICK OFF", "a single match does not say KICK OFF")
-	assert_eq(str(view["caption"]), "FRIENDLY · SINGLE MATCH", "a single match is not a friendly")
+	assert_eq(str(view["caption"]), "PREMIER LEAGUE · FRIENDLY", "a single match is not a friendly")
 	assert_eq((view["home_absences"] as Array).size(), 0, "a friendly has season absences")
 	assert_eq(str(view["date_label"]), "", "a friendly carries a league date")
 

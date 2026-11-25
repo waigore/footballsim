@@ -31,6 +31,8 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 		"matchday": int(fixture.get("matchday", 1)),
 		"home_position": home_pos,
 		"away_position": away_pos,
+		"competition": str(home.get("competition", "")),
+		"cross_league": str(home.get("competition", "")) != str(away.get("competition", "")),
 	}
 	var home_form := _form(season, home_id) if live else ""
 	var away_form := _form(season, away_id) if live else ""
@@ -52,7 +54,7 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 		"news": PreMatchCopy.news(seed, home, away, ctx),
 		"home_form": home_form, "away_form": away_form,
 		"home_position": home_pos, "away_position": away_pos,
-		"caption": _caption(fixture),
+		"caption": _caption(fixture, home, away),
 		"date_label": FixtureCalendar.day_label(date) if date != "" else "",
 		"time": str(fixture.get("kickoff_time", "")),
 		"kick": "CONTINUE" if live and not fixture.is_empty() else "KICK OFF",
@@ -60,10 +62,21 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 		"auto_seconds": 10.0,
 	}
 
-static func _caption(fixture: Dictionary) -> String:
-	if fixture.is_empty():
-		return "FRIENDLY · SINGLE MATCH"
-	return "PREMIER LEAGUE · MATCHDAY %d" % int(fixture.get("matchday", 1))
+## The competition caption: the fixture's own league and gameweek; a single
+## match names both leagues when the sides come from different ones.
+static func _caption(fixture: Dictionary, home: Dictionary, away: Dictionary) -> String:
+	if not fixture.is_empty():
+		var comp := PLRepository.shared().competition_name(str(fixture.get("competition_id", "")))
+		if comp == "":
+			comp = "PREMIER LEAGUE"
+		return "%s · MATCHDAY %d" % [comp, int(fixture.get("matchday", 1))]
+	var home_comp := str(home.get("competition", ""))
+	var away_comp := str(away.get("competition", ""))
+	if home_comp != "" and away_comp != "" and home_comp != away_comp:
+		return "FRIENDLY · %s v %s" % [home_comp, away_comp]
+	if home_comp != "":
+		return "%s · FRIENDLY" % home_comp
+	return "FRIENDLY · SINGLE MATCH"
 
 ## The armband goes to the best-rated starter: the snapshot carries no captain,
 ## so the eleven's own best player wears it (DR-20261125-13).

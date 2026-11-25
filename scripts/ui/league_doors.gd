@@ -70,6 +70,13 @@ static func _typed(screen, code: int) -> bool:
 			screen.interest_query = str(typed[1]).to_lower()
 			screen.refresh()
 			return true
+	# The STATS team filter is a typed field while that sheet is open.
+	if screen.mode == screen.MODE_STATS:
+		var typed_stats: Array = LeagueSheet.type_name(str(screen.stats_filter.get("team", "")), code)
+		if bool(typed_stats[0]):
+			screen.stats_filter["team"] = str(typed_stats[1])
+			screen.refresh()
+			return true
 	if screen.mode != screen.MODE_REPORT or code < KEY_1 or code > KEY_9:
 		return false
 	var want := code - KEY_1
@@ -85,13 +92,13 @@ static func _typed(screen, code: int) -> bool:
 static func press(screen, id: String) -> void:
 	if id == "":
 		return
-	# The delete confirmation's two doors answer before the sheet does. They carry
-	# no `delete:` prefix, so no save slug can ever be mistaken for an answer.
 	if id == "delete_yes":
 		screen.delete.answer(screen)
 		return
 	if id == "delete_no":
 		screen.delete.cancel(screen)
+		return
+	if LeagueStatsActions.press(screen, id):
 		return
 	if id.begins_with("match:"):
 		screen.show_report(id.substr(6))
@@ -108,6 +115,8 @@ static func press(screen, id: String) -> void:
 	elif id.begins_with("delete:"):
 		screen.delete.ask_from(screen.saves, id.substr(7))
 		screen.refresh()
+	elif id.begins_with("wleague:"):
+		toggle_wizard_league(screen, id.substr(8))
 	elif id.begins_with("mode:"):
 		screen.wizard["calendar_mode"] = id.substr(5)
 		screen.refresh()
@@ -132,7 +141,7 @@ static func press(screen, id: String) -> void:
 	elif id.begins_with("stats:"):
 		stats(screen, id)
 	elif id.begins_with("statsday:"):
-		open_day(screen, id.substr(9))
+		LeagueStatsActions.open_day(screen, id.substr(9))
 	elif id.begins_with("interest:add:"):
 		set_interest(screen, id.substr(13), true)
 	elif id.begins_with("interest:remove:"):
@@ -232,11 +241,14 @@ static func read_podium(screen) -> void:
 	go(screen, screen.MODE_PODIUM)
 	screen.refresh()
 
-## New season from the wizard: the name, the calendar and the clock the player
-## chose. A refusal stays on the wizard with its message.
+## New season from the wizard: the name, the calendar, the leagues and the clock
+## the player chose. A refusal stays on the wizard with its message.
 static func create(screen) -> void:
-	var created: LeagueSeason = LeagueSeason.create(str(screen.wizard["name"]), str(screen.wizard["calendar_mode"]),
-		str(screen.wizard["advance_mode"]), 0)
+	var comps: Array = screen.wizard.get("competitions", ["PL"])
+	if comps.is_empty():
+		comps = ["PL"]
+	var created: LeagueSeason = LeagueSeason.create(str(screen.wizard["name"]),
+		str(screen.wizard["calendar_mode"]), str(screen.wizard["advance_mode"]), 0, comps)
 	if created == null:
 		screen.wizard["error"] = "The season could not be created."
 		screen.refresh()
@@ -247,6 +259,21 @@ static func create(screen) -> void:
 	screen.season_opened.emit(created)
 	screen.mode = screen.MODE_HUB
 	screen.month = LeagueBook.state_month(screen.season, screen.month)
+	screen.refresh()
+
+## Toggle one league in the New League wizard. At least one league always stays
+## on: a save with no competition has nothing to play.
+static func toggle_wizard_league(screen, competition_id: String) -> void:
+	if competition_id == "":
+		return
+	var comps: Array = screen.wizard.get("competitions", ["PL"]).duplicate()
+	if comps.has(competition_id):
+		if comps.size() <= 1:
+			return
+		comps.erase(competition_id)
+	else:
+		comps.append(competition_id)
+	screen.wizard["competitions"] = comps
 	screen.refresh()
 
 ## Load replaces the season outright: the old save, its ledger and every cached
@@ -267,8 +294,8 @@ static func open_save(screen, slug: String) -> void:
 static func delete_save(screen, slug: String) -> void:
 	if screen.season != null and screen.season.save.slug == slug:
 		LeagueSystemActions.unload(screen)
-	LeagueSave.remove(slug)
-	screen.saves = LeagueSave.list()
+	LeagueSaveCatalog.remove(slug)
+	screen.saves = LeagueSaveCatalog.list()
 	screen.refresh()
 
 ## Continue: settle the auto-played day, or open the pending watch first (#100).
@@ -338,20 +365,6 @@ static func stats(screen, id: String) -> void:
 		go(screen, LeagueScreen.MODE_STATS)
 	elif id == "stats:podium":
 		go(screen, LeagueScreen.MODE_PODIUM)
-	screen.refresh()
-
-## A matchday opened from the Stats list: BACK returns there, not to the hub.
-static func open_day(screen, date: String) -> void:
-	if screen.season == null:
-		return
-	var rows: Array = []
-	for fx in screen.season.record.fixtures.on(date):
-		if str(fx["status"]) == "played":
-			rows.append(screen.season.report(str(fx["id"])))
-	go(screen, LeagueScreen.MODE_REPORT)
-	screen.roundup = rows
-	screen.report = {}
-	screen.report_back = LeagueScreen.MODE_STATS
 	screen.refresh()
 
 ## Teams of Interest from the list: add or remove a club in this save (#104).

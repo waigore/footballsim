@@ -265,7 +265,7 @@ func test_deleting_the_open_save_unloads_it_first() -> void:
 	assert_null(screen.season, "the deleted save stayed bound to the surface")
 	assert_false(screen.delete.is_open(), "the question outlived its answer")
 	var left: Array = []
-	for row in LeagueSave.list():
+	for row in LeagueSaveCatalog.list():
 		left.append(str(row["slug"]))
 	assert_false(left.has(slug), "the deleted save is still on disk")
 	# A save that is not the open one leaves the season alone.

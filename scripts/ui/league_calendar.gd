@@ -18,10 +18,17 @@ static func open(screen) -> void:
 		for fx in season.record.fixtures.all():
 			var date: String = str(fx["kickoff"])
 			if not screen.days_cache.has(date):
-				screen.days_cache[date] = {"n": 0, "played": 0}
-			screen.days_cache[date]["n"] = int(screen.days_cache[date]["n"]) + 1
+				screen.days_cache[date] = {"n": 0, "played": 0, "by_league": {}}
+			var info: Dictionary = screen.days_cache[date]
+			info["n"] = int(info["n"]) + 1
+			var cid := str(fx.get("competition_id", ""))
+			if not (info["by_league"] as Dictionary).has(cid):
+				info["by_league"][cid] = {"n": 0, "played": 0}
+			var mine: Dictionary = info["by_league"][cid]
+			mine["n"] = int(mine["n"]) + 1
 			if str(fx["status"]) == "played":
-				screen.days_cache[date]["played"] = int(screen.days_cache[date]["played"]) + 1
+				info["played"] = int(info["played"]) + 1
+				mine["played"] = int(mine["played"]) + 1
 		screen.month = LeagueBook.state_month(season, screen.month)
 	var chosen: String = str(screen.month) + "-01"
 	if season != null:

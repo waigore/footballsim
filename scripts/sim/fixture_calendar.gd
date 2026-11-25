@@ -20,29 +20,33 @@ const KICKOFF_TIMES := ["12:30", "15:00", "17:30"]
 const SECONDS_PER_DAY := 86400
 
 ## Rows ready for `league_fixture`: id, matchday, kickoff, kickoff_time, home,
-## away. Results stay empty — a save starts unplayed in either mode.
-static func build(mode: String, rules: Dictionary, seed: int) -> Array:
+## away. Results stay empty — a save starts unplayed in either mode. A
+## competition id scopes the calendar to that league's clubs and fixtures; the
+## ids it writes carry the league so two leagues in one save never collide.
+static func build(mode: String, rules: Dictionary, seed: int, competition_id: String = "PL") -> Array:
 	var rows: Array = []
 	if mode == "real":
-		rows = real_rows()
+		rows = real_rows(competition_id)
 	if rows.is_empty():
-		rows = generate(TeamData.team_ids(), rules, seed)
+		var ids: Array = TeamData.team_ids(competition_id)
+		rows = generate(ids, rules, seed, competition_id)
 	return rows
 
 # ------------------------------------------------------------------ real ---
 
-## Pairings and dates from the shipped snapshot. The snapshot is a reading of a
-## live season, so some fixtures already carry results; a new save starts
-## unplayed, so the results are deliberately left behind and the calendar and
-## its dates are what a real-mode save inherits.
+## Pairings and dates from the shipped snapshot for one competition. The
+## snapshot is a reading of a live season, so some fixtures already carry
+## results; a new save starts unplayed, so the results are deliberately left
+## behind and the calendar and its dates are what a real-mode save inherits.
 ##
 ## The snapshot stores no round number, and real fixtures move for cups and
 ## postponements, so the gameweek is rebuilt from the pairings themselves: the
 ## circle-method decomposition names every pairing once, the return leg is the
 ## mirror, and the rounds are then ordered by their mean date. Every gameweek
-## therefore holds the ten games it should, and the dates stay exactly real.
-static func real_rows() -> Array:
-	var rows := PLDatabase.rows("SELECT * FROM fixture ORDER BY kickoff, id;")
+## therefore holds the games it should, and the dates stay exactly real.
+static func real_rows(competition_id: String = "PL") -> Array:
+	var rows := PLDatabase.rows(
+		"SELECT * FROM fixture WHERE competition_id = ? ORDER BY kickoff, id;", [competition_id])
 	if rows.is_empty():
 		return []
 	var clubs: Array = []
@@ -78,10 +82,11 @@ static func real_rows() -> Array:
 	var number := {}
 	for i in range(keys.size()):
 		number[int(keys[i])] = i + 1
+	var tag := "" if competition_id == "PL" else slug_key(competition_id) + "-"
 	var out: Array = []
 	for row in rows:
 		out.append({
-			"id": "real-" + str(row["id"]),
+			"id": "real-" + tag + str(row["id"]),
 			"matchday": int(number.get(int(row["round"]), 1)),
 			"kickoff": str(row["kickoff"]),
 			"kickoff_time": "",
@@ -90,13 +95,18 @@ static func real_rows() -> Array:
 		})
 	return out
 
+static func slug_key(text: String) -> String:
+	return text.to_lower()
+
+
 static func _pair_key(a: String, b: String) -> String:
 	return (a + "|" + b) if a < b else (b + "|" + a)
 
 
 # ------------------------------------------------------------- generated ---
 
-static func generate(clubs: Array, rules: Dictionary, seed: int) -> Array:
+static func generate(clubs: Array, rules: Dictionary, seed: int,
+		competition_id: String = "PL") -> Array:
 	var ids := clubs.duplicate()
 	if ids.size() < 2:
 		return []
@@ -121,6 +131,7 @@ static func generate(clubs: Array, rules: Dictionary, seed: int) -> Array:
 		rounds.size(),
 		int(rules.get("midweek_matchdays", 5)),
 	)
+	var tag := "" if competition_id == "PL" else slug_key(competition_id) + "-"
 	var out: Array = []
 	for r in range(rounds.size()):
 		var pairs: Array = rounds[r]
@@ -128,7 +139,7 @@ static func generate(clubs: Array, rules: Dictionary, seed: int) -> Array:
 		for k in range(pairs.size()):
 			var pair: Array = pairs[k]
 			out.append({
-				"id": "gw%02d-%s-%s" % [r + 1, str(pair[0]), str(pair[1])],
+				"id": tag + "gw%02d-%s-%s" % [r + 1, str(pair[0]), str(pair[1])],
 				"matchday": r + 1,
 				"kickoff": date,
 				"kickoff_time": KICKOFF_TIMES[k % KICKOFF_TIMES.size()],

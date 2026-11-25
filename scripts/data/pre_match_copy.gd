@@ -96,9 +96,12 @@ static func news(seed: int, home: Dictionary, away: Dictionary, ctx: Dictionary)
 			str(home.get("stadium", "")), str(home.get("name", "")), int(ctx.get("home_position", 0)),
 			str(away.get("name", "")), int(ctx.get("away_position", 0))]
 	else:
-		line = "%s welcome %s to %s for matchday %d of the Premier League." % [
+		var competition := str(ctx.get("competition", "the Premier League"))
+		if str(competition) == "":
+			competition = "the Premier League"
+		line = "%s welcome %s to %s for matchday %d of %s." % [
 			str(home.get("name", "")), str(away.get("name", "")),
-			str(home.get("stadium", "")), int(ctx.get("matchday", 1))]
+			str(home.get("stadium", "")), int(ctx.get("matchday", 1)), competition]
 	return {"title": title, "line": line}
 
 static func _pick(lines: Array, seed: int, salt: int) -> String:
