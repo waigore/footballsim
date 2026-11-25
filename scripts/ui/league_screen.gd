@@ -90,6 +90,10 @@ var rows_hints: DateHints = null
 var rows_names: InterestNames = null
 ## The long press itself: the clock, the menu and the one write it makes.
 var interest := InterestHold.new()
+## Which painted text field owns the on-screen keyboard (#201). A touch sheet
+## has no `LineEdit` to hand the platform, so the sheet raises the keyboard for
+## the field the player pressed and puts it away when the field leaves.
+var focus := LeagueFieldFocus.new()
 ## The layer that paints the menu above the body and the panel.
 var menu_layer: InterestLayer = null
 var tooltip: DateOverlay = null
@@ -216,6 +220,8 @@ func close() -> void:
 	visible = false
 	mode = MODE_HUB
 	delete.clear()
+	# A keyboard is part of being on a field: leaving the sheet puts it away.
+	focus.blur()
 	# Leaving the league ends its history: a reopened season starts at its root.
 	nav.clear()
 	closed.emit()
@@ -261,6 +267,10 @@ func refresh() -> void:
 	panel.touch = touch
 	overlay.active_pose = panel.active
 	overlay.ui_scale = ui_scale
+	# Keep the on-screen keyboard on the field the pose paints (#201): a repaint
+	# the field survives leaves the IME alone, and a pose that no longer paints it
+	# puts the keyboard away.
+	focus.sync(self)
 	_last_mode = mode
 	overlay.queue_redraw()
 	queue_redraw()
@@ -343,6 +353,14 @@ func key(code: int) -> bool:
 		refresh()
 		return true
 	return LeagueDoors.key(self, code)
+
+## One character the platform typed, which is how a soft keyboard's own text
+## arrives (#201). The sheet's text fields take it; everything else is ignored,
+## so the shared pointer grammar can hand every key event here.
+func text_key(code: int, unicode: int) -> bool:
+	if delete_confirm_open() or interest.is_open():
+		return false
+	return LeagueDoors.text_key(self, code, unicode)
 
 # ----------------------------------------------------------------- paint ---
 

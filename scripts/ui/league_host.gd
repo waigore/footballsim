@@ -143,6 +143,10 @@ func cover_for_wiki(hidden: bool) -> void:
 	if layer == null:
 		return
 	if hidden:
+		# The encyclopedia covers the season: no field of it is on screen, so no
+		# keyboard may stay up above the page (#201).
+		if screen != null:
+			screen.focus.blur()
 		layer.visible = false
 		return
 	if screen == null:
@@ -210,6 +214,9 @@ func _start_watch(home: String, away: String) -> void:
 	briefing = {}
 	if layer != null:
 		layer.visible = false
+	# A keyboard belongs to a field on screen: the broadcast never inherits one.
+	if screen != null:
+		screen.focus.blur()
 	if result != null:
 		result.clear()
 	game.home_id = home

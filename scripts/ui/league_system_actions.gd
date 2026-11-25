@@ -32,6 +32,8 @@ static func view(screen) -> Dictionary:
 		"status": str(screen.sys["status"]), "error": str(screen.sys["error"]),
 		"naming": bool(screen.sys["naming"]), "save_name": str(screen.sys["name"]),
 		"name": str(state.get("name", "")), "date": str(state.get("date", "")),
+		# Where the on-screen keyboard is (#201), so the field can paint a caret.
+		"focus": str(screen.focus.kind),
 	}
 
 static func act(screen, id: String) -> void:
@@ -47,6 +49,9 @@ static func act(screen, id: String) -> void:
 				screen.sys["status"] = ""
 				screen.sys["error"] = ""
 				screen.refresh()
+				# SAVE AS opens a field to type into: on a touch build the
+				# keyboard comes up on it at once (#201).
+				LeagueFieldFocus.press(screen, LeagueFieldFocus.SYSTEM)
 		"sys:commit":
 			save_as(screen)
 		"sys:cancel":
@@ -65,14 +70,17 @@ static func act(screen, id: String) -> void:
 		_:
 			refuse(screen, "Unknown action.")
 
-## Keyboard for the Save As field, mirroring the setup wizard's name entry.
-static func type_name(screen, code: int) -> bool:
+## Keyboard for the Save As field, mirroring the setup wizard's name entry. A
+## soft keyboard sends the character rather than a keycode (#201), so `ch`
+## carries it when there is one.
+static func type_name(screen, code: int, ch: String = "") -> bool:
 	if not bool(screen.sys["naming"]):
 		return false
 	if code == KEY_ENTER or code == KEY_KP_ENTER:
 		save_as(screen)
 		return true
-	var typed: Array = LeagueTextField.type_name(str(screen.sys["name"]), code)
+	var typed: Array = LeagueTextField.type_char(str(screen.sys["name"]), ch) if ch != "" \
+		else LeagueTextField.type_name(str(screen.sys["name"]), code)
 	if bool(typed[0]):
 		screen.sys["name"] = str(typed[1])
 		screen.refresh()

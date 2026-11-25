@@ -72,9 +72,10 @@ func draw_wizard_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dic
 	if str(view.get("error", "")) != "":
 		UiChrome.text(c, Vector2(24.0, vp.y - BAR_H - 10.0), str(view["error"]), 12, UiChrome.C_DANGER, fonts["med"])
 
-func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, _view: Dictionary) -> void:
+func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()
 	var bold: Font = fonts["bold"]
+	var live := str(view.get("focus", "")) == LeagueFieldFocus.WIZARD
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
@@ -86,8 +87,10 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 		if kind == "field":
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y - 8.0), "SAVE NAME", 10, UiChrome.C_DIM, bold)
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_GOLD, 1)
+			var value := str(item["value"])
 			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
-				str(item["value"]) if str(item["value"]) != "" else "League 1", 15, UiChrome.C_TEXT, bold)
+				value if value != "" else "League 1", 15, UiChrome.C_TEXT, bold)
+			LeagueFieldFocus.caret(c, rect, value, bold, 15, live)
 		elif kind == "choice":
 			var chosen := bool(item["selected"])
 			UiChrome.panel(c, cache, rect,
