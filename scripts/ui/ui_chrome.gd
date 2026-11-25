@@ -38,8 +38,10 @@ const HINT_DROP := 14.0
 ## primary reads the same on a season sheet, the System dialog, the fixture
 ## picker and the encyclopedia. `size > 0` overrides the door's type size;
 ## `hint` adds the keyboard line under the caption (a desktop-only affordance).
+## `enabled = false` keeps the door where it is and dims it, so BACK at the root
+## of a season's history is visible but not something to press (#169).
 static func button(c: CanvasItem, cache: Dictionary, r: Rect2, label: String, font: Font,
-		primary: bool, size: int = -1, hint: String = "") -> void:
+		primary: bool, size: int = -1, hint: String = "", enabled: bool = true) -> void:
 	var px: int = size if size > 0 else (15 if primary else 12)
 	var cx: float = r.get_center().x
 	var middle: float = r.position.y + r.size.y * 0.5
@@ -47,6 +49,10 @@ static func button(c: CanvasItem, cache: Dictionary, r: Rect2, label: String, fo
 	# and the key sits under it, so neither line lands on the other.
 	var mid: float = middle - RISE if hint != "" else middle + RISE
 	var ink: Color = Color(0.06, 0.06, 0.05) if primary else C_TEXT
+	if not enabled:
+		panel(c, cache, r, C_PANEL, 7, C_BORDER, 1)
+		text_c(c, cx, mid, label, px, Color(C_DIM.r, C_DIM.g, C_DIM.b, 0.55), font)
+		return
 	if primary:
 		panel(c, cache, r, C_GOLD, 7, Color(0.96, 0.78, 0.30, 0.85), 1)
 	else:

@@ -50,11 +50,14 @@ static func shift(screen, delta: int) -> void:
 			break
 	pick(screen, chosen)
 
-## Open one day: the fixtures that day, and the screen repaint.
+## Open one day: the fixtures that day, with the event rows of the played ones
+## so the day list can print each result's side columns (#168), and repaint.
 static func pick(screen, date: String) -> void:
 	screen.day = date
 	screen.day_fixtures = []
 	if screen.season != null:
 		for fx in screen.season.record.fixtures.on(date):
+			if str(fx["status"]) == "played":
+				fx["events"] = screen.season.record.report.events(str(fx["id"]))
 			screen.day_fixtures.append(fx)
 	screen.refresh()

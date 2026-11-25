@@ -81,7 +81,11 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	var left_w: float = (vp.x - 72.0) * 0.58 if wide else vp.x - 48.0
 	var y := top + 24.0
 	for fx in plan:
-		var row := Rect2(24.0, y, left_w, ROW_H)
+		# A played row is a result block: the score line, both full names and
+		# each side's events under its own name (#168). A pending row keeps the
+		# planner's one line.
+		var h: float = maxf(ROW_H, LeagueBlock.height(fx))
+		var row := Rect2(24.0, y, left_w, h)
 		items.append({"id": "fixture:" + str(fx["id"]), "kind": "row", "rect": row,
 			"fixture": fx, "interest": interest})
 		# A played row is a result, not a plan: no chip to press, the score takes
@@ -94,7 +98,7 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 			var followed := LeagueInterestMark.follows(interest, fx)
 			items.append({"id": "" if followed else "toggle:" + str(fx["id"]), "kind": "chip",
 				"rect": chip, "fixture": fx, "followed": followed})
-		y += ROW_H + ROW_GAP
+		y += h + ROW_GAP
 	if wide:
 		var box := _hub_table_box(vp)
 		var places := _hub_table_places(box)
@@ -114,10 +118,9 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	if bool(state.get("can_suggest", false)):
 		items.append({"id": "suggest", "kind": "chip", "label": "SUGGEST WATCHES",
 			"rect": Rect2(24.0 + left_w - 150.0, top + 2.0, 150.0, 20.0)})
-	# Chrome: BACK top-left, CONTINUE top-right. The bottom door bar is gone;
-	# every other destination lives in the left panel (#105).
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": LeagueExtra.back_rect()})
+	# Chrome: BACK top-left, CONTINUE top-right; every other destination lives in
+	# the left panel (#105).
+	items.append(LeagueExtra.back_item())
 	items.append({"id": "continue", "kind": "button", "label": "CONTINUE", "primary": true,
 		"pinned": true, "rect": LeagueExtra.primary_rect(vp)})
 	return items
@@ -141,8 +144,7 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	y += 54.0
 	items.append({"id": "create", "kind": "button", "label": "CREATE SEASON",
 		"rect": Rect2(24.0, y, minf(240.0, w), 46.0), "primary": true})
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": LeagueExtra.back_rect()})
+	items.append(LeagueExtra.back_item())
 	return items
 
 func load_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -158,8 +160,7 @@ func load_layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": "delete:" + str(save["slug"]), "kind": "delete",
 			"rect": Rect2(row.end.x - 96.0, row.position.y + 5.0, 34.0, 30.0), "slug": str(save["slug"])})
 		y += 46.0
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": LeagueExtra.back_rect()})
+	items.append(LeagueExtra.back_item())
 	return items
 
 ## The lane the wide hub's side table occupies, beside the fixture list.
@@ -250,22 +251,28 @@ func _draw_fixture_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dict
 	# planner and the tables share (#104).
 	var home_ink := LeagueInterestMark.ink(interest, str(fx.get("home_club_id", "")))
 	var away_ink := LeagueInterestMark.ink(interest, str(fx.get("away_club_id", "")))
+	if played:
+		# The result block: score, both full names, and each side's events under
+		# its own name (#168). The chip's old slots are all inside it.
+		LeagueBlock.paint(c, rect, fx, fonts, names, home_ink, away_ink)
+		return
+	# A pending plan row: the kick-off, both clubs by full name, and the chip.
 	var line_y := rect.position.y + 17.0
 	var time := str(fx.get("kickoff_time", ""))
-	if time != "" or played:
-		# A played row leads with FT where the kickoff time sat, so the list reads
-		# as a results column once the day is done (#124).
-		UiChrome.text(c, Vector2(rect.position.x + 8.0, line_y), "FT" if played else time, 10,
-			UiChrome.C_GOLD if played else UiChrome.C_DIM, bold if played else med)
-	InterestNames.run(c, names, str(fx.get("home_club_id", "")), str(fx["home_abbr"]),
-		Vector2(rect.position.x + 60.0, line_y), 13, home_ink, bold)
-	UiChrome.text(c, Vector2(rect.position.x + 60.0 + 46.0, line_y), "v", 10, UiChrome.C_DIM, med)
-	InterestNames.run(c, names, str(fx.get("away_club_id", "")), str(fx["away_abbr"]),
-		Vector2(rect.position.x + 60.0 + 66.0, line_y), 13, away_ink, bold)
-	if played:
-		UiChrome.text_r(c, rect.end.x - 12.0, line_y, "%d  –  %d" % [
-			int(fx.get("home_goals", 0)), int(fx.get("away_goals", 0))], 14, UiChrome.C_TEXT, bold)
-	elif int(fx.get("suggested", 0)) == 1:
+	if time != "":
+		UiChrome.text(c, Vector2(rect.position.x + 8.0, line_y), time, 10, UiChrome.C_DIM, med)
+	var x := rect.position.x + 60.0
+	var room := maxf((rect.end.x - 96.0 - x) * 0.46, 60.0)
+	var home_name: String = LeagueColumns.fit_name(str(fx.get("home_name", "")), bold, 13, room)
+	x += InterestNames.run(c, names, str(fx.get("home_club_id", "")), home_name,
+		Vector2(x, line_y), 13, home_ink, bold) + 8.0
+	UiChrome.text(c, Vector2(x, line_y), "v", 10, UiChrome.C_DIM, med)
+	x += InterestNames.width(med, "v", 10) + 8.0
+	var away_name: String = LeagueColumns.fit_name(str(fx.get("away_name", "")), bold, 13,
+		maxf(rect.end.x - 96.0 - x, 60.0))
+	InterestNames.run(c, names, str(fx.get("away_club_id", "")), away_name,
+		Vector2(x, line_y), 13, away_ink, bold)
+	if int(fx.get("suggested", 0)) == 1:
 		UiChrome.text_r(c, rect.end.x - 78.0, rect.position.y + 15.0, "TOP-6", 10, UiChrome.C_GOLD, bold)
 
 func _draw_toggle(c: CanvasItem, rect: Rect2, fx: Dictionary, bold: Font) -> void:
@@ -369,8 +376,8 @@ func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 ## grammar itself is `UiChrome.button`, shared with the menu, the System dialog,
 ## the fixture picker and the encyclopedia.
 func draw_button(c: CanvasItem, rect: Rect2, label: String, bold: Font,
-		primary: bool) -> void:
-	UiChrome.button(c, cache, rect, label, bold, primary)
+		primary: bool, disabled: bool = false) -> void:
+	UiChrome.button(c, cache, rect, label, bold, primary, -1, "", not disabled)
 
 ## The ▶ beside a goal on a match report: a bordered gold chip, sized by the
 ## caller so the door stays thumb-sized on every platform.

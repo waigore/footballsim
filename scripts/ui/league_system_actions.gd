@@ -9,12 +9,15 @@ extends RefCounted
 ## the screen and its tests keep reading the same state they always did.
 
 ## Open the dialog on a season. A season that is gone has nothing to save, so the
-## door falls through to leaving the sheet.
+## door falls through to leaving the sheet. In a season the dialog is a page of
+## its own: the sheet it covers is left behind it, so BACK returns there (#169).
 static func open(screen) -> void:
 	if screen.season == null:
 		screen.close()
 		return
 	reset(screen)
+	if screen.mode != LeagueScreen.MODE_SYSTEM:
+		screen.push_page()
 	screen.mode = LeagueScreen.MODE_SYSTEM
 	screen.refresh()
 
@@ -51,6 +54,7 @@ static func act(screen, id: String) -> void:
 			screen.refresh()
 		"sys:load":
 			screen.load_from = "system"
+			screen.push_page()
 			screen.mode = LeagueScreen.MODE_LOAD
 			screen.saves = LeagueSave.list()
 			screen.refresh()
@@ -60,19 +64,6 @@ static func act(screen, id: String) -> void:
 			screen.quit_requested.emit()
 		_:
 			refuse(screen, "Unknown action.")
-
-## BACK out of the pose this helper owns: the dialog itself, or the load list it
-## opened over the season. False means the screen's own BACK rules apply.
-static func back(screen) -> bool:
-	if screen.mode == LeagueScreen.MODE_SYSTEM:
-		screen.mode = LeagueScreen.MODE_HUB
-		screen.refresh()
-		return true
-	if screen.mode == LeagueScreen.MODE_LOAD and screen.load_from == "system":
-		screen.mode = LeagueScreen.MODE_SYSTEM
-		screen.refresh()
-		return true
-	return false
 
 ## Keyboard for the Save As field, mirroring the setup wizard's name entry.
 static func type_name(screen, code: int) -> bool:
@@ -140,6 +131,7 @@ static func leave(screen) -> void:
 ## still read the save: the next season rebuilds from whichever file is bound.
 static func unload(screen) -> void:
 	screen.book.table.attach(null)
+	screen.nav.clear()
 	screen.report = {}
 	screen.roundup = []
 	screen.day = ""

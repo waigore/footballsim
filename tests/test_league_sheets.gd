@@ -433,10 +433,10 @@ func test_a_roundup_offers_no_play_doors() -> void:
 	for item in items:
 		assert_ne(str(item["kind"]), "play", "a roundup row offered a play door")
 
-## #125: the run mixes both sides' goals, so every entry names the club that
-## scored it and the goals read in minute order — not in the order they were
-## stored (head first, then away).
-func test_a_roundup_row_names_the_club_of_every_scorer() -> void:
+## #168: a fixture's events are read as two sides — each row sits under the
+## club stored on it, and the columns are in minute order. The old mixed run
+## needed a club label on every entry; a column is the label now.
+func test_a_fixture_reads_as_two_event_columns() -> void:
 	var fixture := _fixture(1)
 	var report := {
 		"fixture": fixture,
@@ -448,56 +448,69 @@ func test_a_roundup_row_names_the_club_of_every_scorer() -> void:
 			{"id": 9, "minute": 58, "kind": "goal", "club_id": "A1", "player_name": "J. Mateta"},
 		],
 	}
-	var entries: Array = LeagueRoundup.entries(report)
-	assert_eq(entries, [
-		"HOM 6' Y. Pino", "HOM 7' J. Mateta", "AWY 23' M. Cunha", "HOM 58' J. Mateta",
-	], "the roundup lost its clubs or its minute order")
-	# A card is not a goal, and the away side's goals follow the home side's.
-	assert_eq(entries.size(), 4, "the roundup listed something that was not a goal")
-	var once := LeagueRoundup.run(report, UiChrome.fonts()["med"], 600.0, 10)
-	assert_eq(once, "  ·  ".join(entries), "a run that fits dropped a goal")
+	var sides: Dictionary = LeagueRoundup.sides(report)
+	var home: Array = sides["home"]
+	var away: Array = sides["away"]
+	assert_eq(home.map(func(e): return "%d' %s" % [int(e["minute"]), str(e["player_name"])]),
+		["6' Y. Pino", "7' J. Mateta", "58' J. Mateta"], "the home column lost its minute order")
+	assert_eq(away.map(func(e): return "%d' %s" % [int(e["minute"]), str(e["player_name"])]),
+		["23' M. Cunha", "30' D. Back"], "the away column lost a row")
+	# The club is the column, not a prefix on every line.
+	assert_eq(LeagueRoundup.line(home[0]), "6' Y. Pino", "an entry repeated its club")
+	assert_eq(LeagueRoundup.line(away[0]), "23' M. Cunha", "an away entry repeated its club")
 
-## A row cannot grow, so a busy scoreline names what it can and counts the rest:
-## the rule the whistle card uses (DR-20261125-04), never a silent drop.
-func test_a_roundup_run_that_does_not_fit_counts_the_rest() -> void:
-	var report := {"fixture": _fixture(1), "events": []}
-	for i in range(6):
-		(report["events"] as Array).append({
-			"id": i, "minute": 5 + i, "kind": "goal", "club_id": "A1",
-			"player_name": "A. Striker",
-		})
-	var all: Array = LeagueRoundup.entries(report)
-	var font: Font = UiChrome.fonts()["med"]
-	var wide := LeagueRoundup.run(report, font, 900.0, 10)
-	assert_eq(wide, LeagueRoundup.SEP.join(all), "a run with room counted goals it could show")
-	var narrow := LeagueRoundup.run(report, font, 160.0, 10)
-	assert_ne(narrow, wide, "a run measured for 160 units kept every entry")
-	var parts: PackedStringArray = narrow.split(LeagueRoundup.SEP)
-	var shown := parts.size()
-	assert_gte(shown, 1, "a run too wide for its row showed no scorer at all")
-	assert_lt(shown, all.size(), "a run measured for 160 units kept every entry")
-	for i in range(shown):
-		assert_true(str(parts[i]).begins_with(str(all[i])), "the run reordered or dropped a goal")
-	var tail := str(parts[shown - 1])
-	assert_true(tail.ends_with("+%d" % (all.size() - shown)),
-		"the run miscounted what it dropped: %s" % tail)
-	var room := 160.0 + UiChrome.text_width(font, "  +5", 10)
-	assert_lte(UiChrome.text_width(font, narrow, 10), room,
-		"the counted run runs past the row it was measured for")
-	assert_eq(LeagueRoundup.run({"fixture": _fixture(1), "events": []}, font, 900.0, 10), "",
-		"a goalless report produced a run")
-
-## Rows stored before a club id was written (and test rows) still read: the
-## scorer is named, without a prefix the fixture cannot prove.
-func test_a_scorer_with_no_known_club_still_reads() -> void:
+## A row with no club id (an older save, a hand-made report) still reads, under
+## the home column rather than disappearing.
+func test_an_event_with_no_known_club_still_reads() -> void:
 	var fixture := _fixture(1)
-	assert_eq(LeagueRoundup.entry(fixture, {"minute": 12, "player_name": "A. Striker"}),
-		"12' A. Striker", "a clubless goal invented a club")
-	assert_eq(LeagueRoundup.entry(fixture, {"minute": 12, "club_id": "ZZ", "player_name": "A. Striker"}),
-		"12' A. Striker", "a stranger's goal took the home club's label")
-	# An engine row names its scorer in `detail`; the run reads that too.
-	assert_eq(LeagueRoundup.entry(fixture, {"minute": 12, "detail": "A. Striker"}),
-		"12' A. Striker", "a row with no player_name lost its scorer")
+	var report := {"fixture": fixture, "events": [
+		{"id": 1, "minute": 12, "kind": "goal", "player_name": "A. Striker"},
+		{"id": 2, "minute": 40, "kind": "goal", "club_id": "ZZ", "detail": "B. Stranger"},
+	]}
+	var sides: Dictionary = LeagueRoundup.sides(report)
+	assert_eq((sides["home"] as Array).size(), 2, "a clubless row vanished")
+	assert_eq((sides["away"] as Array).size(), 0, "a stranger took the away column")
+	assert_eq(LeagueRoundup.line((sides["home"] as Array)[0]), "12' A. Striker",
+		"a clubless goal invented a club")
+
+## An assist is a bracket on the goal it served, never a row of its own. The
+## synthetic report writes the assist as its own event at the same minute.
+func test_an_assist_rides_the_goal_line_in_brackets() -> void:
+	var report := {"fixture": _fixture(1), "events": [
+		{"id": 2, "minute": 6, "kind": "goal", "club_id": "A1", "player_name": "Y. Pino"},
+		{"id": 3, "minute": 6, "kind": "assist", "club_id": "A1", "player_name": "J. Eze"},
+		{"id": 4, "minute": 23, "kind": "goal", "club_id": "B1", "player_name": "M. Cunha"},
+		{"id": 5, "minute": 23, "kind": "assist", "club_id": "B1", "player_name": "B. Saka"},
+	]}
+	var lines: Array = LeagueRoundup.lines(report)
+	assert_eq(lines.size(), 2, "an assist took a line of its own")
+	assert_eq(LeagueRoundup.line(lines[0]), "6' Y. Pino (J. Eze)", "the home assist was lost")
+	assert_eq(LeagueRoundup.line(lines[1]), "23' M. Cunha (B. Saka)", "the away assist was lost")
+	# An assist row that never found its goal is not printed alone either.
+	var orphan := {"fixture": _fixture(1), "events": [
+		{"id": 2, "minute": 6, "kind": "goal", "club_id": "A1", "player_name": "Y. Pino"},
+		{"id": 3, "minute": 7, "kind": "assist", "club_id": "A1", "player_name": "J. Eze"},
+	]}
+	assert_eq(LeagueRoundup.line(LeagueRoundup.lines(orphan)[0]), "6' Y. Pino",
+		"a mismatched assist was attached to a goal")
+
+## An own goal counts for the side that gained it — the club on the row — and is
+## marked so the reader still sees whose mistake it was. It takes no assist.
+func test_an_own_goal_is_credited_to_the_side_that_gained_it() -> void:
+	var fixture := _fixture(1)
+	var report := {"fixture": fixture, "events": [
+		{"id": 1, "minute": 12, "kind": "own_goal", "club_id": "A1", "player_name": "D. Back",
+			"assist_name": "B. Saka"},
+		{"id": 2, "minute": 30, "kind": "goal", "club_id": "A1", "player_name": "Y. Pino"},
+	]}
+	var sides: Dictionary = LeagueRoundup.sides(report)
+	assert_eq((sides["home"] as Array).size(), 2, "the own goal left the gaining side")
+	assert_eq((sides["away"] as Array).size(), 0, "the own goal was credited to the conceding side")
+	assert_eq(LeagueRoundup.goals(report).size(), 2, "an own goal stopped counting as a goal")
+	assert_eq(LeagueRoundup.line((sides["home"] as Array)[0]), "12' D. Back (OG)",
+		"the own goal lost its mark")
+	assert_eq(LeagueRoundup.line((sides["home"] as Array)[1]), "30' Y. Pino",
+		"a normal goal took an own-goal mark")
 
 func _bottom(items: Array) -> float:
 	var bottom := 0.0
@@ -509,15 +522,25 @@ func _bottom(items: Array) -> float:
 func test_the_report_lays_out_events_and_a_roundup() -> void:
 	var book := LeagueBook.new()
 	var events := [
-		{"minute": 12, "kind": "goal", "player_name": "A. Striker"},
-		{"minute": 12, "kind": "assist", "player_name": "B. Winger"},
-		{"minute": 30, "kind": "yellow", "player_name": "C. Pivot"},
-		{"minute": 77, "kind": "red", "player_name": "D. Back"},
+		{"minute": 12, "kind": "goal", "club_id": "A1", "player_name": "A. Striker"},
+		{"minute": 12, "kind": "assist", "club_id": "A1", "player_name": "B. Winger"},
+		{"minute": 30, "kind": "yellow", "club_id": "B1", "player_name": "C. Pivot"},
+		{"minute": 77, "kind": "red", "club_id": "B1", "player_name": "D. Back"},
 	]
 	var single: Array = book.report_layout(Vector2(1280, 720), {
 		"fixture": _fixture(1), "events": events, "day": "2026-08-15",
 	})
-	assert_eq(single.size(), 5, "the report lost an event or the back door")
+	# Three lines (the assist rides its goal) and the back door.
+	assert_eq(single.size(), 4, "the report lost an event or the back door")
+	var places := LeagueReportSheet.columns(Vector2(1280, 720))
+	var xs := {}
+	for item in single:
+		if str(item["kind"]) != "event":
+			continue
+		xs[str(item["side"])] = (item["rect"] as Rect2).position.x
+		assert_ne(str(item["event"].get("kind", "")), "assist", "an assist took a row of its own")
+	assert_eq(xs.get("home", -1.0), float(places["home_x"]), "the home column moved")
+	assert_eq(xs.get("away", -1.0), float(places["away_x"]), "the away column moved")
 	var roundup: Array = book.report_layout(Vector2(1280, 720), {
 		"roundup": [{"fixture": _fixture(1), "events": events, "score": [1, 0], "played": true}],
 	})
@@ -543,6 +566,58 @@ func test_the_report_keeps_back_in_the_top_left_chrome() -> void:
 		"the report's BACK sits below the header rule")
 	assert_lt((back["rect"] as Rect2).position.y, vp.y - LeagueSheet.BAR_H,
 		"the report's BACK is still a bottom door")
+
+## #168: a played hub row is a block tall enough for both columns; a pending row
+## keeps the planner's one line. The hub and the calendar read the same height.
+func test_a_played_row_grows_for_its_events() -> void:
+	var sheet := LeagueSheet.new()
+	var played := _fixture(1)
+	played["status"] = "played"
+	played["home_goals"] = 1
+	played["away_goals"] = 0
+	played["events"] = [
+		{"minute": 12, "kind": "goal", "club_id": "A1", "player_name": "A. Striker"},
+		{"minute": 40, "kind": "yellow", "club_id": "B1", "player_name": "C. Pivot"},
+		{"minute": 66, "kind": "injury", "club_id": "A1", "player_name": "D. Back"},
+	]
+	var pending := _fixture(2)
+	var plan := [played, pending]
+	var items: Array = sheet.hub_layout(Vector2(913, 411), _state(plan, _table()))
+	var rows: Array = []
+	for item in items:
+		if str(item["kind"]) == "row":
+			rows.append(item)
+	assert_eq(rows.size(), 2, "the hub lost a row")
+	var played_row: Rect2 = rows[0]["rect"]
+	var pending_row: Rect2 = rows[1]["rect"]
+	assert_eq(played_row.size.y, LeagueBlock.height(played), "the played row is not its block")
+	assert_gt(played_row.size.y, pending_row.size.y, "a played row did not grow for its events")
+	assert_eq(pending_row.size.y, LeagueSheet.ROW_H, "a pending row left the planner's line")
+	# The two event columns share the row and never overlap.
+	var places := LeagueBlock.columns(played_row)
+	assert_lt(float(places["home_x"]) + float(places["home_w"]), float(places["away_x"]),
+		"the event columns overlap")
+	assert_lte(float(places["away_x"]) + float(places["away_w"]), played_row.end.x + 0.01,
+		"the away column runs off its row")
+	# An empty result is still a block, and it prints no filler line.
+	var bare := _fixture(3)
+	bare["status"] = "played"
+	assert_eq(LeagueBlock.height(bare), LeagueBlock.BASE, "an empty result lost its block")
+	assert_eq(LeagueRoundup.lines({"fixture": bare, "events": []}).size(), 0,
+		"an empty result grew a placeholder row")
+
+## #168: the table is the one season pose that keeps abbreviations; the hub, the
+## calendar, the roundup and the report print the club's full name.
+func test_the_table_keeps_abbreviations_while_rows_print_names() -> void:
+	var row: Dictionary = _table()[0]
+	assert_eq(LeagueTableView.club_label(row), str(row["club_abbr"]),
+		"the table dropped its abbreviation")
+	assert_eq(LeagueTableView.club_label({"club_name": "Coventry City"}), "Coventry City",
+		"a row with no short form lost its name")
+	var fx := _fixture(1)
+	assert_eq(str(fx["home_name"]), "Home 1", "the fixture row lost its full name")
+	assert_ne(str(fx["home_name"]), str(fx["home_abbr"]),
+		"a fixture row still reads only the abbreviation")
 
 func test_the_podium_lays_out_with_and_without_a_summary() -> void:
 	var book := LeagueBook.new()

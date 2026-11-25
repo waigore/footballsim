@@ -128,7 +128,8 @@ func state() -> Dictionary:
 		"summary": summary() if complete else {},
 	}
 
-## The day's fixtures with the flags the planner draws.
+## The day's fixtures with the flags the planner draws, and the event rows of a
+## played one, so the hub can print its side columns without a second read.
 func plan() -> Array:
 	if save == null or record == null:
 		return []
@@ -137,6 +138,8 @@ func plan() -> Array:
 		var item: Dictionary = fx.duplicate()
 		item["watch"] = int(fx["watched"]) == 1
 		item["suggested"] = int(fx["suggested"]) == 1
+		if str(fx["status"]) == "played":
+			item["events"] = record.report.events(str(fx["id"]))
 		out.append(item)
 	return out
 
