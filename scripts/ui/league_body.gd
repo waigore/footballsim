@@ -4,8 +4,10 @@ extends Control
 ## Scroll window for the league sheets. It clips the season content to the band
 ## between the header and the bottom bar, owns the scroll offset (both axes) that
 ## the hit test and the painted rows must share, and hands the paint to the sheet
-## that laid the rows out. Chrome (the header and the bottom bar) stays on the
-## screen above it, exactly like the encyclopedia's body sits under its own header.
+## that laid the rows out. The doors a sheet pins (the header band's BACK and
+## primary door, the bottom bar's reading doors) are its paint too: they are not
+## clipped, and they cover the rows underneath them, exactly like the encyclopedia's
+## body sits under its own header.
 
 ## Sheet chrome above the content (LeagueChrome.HEADER).
 const TOP := LeagueChrome.HEADER
@@ -23,6 +25,15 @@ var content_height := 0.0
 var content_width := 0.0
 ## Bound painter from the sheet on screen: `(c, vp, fonts, items, view)`.
 var painter: Callable = Callable()
+## The font set the painter and the pinned doors draw with, refreshed by the
+## screen on every layout.
+var fonts: Dictionary = {}
+## The sheet's style cache for the pinned doors: the body builds one when nobody
+## hands it the host's, so a bare body in a test still paints its buttons.
+var cache: Dictionary = {}
+## The live pause: set by a modal layer (the load list's delete question, the
+## long-press menu) so the body draws the sheet but its doors go quiet.
+var frozen := false
 ## The current sheet: rows that scroll, and doors that stay where they were put.
 var content: Array = []
 var pinned: Array = []
@@ -94,11 +105,11 @@ func set_sheet(items: Array, vp: Vector2, reset: bool, bar: float = -1.0) -> Arr
 	for item in items:
 		if bool(item.get("pinned", false)):
 			pinned.append(item)
-		else:
-			content.append(item)
-			var rect: Rect2 = item["rect"]
-			bottom = maxf(bottom, rect.end.y)
-			right = maxf(right, rect.end.x)
+			continue
+		content.append(item)
+		var rect: Rect2 = item["rect"]
+		bottom = maxf(bottom, rect.end.y)
+		right = maxf(right, rect.end.x)
 	content_height = bottom - TOP
 	content_width = right + 24.0
 	scroll_to(scroll)
@@ -118,10 +129,14 @@ func button_rects() -> Array:
 	out.append_array(pinned)
 	return out
 
-## Front-most door under a design point. A row that has scrolled under the
-## header or past the bar is not under the pointer any more, so the pointer has
-## to be inside the window before a scrolling row can claim it.
+## Front-most door under a design point: the pinned doors first (they are painted
+## over the clip), then the rows. A row that has scrolled under the header or past
+## the bar is not under the pointer any more, so the pointer has to be inside the
+## window before a scrolling row can claim it. A frozen body answers nothing: a
+## modal layer owns the click while it is up.
 func hit(p: Vector2) -> String:
+	if frozen:
+		return ""
 	for i in range(pinned.size() - 1, -1, -1):
 		if (pinned[i]["rect"] as Rect2).has_point(p):
 			return str(pinned[i]["id"])
@@ -137,11 +152,18 @@ func hit(p: Vector2) -> String:
 
 # gd-tools: no cover start
 
-## The sheets lay out in design coordinates, so the body only has to cancel its
-## own offset; `clip_contents` trims what would run under the header or the bar.
+## Layers, bottom to top: the sheet's scrolling rows (offset and clipped by
+## `clip_contents`), then the doors it pins — which are laid out in screen space,
+## so they are painted after the offset is cancelled and cover the clip.
 func _draw() -> void:
 	if painter.is_valid():
 		draw_set_transform(Vector2(-hscroll, -position.y - scroll))
 		painter.call(self)
+		draw_set_transform(Vector2.ZERO)
+	for item in pinned:
+		_door(item)
+
+func _door(item: Dictionary) -> void:
+	LeagueChrome.pinned_door(self, cache, item, fonts)
 
 # gd-tools: no cover end

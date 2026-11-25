@@ -34,6 +34,19 @@ static func zone_color(band: String) -> Color:
 		return UiChrome.C_DANGER
 	return UiChrome.C_DIM
 
+## Paint one of the doors a sheet pinning in place (BACK, the primary door, the
+## month chips, the table's reading doors). They are not part of the scrolling
+## rows, so the body draws them itself with the host's paint grammar — button
+## with the sheet's style cache, chip plain — above the content it clips.
+static func pinned_door(c: CanvasItem, cache: Dictionary, item: Dictionary,
+		fonts: Dictionary) -> void:
+	var rect: Rect2 = item["rect"]
+	if str(item["kind"]) == "chip":
+		UiChrome.chip(c, cache, rect, str(item["label"]), fonts["bold"])
+	else:
+		UiChrome.button(c, cache, rect, str(item["label"]), fonts["bold"],
+			bool(item.get("primary", false)), -1, "", not bool(item.get("disabled", false)))
+
 ## True on a window short enough for the sheets' compact reading (a landscape
 ## phone), where rows tighten and the hub drops its side table.
 static func compact(vp: Vector2) -> bool:
