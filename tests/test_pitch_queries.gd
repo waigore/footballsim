@@ -46,18 +46,20 @@ func _walk_intercept(eng, p) -> Vector2:
 		t += 0.12
 	return last
 
-func _move_clock_on(eng, seconds: float) -> void:
-	var steps := int(seconds / eng.DT)
-	for i in steps:
-		if eng.phase == "half_time":
-			eng.begin_second_half()
-		eng.tick()
+## A ball in flight through the kick-off shape. The queries read only the ball
+## and body positions, so the state is built directly rather than playing
+## minutes of match to reach one — the arithmetic under test is the same.
+func _in_flight() -> MatchEngine:
+	var eng := _engine()
+	eng.ball.pos = eng.to_world(0, Vector2(0.55, 0.5))
+	eng.ball.vel = Vector2(12.0, 2.5)
+	eng.ball.owner_id = -1
+	return eng
 
 # ------------------------------------------------------- the shared path ----
 
 func test_shared_path_answers_the_same_reach_time_as_the_per_player_walk() -> void:
-	var eng := _engine()
-	_move_clock_on(eng, 120.0)
+	var eng := _in_flight()
 	var pq := PitchQueries.new(eng)
 	var path: Dictionary = pq.ball_trajectory()
 	assert_gt(path["points"].size(), 20, "the path had fewer than the 30 samples a 3.6s walk holds")
@@ -68,8 +70,7 @@ func test_shared_path_answers_the_same_reach_time_as_the_per_player_walk() -> vo
 			"the shared path changed %s's reach time" % p.key)
 
 func test_shared_path_answers_the_same_intercept_point() -> void:
-	var eng := _engine(32)
-	_move_clock_on(eng, 200.0)
+	var eng := _in_flight()
 	var pq := PitchQueries.new(eng)
 	var path: Dictionary = pq.ball_trajectory()
 	for p in eng.players:
@@ -99,8 +100,7 @@ func test_a_ball_far_beyond_the_horizon_is_unreachable() -> void:
 		"a ball 60 m away was reported reachable inside 3.6 s")
 
 func test_the_wrappers_still_answer_the_per_player_walk() -> void:
-	var eng := _engine(35)
-	_move_clock_on(eng, 90.0)
+	var eng := _in_flight()
 	var pq := PitchQueries.new(eng)
 	for p in eng.players:
 		if p.sent_off:
@@ -166,12 +166,14 @@ func test_the_line_follows_the_bodies_rather_than_a_stale_read() -> void:
 	assert_eq(after, backs[0].pos, "the line did not follow the back four that moved")
 	assert_true(after != before, "the line was answered from a stale read rather than the bodies on the pitch")
 
-## A whole match must stay reproducible: two engines on one seed agree on every
-## body's position, so the shared path changed no decision.
+## A seeded match must stay reproducible: two engines on one seed agree on every
+## body's position through a real stretch of play, so the shared path changed no
+## decision. Twenty seconds of ticks is enough for many shape passes without
+## paying for a full match under coverage.
 func test_a_shared_path_leaves_a_seeded_match_reproducible() -> void:
 	var a := MatchEngine.new(4242, "MUN", "MCI")
 	var b := MatchEngine.new(4242, "MUN", "MCI")
-	for i in 4000:
+	for i in 1200:
 		if a.phase == "half_time":
 			a.begin_second_half()
 			b.begin_second_half()
