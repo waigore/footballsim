@@ -12,7 +12,6 @@ extends RefCounted
 ## then flown through, and a planned strike is never intercepted (the engine's
 ## `planned_goal` rule). World space is the attacking frame; an away goal is
 ## mirrored once at sampling, like the engine's own direction switch.
-
 const L := 105.0
 const W := 68.0
 const CENTRE := W * 0.5
@@ -63,9 +62,6 @@ class Sim:
 	var shooter := 0
 	var keeper := 0
 	var mirror := false
-	## A tagged penalty (#171): no build-up, no pass — the taker stands over
-	## the spot and the picture is a spot kick, matching the report row.
-	var penalty := false
 	var ball := Vector3.ZERO
 	var bvel := Vector3.ZERO
 	var spin := 0.0
@@ -90,7 +86,6 @@ class Sim:
 			scoring_home: bool) -> void:
 		rng.seed = seed
 		mirror = not scoring_home
-		penalty = bool(goal.get("penalty", false))
 		minute = int(goal.get("minute", 1))
 		var score: Array = goal.get("score_after", [0, 0])
 		score_before = [int(score[0]), int(score[1])]
@@ -142,38 +137,7 @@ class Sim:
 		c.base = c.pos
 		ball = Vector3(c.pos.x, c.pos.y, 0.11)
 		owner = carrier
-		if penalty:
-			_set_penalty()
-
-	## A spot kick's picture: the taker alone over the ball at the spot, the
-	## keeper on his line, everyone else outside the area and behind the ball.
-	## The strike is a single decision, not a pass, and the net still decides
-	## whether it is a goal — the taker is recorded by the report, so it must be.
-	func _set_penalty() -> void:
-		carrier = shooter
-		pass_at = -1.0
-		strike_at = 1.3 + rng.randf() * 0.3
-		var spot := Vector2(L - 11.0, CENTRE + rng.randf_range(-0.4, 0.4))
-		meet = spot
-		carry_to = spot
-		strike_from = spot
-		var taker: Body = bodies[shooter]
-		taker.pos = spot
-		taker.base = spot
-		ball = Vector3(spot.x, spot.y, 0.11)
-		owner = shooter
-		# Keep the picture legible: both sides wait outside the area, the keeper
-		# stands on his line, and nobody wanders into the taker's run.
-		for i in range(bodies.size()):
-			if i == shooter or i == keeper:
-				continue
-			var b: Body = bodies[i]
-			var lane := 68.0 + rng.randf() * 12.0
-			b.pos = Vector2(lane, CENTRE + (float(i) / float(maxi(bodies.size() - 1, 1)) - 0.5) * 44.0)
-			b.base = b.pos
-		var gk: Body = bodies[keeper]
-		gk.pos = Vector2(L - 1.2, CENTRE)
-		gk.base = gk.pos
+		if bool(goal.get("penalty", false)): GoalVignettePenalty.lay_out(self, shooter, keeper, rng)
 
 	func run() -> void:
 		for i in range(int(round(LENGTH / DT)) + 1):
@@ -188,7 +152,7 @@ class Sim:
 		for b in bodies:
 			(b as Body).steer(dt)
 		if not shot:
-			if not penalty and owner == carrier and t >= pass_at:
+			if owner == carrier and t >= pass_at:
 				_pass()
 			var reach := t >= pass_at and ball.z < 1.7 and \
 				Vector2(ball.x, ball.y).distance_to(bodies[shooter].pos) < NEAR
@@ -221,10 +185,6 @@ class Sim:
 					b.target = _defend_goal(b, spot, false)
 			elif shot:
 				b.target = b.pos + b.vel * 0.05
-			elif penalty:
-				# The spot kick holds its shape: the taker stays over the ball,
-				# everyone else waits behind him until the strike.
-				b.target = strike_from if i == shooter else b.base
 			elif i == carrier:
 				b.target = carry_to
 			elif i == shooter:

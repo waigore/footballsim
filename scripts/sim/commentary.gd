@@ -87,11 +87,14 @@ static func save(rng, gk: String, shooter: String, how: String, xg: float) -> St
 	])
 
 static func goal(rng, scorer: String, assist: String, own_goal: bool, team_short: String,
-		other_short: String, before_for: int, before_against: int, minute: int) -> String:
+		other_short: String, before_for: int, before_against: int, minute: int,
+		penalty: bool = false) -> String:
 	var after_for := before_for + 1
 	var score := "%s %d-%d %s" % [team_short, after_for, before_against, other_short]
 	if own_goal:
 		return "OWN GOAL! %s turns it into his own net. %s." % [scorer, score]
+	if penalty:
+		return "PENALTY! %s scores from the spot — %s." % [scorer, score]
 	var open := _pick(rng, ["GOAL!", "IT'S IN!", "GOAL!", "IT'S THERE!"])
 	var state := ""
 	if after_for == before_against:
@@ -108,18 +111,6 @@ static func goal(rng, scorer: String, assist: String, own_goal: bool, team_short
 	if line.length() > 90:
 		line = "%s %s scores! %s." % [open, scorer, score]
 	return line
-
-## A goal from the spot. No assist, because there is none: the taker is the
-## whole story. Reads like the engine's own goal line, with the score from the
-## scoring side (#171).
-static func penalty_goal(rng, scorer: String, team_short: String, other_short: String,
-		before_for: int, before_against: int) -> String:
-	var score := "%s %d-%d %s" % [team_short, before_for + 1, before_against, other_short]
-	return _pick(rng, [
-		"PENALTY! %s sends the keeper the wrong way. %s." % [scorer, score],
-		"FROM THE SPOT! %s buries it. %s." % [scorer, score],
-		"%s holds his nerve from twelve yards. %s." % [scorer, score],
-	])
 
 static func block(rng, name: String, shooter: String) -> String:
 	if shooter != "":
