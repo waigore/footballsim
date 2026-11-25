@@ -327,6 +327,53 @@ func test_the_host_runs_one_callback_per_press() -> void:
 	assert_eq(calls[0], 1, "BACK ran the kick callback")
 	game.free()
 
+## The host answers every event while it is up: hover, a key that holds the
+## auto-advance, ESC that leaves, and a tap on the primary door.
+func _event_key(code: int) -> InputEventKey:
+	var ev := InputEventKey.new()
+	ev.keycode = code
+	ev.pressed = true
+	return ev
+
+func _event_motion(at: Vector2) -> InputEventMouseMotion:
+	var ev := InputEventMouseMotion.new()
+	ev.position = at
+	return ev
+
+func _event_click(at: Vector2, pressed: bool) -> InputEventMouseButton:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = pressed
+	ev.position = at
+	return ev
+
+func test_the_host_answers_mouse_and_keys_while_open() -> void:
+	var game := StubGame.new()
+	var host := PreMatchHost.new()
+	host.attach(game)
+	host.build()
+	var calls := [0, 0]
+	host.ask(PreMatchModel.build("MUN", "MCI", {}, null),
+		func(): calls[0] += 1, func(): calls[1] += 1)
+	assert_true(host.handle_input(_event_motion(Vector2(10.0, 10.0)), Vector2(10.0, 10.0)),
+		"the briefing did not take a hover")
+	assert_true(host.handle_input(_event_key(KEY_S), Vector2.ZERO), "the briefing did not take a key")
+	assert_true(host.screen.held, "S did not hold the briefing")
+	assert_true(host.handle_input(_event_key(KEY_ESCAPE), Vector2.ZERO), "the briefing did not take ESC")
+	assert_eq(calls[1], 1, "ESC did not leave the briefing")
+	host.ask(PreMatchModel.build("MUN", "MCI", {}, null),
+		func(): calls[0] += 1, func(): calls[1] += 1)
+	var kick: Rect2 = (host.screen.layout(host.screen.design_vp())["buttons"][2] as Dictionary)["rect"]
+	host.handle_input(_event_click(kick.get_center(), true), kick.get_center())
+	host.handle_input(_event_click(kick.get_center(), false), kick.get_center())
+	assert_eq(calls[0], 1, "a tap on CONTINUE did not start the match")
+	# With no request there is nothing to read: the caller's kick runs at once.
+	var kicked := [0]
+	host.ask({}, func(): kicked[0] += 1, Callable())
+	assert_eq(kicked[0], 1, "an empty briefing did not hand straight over")
+	assert_false(host.is_open(), "an empty briefing stayed up")
+	game.free()
+
 func test_the_briefing_reads_form_and_places_once_results_are_in() -> void:
 	var played: Dictionary = {}
 	for fx in season.record.fixtures.all():
