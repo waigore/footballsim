@@ -63,6 +63,13 @@ static func _typed(screen, code: int) -> bool:
 			return true
 	if screen.mode == screen.MODE_SYSTEM and LeagueSystemActions.type_name(screen, code):
 		return true
+	# The shortlist's search field takes printable keys while the list is open.
+	if screen.mode == screen.MODE_INTEREST:
+		var typed: Array = LeagueSheet.type_name(str(screen.interest_query), code)
+		if bool(typed[0]):
+			screen.interest_query = str(typed[1]).to_lower()
+			screen.refresh()
+			return true
 	if screen.mode != screen.MODE_REPORT or code < KEY_1 or code > KEY_9:
 		return false
 	var want := code - KEY_1
@@ -105,6 +112,22 @@ static func press(screen, id: String) -> void:
 	elif id.begins_with("tbl:"):
 		if screen.season != null and screen.book.table.press(id, screen.season.save):
 			screen.refresh()
+	elif id == "panel":
+		screen.panel.open()
+		screen.overlay.queue_redraw()
+	elif id == "panel:close":
+		screen.panel.close()
+		screen.overlay.queue_redraw()
+	elif id.begins_with("nav:"):
+		nav(screen, id.substr(4))
+	elif id.begins_with("stats:"):
+		stats(screen, id)
+	elif id.begins_with("statsday:"):
+		open_day(screen, id.substr(9))
+	elif id.begins_with("interest:add:"):
+		set_interest(screen, id.substr(13), true)
+	elif id.begins_with("interest:remove:"):
+		set_interest(screen, id.substr(16), false)
 	elif id.begins_with("sys:"):
 		LeagueSystemActions.act(screen, id)
 	elif id == "back":
@@ -135,9 +158,15 @@ static func press(screen, id: String) -> void:
 static func back(screen) -> void:
 	if LeagueSystemActions.back(screen):
 		return
-	if (screen.mode == screen.MODE_HUB or screen.mode == screen.MODE_WIZARD
-			or screen.mode == screen.MODE_LOAD or screen.mode == screen.MODE_PODIUM):
+	if screen.mode == screen.MODE_HUB or screen.mode == screen.MODE_WIZARD \
+			or screen.mode == screen.MODE_LOAD or screen.mode == screen.MODE_PODIUM:
 		screen.close()
+		return
+	# A matchday opened from the Stats list goes back there, not to the hub.
+	if screen.mode == screen.MODE_REPORT and str(screen.report_back) == screen.MODE_STATS:
+		screen.report_back = screen.MODE_HUB
+		screen.mode = screen.MODE_STATS
+		screen.refresh()
 		return
 	open_hub(screen)
 
@@ -241,6 +270,58 @@ static func toggle_fixture(screen, fixture_id: String) -> void:
 
 ## A calendar row: a played fixture opens its report, a watched one starts the
 ## match, and a pending one just flips its watch flag.
+## The panel's destinations, and the pose each one opens. The panel is closed on
+## the way so the sheet it opens is never covered by its own menu.
+static func nav(screen, pose: String) -> void:
+	screen.panel.close()
+	if pose == "fixtures":
+		screen.mode = LeagueScreen.MODE_HUB
+	elif pose == "table":
+		screen.mode = LeagueScreen.MODE_TABLE
+		screen.book.table.attach(screen.season.save if screen.season != null else null)
+	elif pose == "calendar":
+		screen.mode = LeagueScreen.MODE_CALENDAR
+		LeagueCalendar.open(screen)
+	elif pose == "interest":
+		screen.interest_query = ""
+		screen.mode = LeagueScreen.MODE_INTEREST
+	elif pose == "stats":
+		screen.mode = LeagueScreen.MODE_STATS
+	elif pose == "system":
+		LeagueSystemActions.open(screen)
+		return
+	screen.refresh()
+
+static func stats(screen, id: String) -> void:
+	if id == "stats:reports":
+		screen.mode = LeagueScreen.MODE_STATS
+	elif id == "stats:podium":
+		screen.mode = LeagueScreen.MODE_PODIUM
+	screen.refresh()
+
+## A matchday opened from the Stats list: BACK returns there, not to the hub.
+static func open_day(screen, date: String) -> void:
+	if screen.season == null:
+		return
+	var rows: Array = []
+	for fx in screen.season.record.fixtures.on(date):
+		if str(fx["status"]) == "played":
+			rows.append(screen.season.report(str(fx["id"])))
+	screen.roundup = rows
+	screen.report = {}
+	screen.report_back = LeagueScreen.MODE_STATS
+	screen.mode = LeagueScreen.MODE_REPORT
+	screen.refresh()
+
+## Teams of Interest from the list: add or remove a club in this save (#104).
+static func set_interest(screen, club_id: String, follow: bool) -> void:
+	if screen.season == null or club_id == "":
+		return
+	if screen.season.set_interest(club_id, follow):
+		if follow:
+			screen.interest_query = ""
+		screen.refresh()
+
 static func press_fixture(screen, fixture_id: String) -> void:
 	if screen.season == null:
 		return

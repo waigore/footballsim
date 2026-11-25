@@ -73,7 +73,6 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	var items: Array = []
 	var plan: Array = state.get("plan", [])
 	var top: float = HEADER + (14.0 if not compact(vp) else 8.0)
-	var body_bottom := vp.y - BAR_H - 6.0
 	var interest := LeagueInterestMark.set_of(state.get("interests", []))
 	var wide := vp.x >= 760.0 and not compact(vp)
 	var left_w: float = (vp.x - 72.0) * 0.58 if wide else vp.x - 48.0
@@ -112,11 +111,12 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	if bool(state.get("can_suggest", false)):
 		items.append({"id": "suggest", "kind": "chip", "label": "SUGGEST WATCHES",
 			"rect": Rect2(24.0 + left_w - 150.0, top + 2.0, 150.0, 20.0)})
-	items.append_array(_bar_rects(vp, ["continue", "table", "calendar", "system"],
-		["CONTINUE", "TABLE", "CALENDAR", "SYSTEM"]))
-	if bool(state.get("complete", false)):
-		items.append({"id": "podium", "kind": "button", "label": "PODIUM", "pinned": true,
-			"rect": Rect2(24.0, body_bottom - 34.0, 120.0, 28.0), "primary": false})
+	# Chrome: BACK top-left, CONTINUE top-right. The bottom door bar is gone;
+	# every other destination lives in the left panel (#105).
+	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
+		"rect": LeagueExtra.back_rect()})
+	items.append({"id": "continue", "kind": "button", "label": "CONTINUE", "primary": true,
+		"pinned": true, "rect": Rect2(vp.x - 24.0 - 140.0, 12.0, 140.0, 32.0)})
 	return items
 
 func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -138,8 +138,8 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	y += 54.0
 	items.append({"id": "create", "kind": "button", "label": "CREATE SEASON",
 		"rect": Rect2(24.0, y, minf(240.0, w), 46.0), "primary": true})
-	items.append({"id": "back", "kind": "button", "label": "BACK",
-		"rect": Rect2(24.0 + minf(240.0, w) + 12.0, y, 110.0, 46.0), "primary": false})
+	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
+		"rect": LeagueExtra.back_rect()})
 	return items
 
 func load_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -156,20 +156,8 @@ func load_layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(row.end.x - 96.0, row.position.y + 5.0, 34.0, 30.0), "slug": str(save["slug"])})
 		y += 46.0
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 110.0, BAR_H - 14.0), "primary": false})
+		"rect": LeagueExtra.back_rect()})
 	return items
-
-func _bar_rects(vp: Vector2, ids: Array, labels: Array) -> Array:
-	var out: Array = []
-	var margin := 24.0
-	var gap := 8.0
-	var w := (vp.x - 2.0 * margin - gap * float(ids.size() - 1)) / float(ids.size())
-	for i in range(ids.size()):
-		out.append({
-			"id": str(ids[i]), "kind": "button", "label": str(labels[i]), "primary": i == 0,
-			"pinned": true, "rect": Rect2(margin + float(i) * (w + gap), vp.y - BAR_H + 6.0, w, BAR_H - 14.0),
-		})
-	return out
 
 ## The lane the wide hub's side table occupies, beside the fixture list.
 func _hub_table_box(vp: Vector2) -> Rect2:

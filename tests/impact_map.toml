@@ -151,11 +151,12 @@ suites = [
   "test_strongest_xi.gd",
   "test_league_season.gd",
   "test_league_sheets.gd",
+  "test_league_panel_ui.gd",
   "test_league_ui.gd",
   "test_league_doors.gd",
   "test_league_system.gd",
   "test_league_interest.gd",
-  "test_goal_highlights.gd",
+  "test_league_sheets.gd",  "test_goal_highlights.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -281,6 +282,11 @@ domain = "league"
 # The planner's suggested watches read the table and flag fixtures.
 [[rules]]
 match = "scripts/sim/league_planner.gd*"
+domain = "league"
+
+# Season helpers split out of the season loop to keep its P3 size ratchet.
+[[rules]]
+match = "scripts/sim/league_*.gd*"
 domain = "league"
 
 [[rules]]
@@ -417,6 +423,11 @@ domain = "sheet_pointer"
 
 [[rules]]
 match = "scripts/ui/league_*.gd*"
+domain = "league"
+
+# Teams of Interest: the shared long-press menu and the HUD/picker entry points.
+[[rules]]
+match = "scripts/ui/interest_*.gd*"
 domain = "league"
 
 [[rules]]
