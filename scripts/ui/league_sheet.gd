@@ -152,13 +152,14 @@ func load_layout(vp: Vector2, view: Dictionary) -> Array:
 	var saves: Array = view.get("saves", [])
 	var w := minf(620.0, vp.x - 48.0)
 	var y := HEADER + 26.0
-	for i in range(mini(saves.size(), 7)):
+	# Every save is laid out; the body scrolls a library longer than one screen (REQ-P5-08).
+	for i in range(saves.size()):
 		var save: Dictionary = saves[i]
 		var row := Rect2(24.0, y, w, 40.0)
 		items.append({"id": "open:" + str(save["slug"]), "kind": "save_row",
 			"rect": row, "save": save})
 		items.append({"id": "delete:" + str(save["slug"]), "kind": "delete",
-			"rect": Rect2(row.end.x - 96.0, row.position.y + 5.0, 34.0, 30.0), "slug": str(save["slug"])})
+			"rect": Rect2(row.end.x - 84.0, row.position.y + 4.0, 40.0, 32.0), "slug": str(save["slug"])})
 		y += 46.0
 	items.append(LeagueExtra.back_item())
 	return items

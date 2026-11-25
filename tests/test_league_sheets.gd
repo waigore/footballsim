@@ -154,13 +154,19 @@ func test_the_load_list_lays_out_zero_and_many_saves() -> void:
 	var items: Array = sheet.load_layout(Vector2(1280, 720), {"saves": saves})
 	var open_doors := 0
 	var delete_doors := 0
+	var last_row := Rect2()
 	for item in items:
 		if str(item["kind"]) == "save_row":
 			open_doors += 1
+			last_row = item["rect"]
 		if str(item["kind"]) == "delete":
 			delete_doors += 1
-	assert_eq(open_doors, 7, "the load list should show seven rows")
-	assert_eq(delete_doors, 7, "every shown save needs a delete door")
+	# Every save is laid out: the body scrolls a long library instead of dropping
+	# the rows past the seventh (REQ-P5-08).
+	assert_eq(open_doors, 9, "the load list dropped a save")
+	assert_eq(delete_doors, 9, "every save needs a delete door")
+	assert_gte(last_row.end.y, LeagueSheet.HEADER + 26.0 + 46.0 * 8.0,
+		"the ninth save was laid over an earlier row")
 
 ## The compact column set (#, club, P W D L GF GA GD PTS) has to fit inside the
 ## row at every width the handheld overlay scale can produce: the numbers ride
