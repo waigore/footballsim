@@ -36,6 +36,12 @@ static func build(season: LeagueSeason) -> Dictionary:
 			"complete": season.record.fixtures.unplayed(str(cid)) == 0,
 		})
 	var primary := str(save.actives[0]) if not save.actives.is_empty() else "PL"
+	# The door appears when any active league has five rounds behind it: the
+	# planner then suggests from that league's own top six.
+	var ready := 0
+	for cid in save.actives:
+		if season.record.fixtures.completed_matchdays(str(cid)) >= LeaguePlanner.SUGGEST_AFTER_ROUNDS:
+			ready += 1
 	return {
 		"slug": save.slug,
 		"name": save.name(),
@@ -53,8 +59,7 @@ static func build(season: LeagueSeason) -> Dictionary:
 		"played": season.record.fixtures.played(),
 		"total": season.record.fixtures.played() + season.record.fixtures.unplayed(),
 		"rounds": season.record.fixtures.completed_matchdays(primary),
-		"can_suggest": season.record.fixtures.completed_matchdays(primary)
-			>= LeaguePlanner.SUGGEST_AFTER_ROUNDS,
+		"can_suggest": ready > 0,
 		"interests": season.record.interest.interests(),
 		"advance_mode": save.advance_mode(),
 		"rules": season.rules.duplicate(true),
