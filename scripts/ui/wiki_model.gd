@@ -72,6 +72,7 @@ static func league_page() -> Dictionary:
 			],
 			"target": {"page": TEAM, "id": str(row["club_id"])},
 			"accent": str(row.get("club_color", "")),
+			"club_cell": 1,
 		})
 	out["blocks"].append({
 		"k": "table",
@@ -96,7 +97,7 @@ static func league_page() -> Dictionary:
 				"%d – %d" % [int(fx["home_goals"]), int(fx["away_goals"])], str(fx["away_abbr"]),
 			],
 			"target": {"page": TEAM, "id": str(fx["home_club_id"])},
-			"dates": {0: str(fx["kickoff"])},
+			"dates": {0: str(fx["kickoff"])}, "club_cell": 1,
 		})
 	out["blocks"].append({"k": "section", "text": "LATEST RESULTS  ·  %s" % WikiLedger.ledger_label()})
 	if results.is_empty():

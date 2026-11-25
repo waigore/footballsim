@@ -7,6 +7,10 @@ extends RefCounted
 ## out of main.gd so the scene stays inside its P3 size budget.
 
 var game = null
+## A press the long-press grammar is watching (#107): the click it held back runs
+## on release, when the press turns out to be a short tap.
+var held_by = null
+var held_at := Vector2(-1, -1)
 
 func _init(host) -> void:
 	game = host
@@ -25,7 +29,7 @@ func handle(event: InputEvent) -> bool:
 	if event is InputEventMouseMotion:
 		game.mouse = event.position
 		game.view.hover(game.mouse)
-	elif event is InputEventMouseButton and event.pressed:
+	elif event is InputEventMouseButton:
 		_pointer(event)
 	elif event is InputEventKey and event.pressed and not event.echo:
 		_key(event.keycode)
@@ -39,12 +43,20 @@ func _select(event: InputEvent) -> void:
 		sheet.mouse = game.view.design(event.position, game.chrome_scale)
 		if not game.touch:
 			Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if sheet.button_at(sheet.mouse) != "" else Input.CURSOR_ARROW)
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		game.mouse = event.position
 		sheet.mouse = game.view.design(event.position, game.chrome_scale)
-		var sid: String = sheet.button_at(sheet.mouse)
-		if sid != "":
-			sheet.click(sid)
+		if event.pressed:
+			# A club card is held back until the release says tap or hold (#107).
+			if sheet.interest.press_at(sheet.mouse):
+				held_by = sheet.interest
+				held_at = event.position
+				return
+			var sid: String = sheet.button_at(sheet.mouse)
+			if sid != "":
+				sheet.click(sid)
+		else:
+			_release(event.position)
 	elif event is InputEventKey and event.pressed and not event.echo:
 		sheet.key(event.keycode)
 
@@ -57,7 +69,34 @@ func _pointer(event: InputEventMouseButton) -> void:
 		game._apply_camera(true)
 	elif event.button_index == MOUSE_BUTTON_LEFT:
 		game.mouse = event.position
-		game._click(event.position)
+		if event.pressed:
+			# A held club name on the overlay opens the menu instead of the page.
+			if game.hud != null and game.hud.interest.press_at(game.view.design(event.position)):
+				held_by = game.hud.interest
+				held_at = event.position
+				return
+			game._click(event.position)
+		else:
+			_release(event.position)
+
+## The release of a press a long-press grammar held back: a short tap still runs
+## the click the press would have run, a hold or a menu press is consumed (#107).
+func _release(screen_point: Vector2) -> void:
+	if held_by == null:
+		return
+	var hold = held_by
+	held_by = null
+	var design: Vector2 = game.view.design(screen_point,
+		game.chrome_scale if game.select_open else -1.0)
+	if hold.release_at(design):
+		return
+	var sheet = game.selector if game.select_open else null
+	if sheet != null:
+		var sid: String = sheet.button_at(design)
+		if sid != "":
+			sheet.click(sid)
+		return
+	game._click(held_at if held_at.x >= 0.0 else screen_point)
 
 # if/elif rather than match: the coverage injector cannot instrument a match
 # statement, and an uninstrumentable main.gd fails the patch gate.

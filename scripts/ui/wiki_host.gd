@@ -36,6 +36,8 @@ func build() -> void:
 	screen.closed.connect(_on_screen_closed)
 	screen.interest_toggled.connect(_on_interest_toggled)
 	pointer = SheetPointer.new(screen)
+	# The same pointer grammar watches for a hold (#107).
+	pointer.hold = screen.interest
 	layer.visible = false
 
 func is_open() -> bool:

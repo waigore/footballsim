@@ -18,13 +18,16 @@ func scoreboard(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: F
 	c.draw_rect(Rect2(x + w - 7, y + 2, 5, h - 4), engine.teams[1]["data"]["color"])
 	# home
 	_badge(p, c, engine, Rect2(x + 22, y + 19, 48, 48), 0, f_bold)
-	p.text(c, Vector2(x + 82, y + 44), engine.teams[0]["data"]["abbr"], 30, UiChrome.C_TEXT, f_bold)
+	# A followed club wears the interest mark on the scoreboard too (#107).
+	p.text(c, Vector2(x + 82, y + 44), engine.teams[0]["data"]["abbr"], 30,
+		LeagueInterestMark.ink(p.followed, str(engine.teams[0]["id"])), f_bold)
 	p.text(c, Vector2(x + 82, y + 64), engine.teams[0]["data"]["name"].to_upper(), 11, UiChrome.C_DIM, f_med)
 	# Club chrome opens the club's encyclopedia page.
 	p.add_button("team_0", Rect2(x + 14, y + 14, 190, 58), "HOME CLUB", "CLUB")
 	# away
 	_badge(p, c, engine, Rect2(x + w - 70, y + 19, 48, 48), 1, f_bold)
-	p.text_r(c, x + w - 82, y + 44, engine.teams[1]["data"]["abbr"], 30, UiChrome.C_TEXT, f_bold)
+	p.text_r(c, x + w - 82, y + 44, engine.teams[1]["data"]["abbr"], 30,
+		LeagueInterestMark.ink(p.followed, str(engine.teams[1]["id"])), f_bold)
 	p.text_r(c, x + w - 82, y + 64, engine.teams[1]["data"]["name"].to_upper(), 11, UiChrome.C_DIM, f_med)
 	p.add_button("team_1", Rect2(x + w - 204, y + 14, 190, 58), "AWAY CLUB", "CLUB")
 	# score

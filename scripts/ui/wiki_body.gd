@@ -27,6 +27,13 @@ var mouse := Vector2(-1000, -1000)
 ## Date strips this page painted, in body space (#99): the screen's overlay
 ## paints the weekday for the one under the pointer.
 var hints := DateHints.new()
+## Club names this page painted, in body space (#107): a long press reads them
+## to know which club is under the finger.
+var names := InterestNames.new()
+## Followed club ids as a set (#107): their printed names are gold. The screen
+## hands it in whenever the page or the shortlist changes, so a paint pass never
+## reads the save.
+var followed := {}
 
 func _ready() -> void:
 	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
@@ -146,6 +153,35 @@ func hit(p: Vector2) -> Dictionary:
 			return row["target"]
 	return {}
 
+## The club whose printed name is under a body point (#107). Only a cell that
+## prints one club counts: a fixture line that names both clubs has no answer,
+## so a hold there stays an ordinary press.
+func club_at(p: Vector2) -> String:
+	var local := p - position
+	if not Rect2(Vector2.ZERO, size).has_point(local):
+		return ""
+	return names.at(local)
+
+## Register the strip a row printed one club's name in. The painter knows the
+## cell's width; the model says which cell is the club's own name.
+func _name_strip(row: Dictionary, rect: Rect2) -> void:
+	var target: Dictionary = row.get("target", {})
+	if str(target.get("page", "")) != WikiModel.TEAM:
+		return
+	if str(row.get("k", "")) == "chip":
+		names.add(rect, str(target.get("id", "")))
+		return
+	var idx := int(row.get("club_cell", -1))
+	var cells: Array = row.get("cells", [])
+	if idx < 0 or idx >= cells.size():
+		return
+	var widths: Array = row["widths"]
+	var inner: float = rect.size.x - 6.0
+	var x: float = rect.position.x + 6.0
+	for i in range(idx):
+		x += inner * float(widths[i])
+	names.add(Rect2(x, rect.position.y, inner * float(widths[idx]), rect.size.y), str(target["id"]))
+
 func row_at(p: Vector2) -> int:
 	var local := _content_point(p)
 	if local.x < 0.0:
@@ -171,6 +207,7 @@ func _draw() -> void:
 	if _rows.is_empty():
 		return
 	hints.clear()
+	names.clear()
 	var focus_row := row_at(mouse) if mouse.x > -500.0 else -1
 	for i in range(_rows.size()):
 		var row: Dictionary = _rows[i]
@@ -179,6 +216,7 @@ func _draw() -> void:
 		if top + rect.size.y < 0.0 or top > size.y:
 			continue
 		var shifted := Rect2(rect.position.x, top, rect.size.x, rect.size.y)
+		_name_strip(row, shifted)
 		_draw_row(row, shifted, i == focus_row)
 
 ## The body owns its pixels: a page swap, a scroll or a hover change must ask
@@ -216,7 +254,9 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 		var accent := Color(str(row["accent"])) if str(row["accent"]) != "" else Color(0.35, 0.45, 0.5)
 		draw_rect(rect, Color(0.075, 0.105, 0.125, 0.95 if not hovered else 1.0), true)
 		draw_rect(Rect2(rect.position, Vector2(4, rect.size.y)), accent)
-		_text(Vector2(rect.position.x + 14, rect.position.y + 19), str(row["text"]), 13, Color(0.92, 0.95, 0.96), true)
+		var chip_id := str((row.get("target", {}) as Dictionary).get("id", ""))
+		_text(Vector2(rect.position.x + 14, rect.position.y + 19), str(row["text"]), 13,
+			UiChrome.C_GOLD if followed.has(chip_id) else Color(0.92, 0.95, 0.96), true)
 	elif kind == "thead":
 		var cols: Array = row["cols"]
 		var widths: Array = row["widths"]
@@ -243,16 +283,21 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 		var x := rect.position.x + 6.0
 		var text_cols: Array = row.get("text_cols", [1])
 		var dates: Dictionary = row.get("dates", {})
+		# A followed club's printed name is gold here too (#107), on the cell the
+		# model marked as that club's own name.
+		var mark := int(row.get("club_cell", -1))
+		var marked: bool = mark >= 0 and followed.has(str((row.get("target", {}) as Dictionary).get("id", "")))
 		for i in range(cells.size()):
 			var cw: float = (rect.size.x - 6.0) * float(widths[i])
 			# A date cell carries its weekday as a hint (#99), not in the text.
 			if dates.has(i):
 				hints.add(Rect2(x, rect.position.y + 2.0, cw, rect.size.y - 4.0), str(dates[i]))
+			var ink: Color = UiChrome.C_GOLD if marked and i == mark else Color(0.92, 0.95, 0.96)
 			var right: bool = not text_cols.has(i) and i != 0
 			if right:
-				_text_right(x + cw - 8.0, rect.position.y + 16.0, str(cells[i]), 11, Color(0.92, 0.95, 0.96), i == cells.size() - 1)
+				_text_right(x + cw - 8.0, rect.position.y + 16.0, str(cells[i]), 11, ink, i == cells.size() - 1)
 			else:
-				_text(Vector2(x, rect.position.y + 16), _clip(str(cells[i]), 34), 11, Color(0.92, 0.95, 0.96), i == 1 and cells.size() >= 4)
+				_text(Vector2(x, rect.position.y + 16), _clip(str(cells[i]), 34), 11, ink, i == 1 and cells.size() >= 4)
 			x += cw
 		draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), Color(1, 1, 1, 0.05), 1)
 

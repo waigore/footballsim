@@ -47,6 +47,9 @@ func build() -> void:
 	screen.goal_highlight_requested.connect(_on_goal_highlight)
 	screen.quit_requested.connect(_on_quit_requested)
 	pointer = SheetPointer.new(screen)
+	# The same pointer grammar watches for a hold, so a club name can be pressed
+	# and held without a second input path (#107).
+	pointer.hold = screen.interest
 	layer.visible = false
 
 ## Open means "the layer is on screen": the hand-off to the match viewer hides

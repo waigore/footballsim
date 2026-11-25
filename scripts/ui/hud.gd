@@ -20,6 +20,15 @@ var f_bold: FontFile
 var f_med: FontFile
 var f_body: FontFile
 
+## The long press on a club's scoreboard name (#107).
+var interest := InterestHold.new()
+## The layer that paints the menu above every band.
+var menu_layer: InterestLayer = null
+## The followed club ids as a set, and the season it was read from: the overlay
+## paints every frame, so the shortlist is read when it moves, not per name.
+var followed := {}
+var followed_of = null
+
 ## Every door painted this frame, in draw order (`id`, `rect`, `label`, `hint`).
 var buttons: Array:
 	get:
@@ -54,6 +63,25 @@ func _ready() -> void:
 	ticker = HudCommentary.new(C_PANEL, C_GOLD, C_TEXT, C_DIM)
 	manager_card = HudManagers.new(C_PANEL, C_GOLD, C_TEXT, C_DIM)
 	card = HudPlayerCard.new(C_PANEL, C_GOLD, C_TEXT, C_DIM)
+	# A held club name opens the Teams of Interest menu (#107); the scoreboard
+	# doors are already the club's own, so the hold reads them back.
+	interest.club_at = func(p: Vector2) -> String:
+		if engine == null:
+			return ""
+		var id := button_at(p)
+		if id == "team_0":
+			return str(engine.teams[0]["id"])
+		if id == "team_1":
+			return str(engine.teams[1]["id"])
+		return ""
+	interest.season_of = func(): return LeagueSeason.active
+	interest.on_changed = func():
+		_read_followed()
+		queue_redraw()
+	menu_layer = InterestLayer.new()
+	menu_layer.hold = interest
+	menu_layer.screen = self
+	add_child(menu_layer)
 
 ## The logical viewport is the stretched one (1600x900 and friends); the overlay
 ## draws in the smaller design space that main.gd scales back up.
@@ -65,7 +93,19 @@ func _process(d: float) -> void:
 		ticker.tick(d, engine, game)
 	if manager_card != null:
 		manager_card.tick(d, engine, game)
+	if interest.tick(d):
+		queue_redraw()
+	if LeagueSeason.active != followed_of:
+		_read_followed()
 	queue_redraw()
+
+## Re-read the shortlist when the season under the broadcast opens or closes, and
+## after the menu writes it (#107).
+func _read_followed() -> void:
+	var season = LeagueSeason.active
+	followed_of = season
+	followed = LeagueInterestMark.set_of(season.state().get("interests", [])) \
+		if season != null else {}
 
 func _draw() -> void:
 	if game == null or engine == null:
@@ -73,6 +113,7 @@ func _draw() -> void:
 	chrome.buttons.clear()
 	var vp := design_vp()
 	var p := HudPaint.new(chrome, vp)
+	p.followed = followed
 	roster_band.ui_scale = ui_scale
 	roster_band.touch = touch
 	roster_band.mouse = mouse
@@ -101,6 +142,9 @@ func _draw() -> void:
 
 ## The manager card is a whole-card dismiss target and sits in front of the bar.
 func button_at(p: Vector2) -> String:
+	# The open menu answers every press itself (#107).
+	if interest.is_open():
+		return interest.menu.hit(p, design_vp())
 	if manager_card != null and manager_card.button_at(p):
 		return "manager_card"
 	return chrome.button_at(p)

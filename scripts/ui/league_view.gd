@@ -44,17 +44,18 @@ static func build(screen) -> Dictionary:
 			"interests": state.get("interests", [])}
 	if mode == LeagueScreen.MODE_CALENDAR:
 		return {"month": screen.month, "day": screen.day, "days": screen.days_cache,
-			"day_fixtures": screen.day_fixtures}
+			"day_fixtures": screen.day_fixtures, "interests": state.get("interests", [])}
 	if mode == LeagueScreen.MODE_REPORT:
 		if not (screen.roundup as Array).is_empty():
 			var first: Dictionary = screen.roundup[0]
-			return {"roundup": screen.roundup,
+			return {"roundup": screen.roundup, "interests": state.get("interests", []),
 				"day": str(first["fixture"]["kickoff"]) if first.has("fixture") else ""}
 		var card: Dictionary = screen.report
 		return {
 			"fixture": card.get("fixture", {}), "events": card.get("events", []),
 			"highlights": card.get("highlights", []),
 			"day": str((card.get("fixture", {}) as Dictionary).get("kickoff", "")),
+			"interests": state.get("interests", []),
 		}
 	if mode == LeagueScreen.MODE_PODIUM:
 		return {"summary": state.get("summary", {}), "name": state.get("name", ""),

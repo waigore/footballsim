@@ -21,6 +21,9 @@ var cache := {}
 ## Dates this book painted, with the strip each one occupies (#99): the screen's
 ## overlay paints the weekday for the one under the pointer.
 var hints := DateHints.new()
+## Club names this book painted, with the strip each one occupies (#107): the
+## long press reads it, in the same design space the rows are laid out in.
+var names := InterestNames.new()
 ## The table pose's geometry, sorting and paint (compact/full, header sort). It
 ## lives in its own module because the book is at its method budget.
 var table := LeagueTableView.new()
@@ -170,7 +173,7 @@ func draw_table_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dict
 	table.draw_chrome(c, vp, fonts, view, hints)
 
 func draw_table_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
-	table.draw_body(c, vp, fonts, items, view)
+	table.draw_body(c, vp, fonts, items, view, names)
 
 # -------------------------------------------------------------- calendar ---
 
@@ -183,6 +186,8 @@ func draw_calendar_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: D
 
 func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()
+	names.clear()
+	var interest := LeagueInterestMark.set_of(view.get("interests", []))
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	var labels := ["S", "M", "T", "W", "T", "F", "S"]
@@ -195,11 +200,23 @@ func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Ar
 		if kind == "cell":
 			_draw_cell(c, rect, item, fonts)
 		elif kind == "fixture":
+			# Each club is its own run so the long press can name the one under
+			# the finger, and a followed club's abbreviation is gold (#107).
 			var fx: Dictionary = item["fixture"]
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 4)
-			UiChrome.text(c, Vector2(rect.position.x + 8.0, rect.position.y + 15.0),
-				"%s  %s v %s" % [str(fx["kickoff_time"]), str(fx["home_abbr"]), str(fx["away_abbr"])], 11,
-				UiChrome.C_TEXT, med)
+			var fy := rect.position.y + 15.0
+			var fx_x := rect.position.x + 8.0
+			var kick := str(fx["kickoff_time"])
+			UiChrome.text(c, Vector2(fx_x, fy), kick, 10, UiChrome.C_DIM, med)
+			fx_x += InterestNames.width(med, kick, 10) + 8.0
+			var home_id := str(fx.get("home_club_id", ""))
+			var away_id := str(fx.get("away_club_id", ""))
+			fx_x += InterestNames.run(c, names, home_id, str(fx["home_abbr"]),
+				Vector2(fx_x, fy), 11, LeagueInterestMark.ink(interest, home_id), med) + 5.0
+			UiChrome.text(c, Vector2(fx_x, fy), "v", 10, UiChrome.C_DIM, med)
+			fx_x += InterestNames.width(med, "v", 10) + 6.0
+			InterestNames.run(c, names, away_id, str(fx["away_abbr"]), Vector2(fx_x, fy), 11,
+				LeagueInterestMark.ink(interest, away_id), med)
 			var score := "%d-%d" % [int(fx["home_goals"]), int(fx["away_goals"])]
 			UiChrome.text_r(c, rect.end.x - 8.0, rect.position.y + 15.0,
 				score if str(fx["status"]) == "played" else "OPEN", 10,
@@ -239,13 +256,25 @@ func draw_report_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dic
 
 func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()
+	names.clear()
+	var interest := LeagueInterestMark.set_of(view.get("interests", []))
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	if (view.get("roundup", []) as Array).is_empty():
 		var fx: Dictionary = view.get("fixture", {})
-		UiChrome.text(c, Vector2(24.0, HEADER + 34.0),
-			"%s  %d – %d  %s" % [str(fx.get("home_name", "")), int(fx.get("home_goals", 0)),
-				int(fx.get("away_goals", 0)), str(fx.get("away_name", ""))], 22, UiChrome.C_TEXT, bold)
+		# The headline is three runs so each club name is its own long-press
+		# target, and a followed club prints gold like it does in the lists.
+		var head_y := HEADER + 34.0
+		var home_id := str(fx.get("home_club_id", ""))
+		var away_id := str(fx.get("away_club_id", ""))
+		var hx := 24.0
+		hx += InterestNames.run(c, names, home_id, str(fx.get("home_name", "")),
+			Vector2(hx, head_y), 22, LeagueInterestMark.ink(interest, home_id), bold) + 10.0
+		var line := "%d – %d" % [int(fx.get("home_goals", 0)), int(fx.get("away_goals", 0))]
+		UiChrome.text(c, Vector2(hx, head_y), line, 22, UiChrome.C_TEXT, bold)
+		hx += InterestNames.width(bold, line, 22) + 10.0
+		InterestNames.run(c, names, away_id, str(fx.get("away_name", "")),
+			Vector2(hx, head_y), 22, LeagueInterestMark.ink(interest, away_id), bold)
 		var date := str(view.get("day", ""))
 		var label := FixtureCalendar.day_label(date)
 		UiChrome.text(c, Vector2(24.0, HEADER + 54.0), label, 10, UiChrome.C_DIM, med)
@@ -264,14 +293,22 @@ func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 			var report: Dictionary = item["report"]
 			var fx: Dictionary = report["fixture"]
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 5)
-			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 18.0),
-				"%s %d – %d %s" % [str(fx["home_abbr"]), int(fx["home_goals"]), int(fx["away_goals"]),
-					str(fx["away_abbr"])], 15, UiChrome.C_TEXT, bold)
+			var ry := rect.position.y + 18.0
+			var rx := rect.position.x + 10.0
+			var row_home := str(fx.get("home_club_id", ""))
+			var row_away := str(fx.get("away_club_id", ""))
+			var score := "%d – %d" % [int(fx["home_goals"]), int(fx["away_goals"])]
+			rx += InterestNames.run(c, names, row_home, str(fx["home_abbr"]),
+				Vector2(rx, ry), 15, LeagueInterestMark.ink(interest, row_home), bold) + 8.0
+			UiChrome.text(c, Vector2(rx, ry), score, 15, UiChrome.C_TEXT, bold)
+			rx += InterestNames.width(bold, score, 15) + 8.0
+			InterestNames.run(c, names, row_away, str(fx["away_abbr"]), Vector2(rx, ry), 15,
+				LeagueInterestMark.ink(interest, row_away), bold)
 			# Every scorer says which club scored (DR-20261125-07): the run mixes
 			# both sides, so the entry carries its own club label.
-			var line := LeagueRoundup.run(report, med, rect.size.x - 20.0, 10)
+			var scorers := LeagueRoundup.run(report, med, rect.size.x - 20.0, 10)
 			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 34.0),
-				line if line != "" else LeagueRoundup.NONE, 10, UiChrome.C_DIM, med)
+				scorers if scorers != "" else LeagueRoundup.NONE, 10, UiChrome.C_DIM, med)
 
 func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
 	var e: Dictionary = item["event"]
