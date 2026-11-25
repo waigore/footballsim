@@ -73,6 +73,8 @@ func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 
 func report_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
+	# BACK keeps the league's header position, never a bottom door (#105, #162).
+	items.append(LeagueExtra.back_item())
 	var y := HEADER + 70.0
 	var clips := {}
 	for row in view.get("highlights", []):
@@ -96,8 +98,6 @@ func report_layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": "match:" + str(report["fixture"]["id"]), "kind": "result",
 			"report": report, "rect": Rect2(24.0, y, vp.x - 48.0, 44.0)})
 		y += 50.0
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 120.0, BAR_H - 14.0), "primary": true})
 	return items
 
 func podium_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -254,11 +254,11 @@ func draw_report_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dic
 	var kicker := "MATCH REPORT"
 	if not roundup.is_empty():
 		kicker = "RESULTS · %s" % (label if label != "" else date)
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), kicker, 12, UiChrome.C_GOLD, bold)
+	UiChrome.wordmark(c, Vector2(136.0, 30.0), 18, bold)
+	UiChrome.text(c, Vector2(136.0, 48.0), kicker, 12, UiChrome.C_GOLD, bold)
 	if not roundup.is_empty() and date != "":
 		hints.add(DateHints.strip(bold, label,
-			Vector2(24.0 + DateHints.width(bold, "RESULTS · ", 12), 48.0), 12), date)
+			Vector2(136.0 + DateHints.width(bold, "RESULTS · ", 12), 48.0), 12), date)
 
 func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()
