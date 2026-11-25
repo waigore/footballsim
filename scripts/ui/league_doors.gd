@@ -30,8 +30,7 @@ const EDGE := 1.0e7
 
 # ------------------------------------------------------------------ keys ---
 
-## Run the key map against the screen. True when the key belonged to the surface
-## and the caller should not pass it on.
+## A key: the sheet's key map. `code` is the keycode the platform reports.
 static func key(screen, code: int) -> bool:
 	if _typed(screen, code):
 		return true
@@ -59,20 +58,32 @@ static func key(screen, code: int) -> bool:
 			return false
 	return true
 
+## One typed character — what a soft keyboard sends, with no keycode of its own
+## (#201). `unicode` is the codepoint the platform reports, 0 when the key names
+## no character. A physical key keeps the letter printed on it instead, so a
+## letter the platform also names by keycode is left to the key map above and
+## this only takes the characters it does not know.
+static func text_key(screen, code: int, unicode: int) -> bool:
+	if unicode <= 0 or LeagueTextField.accepts(LeagueTextField.char_of(code)):
+		return false
+	return _typed(screen, 0, char(unicode))
+
 ## Text-entry sheets take their keys first: the wizard's name field, the System
 ## dialog's Save As name field, and the report's numbered goal doors. A key they
 ## do not own falls through to the map (so BACKSPACE on an empty field still
 ## leaves the sheet, and a digit with no clip stays a no-op).
-static func _typed(screen, code: int) -> bool:
+static func _typed(screen, code: int, ch: String = "") -> bool:
 	if screen.mode == screen.MODE_WIZARD:
-		if LeagueTextField.type_name_into(screen.wizard, code):
+		if _edit(screen.wizard, code, ch):
 			screen.refresh()
 			return true
-	if screen.mode == screen.MODE_SYSTEM and LeagueSystemActions.type_name(screen, code):
+	if screen.mode == screen.MODE_SYSTEM and LeagueSystemActions.type_name(screen, code, ch):
 		return true
 	# The shortlist's search field takes printable keys while the list is open.
 	if screen.mode == screen.MODE_INTEREST:
-		var typed: Array = LeagueTextField.type_name(str(screen.interest_query), code)
+		var query := str(screen.interest_query)
+		var typed: Array = LeagueTextField.type_char(query, ch) if ch != "" \
+			else LeagueTextField.type_name(query, code)
 		if bool(typed[0]):
 			screen.interest_query = str(typed[1]).to_lower()
 			screen.refresh()
@@ -85,6 +96,11 @@ static func _typed(screen, code: int) -> bool:
 	LeagueGoalDoors.play(screen, want)
 	return true
 
+## One edit of a field's state, from a keycode or from a typed character.
+static func _edit(state: Dictionary, code: int, ch: String) -> bool:
+	return LeagueTextField.type_char_into(state, ch) if ch != "" \
+		else LeagueTextField.type_name_into(state, code)
+
 # ----------------------------------------------------------------- press ---
 
 ## The whole press table. Ids are `sheet:payload`; the first arm that matches
@@ -92,6 +108,14 @@ static func _typed(screen, code: int) -> bool:
 static func press(screen, id: String) -> void:
 	if id == "":
 		return
+	# A painted text field is a door too (#201): pressing it puts the platform's
+	# keyboard up on the text it holds. Any other press puts the keyboard away,
+	# so it never stands over a sheet the player has moved on from.
+	if LeagueFieldFocus.kind_of(id) != "":
+		LeagueFieldFocus.press(screen, LeagueFieldFocus.kind_of(id))
+		screen.refresh()
+		return
+	screen.focus.blur()
 	# The delete confirmation's two doors answer before the sheet does. They carry
 	# no `delete:` prefix, so no save slug can ever be mistaken for an answer.
 	if id == "delete_yes":
@@ -167,14 +191,14 @@ static func press(screen, id: String) -> void:
 		LeagueSystemActions.open(screen)
 	elif id == "create":
 		create(screen)
-	elif id == "name":
-		screen.refresh()
 
 ## Leave the current page. The season walks its own history (#169): BACK is the
 ## previous page, at the root it does nothing, and the main menu is reached only
 ## through System → MAIN MENU. The menu-level sheets (New League, Load) are not
 ## pages of a season: their BACK returns to the caller that opened them.
 static func back(screen) -> void:
+	# BACK is also how a player puts the keyboard away before leaving the pose.
+	screen.focus.blur()
 	# The delete confirmation is the top-most surface: BACK puts it away and
 	# leaves the sheet it was raised over untouched.
 	if screen.delete_confirm_open():

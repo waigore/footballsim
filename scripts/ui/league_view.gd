@@ -49,7 +49,12 @@ static func panel_reading(mode: String) -> String:
 static func build(screen) -> Dictionary:
 	var mode: String = str(screen.mode)
 	if mode == LeagueScreen.MODE_WIZARD or mode == LeagueScreen.MODE_LOAD:
-		return screen.wizard if mode == LeagueScreen.MODE_WIZARD else {"saves": screen.saves}
+		if mode == LeagueScreen.MODE_LOAD:
+			return {"saves": screen.saves}
+		# The wizard's own state, plus where the keyboard is (#201).
+		var wiz: Dictionary = screen.wizard.duplicate()
+		wiz["focus"] = str(screen.focus.kind)
+		return wiz
 	var season = screen.season
 	var rules: Dictionary = season.rules if season != null else LeagueRules.defaults()
 	var state: Dictionary = season.state() if season != null else {"rules": rules}
@@ -74,7 +79,10 @@ static func build(screen) -> Dictionary:
 	if mode == LeagueScreen.MODE_INTEREST:
 		var marked: Array = state.get("interests", []) if season != null else []
 		return {"query": screen.interest_query, "clubs": LeagueClubs.rows(marked),
-			"results": LeagueClubs.search(screen.interest_query, marked)}
+			"results": LeagueClubs.search(screen.interest_query, marked),
+			# Where the on-screen keyboard is (#201), so the search field can
+			# paint its caret only while it owns the keyboard.
+			"focus": str(screen.focus.kind)}
 	if mode == LeagueScreen.MODE_TABLE:
 		return {"table": state.get("table", []), "rules": state.get("rules", rules),
 			"name": state.get("name", ""), "date": state.get("date", ""),

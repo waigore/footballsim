@@ -72,9 +72,10 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 	elif status != "":
 		UiChrome.text(c, Vector2(24.0, HEADER + 14.0), status, 11, UiChrome.C_LIVE, bold)
 
-func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array, _view: Dictionary) -> void:
+func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
+	var live := str(view.get("focus", "")) == LeagueFieldFocus.SYSTEM
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		match str(item["kind"]):
@@ -90,6 +91,7 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array, _vi
 				UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_GOLD, 1)
 				UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
 					str(item["value"]), 15, UiChrome.C_TEXT, bold)
+				LeagueFieldFocus.caret(c, rect, str(item["value"]), bold, 15, live)
 			"button":
 				UiChrome.button(c, cache, rect, str(item["label"]), bold,
 					bool(item.get("primary", false)))
