@@ -427,6 +427,10 @@ func test_the_hud_holds_a_club_name() -> void:
 		InterestMenu.TOGGLE, "the overlay did not hand the press to the menu")
 	game.hud.interest.click(InterestMenu.TOGGLE)
 	assert_true(season.record.interest.is_interested("MUN"), "the overlay's door did not follow the club")
+	# The overlay paints the gold from a set it reads when the season moves, not
+	# from the save on every frame: the write must reach it.
+	assert_true(bool(game.hud.followed.get("MUN", false)),
+		"the overlay did not pick up the club it just followed")
 	game.queue_free()
 
 func test_a_short_tap_on_a_club_name_still_opens_its_page() -> void:
