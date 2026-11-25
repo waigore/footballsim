@@ -48,6 +48,15 @@ func _init() -> void:
 		_fail("the whistle sheet lists %d goals for a %d-%d score" % [
 			eng.goal_sheet.size(), eng.score[0], eng.score[1]])
 		return
+	# One match names one competition (#209): this match has no league fixture
+	# behind it, so the binding every surface reads is a friendly — no matchday,
+	# no table, and never a borrowed league name.
+	var billing := MatchBilling.new()
+	billing.bind_fixture(HOME, {})
+	if not billing.friendly or billing.matchday != 0 or billing.chrome_name() != MatchBilling.FRIENDLY:
+		_fail("a fixture-less match is not billed as a friendly (%s, matchday %d)" % [
+			billing.chrome_name(), billing.matchday])
+		return
 
 	print("SMOKE OK %s %d-%d %s seed=%d ticks=%d wall=%.1fs" % [
 		HOME, eng.score[0], eng.score[1], AWAY, SEED, ticks, elapsed_total])

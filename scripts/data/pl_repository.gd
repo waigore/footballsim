@@ -52,6 +52,10 @@ func club_ids(competition_id: String = "") -> Array:
 	return ids
 
 ## Club row plus its league table line: what the team dashboard header needs.
+## The row also names the competition the club plays in (#209): the id, its
+## short name for chrome and its full name for prose. They ride the memoised
+## club row so a match bound to a competition never has to read the file again
+## — the broadcast paints every frame.
 func club(club_id: String) -> Dictionary:
 	if _clubs.has(club_id):
 		return _clubs[club_id]
@@ -59,6 +63,8 @@ func club(club_id: String) -> Dictionary:
 	if row.is_empty():
 		return {}
 	var competition_id := str(row.get("competition_id", ""))
+	var competition := PLDatabase.row(
+		"SELECT name, short_name FROM competition WHERE id = ?;", [competition_id])
 	# A season save owns its own standings, so the header reads the row the
 	# season keeps; without one it is the snapshot's reading of the real table.
 	var table: Dictionary = LeagueLedger.club_record(club_id) \
@@ -74,6 +80,8 @@ func club(club_id: String) -> Dictionary:
 		"abbr": str(row["abbr"]),
 		"nickname": str(row["nickname"]),
 		"competition": competition_id,
+		"competition_short": str(competition.get("short_name", competition_id)),
+		"competition_name": str(competition.get("name", competition_id)),
 		"manager": str(row["manager"]),
 		"stadium": str(row["stadium"]),
 		"city": str(row["city"]),

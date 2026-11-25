@@ -180,8 +180,10 @@ func _on_season_opened(opened: LeagueSeason) -> void:
 ## through PLSimStats once the match starts.
 func _on_match_requested(home: String, away: String, fixture_id: String) -> void:
 	briefing = {"home": home, "away": away, "fixture": fixture_id}
+	var fx: Dictionary = season.record.fixtures.one(fixture_id) if season != null else {}
+	# One competition for the match, bound before the briefing paints (#209).
+	MatchBilling.bind_scene(game, home, fx)
 	if game.prematch != null:
-		var fx: Dictionary = season.record.fixtures.one(fixture_id) if season != null else {}
 		var req := PreMatchModel.build(home, away, fx, season)
 		game.prematch.ask(req, Callable(self, "_kick_briefing"), Callable(self, "_back_from_briefing"))
 		return
