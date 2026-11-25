@@ -25,7 +25,14 @@ func _initialize() -> void:
 	scene.menus.close()
 	scene.hud_layer.visible = true
 	scene._on_fixture_confirmed("MUN", "MCI")
-	scene.paused = true
+	# #157: the briefing comes before the sim, so kick it off.
+	if scene.prematch != null and scene.prematch.is_open():
+		scene.prematch.screen.click("kick")
+		await _frames(2)
+	# The poses are stills: leave the loop un-paused so the status line reads the
+	# view, and stop the scene's tick so nothing moves between posing and capture.
+	scene.paused = false
+	scene.set_process(false)
 	scene.engine.clock = 63.0 * 60.0
 	scene.engine.score[0] = 2
 	scene.engine.score[1] = 1
@@ -96,10 +103,10 @@ func _print_state(label: String) -> void:
 	for spec in specs:
 		if str(spec[0]) == "mode":
 			door = str(spec[1])
-	var speed_hint: String = str((specs[1] as Array)[1])
-	var label_line: String = scene.hud.roster_band.state_label(scene, speed_hint)
+	var label_line: String = scene.hud.roster_band.state_label(scene, scene.hud.controls_band.speed_label(scene))
+	var chip := "" if scene.mode == "full" else HudTopBand.sim_chip_label(scene.mode)
 	print("%s: mode=%s door=%s chip=%s status=%s fast=%s" % [label, scene.mode, door,
-		HudTopBand.sim_chip_label(scene.mode), label_line, scene.fast_mode])
+		chip, label_line, scene.fast_mode])
 
 func _print_settings(label: String) -> void:
 	var vp: Vector2 = scene.menus.shell.design_vp()
@@ -111,7 +118,10 @@ func _frames(count: int) -> void:
 		await process_frame
 
 func _shot(name: String) -> void:
-	await _frames(4)
+	await _frames(6)
+	# Force the draw stage before reading back: a queued redraw that has not
+	# reached it saves the previous pose, and an occluded window may not draw.
+	RenderingServer.force_draw(false)
 	var tex: ViewportTexture = scene.get_viewport().get_texture()
 	if tex == null:
 		print("SHOT %s skipped (no renderer)" % name)
