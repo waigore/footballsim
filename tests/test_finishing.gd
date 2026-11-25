@@ -161,13 +161,28 @@ func test_contest_factor_is_bounded_and_reads_the_ratings() -> void:
 		assert_between(float(e.xg_form[1]), 0.30, 3.00,
 			"%s v %s away contest factor is out of family" % [pair[0], pair[1]])
 
-func test_equal_squads_carry_only_the_venue_edge() -> void:
+func test_equal_squads_carry_no_pricing_edge() -> void:
 	# An even fixture faces the same defence and takes the same chances, so the
-	# two forms differ only by the venue premium the model puts in λ.
+	# two forms are identical: the home edge lives in creation (the home side
+	# holds the ball higher and shoots from better positions), not in the
+	# finishing multiplier, which prices the venue twice when it does
+	# (DR-20261126-02).
 	var e := MatchEngine.new(1, "MCI", "MCI")
-	var venue: float = exp(2.0 * MatchEngine.XG_HOME_EDGE)
-	assert_almost_eq(float(e.xg_form[0]) / float(e.xg_form[1]), venue, 0.0001,
-		"equal squads did not split by the venue edge")
+	assert_eq(MatchEngine.XG_HOME_EDGE, 0.0, "the finishing multiplier prices the venue again")
+	assert_almost_eq(float(e.xg_form[0]) / float(e.xg_form[1]), 1.0, 0.0001,
+		"equal squads did not read the same chance quality")
 	var goal: Vector2 = e.target_goal_pos(0)
 	var xg: float = e.expected_goals(goal + Vector2(-11.0, 0.0), 0.0, 0)
-	assert_between(xg, 0.04, 0.10, "a central 11 m chance is outside the calibrated band")
+	assert_between(xg, 0.02, 0.05, "a central 11 m chance is outside the calibrated band")
+
+func test_the_canonical_chance_sits_on_the_census_level() -> void:
+	# Tier-1 tripwire for the level the big-n census owns: a central 12 m
+	# chance is worth this much once the engine is priced onto the PL-envelope
+	# λ (DR-20261126-02, wiki poisson-model). A move in XG_SCALE or the contest
+	# elasticity that is not followed by a census shows up here first.
+	var even := MatchEngine.new(1, "MCI", "MCI")
+	var strong := MatchEngine.new(1, "MCI", "IPS")
+	var even_xg: float = even.expected_goals(even.target_goal_pos(0) + Vector2(-12.0, 0.0), 0.0, 0)
+	var strong_xg: float = strong.expected_goals(strong.target_goal_pos(0) + Vector2(-12.0, 0.0), 0.0, 0)
+	assert_between(even_xg, 0.026, 0.032, "the even fixture's chance left the calibrated level")
+	assert_between(strong_xg, 0.044, 0.053, "the rating-gap chance left the calibrated level")

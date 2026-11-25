@@ -122,12 +122,11 @@ func draw_stats_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 		_view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
-	var sheet := LeagueSheet.new()
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
 		if kind == "door":
-			sheet.draw_button(c, rect, str(item["label"]), bold, bool(item["primary"]))
+			UiChrome.button(c, cache, rect, str(item["label"]), bold, bool(item["primary"]))
 		elif kind == "caption":
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), str(item["label"]), 10,
 				UiChrome.C_DIM, bold)
