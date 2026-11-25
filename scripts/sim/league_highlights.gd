@@ -4,7 +4,8 @@ extends RefCounted
 ## Goal clips for a season: one playback pack per goal on every match report.
 ##
 ## A fixture the player left on Auto has no live picture to record, so each goal
-## gets a generated clip that ends with the report's own scorer and assist. A
+## gets a situated clip — `GoalVignette` simulates the chance — that ends with the
+## report's own scorer and assist. A
 ## watched fixture already ran on the pitch, so the clip is cut from the
 ## viewer's snapshot ring of the goal that really happened. Both paths write the
 ## same row shape, so a report reads a clip without knowing which path made it.
@@ -140,10 +141,10 @@ static func _captured_row(pack: Dictionary, fixture_id: String, event: Dictionar
 
 # ------------------------------------------------------------------- rows ---
 
-## A generated clip's row: the line and the fields its pack is drawn from, but
+## A simulated clip's row: the line and the fields its pack is built from, but
 ## not the pack. A settled gameweek draws a dozen clips nobody opens, and a pack
 ## is ~10 kB of JSON and gzip apiece — the single largest cost of a settled
-## matchday. The row keeps its recipe, and `LeagueClips.pack` draws the picture
+## matchday. The row keeps its recipe, and `LeagueClips.pack` runs the vignette
 ## the first time a report asks for it, then caches it in the row.
 static func _generated_row(save_seed: int, fixture_id: String, event: Dictionary,
 		index: int, score_after: Array, home: String, away: String,
