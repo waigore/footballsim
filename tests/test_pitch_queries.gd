@@ -15,6 +15,11 @@ func _engine(seed_in: int = 31) -> MatchEngine:
 	eng.possession_team = 0
 	return eng
 
+## The boot template (`TestEngineBoot`) already holds the kick-off shape a
+## 4242 engine starts in; `match` copies it onto an engine free to tick.
+func _seeded(seed_in: int) -> MatchEngine:
+	return TestEngineBoot.match(seed_in)
+
 ## The walk as the per-player query did it, kept here as the oracle.
 func _walk_reach(eng, p) -> float:
 	var bp: Vector2 = eng.ball.pos
@@ -168,17 +173,22 @@ func test_the_line_follows_the_bodies_rather_than_a_stale_read() -> void:
 
 ## A seeded match must stay reproducible: two engines on one seed agree on every
 ## body's position through a real stretch of play, so the shared path changed no
-## decision. Twenty seconds of ticks is enough for many shape passes without
-## paying for a full match under coverage.
+## decision. The first five seconds already carry kick-off, the opening shape
+## passes and the first restarts — where the shared path is read — and two
+## hundred ticks of two engines is a fraction of a coverage-instrumented second.
 func test_a_shared_path_leaves_a_seeded_match_reproducible() -> void:
-	var a := MatchEngine.new(4242, "MUN", "MCI")
-	var b := MatchEngine.new(4242, "MUN", "MCI")
-	for i in 1200:
+	var a := _seeded(4242)
+	var b := _seeded(4242)
+	var seen: Array = []
+	for i in 200:
 		if a.phase == "half_time":
 			a.begin_second_half()
 			b.begin_second_half()
 		a.tick()
 		b.tick()
+		if not seen.has(a.phase):
+			seen.append(a.phase)
+	assert_true(seen.has("play"), "the seeded match never reached open play")
 	for i in a.players.size():
 		assert_eq(a.players[i].pos, b.players[i].pos, "the same seed drifted the squad's positions")
 	assert_eq(a.ball.pos, b.ball.pos, "the same seed drifted the ball")
