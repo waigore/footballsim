@@ -154,12 +154,15 @@ func hit(p: Vector2) -> String:
 
 ## Layers, bottom to top: the sheet's scrolling rows (offset and clipped by
 ## `clip_contents`), then the doors it pins — which are laid out in screen space,
-## so they are painted after the offset is cancelled and cover the clip.
+## so they are painted after the scroll is cancelled and cover the clip. The
+## pinned rects are screen rects while this node sits at `position.y`, so the
+## node's own offset is cancelled too: without it every pinned door painted 58
+## units low, over the first field or row of the sheet.
 func _draw() -> void:
 	if painter.is_valid():
 		draw_set_transform(Vector2(-hscroll, -position.y - scroll))
 		painter.call(self)
-		draw_set_transform(Vector2.ZERO)
+		draw_set_transform(Vector2(0.0, -position.y))
 	for item in pinned:
 		_door(item)
 
