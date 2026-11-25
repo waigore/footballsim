@@ -1,95 +1,148 @@
 class_name LeagueRoundup
 extends RefCounted
 
-## A roundup row's scorer run: every goal of one fixture in minute order, each
-## entry carrying the club that scored it (#125).
+## A fixture's events, read as two sides: the goals, cards and injuries that sit
+## under the club they belong to, in minute order, with a goal's assist in
+## brackets (#168).
 ##
-## The run mixes both sides' goals on one line, so — like the whistle card's
-## phone rows (DR-20261125-04) — no column implies who a goal belongs to and the
-## entry names its own club: `CRY 6' J. Mateta · MUN 23' M. Cunha`. A goal the
-## row cannot fit is counted (`+2`) rather than dropped silently, the rule the
-## cards use. Geometry and text only, no nodes: the book paints what this
-## returns.
+## The row that prints them gives each side its own column, so an entry never
+## carries its club's label — the column is the label. A goal is credited to the
+## club stored on its row, which for an own goal is the side that gained it; the
+## row says `(OG)` so the reader still knows the ball went in off the other
+## side's player. Assist rows are folded into the goal they served instead of
+## taking a line of their own; a report whose goals have no assist rows (a
+## watched fixture) reads exactly the same, only without the bracket.
+##
+## Geometry and text only, no nodes: the sheets paint what this returns.
 
-## Between two entries on the run.
-const SEP := "  ·  "
-## Prefix of the count that closes a run the row cannot hold.
-const MORE := "  +%d"
-## A roundup row with no goals in it.
-const NONE := "no goals"
+## The report kind an own goal is stored under, beside a goal row that carries
+## the flag itself.
+const OWN_GOAL := "own_goal"
+## The mark that names an own goal on the line, the grammar the broadcast card
+## already uses.
+const OG := " (OG)"
+## The mark that names a converted penalty, on the scorer's name (#171).
+const PEN := " (PEN)"
 
-## The club abbreviation a goal belongs to, read off the fixture's own row: the
-## fixture carries both clubs' labels, so no club lookup is needed to paint a
-## result. An event whose club is neither side (a test row, an older save)
-## contributes no prefix instead of a wrong one.
-static func club_abbr(fixture: Dictionary, club_id: String) -> String:
-	if club_id == "":
-		return ""
-	if club_id == str(fixture.get("home_club_id", "")):
-		return str(fixture.get("home_abbr", ""))
-	if club_id == str(fixture.get("away_club_id", "")):
-		return str(fixture.get("away_abbr", ""))
-	return ""
+## True when the row put the ball in the net: a goal, or an own goal that still
+## counts for the side its club names.
+static func is_goal(e: Dictionary) -> bool:
+	var kind := str(e.get("kind", ""))
+	return kind == "goal" or kind == OWN_GOAL
 
-## A scorer's name as a report reads it. A penalty is marked on the name — the
-## same shape the HUD gives an own goal — so a spot kick is visible without a
-## column of its own, and a row with no name still reads as nothing.
-static func name_of(e: Dictionary) -> String:
-	var name := str(e.get("player_name", e.get("detail", "")))
-	if bool(e.get("penalty", false)):
-		return name + " (PEN)"
-	return name
+## True when the goal was put in off the conceding side's own player.
+static func is_own_goal(e: Dictionary) -> bool:
+	return str(e.get("kind", "")) == OWN_GOAL or bool(e.get("own_goal", false))
 
-## One goal as the row reads it: `CRY 6' J. Mateta`.
-static func entry(fixture: Dictionary, e: Dictionary) -> String:
-	var name := name_of(e)
-	var minute := int(e.get("minute", 0))
-	var abbr := club_abbr(fixture, str(e.get("club_id", "")))
-	if abbr == "":
-		return "%d' %s" % [minute, name]
-	return "%s %d' %s" % [abbr, minute, name]
+## True when the goal came from the spot. A save hands the flag back as 1.
+static func is_penalty(e: Dictionary) -> bool:
+	return bool(e.get("penalty", false))
 
-## Every goal of the report in minute order, labelled with its club. The ledger
-## already orders by minute (`LeagueRecord.events`); ties keep that order by
-## row id, so a replayed report reads the same way twice.
-static func entries(report: Dictionary) -> Array:
-	var fixture: Dictionary = report.get("fixture", {})
-	var goals: Array = []
-	for e in report.get("events", []):
-		if str(e.get("kind", "")) == "goal":
-			goals.append(e)
-	goals.sort_custom(_before)
+## The rows of a report in the order the report prints them: by minute, then by
+## the order the ledger wrote them. Rows without an id (a test, a hand-made
+## report) keep the order they arrived in.
+static func ordered(events: Array) -> Array:
+	var keyed: Array = []
+	for i in range(events.size()):
+		keyed.append({"i": i, "e": events[i]})
+	keyed.sort_custom(func(a, b):
+		var ma := int((a["e"] as Dictionary).get("minute", 0))
+		var mb := int((b["e"] as Dictionary).get("minute", 0))
+		if ma != mb:
+			return ma < mb
+		var ia := int((a["e"] as Dictionary).get("id", 0))
+		var ib := int((b["e"] as Dictionary).get("id", 0))
+		if ia != ib:
+			return ia < ib
+		return int(a["i"]) < int(b["i"]))
 	var out: Array = []
-	for e in goals:
-		out.append(entry(fixture, e))
+	for item in keyed:
+		out.append(item["e"])
 	return out
 
-static func _before(a: Dictionary, b: Dictionary) -> bool:
-	var ma := int(a.get("minute", 0))
-	var mb := int(b.get("minute", 0))
-	if ma != mb:
-		return ma < mb
-	return int(a.get("id", 0)) < int(b.get("id", 0))
+## Every row that takes a line on the sheet: assists are folded into their goal
+## and do not print on their own.
+static func lines(report: Dictionary) -> Array:
+	var events := ordered(report.get("events", []))
+	var assists: Array = []
+	for e in events:
+		if str(e.get("kind", "")) == "assist":
+			assists.append({"e": e, "used": false})
+	var out: Array = []
+	for e in events:
+		var kind := str(e.get("kind", ""))
+		if kind == "assist":
+			continue
+		var row: Dictionary = (e as Dictionary).duplicate()
+		if is_own_goal(row):
+			# An own goal has no assister: the ball went in off the wrong foot.
+			row.erase("assist_name")
+		elif is_goal(row) and str(row.get("assist_name", "")) == "":
+			var helper := _take_assist(assists, str(row.get("club_id", "")), int(row.get("minute", 0)))
+			if helper != "":
+				row["assist_name"] = helper
+		out.append(row)
+	return out
 
-## The run one row can hold, measured at the size it is really painted: entries
-## are added while they fit beside the count, and the goals left over close the
-## line as `+n`. One entry is shown even when it alone is too wide — a row that
-## names its first scorer beats an empty caption.
-static func run(report: Dictionary, font: Font, max_w: float, size: int) -> String:
-	var all := entries(report)
-	if all.is_empty():
-		return ""
-	var line := ""
-	var shown := 0
-	for i in range(all.size()):
-		var candidate: String = str(all[i]) if shown == 0 else line + SEP + str(all[i])
-		var tail := all.size() - i - 1
-		if tail > 0:
-			candidate += MORE % tail
-		if shown > 0 and UiChrome.text_width(font, candidate, size) > max_w:
-			break
-		line = str(all[i]) if shown == 0 else line + SEP + str(all[i])
-		shown += 1
-	if shown < all.size():
-		return line + MORE % (all.size() - shown)
-	return line
+## The side column a row belongs to: the club on the row decides it, and a row
+## that names neither side (an older save, a hand-made report) reads under the
+## home column rather than vanishing.
+static func side_of(fixture: Dictionary, e: Dictionary) -> String:
+	var club := str(e.get("club_id", ""))
+	if club == str(fixture.get("away_club_id", "")) and club != "":
+		return "away"
+	return "home"
+
+## Every printing row split by side, each side already in minute order.
+static func sides(report: Dictionary) -> Dictionary:
+	var fixture: Dictionary = report.get("fixture", {})
+	var out := {"home": [], "away": []}
+	for e in lines(report):
+		var side := side_of(fixture, e)
+		var bucket: Array = out[side]
+		bucket.append(e)
+	return out
+
+## The goal rows of a report in report order: the ordinals the ▶ doors and the
+## stored clips are keyed by.
+static func goals(report: Dictionary) -> Array:
+	var out: Array = []
+	for e in lines(report):
+		if is_goal(e):
+			out.append(e)
+	return out
+
+## One line as a column prints it: `6' Y. Pino (J. Eze)`, `58' J. Mateta (OG)`,
+## `23' V. Gyökeres (PEN)`.
+static func line(e: Dictionary) -> String:
+	var name := _player(e)
+	if is_own_goal(e):
+		name += OG
+	elif is_penalty(e):
+		name += PEN
+	var assist := str(e.get("assist_name", ""))
+	if assist != "":
+		name += " (%s)" % assist
+	return "%d' %s" % [int(e.get("minute", 0)), name]
+
+static func _player(e: Dictionary) -> String:
+	# A row with no player join comes back as NULL, not an empty string.
+	var raw = e.get("player_name", null)
+	var name := "" if raw == null else str(raw)
+	if name == "":
+		raw = e.get("detail", null)
+		name = "" if raw == null else str(raw)
+	return name if name != "" else "Unknown"
+
+## The first unused assist row for this side and minute. Synthetic reports write
+## the assist row straight after its goal, so the first match is the right one.
+static func _take_assist(assists: Array, club_id: String, minute: int) -> String:
+	for slot in assists:
+		if bool(slot["used"]):
+			continue
+		var e: Dictionary = slot["e"]
+		if str(e.get("club_id", "")) != club_id or int(e.get("minute", 0)) != minute:
+			continue
+		slot["used"] = true
+		return _player(e)
+	return ""

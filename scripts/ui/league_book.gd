@@ -11,9 +11,6 @@ extends RefCounted
 
 const HEADER := 58.0
 const BAR_H := 52.0
-## The ▶ hit target beside a goal: thumb-sized, never hover-only.
-const PLAY_W := 44.0
-const PLAY_H := 26.0
 const MONTHS := ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
 	"AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"]
 
@@ -27,6 +24,14 @@ var names := InterestNames.new()
 ## The table pose's geometry, sorting and paint (compact/full, header sort). It
 ## lives in its own module because the book is at its method budget.
 var table := LeagueTableView.new()
+## The match report pose, with its own two event columns (#168).
+var report_sheet := LeagueReportSheet.new()
+
+func _init() -> void:
+	# One registry each, so a long press or a weekday bubble on the report reads
+	# the strips the report really painted.
+	report_sheet.hints = hints
+	report_sheet.names = names
 
 # ----------------------------------------------------------------- table ---
 
@@ -60,9 +65,10 @@ func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 		})
 	var y := grid_top + 6.0 * ch + 10.0
 	for fx in view.get("day_fixtures", []):
+		var h: float = maxf(22.0, LeagueBlock.height(fx, true))
 		items.append({"id": "match:" + str(fx["id"]), "kind": "fixture",
-			"fixture": fx, "rect": Rect2(24.0, y, vp.x - 48.0, 22.0)})
-		y += 23.0
+			"fixture": fx, "rect": Rect2(24.0, y, vp.x - 48.0, h)})
+		y += h + 2.0
 	items.append({"id": "month:-1", "kind": "chip", "label": "<", "pinned": true,
 		"rect": Rect2(vp.x - 24.0 - 132.0, HEADER + 8.0, 28.0, 24.0)})
 	items.append({"id": "month:1", "kind": "chip", "label": ">", "pinned": true,
@@ -70,34 +76,11 @@ func calendar_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append(LeagueExtra.back_item())
 	return items
 
+## The report pose lives in `LeagueReportSheet`: two columns of events under the
+## clubs their score line names (#168). Kept behind the same names the screen
+## already calls, so the pose table did not change.
 func report_layout(vp: Vector2, view: Dictionary) -> Array:
-	var items: Array = []
-	# BACK keeps the league's header position, never a bottom door (#105, #162).
-	items.append(LeagueExtra.back_item())
-	var y := HEADER + 70.0
-	var clips := {}
-	for row in view.get("highlights", []):
-		clips[int(row.get("goal_index", -1))] = row
-	var goal := 0
-	for e in view.get("events", []):
-		var is_goal := str(e.get("kind", "")) == "goal"
-		var clip: Dictionary = clips.get(goal, {}) if is_goal else {}
-		var index := goal
-		if is_goal:
-			goal += 1
-		var h := 40.0 if not clip.is_empty() else 20.0
-		items.append({"id": "", "kind": "event", "event": e, "clip": clip,
-			"rect": Rect2(24.0, y, vp.x - 48.0, h)})
-		if not clip.is_empty():
-			# ▶ is a real touch target beside the goal, never a hover-only door.
-			items.append({"id": "goal:%d" % index, "kind": "play", "clip": clip,
-				"rect": Rect2(vp.x - 24.0 - PLAY_W, y + 1.0, PLAY_W, PLAY_H)})
-		y += h + 1.0
-	for report in view.get("roundup", []):
-		items.append({"id": "match:" + str(report["fixture"]["id"]), "kind": "result",
-			"report": report, "rect": Rect2(24.0, y, vp.x - 48.0, 44.0)})
-		y += 50.0
-	return items
+	return report_sheet.layout(vp, view)
 
 func podium_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
@@ -198,27 +181,36 @@ func draw_calendar_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Ar
 		if kind == "cell":
 			_draw_cell(c, rect, item, fonts)
 		elif kind == "fixture":
-			# Each club is its own run so the long press can name the one under
-			# the finger, and a followed club's abbreviation is gold (#107).
+			# A result reads as the same block the hub prints: full names and
+			# each side's events under its own name (#168). A pending fixture
+			# keeps the calendar's one line with OPEN in the score's place.
 			var fx: Dictionary = item["fixture"]
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 4)
-			var fy := rect.position.y + 15.0
-			var fx_x := rect.position.x + 8.0
-			var kick := str(fx["kickoff_time"])
-			UiChrome.text(c, Vector2(fx_x, fy), kick, 10, UiChrome.C_DIM, med)
-			fx_x += InterestNames.width(med, kick, 10) + 8.0
 			var home_id := str(fx.get("home_club_id", ""))
 			var away_id := str(fx.get("away_club_id", ""))
-			fx_x += InterestNames.run(c, names, home_id, str(fx["home_abbr"]),
-				Vector2(fx_x, fy), 11, LeagueInterestMark.ink(interest, home_id), med) + 5.0
+			var home_ink := LeagueInterestMark.ink(interest, home_id)
+			var away_ink := LeagueInterestMark.ink(interest, away_id)
+			if str(fx.get("status", "")) == "played":
+				LeagueBlock.paint(c, rect, fx, fonts, names, home_ink, away_ink, true)
+				continue
+			var fy := rect.position.y + 15.0
+			var fx_x := rect.position.x + 8.0
+			var kick := str(fx.get("kickoff_time", ""))
+			UiChrome.text(c, Vector2(fx_x, fy), kick, 10, UiChrome.C_DIM, med)
+			fx_x += InterestNames.width(med, kick, 10) + 8.0
+			var room := maxf((rect.end.x - 60.0 - fx_x) * 0.46, 50.0)
+			var home_name: String = LeagueColumns.fit_name(str(fx.get("home_name", "")), med,
+				11, room)
+			fx_x += InterestNames.run(c, names, home_id, home_name, Vector2(fx_x, fy),
+				11, home_ink, med) + 5.0
 			UiChrome.text(c, Vector2(fx_x, fy), "v", 10, UiChrome.C_DIM, med)
 			fx_x += InterestNames.width(med, "v", 10) + 6.0
-			InterestNames.run(c, names, away_id, str(fx["away_abbr"]), Vector2(fx_x, fy), 11,
-				LeagueInterestMark.ink(interest, away_id), med)
-			var score := "%d-%d" % [int(fx["home_goals"]), int(fx["away_goals"])]
-			UiChrome.text_r(c, rect.end.x - 8.0, rect.position.y + 15.0,
-				score if str(fx["status"]) == "played" else "OPEN", 10,
-				UiChrome.C_TEXT if str(fx["status"]) == "played" else UiChrome.C_GOLD, bold)
+			var away_name: String = LeagueColumns.fit_name(str(fx.get("away_name", "")), med,
+				11, maxf(rect.end.x - 60.0 - fx_x, 50.0))
+			InterestNames.run(c, names, away_id, away_name, Vector2(fx_x, fy), 11,
+				away_ink, med)
+			UiChrome.text_r(c, rect.end.x - 8.0, rect.position.y + 15.0, "OPEN", 10,
+				UiChrome.C_GOLD, bold)
 
 func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
 	var info: Dictionary = item["info"]
@@ -245,103 +237,10 @@ func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 
 func draw_report_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
-	var bold: Font = fonts["bold"]
-	var roundup: Array = view.get("roundup", [])
-	var date := str(view.get("day", ""))
-	var label := FixtureCalendar.day_label(date)
-	var kicker := "MATCH REPORT"
-	var caption := ""
-	if not roundup.is_empty():
-		kicker = "RESULTS"
-		caption = label if label != "" else date
-	LeagueExtra.header(c, vp, fonts, kicker, caption)
-	if caption != "":
-		hints.add(DateHints.strip_right(bold, caption, vp.x - 24.0, 34.0, 10), date)
+	report_sheet.draw_chrome(c, vp, fonts, view, hints)
 
 func draw_report_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
-	hints.clear()
-	names.clear()
-	var interest := LeagueInterestMark.set_of(view.get("interests", []))
-	var bold: Font = fonts["bold"]
-	var med: Font = fonts["med"]
-	if (view.get("roundup", []) as Array).is_empty():
-		var fx: Dictionary = view.get("fixture", {})
-		# The headline is three runs so each club name is its own long-press
-		# target, and a followed club prints gold like it does in the lists.
-		var head_y := HEADER + 34.0
-		var home_id := str(fx.get("home_club_id", ""))
-		var away_id := str(fx.get("away_club_id", ""))
-		var hx := 24.0
-		hx += InterestNames.run(c, names, home_id, str(fx.get("home_name", "")),
-			Vector2(hx, head_y), 22, LeagueInterestMark.ink(interest, home_id), bold) + 10.0
-		var line := "%d – %d" % [int(fx.get("home_goals", 0)), int(fx.get("away_goals", 0))]
-		UiChrome.text(c, Vector2(hx, head_y), line, 22, UiChrome.C_TEXT, bold)
-		hx += InterestNames.width(bold, line, 22) + 10.0
-		InterestNames.run(c, names, away_id, str(fx.get("away_name", "")),
-			Vector2(hx, head_y), 22, LeagueInterestMark.ink(interest, away_id), bold)
-		var date := str(view.get("day", ""))
-		var label := FixtureCalendar.day_label(date)
-		UiChrome.text(c, Vector2(24.0, HEADER + 54.0), label, 10, UiChrome.C_DIM, med)
-		if date != "":
-			hints.add(DateHints.strip(med, label, Vector2(24.0, HEADER + 54.0), 10), date)
-		if (view.get("events", []) as Array).is_empty():
-			UiChrome.text(c, Vector2(24.0, HEADER + 84.0), "No goals or cards.", 11, UiChrome.C_DIM, med)
-	for item in items:
-		var rect: Rect2 = item["rect"]
-		var kind := str(item["kind"])
-		if kind == "event":
-			_draw_event(c, rect, item, fonts)
-		elif kind == "play":
-			LeagueSheet.draw_play(c, cache, rect, fonts["bold"])
-		elif kind == "result":
-			var report: Dictionary = item["report"]
-			var fx: Dictionary = report["fixture"]
-			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 5)
-			var ry := rect.position.y + 18.0
-			var rx := rect.position.x + 10.0
-			var row_home := str(fx.get("home_club_id", ""))
-			var row_away := str(fx.get("away_club_id", ""))
-			var score := "%d – %d" % [int(fx["home_goals"]), int(fx["away_goals"])]
-			rx += InterestNames.run(c, names, row_home, str(fx["home_abbr"]),
-				Vector2(rx, ry), 15, LeagueInterestMark.ink(interest, row_home), bold) + 8.0
-			UiChrome.text(c, Vector2(rx, ry), score, 15, UiChrome.C_TEXT, bold)
-			rx += InterestNames.width(bold, score, 15) + 8.0
-			InterestNames.run(c, names, row_away, str(fx["away_abbr"]), Vector2(rx, ry), 15,
-				LeagueInterestMark.ink(interest, row_away), bold)
-			# Every scorer says which club scored (DR-20261125-07): the run mixes
-			# both sides, so the entry carries its own club label.
-			var scorers := LeagueRoundup.run(report, med, rect.size.x - 20.0, 10)
-			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 34.0),
-				scorers if scorers != "" else LeagueRoundup.NONE, 10, UiChrome.C_DIM, med)
-
-func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
-	var e: Dictionary = item["event"]
-	var kind := str(e.get("kind", ""))
-	var colour := UiChrome.C_TEXT
-	if kind == "goal":
-		colour = UiChrome.C_GOLD
-	elif kind == "yellow":
-		colour = Color(0.92, 0.84, 0.35)
-	elif kind == "red":
-		colour = UiChrome.C_DANGER
-	elif kind == "injury":
-		colour = UiChrome.C_SOFT
-	elif kind == "assist":
-		colour = UiChrome.C_SOFT
-	var name := LeagueRoundup.name_of(e)
-	UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), "%d'" % int(e.get("minute", 0)), 10,
-		UiChrome.C_DIM, fonts["bold"])
-	UiChrome.text(c, Vector2(rect.position.x + 34.0, rect.position.y + 14.0), name, 11, colour, fonts["bold"])
-	UiChrome.text(c, Vector2(rect.position.x + 210.0, rect.position.y + 14.0), kind.to_upper(), 10, colour, fonts["med"])
-	# A goal with a stored clip reads as a broadcast moment: the commentary line
-	# sits under it and the ▶ beside it plays exactly that goal.
-	var clip: Dictionary = item.get("clip", {})
-	if not clip.is_empty():
-		var line := str(clip.get("commentary", ""))
-		if line != "":
-			var room := maxi(int((rect.size.x - 90.0) / 5.4), 12)
-			UiChrome.text(c, Vector2(rect.position.x + 34.0, rect.position.y + 32.0),
-				line.substr(0, room), 10, UiChrome.C_SOFT, fonts["med"])
+	report_sheet.draw_body(c, vp, fonts, items, view)
 
 # ---------------------------------------------------------------- podium ---
 

@@ -168,6 +168,7 @@ suites = [
   "test_league_panel_ui.gd",
   "test_league_ui.gd",
   "test_league_doors.gd",
+  "test_league_nav_stack.gd",
   "test_league_system.gd",
   "test_league_interest.gd",
   "test_league_sheets.gd",  "test_goal_highlights.gd",

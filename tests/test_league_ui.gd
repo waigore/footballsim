@@ -510,11 +510,16 @@ func test_keyboard_walks_the_league_and_respects_its_limits() -> void:
 	var before := int(LeagueSeason.active.record.fixtures.played())
 	assert_true(screen().key(KEY_ENTER), "Enter did not press Continue")
 	assert_gte(int(LeagueSeason.active.record.fixtures.played()), before, "Enter lost matches")
-	assert_true(screen().key(KEY_ESCAPE), "Esc did not leave the hub")
-	if game.menus.league_active():
-		screen().key(KEY_ESCAPE)
-	assert_false(game.menus.league_active(), "Esc left the league open")
-	assert_true(game.menus.active(), "Esc did not return to the main menu")
+	# #169: Esc walks the season's own history; at its root it does nothing, so
+	# the league is left through System → MAIN MENU.
+	assert_true(screen().key(KEY_ESCAPE), "Esc was not taken by the season")
+	assert_true(screen().key(KEY_ESCAPE), "Esc was not taken at the root")
+	assert_true(game.menus.league_active(), "Esc opened the main menu from the league")
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Esc did not land on the hub")
+	press_id("system")
+	press_id("sys:menu")
+	assert_false(game.menus.league_active(), "MAIN MENU left the league open")
+	assert_true(game.menus.active(), "MAIN MENU did not return to the main menu")
 	game.menus.open_menu()
 	press(door("new_league").get_center())
 	for i in range(30):

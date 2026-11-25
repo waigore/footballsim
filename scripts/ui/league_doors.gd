@@ -152,46 +152,70 @@ static func press(screen, id: String) -> void:
 	elif id == "name":
 		screen.refresh()
 
-## Leave the current sheet. The System dialog gets first refusal (it swallows
-## BACK while it is open); the menu-level sheets close the surface; every
-## reading goes back to the hub.
+## Leave the current page. The season walks its own history (#169): BACK is the
+## previous page, at the root it does nothing, and the main menu is reached only
+## through System → MAIN MENU. The menu-level sheets (New League, Load) are not
+## pages of a season: their BACK returns to the caller that opened them.
 static func back(screen) -> void:
-	if LeagueSystemActions.back(screen):
-		return
-	if screen.mode == screen.MODE_HUB or screen.mode == screen.MODE_WIZARD \
-			or screen.mode == screen.MODE_LOAD or screen.mode == screen.MODE_PODIUM:
+	if screen.mode == screen.MODE_WIZARD:
 		screen.close()
 		return
-	# A matchday opened from the Stats list goes back there, not to the hub.
-	if screen.mode == screen.MODE_REPORT and str(screen.report_back) == screen.MODE_STATS:
-		screen.report_back = screen.MODE_HUB
-		screen.mode = screen.MODE_STATS
-		screen.refresh()
+	if screen.mode == screen.MODE_LOAD:
+		# A load list opened over the season is a page of it; one opened from the
+		# menu returns to the menu.
+		if str(screen.load_from) == "system" and not screen.nav.is_empty():
+			LeagueNavStack.restore(screen, screen.nav.pop())
+			return
+		screen.close()
 		return
-	open_hub(screen)
+	if screen.season == null:
+		screen.close()
+		return
+	# At the root BACK is disabled, not a trapdoor: nothing behind it to reach.
+	if screen.nav.is_empty():
+		return
+	LeagueNavStack.restore(screen, screen.nav.pop())
+
+## True while the BACK door has a page behind it. The sheet paints the door
+## dimmed when it does not, so a disabled BACK is visible, never hidden.
+static func can_back(screen) -> bool:
+	if screen.mode == screen.MODE_WIZARD or screen.mode == screen.MODE_LOAD:
+		return true
+	if screen.season == null:
+		return true
+	return not screen.nav.is_empty()
 
 # ----------------------------------------------------------------- doors ---
 
 ## Show the hub with its layout refreshed. The one place that sets the mode, so a
 ## door never forgets the repaint.
 static func open_hub(screen) -> void:
+	if screen.mode != screen.MODE_HUB:
+		screen.push_page()
 	screen.mode = screen.MODE_HUB
 	screen.refresh()
+
+## Walk forward one page: remember where the player was, then show the next
+## pose. A press that leaves the pose where it is never grows the history.
+static func go(screen, next: String) -> void:
+	if next != screen.mode:
+		screen.push_page()
+	screen.mode = next
 
 ## The table reading, bound to this season's save so its sort and reading are the
 ## save's own. A surface with no season still opens the table (the strip paints
 ## empty) rather than guessing one.
 static func open_table(screen) -> void:
-	screen.mode = screen.MODE_TABLE
+	go(screen, screen.MODE_TABLE)
 	screen.book.table.attach(screen.season.save if screen.season != null else null)
 	screen.refresh()
 
 static func open_calendar(screen) -> void:
-	screen.mode = screen.MODE_CALENDAR
+	go(screen, screen.MODE_CALENDAR)
 	LeagueCalendar.open(screen)
 
 static func read_podium(screen) -> void:
-	screen.mode = screen.MODE_PODIUM
+	go(screen, screen.MODE_PODIUM)
 	screen.refresh()
 
 ## New season from the wizard: the name, the calendar and the clock the player
@@ -204,6 +228,8 @@ static func create(screen) -> void:
 		screen.refresh()
 		return
 	screen.season = created
+	# A new season starts a new history.
+	screen.nav.clear()
 	screen.season_opened.emit(created)
 	screen.mode = screen.MODE_HUB
 	screen.month = LeagueBook.state_month(screen.season, screen.month)
@@ -238,7 +264,7 @@ static func continue_day(screen) -> void:
 	var result: Dictionary = screen.season.advance()
 	var played: Array = result.get("played", [])
 	if str(result.get("status", "")) == "complete" or bool(result.get("complete", false)):
-		screen.mode = screen.MODE_PODIUM
+		go(screen, screen.MODE_PODIUM)
 		screen.month = LeagueBook.state_month(screen.season, screen.month)
 		screen.refresh()
 		return
@@ -268,35 +294,35 @@ static func toggle_fixture(screen, fixture_id: String) -> void:
 	screen.season.set_watch(fixture_id, int(fx["watched"]) != 1)
 	screen.refresh()
 
-## A calendar row: a played fixture opens its report, a watched one starts the
-## match, and a pending one just flips its watch flag.
 ## The panel's destinations, and the pose each one opens. The panel is closed on
-## the way so the sheet it opens is never covered by its own menu.
+## the way so the sheet it opens is never covered by its own menu. Each jump is
+## one page of the season's history, so BACK undoes it like any other door.
 static func nav(screen, pose: String) -> void:
 	screen.panel.close()
-	if pose == "fixtures":
-		screen.mode = LeagueScreen.MODE_HUB
-	elif pose == "table":
-		screen.mode = LeagueScreen.MODE_TABLE
-		screen.book.table.attach(screen.season.save if screen.season != null else null)
-	elif pose == "calendar":
-		screen.mode = LeagueScreen.MODE_CALENDAR
-		LeagueCalendar.open(screen)
-	elif pose == "interest":
-		screen.interest_query = ""
-		screen.mode = LeagueScreen.MODE_INTEREST
-	elif pose == "stats":
-		screen.mode = LeagueScreen.MODE_STATS
-	elif pose == "system":
+	if pose == "system":
 		LeagueSystemActions.open(screen)
 		return
+	if pose == "interest":
+		screen.interest_query = ""
+		go(screen, LeagueScreen.MODE_INTEREST)
+	elif pose == "fixtures":
+		go(screen, LeagueScreen.MODE_HUB)
+	elif pose == "table":
+		go(screen, LeagueScreen.MODE_TABLE)
+		screen.book.table.attach(screen.season.save if screen.season != null else null)
+	elif pose == "calendar":
+		go(screen, LeagueScreen.MODE_CALENDAR)
+		LeagueCalendar.open(screen)
+		return
+	elif pose == "stats":
+		go(screen, LeagueScreen.MODE_STATS)
 	screen.refresh()
 
 static func stats(screen, id: String) -> void:
 	if id == "stats:reports":
-		screen.mode = LeagueScreen.MODE_STATS
+		go(screen, LeagueScreen.MODE_STATS)
 	elif id == "stats:podium":
-		screen.mode = LeagueScreen.MODE_PODIUM
+		go(screen, LeagueScreen.MODE_PODIUM)
 	screen.refresh()
 
 ## A matchday opened from the Stats list: BACK returns there, not to the hub.
@@ -307,10 +333,10 @@ static func open_day(screen, date: String) -> void:
 	for fx in screen.season.record.fixtures.on(date):
 		if str(fx["status"]) == "played":
 			rows.append(screen.season.report(str(fx["id"])))
+	go(screen, LeagueScreen.MODE_REPORT)
 	screen.roundup = rows
 	screen.report = {}
 	screen.report_back = LeagueScreen.MODE_STATS
-	screen.mode = LeagueScreen.MODE_REPORT
 	screen.refresh()
 
 ## Teams of Interest from the list: add or remove a club in this save (#104).

@@ -357,6 +357,12 @@ func _draw_head(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 	if bool(item["sorted"]):
 		c.draw_rect(Rect2(rect.position.x, rect.end.y - 1.0, rect.size.x, 1.0), UiChrome.C_GOLD)
 
+## The table's club label: the abbreviation — the one season pose that keeps it
+## (#168) — falling back to the name only for a row that carries no short form.
+static func club_label(row: Dictionary) -> String:
+	var abbr := str(row.get("club_abbr", ""))
+	return abbr if abbr != "" else str(row.get("club_name", ""))
+
 func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
 		strips: InterestNames = null) -> void:
 	var row: Dictionary = item["row"]
@@ -369,10 +375,12 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
 	UiChrome.text(c, Vector2(float(places["pos_x"]), y), "%d" % int(row["position"]), 10,
 		UiChrome.C_DIM, fonts["med"])
 	# A followed club's name is gold here too: the shortlist is the season's, and
-	# the table is where a club is found (#104).
+	# the table is where a club is found (#104). The table is the one pose that
+	# keeps abbreviations (#168): it is a grid of numbers, and the short label
+	# leaves the record the room it needs. Every other surface prints the name.
 	var size: int = 12 if mode == COMPACT else 11
 	var club_x: float = float(places["club_x"])
-	var label: String = LeagueColumns.fit_name(str(row["club_name"]), fonts["bold"], size,
+	var label: String = LeagueColumns.fit_name(club_label(row), fonts["bold"], size,
 		float(places["club_w"]))
 	UiChrome.text(c, Vector2(club_x, y), label, size,
 		UiChrome.C_GOLD if bool(item.get("interested", false)) else UiChrome.C_TEXT, fonts["bold"])

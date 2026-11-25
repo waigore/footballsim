@@ -115,8 +115,19 @@ func test_the_hub_has_no_bottom_door_bar_and_keeps_back_and_continue() -> void:
 	# The body now runs to the window's bottom edge: no bar is reserved.
 	assert_almost_eq(screen().body.size.y, vp().y - LeagueBody.TOP, 0.5,
 		"the hub still reserves a bottom bar")
+	# #169: the hub is the root of the season's history, so BACK is visible but
+	# disabled — it never leaves the season. The System dialog is the way out.
+	var back_item := {}
+	for item in screen().buttons:
+		if str(item["id"]) == "back":
+			back_item = item
+	assert_true(bool(back_item.get("disabled", false)), "the root BACK door is not disabled")
 	press_id("back")
-	assert_false(game.menus.league_active(), "BACK on the hub did not leave the league")
+	assert_true(game.menus.league_active(), "BACK at the root left the league")
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "BACK at the root moved the sheet")
+	press_nav("nav:system")
+	press_id("sys:menu")
+	assert_false(game.menus.league_active(), "MAIN MENU did not leave the league")
 
 # ------------------------------------------------------------------- panel ---
 
