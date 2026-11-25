@@ -70,7 +70,36 @@ func press_id(id: String) -> void:
 		if str(item["id"]) == id:
 			press((item["rect"] as Rect2).get_center())
 			return
+	if PANEL_DOORS.has(id):
+		_press_panel_row(str(PANEL_DOORS[id]))
+		return
 	assert_true(false, "no button %s on screen %s" % [id, screen().mode])
+## Doors that moved into the left panel (#105): the season sheets no longer carry
+## a bottom door bar, so a suite that asks for one presses the panel row instead.
+const PANEL_DOORS := {
+	"system": "nav:system", "table": "nav:table", "calendar": "nav:calendar",
+	"stats": "nav:stats", "interest": "nav:interest", "podium": "stats:podium",
+}
+
+func _press_panel_row(id: String) -> void:
+	var panel: LeaguePanel = screen().panel
+	panel.open()
+	panel.settle()
+	screen().refresh()
+	if id.begins_with("nav:"):
+		for i in range(LeaguePanel.ITEMS.size()):
+			if str(LeaguePanel.ITEMS[i]["id"]) == id:
+				press(panel.item_rect(screen().design_vp(), i).get_center())
+				panel.settle()
+				return
+	# A second hop, e.g. Podium on the Stats sheet.
+	for item in screen().buttons:
+		if str(item["id"]) == id:
+			press((item["rect"] as Rect2).get_center())
+			panel.settle()
+			return
+	assert_true(false, "no panel door %s" % id)
+
 
 ## Leaving the season now runs through the System sheet (#109): the hub's fourth
 ## door opens it and its MAIN MENU row leaves for the menu. The podium keeps its
@@ -579,8 +608,11 @@ func test_table_rows_and_the_podium_door() -> void:
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Back did not leave the table")
 	LeagueSeason.active.save.set_status("complete")
 	screen().refresh()
-	press_id("podium")
-	assert_eq(screen().mode, LeagueScreen.MODE_PODIUM, "the podium door did not open")
+	# The podium lives under Stats now (#108): the panel opens Stats, its door
+	# opens the podium.
+	press_id("stats")
+	press_id("stats:podium")
+	assert_eq(screen().mode, LeagueScreen.MODE_PODIUM, "the Stats podium door did not open")
 	assert_false(LeagueSeason.active.summary().is_empty(), "a complete season lost its summary")
 	press_id("table")
 	assert_eq(screen().mode, LeagueScreen.MODE_TABLE, "the podium table door did not open")

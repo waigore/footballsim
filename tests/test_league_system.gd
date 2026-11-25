@@ -38,22 +38,48 @@ func after_all() -> void:
 func screen():
 	return game.menus.league.screen
 
+## A tap in design space: press and release, so the scene commits the click.
+func press(p: Vector2) -> void:
+	for down in [true, false]:
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_LEFT
+		ev.pressed = down
+		ev.position = p * game.menus.shell.ui_scale
+		game._input(ev)
+
 func press_id(id: String) -> void:
 	for item in screen().buttons:
 		if str(item["id"]) == id:
-			var at: Vector2 = (item["rect"] as Rect2).get_center()
-			var down := InputEventMouseButton.new()
-			down.button_index = MOUSE_BUTTON_LEFT
-			down.pressed = true
-			down.position = at * game.menus.shell.ui_scale
-			game._input(down)
-			var up := InputEventMouseButton.new()
-			up.button_index = MOUSE_BUTTON_LEFT
-			up.pressed = false
-			up.position = at * game.menus.shell.ui_scale
-			game._input(up)
+			press((item["rect"] as Rect2).get_center())
 			return
+	if PANEL_DOORS.has(id):
+		_press_panel_row(str(PANEL_DOORS[id]))
+		return
 	assert_true(false, "no button %s on screen %s" % [id, screen().mode])
+
+## Doors that moved into the left panel (#105): the season sheets no longer carry
+## a bottom door bar, so a suite that asks for one presses the panel row instead.
+const PANEL_DOORS := {
+	"system": "nav:system", "table": "nav:table", "calendar": "nav:calendar",
+	"stats": "nav:stats", "interest": "nav:interest", "podium": "stats:podium",
+}
+
+func _press_panel_row(id: String) -> void:
+	var panel: LeaguePanel = screen().panel
+	panel.open()
+	panel.settle()
+	screen().refresh()
+	for i in range(LeaguePanel.ITEMS.size()):
+		if str(LeaguePanel.ITEMS[i]["id"]) == id:
+			press(panel.item_rect(screen().design_vp(), i).get_center())
+			panel.settle()
+			return
+	for item in screen().buttons:
+		if str(item["id"]) == id:
+			press((item["rect"] as Rect2).get_center())
+			panel.settle()
+			return
+	assert_true(false, "no panel door %s" % id)
 
 ## A season on the hub, created fresh so a case never inherits another's save.
 func _season(name: String) -> LeagueSeason:

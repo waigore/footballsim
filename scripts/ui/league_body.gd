@@ -15,6 +15,9 @@ const BAR := LeagueSheet.BAR_H
 var scroll := 0.0
 ## Sideways offset for a sheet wider than the window (the full table on a phone).
 var hscroll := 0.0
+## Bottom chrome reserved by the pose on screen: the table's reading doors and
+## the podium's exits need it; the panel-era hub, calendar and reports do not.
+var bottom_bar := BAR
 var content_height := 0.0
 ## Content width including its right margin, from the window's left edge.
 var content_width := 0.0
@@ -70,11 +73,14 @@ func pan_by(delta: Vector2) -> void:
 	hscroll_to(hscroll + delta.x)
 
 ## Take a fresh sheet: the viewport sets the window, the rows set the height and
-## a new pose starts at the top of the page. Returns the scrolling rows so the
-## screen can bind the painter to them.
-func set_sheet(items: Array, vp: Vector2, reset: bool) -> Array:
+## a new pose starts at the top of the page. `bar` is the bottom chrome the pose
+## reserves; it defaults to the fixed action bar of the older sheets. Returns
+## the scrolling rows so the screen can bind the painter to them.
+func set_sheet(items: Array, vp: Vector2, reset: bool, bar: float = -1.0) -> Array:
+	if bar >= 0.0:
+		bottom_bar = bar
 	position = Vector2(0.0, TOP)
-	size = Vector2(vp.x, maxf(vp.y - TOP - BAR, 1.0))
+	size = Vector2(vp.x, maxf(vp.y - TOP - bottom_bar, 1.0))
 	# The rows are replaced every refresh; only a new pose also returns to the
 	# top-left corner. Keeping the old rows made every same-pose refresh stack
 	# another copy of the sheet.

@@ -25,6 +25,16 @@ const MODE_REPORT := "report"
 const MODE_PODIUM := "podium"
 ## The season's own save/exit dialog (#109).
 const MODE_SYSTEM := "system"
+## The panel's two readings (#103): matchday reports + podium, and the shortlist.
+const MODE_STATS := "stats"
+const MODE_INTEREST := "interest"
+
+## Panel destination (LeaguePanel.pose) for each pose on screen.
+const POSE_NAMES := {
+	MODE_HUB: "fixtures", MODE_TABLE: "table", MODE_CALENDAR: "calendar",
+	MODE_INTEREST: "interest", MODE_STATS: "stats", MODE_SYSTEM: "system",
+	MODE_REPORT: "fixtures", MODE_PODIUM: "stats",
+}
 
 var ui_scale := 1.0
 var touch := false
@@ -51,6 +61,14 @@ var hub: LeagueSheet = LeagueSheet.new()
 var book: LeagueBook = LeagueBook.new()
 ## The season's own save/exit dialog (#109), its own pose beside hub and book.
 var system := LeagueSystemSheet.new()
+## Stats and Teams of Interest, the panel's two new readings (#103).
+var sheet_extra := LeagueExtra.new()
+## The shortlist search field, and where BACK from a report returns (#103).
+var interest_query := ""
+var report_back := MODE_HUB
+## The left slide panel and the layer that paints it above the body.
+var panel := LeaguePanel.new()
+var overlay: LeagueOverlay = null
 ## What the System sheet is showing: the last acknowledgement, a refusal, and
 ## the Save As name field while it is open.
 var sys := {"status": "", "error": "", "naming": false, "name": ""}
@@ -71,6 +89,8 @@ var _poses := {
 	MODE_REPORT: ["book", "report_layout", "draw_report_body", "draw_report_chrome"],
 	MODE_PODIUM: ["book", "podium_layout", "draw_podium_body", "draw_podium_chrome"],
 	MODE_SYSTEM: ["system", "layout", "draw_body", "draw_chrome"],
+	MODE_STATS: ["extra", "stats_layout", "draw_stats_body", "draw_stats_chrome"],
+	MODE_INTEREST: ["extra", "interest_layout", "draw_interest_body", "draw_interest_chrome"],
 }
 
 func _ready() -> void:
@@ -81,7 +101,18 @@ func _ready() -> void:
 	body.name = "Body"
 	add_child(body)
 	tooltip = DateOverlay.attach(self, body, false)
+	overlay = LeagueOverlay.new()
+	overlay.name = "Overlay"
+	overlay.panel = panel
+	overlay.fonts = UiChrome.fonts()
+	add_child(overlay)
 	resized.connect(refresh)
+
+## The slide animates on its own clock; a settled panel costs nothing and never
+## blocks input.
+func _process(delta: float) -> void:
+	if visible and panel.update(delta):
+		overlay.queue_redraw()
 
 func design_vp() -> Vector2:
 	var vp: Vector2 = size / maxf(ui_scale, 0.001)
@@ -158,10 +189,18 @@ func refresh() -> void:
 	var sheet := _sheet(pose)
 	rows_hints = sheet.hints
 	var items: Array = Callable(sheet, str(pose[1])).call(vp, view)
-	var content := body.set_sheet(items, vp, mode != _last_mode)
+	var content := body.set_sheet(items, vp, mode != _last_mode, _bottom_bar())
 	body.painter = Callable(sheet, str(pose[2])).bind(vp, UiChrome.fonts(), content, view)
+	panel.active = str(POSE_NAMES.get(mode, ""))
+	overlay.active_pose = panel.active
+	overlay.ui_scale = ui_scale
 	_last_mode = mode
+	overlay.queue_redraw()
 	queue_redraw()
+
+## Bottom chrome the pose reserves: only the table keeps its chips.
+func _bottom_bar() -> float:
+	return LeagueSheet.BAR_H if mode == MODE_TABLE else 0.0
 
 ## The sheet that owns a pose: the hub sheets, the reading book, or the System
 ## dialog (which is its own module).
@@ -171,10 +210,15 @@ func _sheet(pose: Array) -> RefCounted:
 			return book
 		"system":
 			return system
+		"extra":
+			return sheet_extra
 	return hub
 
 ## Hit test walks back to front so later items (e.g. a delete chip) win.
 func button_at(p: Vector2) -> String:
+	var over_panel: String = panel.hit(p, design_vp())
+	if over_panel != "":
+		return over_panel
 	return body.hit(p) if body != null else ""
 
 ## Wheel, trackpad, drag and keys; wide tables also pan sideways.
