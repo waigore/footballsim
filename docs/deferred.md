@@ -18,7 +18,7 @@ Former gaps now shipped (wiki domains playable; DRs accepted):
 | Poisson λ on the last-10 PL scoring envelope | DR-20261125-19; [#172](https://github.com/waigore/footballsim/issues/172) |
 | PL 2026-27 snapshot + encyclopedia | `data/`; DR-20261123-01 / 05 |
 | God-mode season saves, calendar, Continue/watch | `league_season.gd`; DR-20261124-01 / 06 |
-| Two leagues in one seed/save; league-scoped table, stats, calendar, encyclopedia | DR-20261126-01 / 02; [#185](https://github.com/waigore/footballsim/issues/185) |
+| Two leagues in one seed/save; league-scoped table, stats, calendar, encyclopedia | DR-20261126-01 / 04; [#185](https://github.com/waigore/footballsim/issues/185) |
 | System sheet (Quick Save / Save As / Load / Quit) | DR-20261124-07 |
 | Per-goal report playback packs | DR-20261124-04 |
 | Non-match type / viewport scale | DR-20261124-03 |
