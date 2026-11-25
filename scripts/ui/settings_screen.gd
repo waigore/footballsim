@@ -53,10 +53,10 @@ static func hud_toggle_rect(vp: Vector2) -> Rect2:
 	var card := card_rect(vp)
 	return Rect2(card.end.x - 24.0 - 96.0, hud_row_y(vp) + 8.0, 96.0, 44.0)
 
-## Same door the fixture sheet carries, so every sheet has one way out in the
-## same corner.
+## BACK sits in the same top-left corner as every other sheet (#163); the door
+## keeps its 44-unit tap height rather than the league sheets' 32.
 static func back_rect(vp: Vector2) -> Rect2:
-	return Rect2(vp.x - 24.0 - 116.0, 18.0, 116.0, 44.0)
+	return Rect2(24.0, 12.0, 116.0, 44.0)
 
 ## Volume a pointer at `p` means, read on the track plus a finger-sized margin
 ## above and below it. `vp` is the design viewport the sheet was drawn in.
@@ -91,7 +91,7 @@ func click(p: Vector2, vp: Vector2 = Vector2(1600, 900)) -> String:
 func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, volume: float, touch: bool = false, hud_on: bool = true) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
-	UiChrome.sheet_header(c, vp, fonts, "PREFS", "SETTINGS", "")
+	UiChrome.sheet_header(c, vp, fonts, "SETTINGS")
 	var card := card_rect(vp)
 	UiChrome.panel(c, _cache, card, UiChrome.C_PANEL, 12, Color(1, 1, 1, 0.10))
 	c.draw_rect(Rect2(card.position.x + 1.0, card.position.y + 12.0, 3.0, 34.0), UiChrome.C_GOLD)

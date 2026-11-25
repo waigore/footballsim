@@ -26,8 +26,6 @@ const CODEC := "goal-highlight"
 const VERSION := 1
 ## Playback poses per match second. The viewer interpolates between them.
 const FPS := 12
-## Match seconds of build-up shown before the clip's goal minute.
-const PRE_ROLL := 9.0
 
 # ------------------------------------------------------------------ seed ---
 
