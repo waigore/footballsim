@@ -182,6 +182,8 @@ func test_the_overlay_doors_reach_the_sheets_and_settings() -> void:
 	_tap(_door("speed"))
 	assert_almost_eq(game.speed, 2.0, 0.0001, "the speed door did not cycle the pace")
 	_tap(_door("mode"))
+	assert_eq(game.mode, "goals", "the mode door did not reach Goals only")
+	_tap(_door("mode"))
 	assert_eq(game.mode, "full", "the mode door did not switch to the full match")
 	_tap(_door("mode"))
 	assert_eq(game.mode, "highlights", "the mode door did not switch back")

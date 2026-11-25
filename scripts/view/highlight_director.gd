@@ -11,6 +11,10 @@ extends RefCounted
 ## Snapshots are full engine states — they only live for the length of a match.
 ## What a watched fixture stores afterwards is not a snapshot but a playback
 ## pack (see `GoalHighlight`), cut from the ring when a goal lands.
+##
+## Which events turn into a live replay depends on the match view (#164):
+## Highlights rewinds on chances, cards and goals; Goals only rewinds on a
+## scored goal and fast-sims everything in between.
 
 ## Seconds of match time between snapshots: ~18 seconds of picture in the ring.
 const SNAPSHOT_EVERY := 0.45
@@ -84,26 +88,44 @@ func on_event(e: Dictionary) -> void:
 	# may cut a clip, or the season would hold the same goal twice.
 	if kind == "goal" and not shown.has(key):
 		capture(e)
-	if host.mode != "highlights":
+	if not extends_window(kind):
 		return
 	if shown.has(key):
-		return
-	var important: bool = kind in ["shot", "goal", "penalty", "penalty_taken", "card", "corner"]
-	if not important:
 		return
 	if host.in_highlight:
 		# extend the live window around goals and late chances
 		host.highlight_until = maxf(host.highlight_until, host.engine.clock + (5.0 if kind == "goal" else 3.0))
 		return
-	if kind in ["shot", "penalty", "corner", "goal", "card"]:
-		shown[key] = true
-		if rewind(host.engine.clock):
-			host.in_highlight = true
-			host.fast_mode = false
-			host.highlight_until = host.engine.clock + 12.0
-			host.replay_banner = 2.2
-			if kind in ["shot", "penalty", "corner"]:
-				host.accumulator = 0.0
+	if not opens_replay(kind):
+		return
+	shown[key] = true
+	if rewind(host.engine.clock):
+		host.in_highlight = true
+		host.fast_mode = false
+		host.highlight_until = host.engine.clock + 12.0
+		host.replay_banner = 2.2
+		if kind in ["shot", "penalty", "corner"]:
+			host.accumulator = 0.0
+
+## Whether this event keeps an open window open. Highlights stretch a replay for
+## every chance; Goals only stretches it for the goal itself, because everything
+## between goals is fast-simmed.
+func extends_window(kind: String) -> bool:
+	if host.mode == "goals":
+		return kind == "goal"
+	if host.mode != "highlights":
+		return false
+	return kind in ["shot", "goal", "penalty", "penalty_taken", "card", "corner"]
+
+## Whether this event starts a replay. Goals only rewinds on a scored goal — a
+## converted penalty and an own goal both land as `goal` — and never on a shot,
+## a corner, a card or a penalty that missed.
+func opens_replay(kind: String) -> bool:
+	if host.mode == "goals":
+		return kind == "goal"
+	if host.mode != "highlights":
+		return false
+	return kind in ["shot", "goal", "penalty", "corner", "card"]
 
 # ---------------------------------------------------------------- capture ---
 

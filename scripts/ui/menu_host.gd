@@ -33,6 +33,7 @@ func attach(main_node) -> void:
 	shell.load_league_requested.connect(_on_load_league)
 	shell.screen_changed.connect(_restack)
 	shell.hud_visibility_changed.connect(_on_hud_choice)
+	shell.match_mode_changed.connect(_on_match_mode)
 	shell.visible = false
 	# The match HUD's show/hide choice lives in the same prefs file (#158): the
 	# overlay hands its toggles here to be written, and the settings switch comes
@@ -40,6 +41,7 @@ func attach(main_node) -> void:
 	if game.hud != null:
 		game.hud.on_hud_changed = _persist_hud
 	restore_hud()
+	restore_mode()
 	league = LeagueHost.new()
 	league.attach(main_node)
 	league.build()
@@ -54,6 +56,26 @@ func restore_hud() -> void:
 func _on_hud_choice(on: bool) -> void:
 	if game != null and game.hud != null:
 		game.hud.set_hud_visible(on, true)
+
+## The saved match view comes back with the same instant restore the HUD choice
+## gets: the broadcast opens in the mode the player left it in (#164).
+func restore_mode() -> void:
+	if game != null and game.view != null and shell != null:
+		game.view.set_mode(Prefs.load_mode(shell.prefs_path))
+
+## A settings choice applies to the match behind the sheet at once. It was saved
+## by the sheet, so the write is not repeated here.
+func _on_match_mode(mode: String) -> void:
+	if game != null and game.view != null:
+		game.view.set_mode(mode)
+
+## Persist the broadcast's own mode choice (the bar door or `H`) and keep the
+## settings sheet's row in step, without re-emitting the signal.
+func save_mode(mode: String) -> void:
+	if shell == null:
+		return
+	shell.match_mode = Prefs.normalize_mode(mode)
+	Prefs.save_mode(shell.match_mode, shell.prefs_path)
 
 func _persist_hud(on: bool) -> void:
 	Prefs.save_hud(on, shell.prefs_path if shell != null else Prefs.PATH)
