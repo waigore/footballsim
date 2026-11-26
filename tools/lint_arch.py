@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enforce P3 modular architecture bars (RUB-P3-*). See docs/rubric.md."""
+"""Enforce P3 architecture + cheap static P1 bars. See docs/rubric.md."""
 
 from __future__ import annotations
 
@@ -32,7 +32,63 @@ ALLOWED_GD_PREFIXES = (
 
 SIZE_ALLOWLIST_PATH = ROOT / "tools" / "arch_size_allowlist.txt"
 AUTOLOAD_ALLOWLIST_PATH = ROOT / "tools" / "arch_autoload_allowlist.txt"
+UI_ICONS_PATH = ROOT / "tools" / "arch_ui_icons.txt"
 PROJECT_GODOT = ROOT / "project.godot"
+
+# REQ-P1-01 / RUB-P1-01 — 2D primary; no 3D core loops.
+FORBIDDEN_3D_EXTENDS = frozenset(
+    {
+        "Node3D",
+        "Camera3D",
+        "MeshInstance3D",
+        "Sprite3D",
+        "AnimatedSprite3D",
+        "GPUParticles3D",
+        "CPUParticles3D",
+        "CSGCombiner3D",
+        "CSGBox3D",
+        "CSGSphere3D",
+        "CSGCylinder3D",
+        "CSGMesh3D",
+        "CharacterBody3D",
+        "RigidBody3D",
+        "StaticBody3D",
+        "AnimatableBody3D",
+        "Area3D",
+        "CollisionShape3D",
+        "CollisionPolygon3D",
+        "Light3D",
+        "DirectionalLight3D",
+        "OmniLight3D",
+        "SpotLight3D",
+        "GeometryInstance3D",
+        "Label3D",
+        "Decal",
+        "VoxelGI",
+    }
+)
+SCENE_3D_TYPE_RE = re.compile(
+    r'\btype="('
+    + "|".join(sorted(FORBIDDEN_3D_EXTENDS, key=len, reverse=True))
+    + r')"'
+)
+MESH_SUFFIXES = frozenset({".glb", ".gltf", ".fbx"})
+# REQ-P1-08 — no project default icon as player-facing chrome.
+DEFAULT_ICON_RE = re.compile(r"res://icon\.(?:svg|png)\b")
+PANEL_ICON_RE = re.compile(r'"icon"\s*:\s*"([a-z0-9_]+)"')
+LEAGUE_PANEL_GD = ROOT / "scripts" / "ui" / "league_panel.gd"
+DATE_OVERLAY_GD = ROOT / "scripts" / "ui" / "date_overlay.gd"
+# REQ-P1-05 — Godot hover-only APIs (tooltips / mouse_entered) gate nothing critical.
+HOVER_ONLY_API_RE = re.compile(
+    r"""(?x)
+    \.connect\s*\(\s*["']mouse_(?:entered|exited)["']
+    | \bmouse_(?:entered|exited)\.connect\b
+    | \b(?:MOUSE_ENTERED|MOUSE_EXITED)\b
+    | \.tooltip_text\s*=
+    | \bset_tooltip(?:_string)?\s*\(
+    | \bhint_tooltip\b
+    """
+)
 
 FUNC_RE = re.compile(r"(?m)^(static\s+)?func\s+")
 EXTENDS_RE = re.compile(r"(?m)^extends\s+(\w+)")
@@ -423,6 +479,163 @@ def check_platform(failures: list[str]) -> None:
             )
 
 
+def _iter_scene_tscn() -> list[Path]:
+    paths: list[Path] = []
+    for prefix in ("scenes", "ui"):
+        root = ROOT / prefix
+        if root.is_dir():
+            paths.extend(sorted(root.rglob("*.tscn")))
+    return paths
+
+
+def check_no_3d_core(failures: list[str]) -> None:
+    """REQ-P1-01 / RUB-P1-01: no 3D nodes, scenes, or mesh assets in game paths."""
+    for path in iter_script_gd():
+        rel = path.relative_to(ROOT).as_posix()
+        raw = path.read_text(encoding="utf-8")
+        ext = EXTENDS_RE.search(raw)
+        if ext and ext.group(1) in FORBIDDEN_3D_EXTENDS:
+            line = _line_of(raw, ext.start())
+            failures.append(
+                f"{rel}:{line}: RUB-P1-01 3D extends {ext.group(1)} "
+                f"(2D primary; no 3D core loops)"
+            )
+
+    for path in _iter_scene_tscn():
+        rel = path.relative_to(ROOT).as_posix()
+        raw = path.read_text(encoding="utf-8")
+        for match in SCENE_3D_TYPE_RE.finditer(raw):
+            line = _line_of(raw, match.start())
+            failures.append(
+                f"{rel}:{line}: RUB-P1-01 3D scene node type={match.group(1)!r} "
+                f"(2D primary; no 3D core loops)"
+            )
+
+    skip_parts = {".godot", "addons", ".autolab"}
+    for path in ROOT.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in MESH_SUFFIXES:
+            continue
+        if any(part in skip_parts for part in path.parts):
+            continue
+        rel = path.relative_to(ROOT).as_posix()
+        failures.append(
+            f"{rel}:1: RUB-P1-01 3D mesh asset {path.suffix.lower()} "
+            f"(2D primary; no 3D core loops)"
+        )
+
+
+def load_required_ui_icons() -> list[str]:
+    if not UI_ICONS_PATH.is_file():
+        return []
+    icons: list[str] = []
+    for raw in UI_ICONS_PATH.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        icons.append(line.split()[0])
+    return icons
+
+
+def check_ui_icons(failures: list[str]) -> None:
+    """REQ-P1-08 / RUB-P1-08: required icons present; no default project icon."""
+    rel_list = UI_ICONS_PATH.relative_to(ROOT).as_posix()
+    required = load_required_ui_icons()
+    if not required:
+        failures.append(
+            f"{rel_list}:1: RUB-P1-08 missing required UI icon list "
+            f"(tools/arch_ui_icons.txt)"
+        )
+        return
+
+    basenames: set[str] = set()
+    for rel in required:
+        path = ROOT / rel
+        stem = Path(rel).stem
+        basenames.add(stem)
+        if not path.is_file():
+            failures.append(f"{rel}:1: RUB-P1-08 missing required UI icon")
+            continue
+        if path.stat().st_size == 0:
+            failures.append(f"{rel}:1: RUB-P1-08 UI icon file is empty")
+
+    if LEAGUE_PANEL_GD.is_file():
+        panel_rel = LEAGUE_PANEL_GD.relative_to(ROOT).as_posix()
+        raw = LEAGUE_PANEL_GD.read_text(encoding="utf-8")
+        for match in PANEL_ICON_RE.finditer(raw):
+            name = match.group(1)
+            line = _line_of(raw, match.start())
+            if name not in basenames:
+                failures.append(
+                    f"{panel_rel}:{line}: RUB-P1-08 panel icon {name!r} "
+                    f"not listed in {rel_list}"
+                )
+            icon_rel = f"assets/ui/league/{name}.png"
+            if not (ROOT / icon_rel).is_file():
+                failures.append(
+                    f"{panel_rel}:{line}: RUB-P1-08 panel icon file missing "
+                    f"({icon_rel})"
+                )
+
+    for path in iter_script_gd():
+        rel = path.relative_to(ROOT).as_posix()
+        raw = path.read_text(encoding="utf-8")
+        for match in DEFAULT_ICON_RE.finditer(raw):
+            line_start = raw.rfind("\n", 0, match.start()) + 1
+            if "#" in raw[line_start : match.start()]:
+                continue
+            line = _line_of(raw, match.start())
+            failures.append(
+                f"{rel}:{line}: RUB-P1-08 must not use project default icon "
+                f"as UI chrome ({match.group(0)})"
+            )
+
+
+def check_no_hover_only_ux(failures: list[str]) -> None:
+    """REQ-P1-05 / RUB-P1-05: no hover-only critical UX APIs in game UI."""
+    scan_roots = (
+        ROOT / "scripts",
+        ROOT / "scenes",
+        ROOT / "ui",
+        ROOT / "autoload",
+    )
+    for root in scan_roots:
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("*")):
+            if path.suffix not in {".gd", ".tscn"}:
+                continue
+            rel = path.relative_to(ROOT).as_posix()
+            raw = path.read_text(encoding="utf-8")
+            for match in HOVER_ONLY_API_RE.finditer(raw):
+                line_start = raw.rfind("\n", 0, match.start()) + 1
+                if "#" in raw[line_start : match.start()]:
+                    continue
+                # .tscn comments use ';' — still flag real property lines.
+                line = _line_of(raw, match.start())
+                failures.append(
+                    f"{rel}:{line}: RUB-P1-05 hover-only API "
+                    f"{match.group(0)!r} (critical UX needs tap/click path)"
+                )
+
+    if not DATE_OVERLAY_GD.is_file():
+        return
+    rel = DATE_OVERLAY_GD.relative_to(ROOT).as_posix()
+    raw = DATE_OVERLAY_GD.read_text(encoding="utf-8")
+    # Weekday reveal is the one shipped hover hint: touch must arm via hold.
+    if "func showing" not in raw:
+        failures.append(
+            f"{rel}:1: RUB-P1-05 DateOverlay.showing() missing "
+            f"(touch must reveal on hold, not hover-only)"
+        )
+        return
+    showing = raw.split("func showing", 1)[1].split("\nfunc ", 1)[0]
+    if "touch" not in showing or "holding" not in showing:
+        failures.append(
+            f"{rel}:1: RUB-P1-05 DateOverlay.showing() must arm on touch "
+            f"via holding (no hover-only weekday reveal)"
+        )
+
+
 def _git_changed_paths(base_ref: str) -> set[str]:
     cmds = [
         ["git", "diff", "--name-only", "--diff-filter=ACMR", f"{base_ref}...HEAD"],
@@ -509,6 +722,9 @@ def main(argv: list[str] | None = None) -> int:
     check_autoloads(failures, autoload_allowlist)
     check_rules_purity(failures)
     check_platform(failures)
+    check_no_3d_core(failures)
+    check_ui_icons(failures)
+    check_no_hover_only_ux(failures)
     if args.require_rules_tests:
         check_rules_tests_pairing(failures, base_ref)
 
@@ -517,12 +733,13 @@ def main(argv: list[str] | None = None) -> int:
         for line in sorted(failures):
             print(f"  {line}", file=sys.stderr)
         print(
-            "\nSee docs/rubric.md P3 (RUB-P3-*) and docs/requirements.md REQ-P3-*.",
+            "\nSee docs/rubric.md (RUB-P3-*, RUB-P1-01/05/08) and "
+            "docs/requirements.md.",
             file=sys.stderr,
         )
         return 1
 
-    print("arch-lint OK (RUB-P3-01…05).")
+    print("arch-lint OK (RUB-P3-01…05, RUB-P1-01/05/08).")
     return 0
 
 

@@ -281,7 +281,8 @@ func _draw_crumbs(y: float) -> void:
 
 ## Scrollbar plus the footer strip: the one place the sheet explains itself.
 func _draw_furniture(vp: Vector2, br: Rect2) -> void:
-	if body != null and body.max_scroll() > 0.0:
+	var can_scroll := body != null and body.max_scroll() > 0.0
+	if can_scroll:
 		var track := Rect2(br.position.x + br.size.x + 6.0, br.position.y, 3.0, br.size.y)
 		var frac: float = clampf(body.size.y / maxf(body.content_height(), 1.0), 0.06, 1.0)
 		# The thumb travels the whole track between the top and the last row, so
@@ -290,8 +291,10 @@ func _draw_furniture(vp: Vector2, br: Rect2) -> void:
 		var h: float = track.size.y * frac
 		draw_rect(track, Color(1, 1, 1, 0.05))
 		draw_rect(Rect2(track.position.x, track.position.y + (track.size.y - h) * offset, 3.0, h), Color(1, 1, 1, 0.22))
-	var hint := "TAP A ROW TO OPEN  ·  DRAG OR KEYS SCROLL" if touch else "CLICK A ROW TO OPEN  ·  ESC BACK  ·  WHEEL, DRAG OR KEYS SCROLL"
-	WikiChrome.label(self, f_med, Vector2(br.position.x, vp.y - 14.0), hint, 10, WikiChrome.DIM)
+	var can_open := body != null and body.has_open_row_in_view()
+	var hint := WikiChrome.footer_hint(touch, can_open, can_scroll)
+	if hint != "":
+		WikiChrome.label(self, f_med, Vector2(br.position.x, vp.y - 14.0), hint, 10, WikiChrome.DIM)
 	var snap := str(WikiModel.repo().meta().get("snapshot_date", ""))
 	var label := FixtureCalendar.day_label(snap)
 	WikiChrome.label_r(self, f_med, br.end.x, vp.y - 14.0, "SNAPSHOT %s" % label, 10,
