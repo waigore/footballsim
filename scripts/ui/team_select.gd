@@ -173,9 +173,12 @@ func key(code: int) -> bool:
 	elif code == KEY_L:
 		browse.emit(WikiModel.LEAGUE, "")
 	elif code >= KEY_1 and code <= KEY_9:
-		var comps := PLCompetitions.active()
-		var pick := code - KEY_1 - 1
-		set_league("" if pick < 0 else str(comps[mini(pick, comps.size() - 1)]["id"]))
+		# Key 1 selects ALL, then each league takes the key its chip sits at (#279):
+		# the footer legend names exactly the chips `competition_rows()` returns.
+		var row := LeagueChrome.league_key_row(code, LeagueChrome.competition_rows())
+		if row.is_empty():
+			return false
+		set_league(str(row["id"]))
 	else:
 		return false
 	return true
@@ -238,8 +241,7 @@ func _arrow(r: Rect2, glyph: String, id: String) -> void:
 ## phone five chips no longer hold their full names, so a narrow chip falls back
 ## to the competition's short code (PL, LL, BL, 2.BL) instead of overflowing.
 func _draw_league_chips(vp: Vector2) -> void:
-	var rows: Array = [{"id": "", "short_name": "ALL"}]
-	rows.append_array(PLCompetitions.active())
+	var rows: Array = LeagueChrome.competition_rows()
 	if rows.size() < 2:
 		return
 	var chip_h := 24.0

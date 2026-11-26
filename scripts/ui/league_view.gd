@@ -129,6 +129,9 @@ static func build(screen) -> Dictionary:
 		return {"summary": state.get("summary", {}), "name": state.get("name", ""),
 			"table": state.get("table", []), "rules": state.get("rules", rules)}
 	var view: Dictionary = state.duplicate()
+	# The sheet's own pose carries the device (#278): a caption names the verb of
+	# the pointer that will read it.
+	view["touch"] = bool(screen.touch)
 	if season != null:
 		view["plan"] = season.plan()
 		view["can_suggest"] = bool(view.get("can_suggest", false))

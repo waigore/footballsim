@@ -104,6 +104,16 @@ func test_the_caption_and_the_legend_name_every_band() -> void:
 	for band in LeagueTableChrome.BANDS:
 		assert_true(LeagueChrome.zone_color(band).a > 0.0, "legend band %s paints nothing" % band)
 
+## #278: the sentence names the pointer the player is holding — CLICK for a mouse
+## on a desktop sheet, TAP for a finger on a touch one.
+func test_the_sort_sentence_names_the_pointer() -> void:
+	var desk := LeagueTableChrome.sentence(false)
+	var phone := LeagueTableChrome.sentence(true)
+	assert_true(desk.begins_with("CLICK"), "a desktop sheet tells a mouse user to tap: %s" % desk)
+	assert_true(phone.begins_with("TAP"), "a touch sheet tells a finger to click: %s" % phone)
+	assert_false(desk.contains("TAP"), "the desktop sentence still says TAP: %s" % desk)
+	assert_eq(desk.replace("CLICK", "TAP"), phone, "the two readings say different sentences")
+
 ## A phone sheet has no room for the legend in the bottom bar, so it moves up
 ## beside the title; a wide sheet keeps it on the bar and prints the sentence.
 func test_the_legend_moves_up_on_a_phone_sheet() -> void:

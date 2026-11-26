@@ -115,6 +115,37 @@ static func winner_control(c: CanvasItem, vp: Vector2, card_bottom: float, mode:
 			Color(0.06, 0.06, 0.05) if on else UiChrome.C_DIM, bold)
 		c._add_button("win:" + str(spec["id"]), r)
 
+## The picker's league chips in key order (#279): ALL first, then every active
+## competition. The chips the sheet draws, the keys it accepts and the footer
+## legend all read this one list, so adding a league can never leave the legend
+## advertising keys the sheet does not answer.
+static func competition_rows() -> Array:
+	var rows: Array = [{"id": "", "short_name": "ALL"}]
+	rows.append_array(PLCompetitions.active())
+	return rows
+
+## The picker's league-key legend, one entry per chip: key 1 selects ALL and every
+## league takes the key its own chip sits at (#279). Empty when the sheet draws no
+## league chips, because then there is nothing to switch.
+static func picker_league_keys(rows: Array) -> String:
+	if rows.size() < 2:
+		return ""
+	var parts: Array = []
+	for i in range(rows.size()):
+		var row: Dictionary = rows[i]
+		parts.append("%d  %s" % [i + 1, str(row.get("short_name", row.get("name", "")))])
+	return "   ·   ".join(PackedStringArray(parts))
+
+## The chip a league key selects (#279), or `{}` when the key names no chip: key
+## 1 is ALL, then each league takes the key its own chip sits at. A key past the
+## last chip is refused so the footer legend can promise exactly what the sheet
+## answers.
+static func league_key_row(code: int, rows: Array) -> Dictionary:
+	var pick := code - KEY_1
+	if pick < 0 or pick >= rows.size():
+		return {}
+	return rows[pick]
+
 ## The picker's footer captions, so the sheet's own script keeps its lines for
 ## layout and the words live in one place. Each entry is [dy, text, size, ink].
 static func picker_hints(picker, touch: bool, back_to_menu: bool) -> Array:
@@ -123,9 +154,15 @@ static func picker_hints(picker, touch: bool, back_to_menu: bool) -> Array:
 	if touch:
 		return [[-44.0, "TAP THE ARROWS TO CHANGE CLUBS  ·  TAP KICK OFF", 11, UiChrome.C_DIM],
 			[-24.0, clubs, 10, gold]]
+	# The key legend is derived from the chips, never written by hand: the old
+	# hard-coded `1/2/3 LEAGUE` kept advertising three keys after the German
+	# tiers made the sheet answer five (#279). KICK OFF and RANDOM already wear
+	# their own ENTER / TAB hints, so this line holds the leagues and the exit.
+	var keys: String = picker_league_keys(competition_rows())
+	var tail := "   ·   ESC  %s" % ("MENU" if back_to_menu else "BACK")
 	return [[-64.0, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, UiChrome.C_DIM],
-		[-44.0, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   1/2/3  LEAGUE   ·   ESC  %s"
-			% ("MENU" if back_to_menu else "BACK"), 10, UiChrome.C_DIM],
+		[-44.0, (keys + tail) if keys != "" else "ESC  %s" % ("MENU" if back_to_menu else "BACK"),
+			10, UiChrome.C_DIM],
 		[-24.0, clubs, 10, gold]]
 
 ## "n clubs · league" for the footer, reading the picker's own filter.

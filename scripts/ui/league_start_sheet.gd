@@ -136,6 +136,17 @@ static func _league_badge(csv: String) -> String:
 		names.append(PLRepository.shared().competition_name(str(cid)))
 	return " + ".join(PackedStringArray(names)) if not names.is_empty() else "PL"
 
+## The save row's status in player words (#280): the store keeps `in_progress`,
+## the sheet never prints it. An unknown token still reads as words, never as a
+## raw key with its underscore.
+static func status_label(status: String) -> String:
+	var token := status.strip_edges()
+	if token == "in_progress":
+		return "IN PROGRESS"
+	if token == "complete":
+		return "COMPLETE"
+	return token.replace("_", " ").to_upper()
+
 # gd-tools: no cover start
 
 func draw_wizard_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
@@ -206,8 +217,9 @@ func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 			var current := str(save.get("current_date", ""))
 			var dated: String = FixtureCalendar.day_label(current)
 			var leagues := _league_badge(str(save.get("competitions", "PL")))
-			var line: String = "%s · %s · %s" % [dated, str(save.get("status", "")), leagues] \
-				if dated != "" else "%s · %s" % [str(save.get("status", "")), leagues]
+			var status := status_label(str(save.get("status", "")))
+			var line: String = "%s · %s · %s" % [dated, status, leagues] \
+				if dated != "" else "%s · %s" % [status, leagues]
 			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 32.0), line, 10,
 				UiChrome.C_DIM, med)
 			if current != "":
