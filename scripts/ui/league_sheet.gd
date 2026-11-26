@@ -46,6 +46,12 @@ static func compact(vp: Vector2) -> bool:
 static func watch_pending(plan_state: Array) -> bool:
 	return LeagueChrome.watch_pending(plan_state)
 
+## The hint beside TODAY'S FIXTURES: the pointer's verb on a desktop sheet and
+## the finger's on a touch one (#278).
+static func plan_hint(touch: bool) -> String:
+	return " · TAP A GAME TO SWITCH AUTO / WATCH" if touch \
+		else " · CLICK A GAME TO SWITCH AUTO / WATCH"
+
 # ------------------------------------------------------------------- hub ---
 
 ## The shortlist's mark per club, as the plan rows carry it (#104): the hub's
@@ -121,7 +127,7 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 	## it, so a second line would print through the row. A day that still holds
 	## watches says what CONTINUE does with them (#100); a played row never
 	## counts, whatever flag it was left with (#124).
-	var hint := " · TAP A GAME TO SWITCH AUTO / WATCH" if bool(state.get("can_suggest", false)) else ""
+	var hint := plan_hint(bool(state.get("touch", false))) if bool(state.get("can_suggest", false)) else ""
 	if watch_pending(state.get("plan", [])):
 		hint = " · CONTINUE OPENS THE NEXT WATCH"
 	UiChrome.text(c, Vector2(24.0, HEADER + 18.0), "TODAY'S FIXTURES" + hint, 11,

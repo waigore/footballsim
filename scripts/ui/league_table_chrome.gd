@@ -50,8 +50,14 @@ static func labels_for(bands: Array, short: bool) -> Array:
 const NARROW_VP := 620.0
 ## The sort sentence only rides the legend when the sheet is wide enough for both.
 const SENTENCE_VP := 760.0
-const SENTENCE := "TAP A COLUMN TO SORT · COLOURED BAND = PLACE"
 const GAP := 8.0
+
+## The sort sentence under the legend: the pointer's verb on a desktop sheet and
+## the finger's on a touch one (#278), the same split the fixture picker's footer
+## already makes.
+static func sentence(touch: bool) -> String:
+	return "TAP A COLUMN TO SORT · COLOURED BAND = PLACE" if touch \
+		else "CLICK A COLUMN TO SORT · COLOURED BAND = PLACE"
 
 ## A phone sheet: the legend moves up beside the title, the doors keep the bar.
 static func narrow(vp: Vector2) -> bool:
@@ -92,9 +98,10 @@ static func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 	if date != "":
 		hints.add(DateHints.strip_right(fonts["bold"], label, vp.x - 24.0, 34.0, 10), date)
 	var spot := legend_rect(vp)
-	var sentence := sentence_rect(vp)
-	if sentence != Rect2():
-		UiChrome.text_r(c, vp.x - 24.0, sentence.end.y - 4.0, SENTENCE, 8, UiChrome.C_DIM, fonts["med"])
+	var strip := sentence_rect(vp)
+	if strip != Rect2():
+		UiChrome.text_r(c, vp.x - 24.0, strip.end.y - 4.0, sentence(bool(view.get("touch", false))),
+			8, UiChrome.C_DIM, fonts["med"])
 	var rules: Dictionary = view.get("rules", {})
 	_legend(c, spot, fonts, bands_for(rules))
 

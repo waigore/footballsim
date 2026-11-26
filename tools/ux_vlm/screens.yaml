@@ -68,7 +68,7 @@ screens:
       - scripts/ui/hud_commentary.gd
       - scripts/ui/hud_managers.gd
       - scripts/ui/hud_player_card.gd
-    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-f10-hud.png
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-l-hud-1600.jpg
   - id: league-hub
     title: League hub
     kind: flow
@@ -86,7 +86,11 @@ screens:
       - scripts/ui/league_sheet.gd
       - scripts/ui/league_plan_sheet.gd
       - scripts/ui/league_doors.gd
-    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-hub-1600.jpg
+      # The season's other sheets ride the same surface: its front door (New
+      # League / Load) and the drawer's own readings (Stats, Interest).
+      - scripts/ui/league_start_sheet.gd
+      - scripts/ui/league_extra.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-l-hub-1600.jpg
   - id: league-table
     title: League table
     kind: browse
