@@ -22,7 +22,11 @@ func before_all() -> void:
 	var prefs := TestScratch.file("test_match_input_prefs.cfg")
 	for g in [game, game2]:
 		g.menus.shell.prefs_path = prefs
+		# Attach restored HUD/mode from the developer's user://prefs.cfg; point
+		# both at the scratch file and re-read so the suite never inherits a
+		# leftover match view (#164).
 		g.menus.restore_hud()
+		g.menus.restore_mode()
 	game._on_fixture_confirmed("MUN", "MCI")
 	# Every match opens the pre-match briefing first (#157): kick it off.
 	TestBriefing.kick(game)
