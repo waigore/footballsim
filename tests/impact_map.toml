@@ -593,7 +593,8 @@ domain = "hud_chrome"
 match = "scripts/view/match_camera.gd*"
 domain = "hud_chrome"
 
-# The scene's presentation face and input router share main.gd's suite.
+# The scene's presentation face, input router, clock loop and arena build share
+# main.gd's suite.
 [[rules]]
 match = "scripts/view/match_view.gd*"
 domain = "match_input"
@@ -601,6 +602,14 @@ domain = "match_input"
 [[rules]]
 match = "scripts/view/match_input.gd*"
 domain = "match_input"
+
+[[rules]]
+match = "scripts/view/match_playback.gd*"
+domain = "match_input"
+
+[[rules]]
+match = "scripts/match_scene.gd*"
+domain = "hud_chrome"
 
 # Fixture-picker glue rides the router domain: the same suites drive the sheet.
 [[rules]]
