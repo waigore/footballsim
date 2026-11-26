@@ -254,6 +254,11 @@ func refresh() -> void:
 	body.cache = hub.cache
 	body.frozen = delete_confirm_open()
 	panel.active = LeagueView.panel_reading(mode)
+	# A form that exists before a season does has no readings behind it, so the
+	# drawer is put away rather than left out over the form (#273).
+	if panel.active == "":
+		panel.close()
+		panel.settle()
 	# The drawer door is the season's only way to its other readings, so it is
 	# sized for the pointer that will press it (#204).
 	panel.touch = touch

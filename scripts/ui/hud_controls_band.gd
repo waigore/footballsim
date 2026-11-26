@@ -30,9 +30,15 @@ func controls(p: HudPaint, c: CanvasItem, game, touch: bool, mouse: Vector2, f_b
 
 ## `[id, label, key-or-tap hint]` per door, in bar order.
 func control_specs(p: HudPaint, game, touch: bool) -> Array:
+	# The key hint names what a press changes: while a replay view fast-forwards
+	# the clock runs at the director's own rate, so 1-4 would promise a control
+	# the bar does not have (#265).
+	var speed_hint: String = "1-4"
+	if game.mode != "full" and game.fast_mode:
+		speed_hint = ""
 	var specs := [
 		["pause", "PAUSE" if not game.paused else "RESUME", "SPACE"],
-		["speed", "%sx" % speed_label(game), "1-4"],
+		["speed", speed_label(game), speed_hint],
 		["mode", Prefs.mode_label(game.mode), "H"],
 		["skip", "SKIP", "S"],
 		["camera", "FOLLOW" if game.camera_follow else "WIDE", "C"],
@@ -44,10 +50,13 @@ func control_specs(p: HudPaint, game, touch: bool) -> Array:
 		specs.append(["teams", "TEAMS", "CLUBS"])
 	return specs
 
+## The speed door's caption: the player's own multiplier, or the word the state
+## line above the bar uses while a replay view sims. It never glues the
+## multiplier's `x` onto that word (#265).
 func speed_label(game) -> String:
 	if game.mode != "full" and game.fast_mode:
 		return "SIM"
 	var s: float = game.speed
 	if s == int(s):
-		return str(int(s))
-	return "%.1f" % s
+		return "%dx" % int(s)
+	return "%.1fx" % s

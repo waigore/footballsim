@@ -131,6 +131,38 @@ func test_the_hub_has_no_bottom_door_bar_and_keeps_back_and_continue() -> void:
 
 # ------------------------------------------------------------------- panel ---
 
+## #273: the season's drawer belongs to a season. The New League and Load sheets
+## exist before one does, so neither the plate nor an open drawer may sit on their
+## forms — and the plate that is painted is exactly the rect that answers a press.
+func test_the_drawer_never_sits_on_a_front_door_form() -> void:
+	new_season()
+	# Leave the drawer out, then walk to the New League form the way a player does.
+	open_panel()
+	assert_eq(screen().mode, "hub", "the panel did not open on the hub")
+	game.menus.open_menu()
+	press(_menu_door("new_league").get_center())
+	assert_eq(screen().mode, "wizard", "NEW LEAGUE did not open the form")
+	assert_eq(str(screen().overlay.active_pose), "", "the front door kept a panel reading")
+	assert_false(panel().is_open(), "the season's drawer was left out over the form")
+	assert_eq(panel().slide, 0.0, "the drawer was still sliding over the form")
+	var door: Rect2 = panel().tab_rect(vp())
+	# Nothing the drawer owns answers on this form: not the plate, not a row, not
+	# the scrim that dismisses it.
+	assert_eq(panel().hit(door.get_center(), vp()), "", "the form answers a press for a plate it does not paint")
+	assert_eq(panel().hit(Vector2(door.end.x + 8.0, door.get_center().y), vp()), "",
+		"the form answers a press beside its plate")
+	for i in range(LeaguePanel.ITEMS.size()):
+		var row: Rect2 = panel().item_rect(vp(), i)
+		assert_eq(panel().hit(row.get_center(), vp()), "", "a nav row answers over the form")
+	# And the form's own door under that corner still answers its own press.
+	assert_ne(screen().button_at(door.get_center()), "panel", "the plate shadows the form's own control")
+	# The plate that is painted on a reading is exactly the rect that answers.
+	new_season()
+	var painted: Rect2 = panel().tab_rect(vp())
+	assert_eq(panel().hit(painted.get_center(), vp()), "panel", "the painted plate answers nothing")
+	assert_eq(panel().hit(Vector2(painted.end.x + 6.0, painted.get_center().y), vp()), "",
+		"a press beside the painted plate opened the drawer")
+
 func test_the_panel_slides_open_navigates_and_closes() -> void:
 	new_season()
 	assert_false(panel().is_open(), "the panel opened by itself")

@@ -197,6 +197,58 @@ func test_a_club_page_top_has_no_row_to_open_but_its_squad_has() -> void:
 	assert_true(body.has_open_row_in_view(), "the squad on screen is not read as rows to open")
 	body.free()
 
+## #274: on a touch build the encyclopedia's table rows are finger-sized, so one
+## press picks one club — the same 49-unit pitch the league table took in #204.
+func test_touch_table_rows_are_finger_sized() -> void:
+	var page := WikiModel.page(WikiModel.LEAGUE, "")
+	var desk := WikiBody.layout(page["blocks"], 1048.0, true, false)
+	var touch := WikiBody.layout(page["blocks"], 1048.0, true, true)
+	var desk_rows: Array = []
+	var touch_rows: Array = []
+	for row in desk["rows"]:
+		if str(row["k"]) == "trow":
+			desk_rows.append(row["rect"])
+	for row in touch["rows"]:
+		if str(row["k"]) == "trow":
+			touch_rows.append(row)
+	assert_eq(touch_rows.size(), desk_rows.size(), "the touch layout lost rows")
+	assert_eq(touch_rows.size(), 36, "the league page lost clubs on a phone")
+	assert_almost_eq((desk_rows[1] as Rect2).position.y - (desk_rows[0] as Rect2).position.y, 24.0, 0.01,
+		"the desktop reading stopped being dense")
+	# Within one table the rows share the finger pitch; between tables a section
+	# heading or a note takes its own lines, which is not a lost row.
+	var previous: Dictionary = {}
+	for row in touch_rows:
+		var r: Rect2 = row["rect"]
+		assert_gte(r.size.y, 48.0, "a touch row is shorter than 48 units")
+		if not previous.is_empty() and int(row["index"]) == int(previous["index"]) + 1:
+			assert_almost_eq(r.position.y - (previous["rect"] as Rect2).position.y, WikiBody.TAP_ROW_H, 0.01,
+				"two touch rows in one table do not share the finger pitch")
+		previous = row
+
+## A press in the middle of a row's own strip opens that row's page, even after
+## the sheet has scrolled it into view (#274).
+func test_a_touch_row_answers_a_press_after_scrolling() -> void:
+	var body := WikiBody.new()
+	body.size = Vector2(1096.0, 493.0)
+	body.touch = true
+	body.set_page(WikiModel.page(WikiModel.LEAGUE, ""), true)
+	var checked := 0
+	for row in body.rows():
+		if str(row["k"]) != "trow" or (row["target"] as Dictionary).is_empty():
+			continue
+		var r: Rect2 = row["rect"]
+		body.scroll_to(r.position.y - 120.0)
+		var p := Vector2(40.0, r.position.y - body.scroll + r.size.y * 0.5)
+		if p.y < 0.0 or p.y >= body.size.y:
+			continue
+		var hit: Dictionary = body.hit(p)
+		assert_eq(str(hit.get("id", "")), str((row["target"] as Dictionary).get("id", "")),
+			"a press in the middle of a row opened another club")
+		checked += 1
+	assert_gt(checked, 10, "no scrolled row answered a press")
+	body.free()
+
 ## The league table opens a club from its first row, so its footer keeps the hint.
 func test_the_league_table_keeps_the_row_hint() -> void:
 	var body := WikiBody.new()

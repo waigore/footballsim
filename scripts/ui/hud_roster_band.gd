@@ -144,7 +144,8 @@ func status(p: HudPaint, c: CanvasItem, game, speed_label: String, f_bold: Font,
 	p.text_r(c, p.vp.x - 24.0, y + 32, "HOVER A PLAYER  ·  CLICK TO TRACK THEIR MATCH", 9, UiChrome.C_DIM, f_med)
 
 ## The play-state line's words: paused first, then the mode. Exposed so the copy
-## is read by a test instead of a screenshot.
+## is read by a test instead of a screenshot. `speed_label` is the bar's own speed
+## caption, which already carries its `x` (#265).
 func state_label(game, speed_label: String) -> String:
 	if game.paused:
 		return "PAUSED"
@@ -152,7 +153,7 @@ func state_label(game, speed_label: String) -> String:
 		return "%s  ·  SIMMING 24x" % Prefs.mode_label(game.mode)
 	if game.mode != "full":
 		return "%s  ·  LIVE" % Prefs.mode_label(game.mode)
-	return "FULL MATCH  ·  %sx" % speed_label
+	return "FULL MATCH  ·  %s" % speed_label
 
 ## Hovered player's dossier card, offset from the pointer and flipped near edges.
 func tooltip(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:

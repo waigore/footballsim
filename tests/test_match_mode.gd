@@ -201,15 +201,44 @@ func test_goals_only_replays_only_scored_goals() -> void:
 
 func test_the_state_line_names_the_view() -> void:
 	var band: HudRosterBand = game.hud.roster_band
+	var bar: HudControlsBand = game.hud.controls_band
 	game.view.set_mode("goals")
 	game.paused = false
-	assert_eq(band.state_label(game, "SIM"), "GOALS ONLY  ·  SIMMING 24x", "the simming line does not name Goals only")
+	game.fast_mode = true
+	assert_eq(band.state_label(game, bar.speed_label(game)), "GOALS ONLY  ·  SIMMING 24x", "the simming line does not name Goals only")
 	game.fast_mode = false
-	assert_eq(band.state_label(game, "SIM"), "GOALS ONLY  ·  LIVE", "the live line does not name Goals only")
+	assert_eq(band.state_label(game, bar.speed_label(game)), "GOALS ONLY  ·  LIVE", "the live line does not name Goals only")
 	game.view.set_mode("full")
-	assert_eq(band.state_label(game, "2"), "FULL MATCH  ·  2x", "the full-match line lost its speed")
+	game.speed = 2.0
+	assert_eq(bar.speed_label(game), "2x", "the speed door lost its multiplier")
+	assert_eq(band.state_label(game, bar.speed_label(game)), "FULL MATCH  ·  2x", "the full-match line lost its speed")
 	game.paused = true
-	assert_eq(band.state_label(game, "2"), "PAUSED", "the paused line lost its word")
+	assert_eq(band.state_label(game, bar.speed_label(game)), "PAUSED", "the paused line lost its word")
+
+## #265: while a replay view fast-forwards, the speed door reads the sim state's
+## own word — the one the state line uses — never a multiplier's `x` glued to it.
+func test_the_speed_door_never_reads_simx() -> void:
+	var bar: HudControlsBand = game.hud.controls_band
+	var band: HudRosterBand = game.hud.roster_band
+	var paint := HudPaint.new(game.hud.chrome, game.hud.design_vp())
+	game.paused = false
+	game.view.set_mode("highlights")
+	game.fast_mode = true
+	var label := _speed_door(bar, paint)
+	assert_eq(label, "SIM", "a simming replay view shows a multiplier on its speed door")
+	assert_false(label.ends_with("x"), "the door glued the multiplier's x onto the sim word")
+	assert_true(band.state_label(game, label).contains("SIMMING"), "the door and the state line name different states")
+	# A full match keeps the player's own rate, and the two still agree.
+	game.view.set_mode("full")
+	game.speed = 4.0
+	assert_eq(_speed_door(bar, paint), "4x", "the full match lost its speed on the door")
+	assert_true(band.state_label(game, bar.speed_label(game)).ends_with("4x"), "the state line lost the same rate")
+
+func _speed_door(bar: HudControlsBand, paint: HudPaint) -> String:
+	for spec in bar.control_specs(paint, game, false):
+		if str(spec[0]) == "speed":
+			return str(spec[1])
+	return ""
 
 func test_the_simulating_chip_waits_for_a_goal_in_goals_only() -> void:
 	assert_true(HudTopBand.sim_chip_label("goals").contains("NEXT GOAL"), "Goals only still waits on the next chance")
