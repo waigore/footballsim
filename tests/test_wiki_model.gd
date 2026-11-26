@@ -56,6 +56,21 @@ func test_the_player_page_shows_ability_real_and_sim_numbers() -> void:
 			bars = block["items"]
 	assert_eq(bars.size(), 6, "an outfielder should show six attributes")
 
+## The empty states on a player page read as player copy, not as notes about the
+## data pipeline (#208): no snapshot, dataset, season line or ledger talk.
+func test_the_player_page_notes_read_as_player_copy() -> void:
+	for p in PLRepository.shared().squad("MUN"):
+		var text := _flatten(WikiModel.page(WikiModel.PLAYER, str(p["id"])))
+		for word in ["SNAPSHOT", "DATASET", "SEASON LINE", "BEST EFFORT", "LEDGER"]:
+			assert_false(text.contains(word), "%s still says %s" % [str(p["id"]), word])
+	var empty := WikiModel.page(WikiModel.PLAYER, "MUN-casemiro")
+	var notes: Array = []
+	for block in empty["blocks"]:
+		if str(block["k"]) == "note":
+			notes.append(str(block["text"]))
+	assert_has(notes, "NO SEASON STATISTICS YET", "the empty season block is not player copy")
+	assert_has(notes, "NO CAREER TOTALS YET", "the empty career block is not player copy")
+
 func test_a_goalkeeper_page_shows_keeper_attributes() -> void:
 	var page := WikiModel.page(WikiModel.PLAYER, "MUN-s-lammens")
 	var bars: Array = []
