@@ -169,6 +169,7 @@ suites = [
 [domains.league]
 suites = [
   "test_league_rules.gd",
+  "test_league_rules_migration.gd",
   "test_league_save.gd",
   "test_fixture_calendar.gd",
   "test_strongest_xi.gd",
@@ -185,6 +186,10 @@ suites = [
   "test_league_system.gd",
   "test_league_interest.gd",
   "test_league_sheets.gd",  "test_goal_highlights.gd",
+  # Multi-league saves and their chrome (#185): both calendars, the shared
+  # clock, the league-scoped tables/filters and the picker.
+  "test_multi_league.gd",
+  "test_multi_ui.gd",
   # The long press reads the club strips these sheets paint (#107).
   "test_interest_long_press.gd",
   # The painted name fields and the keyboard they hand to the platform (#201).
@@ -484,7 +489,7 @@ domain = "hud_chrome"
 
 [[rules]]
 match = "scripts/ui/team_select.gd*"
-domain = "hud_chrome"
+domain = "league"
 
 [[rules]]
 match = "scripts/ui/hud_player_card.gd*"

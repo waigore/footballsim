@@ -126,7 +126,7 @@ static func league_page(competition_id: String = "") -> Dictionary:
 	var claims_ledger := PLCompetitions.season_owns(comp_id) \
 		or (not LeagueLedger.bound() and comp_id == PLCompetitions.default_id())
 	if claims_ledger:
-		out["blocks"].append_array(WikiLedger.league_blocks())
+		out["blocks"].append_array(WikiLedger.league_blocks(comp_id))
 	out["blocks"].append({"k": "note", "text": "SELECTED BY CLUB OR PLAYER  ·  ESC OR BACK RETURNS  ·  REAL DATA: %s" % str(meta.get("source", ""))})
 	return out
 

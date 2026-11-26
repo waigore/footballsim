@@ -28,19 +28,21 @@ static func height(touch: bool) -> float:
 	return TAP_H if touch else CAPTION_H
 
 ## Top of the band: under the sheet header, and under the group labels when the
-## full reading prints them.
-static func top(full: bool) -> float:
-	return LeagueChrome.HEADER + 6.0 + (GROUPS_H if full else 0.0)
+## full reading prints them. `offset` is air the sheet reserves above the band
+## for its own chips (the table's league tabs).
+static func top(full: bool, offset: float = 0.0) -> float:
+	return LeagueChrome.HEADER + offset + 6.0 + (GROUPS_H if full else 0.0)
 
 ## First row below the band.
-static func rows_top(full: bool, touch: bool) -> float:
-	return top(full) + height(touch) + GAP
+static func rows_top(full: bool, touch: bool, offset: float = 0.0) -> float:
+	return top(full, offset) + height(touch) + GAP
 
 ## The band's cells, in paint order: the place, the club, then one per number
 ## column on the rail `places` measured.
-static func cells(places: Dictionary, full: bool, sort: String, touch: bool) -> Array:
+static func cells(places: Dictionary, full: bool, sort: String, touch: bool,
+		offset: float = 0.0) -> Array:
 	var items: Array = []
-	var y := top(full)
+	var y := top(full, offset)
 	var band := height(touch)
 	if full:
 		items.append_array(captions(places, y - GROUPS_H))

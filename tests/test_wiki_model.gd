@@ -23,7 +23,7 @@ func test_the_league_page_has_every_agreed_section() -> void:
 	assert_gte(_rows_in(page, "LEAGUE TABLE"), 20, "the league table is short")
 	assert_gte(_rows_in(page, "TOP SCORERS  ·  SNAPSHOT"), 5, "no player leaders")
 	assert_gte(_rows_in(page, "LATEST RESULTS  ·  SNAPSHOT"), 5, "no recent results")
-	assert_eq(PLRepository.shared().table().size(), 20, "the table behind the page changed size")
+	assert_eq(PLRepository.shared().table("PL").size(), 20, "the table behind the page changed size")
 
 func test_every_link_on_the_league_page_resolves() -> void:
 	var page := WikiModel.page(WikiModel.LEAGUE, "")

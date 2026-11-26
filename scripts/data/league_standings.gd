@@ -9,6 +9,10 @@ extends RefCounted
 ## result write, the recompute write and its bindings can never drift apart.
 ## Split out of `LeagueRecord` so the table keeps one concern; both talk to the
 ## same bound save, minutes after `LeagueFixtures` installed the calendar.
+##
+## One table per active competition, keyed by `competition_id`. A club belongs to
+## exactly one domestic league, so the club id alone finds its row; every league-
+## wide read filters on the competition and reads that competition's rules.
 
 const TABLE_FIELDS := [
 	"played", "won", "drawn", "lost", "gf", "ga", "points",
@@ -50,28 +54,41 @@ func apply(club_id: String, goals_for: int, goals_against: int, rules: Dictionar
 		],
 	)
 
-## Rebuild the live table from every played fixture. The per-match path moves
+## Rebuild every live table from every played fixture. The per-match path moves
 ## rows incrementally; this is the repair/import path and the one an older save
-## takes when it opens (#73), so overall and home/away always agree again.
+## takes when it opens (#73), so overall and home/away always agree again. Each
+## competition is tallied with its own regulations.
 func recompute() -> void:
 	save.ensure_open()
-	var zero := {}
-	for key in TABLE_FIELDS:
-		zero[key] = 0
+	var rules_by := save.rules_by
+	if rules_by.is_empty():
+		rules_by = {str(save.actives[0]) if not save.actives.is_empty() else "PL": save.rules}
 	var acc := {}
-	for row in PLDatabase.rows("SELECT id FROM club;"):
-		acc[str(row["id"])] = zero.duplicate()
-	var rules := save.rules
+	var comps: Array = []
+	for row in PLDatabase.rows("SELECT DISTINCT competition_id FROM league_fixture;"):
+		comps.append(str(row["competition_id"]))
+	if comps.is_empty():
+		return
+	for row in PLDatabase.rows("SELECT id, competition_id FROM club;"):
+		if not comps.has(str(row["competition_id"])):
+			continue
+		var zero := {}
+		for key in TABLE_FIELDS:
+			zero[key] = 0
+		acc[str(row["id"])] = zero
 	for fx in PLDatabase.rows(
-		"SELECT home_club_id, away_club_id, home_goals, away_goals FROM league_fixture "
-		+ "WHERE status = 'played';"
+		"SELECT home_club_id, away_club_id, home_goals, away_goals, competition_id "
+		+ "FROM league_fixture WHERE status = 'played';"
 	):
+		var rules: Dictionary = rules_by.get(str(fx.get("competition_id", "")), save.rules)
 		_tally(acc, str(fx["home_club_id"]), int(fx["home_goals"]), int(fx["away_goals"]),
 			rules, "home")
 		_tally(acc, str(fx["away_club_id"]), int(fx["away_goals"]), int(fx["home_goals"]),
 			rules, "away")
 	PLDatabase.execute("DELETE FROM league_table;")
-	PLDatabase.execute("INSERT INTO league_table (club_id) SELECT id FROM club;")
+	PLDatabase.execute(
+		"INSERT INTO league_table (club_id, competition_id) SELECT id, competition_id FROM club "
+		+ "WHERE competition_id IN (" + ",".join(_placeholders(comps.size())) + ");", comps)
 	var sets: Array = []
 	for key in TABLE_FIELDS:
 		sets.append(key + " = ?")
@@ -83,6 +100,12 @@ func recompute() -> void:
 			bindings.append(int(s[key]))
 		bindings.append(str(club_id))
 		PLDatabase.execute(sql, bindings)
+
+func _placeholders(count: int) -> PackedStringArray:
+	var out := PackedStringArray()
+	for i in range(count):
+		out.append("?")
+	return out
 
 func _tally(acc: Dictionary, club_id: String, goals_for: int, goals_against: int,
 		rules: Dictionary, side: String) -> void:
@@ -108,13 +131,28 @@ func _tally(acc: Dictionary, club_id: String, goals_for: int, goals_against: int
 		s[p + "lost"] += 1
 
 ## Standings with the club labels the table screen draws and a 1-based position.
-func table() -> Array:
+## One competition's when an id is given; otherwise every active league, each
+## numbered from one (the encyclopedia's multi-league index).
+func table(competition_id: String = "") -> Array:
 	save.ensure_open()
-	var rows := PLDatabase.rows(
+	var sql := (
 		"SELECT t.*, c.name AS club_name, c.abbr AS club_abbr, c.color AS club_color "
-		+ "FROM league_table t JOIN club c ON c.id = t.club_id "
-		+ "ORDER BY t.points DESC, (t.gf - t.ga) DESC, t.gf DESC, c.name ASC;"
+		+ "FROM league_table t JOIN club c ON c.id = t.club_id"
 	)
+	var rows: Array = []
+	if competition_id == "":
+		rows = PLDatabase.rows(
+			sql + " ORDER BY t.competition_id, t.points DESC, (t.gf - t.ga) DESC, "
+			+ "t.gf DESC, c.name ASC;")
+	else:
+		rows = PLDatabase.rows(
+			sql + " WHERE t.competition_id = ? ORDER BY t.points DESC, (t.gf - t.ga) DESC, "
+			+ "t.gf DESC, c.name ASC;", [competition_id])
+	var place := 0
+	var last := ""
 	for i in range(rows.size()):
-		rows[i]["position"] = i + 1
+		var comp := str(rows[i].get("competition_id", ""))
+		place = 1 if comp != last else place + 1
+		last = comp
+		rows[i]["position"] = place
 	return rows

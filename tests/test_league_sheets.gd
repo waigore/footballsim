@@ -89,45 +89,19 @@ func test_the_hub_lays_out_an_empty_day_and_no_table() -> void:
 		if str(item["kind"]) == "table_row":
 			tables += 1
 	assert_eq(rows, 0, "an empty day laid out fixture rows")
-	assert_eq(tables, 20, "a wide hub lost its table")
+	assert_eq(tables, 0, "the hub drew a side table")
 	var compact: Array = sheet.hub_layout(Vector2(913, 411), _state([], _table()))
 	for item in compact:
 		assert_eq(str(item["kind"]) != "table_row", true, "a phone hub tried to draw the table")
 
-## #102: the hub's side table carries the same compact record as the TABLE
-## sheet (`#`, club, P W D L GF GA GD PTS). It paints the abbreviation, so the
-## club column gives the numbers more of the lane, and every column stays inside
-## the row it belongs to.
-func test_the_hub_side_table_carries_the_compact_record() -> void:
+## #189: the hub keeps no side table. The standings live on the TABLES sheet, so
+## a wide hub spends its whole width on the day's fixtures.
+func test_the_hub_has_no_side_table() -> void:
 	var sheet := LeagueSheet.new()
-	var keys: Array = []
-	for col in LeagueColumns.COMPACT_COLS:
-		if bool(col["num"]):
-			keys.append(str(col["key"]))
-	assert_eq(keys, ["played", "won", "drawn", "lost", "gf", "ga", "gd", "points"],
-		"the compact column order moved")
 	for vp in [Vector2(760, 640), Vector2(1280, 720), Vector2(1600, 900)]:
-		var item := {}
-		for candidate in sheet.hub_layout(vp, _state([], _table())):
-			if str(candidate["kind"]) == "table_row":
-				item = candidate
-				break
-		assert_false(item.is_empty(), "the wide hub laid out no table at %s" % vp)
-		var places: Dictionary = item["places"]
-		var rect: Rect2 = item["rect"]
-		var rail := places["cols"] as Array
-		assert_eq(rail.size(), 8, "the hub side table lost a column at %s" % vp)
-		assert_eq(rail.map(func(c): return str(c["key"])), keys,
-			"the hub side table paints another column set at %s" % vp)
-		assert_gt(float(places["club_x"]), float(places["pos_x"]), "# and club overlap at %s" % vp)
-		var previous := float(places["club_x"]) + float(places["club_w"])
-		for col in rail:
-			assert_gt(float(col["right"]) - float(col["w"]), previous - 0.01,
-				"%s overlaps the club abbreviation at %s" % [col["label"], vp])
-			previous = float(col["right"])
-		assert_lte(previous, rect.end.x + 0.01, "PTS is drawn outside the hub row at %s" % vp)
-		assert_gte(float(places["club_w"]), LeagueSideTable.CLUB_MIN - 0.01,
-			"the abbreviation column is too narrow at %s" % vp)
+		for item in sheet.hub_layout(vp, _state([], _table())):
+			assert_eq(str(item["kind"]) != "table_row", true,
+				"the hub drew a side table at %s" % vp)
 
 func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 	var sheet := LeagueStartSheet.new()
@@ -139,8 +113,8 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			for item in items:
 				if str(item["kind"]) == "choice" and bool(item["selected"]):
 					chosen += 1
-			assert_eq(chosen, 2, "one choice per group should be selected")
-			assert_eq(items.size(), 7, "the wizard is missing a control")
+			assert_eq(chosen, 3, "one choice per group should be selected")
+			assert_eq(items.size(), 10, "the wizard is missing a control")
 
 func test_the_load_list_lays_out_zero_and_many_saves() -> void:
 	var sheet := LeagueStartSheet.new()

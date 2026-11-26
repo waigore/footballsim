@@ -119,7 +119,8 @@ static func news(seed: int, home: Dictionary, away: Dictionary, ctx: Dictionary)
 	elif league:
 		line = "%s welcome %s to %s for matchday %d in the %s." % [
 			str(home.get("name", "")), str(away.get("name", "")),
-			str(home.get("stadium", "")), int(ctx.get("matchday", 1)), str(ctx.get("competition", ""))]
+			str(home.get("stadium", "")), int(ctx.get("matchday", 1)),
+			str(ctx.get("competition", "")) if str(ctx.get("competition", "")) != "" else "league"]
 	else:
 		title = NEWS_TITLE_FRIENDLY
 		line = "%s welcome %s to %s for a friendly: no table, no points, just the game." % [

@@ -36,6 +36,8 @@ const TAP_ROW_H := 49.0
 const POS_W := 22.0
 ## The club column never collapses; a name wider than it is shortened instead.
 const CLUB_MIN := 150.0
+## The league tabs above the column band: one chip per active competition.
+const TAB_H := 30.0
 ## One number box and the air between two of them.
 const NUM_W := 28.0
 const NUM_GAP := 2.0
@@ -77,6 +79,12 @@ const FULL_COLS := [
 ## Reading on screen ("" until the first layout picks one) and the player's sort.
 var mode := ""
 var order := LeagueTableSort.new()
+## Competition tab on screen. Session state: the reading and the sort are the
+## save's shared table prefs, the tab is which league is being read right now.
+## Empty means the save's primary league.
+var league_tab := ""
+## Panel style cache for the tab chips.
+var cache := {}
 ## Club names this table painted, with the strip each one occupies (#107): the
 ## long press reads it, in the same design space the rows are laid out in.
 var names := InterestNames.new()
@@ -85,6 +93,7 @@ var names := InterestNames.new()
 ## opens, so two saves never share one table's choices.
 func attach(save: LeagueSave) -> void:
 	mode = ""
+	league_tab = ""
 	if save == null:
 		order.attach(null)
 		return
@@ -110,8 +119,14 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 	var row_h := row_height(view)
 	var row_w := maxf(vp.x - 48.0, _min_row_w(reading))
 	var places := _places(Rect2(24.0, 0.0, row_w, row_h))
-	var top: float = LeagueTableHead.rows_top(reading == FULL, bool(view.get("touch", false)))
-	var items := LeagueTableHead.cells(places, reading == FULL, order.key, bool(view.get("touch", false)))
+	var comps: Array = view.get("competitions", [])
+	var tab_h: float = TAB_H if comps.size() > 1 else 0.0
+	var touch := bool(view.get("touch", false))
+	var top: float = LeagueTableHead.rows_top(reading == FULL, touch, tab_h)
+	var items: Array = []
+	if tab_h > 0.0:
+		items.append_array(_tabs(comps, vp))
+	items.append_array(LeagueTableHead.cells(places, reading == FULL, order.key, touch, tab_h))
 	var interest := LeagueInterestMark.set_of(view.get("interests", []))
 	for i in range(rows.size()):
 		items.append({
@@ -178,6 +193,32 @@ func _places(row: Rect2) -> Dictionary:
 			x += NUM_W + NUM_GAP
 	return out
 
+## The league tabs above the table: one per active competition, the one being
+## read in gold. The shared prefs (reading, sort) do not change as the tab does.
+func _tabs(comps: Array, vp: Vector2) -> Array:
+	var items: Array = []
+	var current := _current_tab(comps)
+	var gap := 8.0
+	var w: float = minf(180.0,
+		(vp.x - 48.0 - gap * float(comps.size() - 1)) / float(maxi(comps.size(), 1)))
+	var x := 24.0
+	for comp in comps:
+		var cid := str((comp as Dictionary).get("id", ""))
+		var on := cid == current
+		items.append({"id": "tbl:league:" + cid, "kind": "chip",
+			"label": str((comp as Dictionary).get("short", cid)),
+			"selected": on, "rect": Rect2(x, LeagueChrome.HEADER + 2.0, w, 24.0)})
+		x += w + gap
+	return items
+
+## The tab actually on screen: the stored one when the save still carries that
+## league, else the first active competition.
+func _current_tab(comps: Array) -> String:
+	for comp in comps:
+		if str((comp as Dictionary).get("id", "")) == league_tab:
+			return league_tab
+	return str((comps[0] as Dictionary).get("id", "")) if not comps.is_empty() else ""
+
 ## The header is part of the scrolling content, so a column stays above its
 ## numbers when the sheet is panned sideways and its tap target travels with it.
 ## Its geometry and paint live in `LeagueTableHead`, which is where the touch
@@ -189,6 +230,12 @@ func _places(row: Rect2) -> Dictionary:
 ## to the save's sort (`LeagueTableSort`). Both write through to the save so the
 ## choice is the save's, not this run's; true when anything changed.
 func press(id: String, save: LeagueSave) -> bool:
+	if id.begins_with("tbl:league:"):
+		var tab := id.substr(11)
+		if tab == league_tab:
+			return false
+		league_tab = tab
+		return true
 	if id.begins_with("tbl:sort:"):
 		return order.press(id.substr(9), save)
 	if not id.begins_with("tbl:mode:"):
@@ -227,6 +274,14 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array,
 			UiChrome.text(c, Vector2((item["rect"] as Rect2).position.x + 2.0,
 				(item["rect"] as Rect2).position.y + 8.0), str(item["label"]), 7,
 				UiChrome.C_DIM, fonts["bold"])
+		elif kind == "chip":
+			var on := bool(item.get("selected", false))
+			UiChrome.panel(c, cache, item["rect"],
+				UiChrome.C_GOLD.darkened(0.1) if on else UiChrome.C_PANEL, 5,
+				UiChrome.C_GOLD if on else UiChrome.C_BORDER, 1)
+			UiChrome.text_c(c, (item["rect"] as Rect2).get_center().x,
+				(item["rect"] as Rect2).position.y + 16.0, str(item["label"]), 10,
+				Color(0.06, 0.06, 0.05) if on else UiChrome.C_SOFT, fonts["bold"])
 
 ## The table's club label: the abbreviation — the one season pose that keeps it
 ## (#168) — falling back to the name only for a row that carries no short form.
