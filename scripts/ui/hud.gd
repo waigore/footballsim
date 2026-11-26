@@ -155,8 +155,12 @@ func _draw() -> void:
 	var vp := design_vp()
 	var p := HudPaint.new(chrome, vp)
 	# The pill never hides (#158), so its press is read before any band's: a card
-	# that grows into its corner can never take the door back (#202).
-	chrome.add_button("hud", HudLayout.hud_toggle_rect(vp, touch), toggle_label(), "U")
+	# that grows into its corner can never take the door back (#202). A held
+	# league result is the one exception: the card swallows every press, so the
+	# pill cannot answer and must not print a `U` that does nothing (#311).
+	var held: bool = str(engine.phase) == "full_time" and bool(game.result_hold)
+	if not held:
+		chrome.add_button("hud", HudLayout.hud_toggle_rect(vp, touch), toggle_label(), "U")
 	p.followed = followed
 	roster_band.ui_scale = ui_scale
 	roster_band.touch = touch
@@ -202,25 +206,36 @@ func _draw() -> void:
 	banners_band.intro(p, self, engine, game, f_bold, f_med)
 	banners_band.paused(p, self, engine, game, f_bold, f_med)
 	banners_band.vignette(p, self)
-	_draw_toggle(p, vp)
+	_draw_toggle(p, vp, held)
+	# While the season holds a result the card owns every press and every key:
+	# whatever the bands registered cannot answer, so the overlay answers nothing
+	# rather than offering doors the card will swallow (#311).
+	if held:
+		chrome.buttons.clear()
 
 ## The one door that never hides: a discreet pill above the ticker, labelled with
 ## what the press does, and the key that does the same on a keyboard (#158). Its
 ## press is registered before the bands paint, so the paint here only draws it.
+## While a held league result owns the screen it is painted dead instead of
+## removed: the strip keeps its shape, and the pill stops promising a key the
+## card swallows (#311).
 func toggle_label() -> String:
 	return "HIDE HUD" if hud_visible else "SHOW HUD"
 
-func _draw_toggle(p: HudPaint, vp: Vector2) -> void:
+func _draw_toggle(p: HudPaint, vp: Vector2, dead: bool = false) -> void:
 	var r: Rect2 = HudLayout.hud_toggle_rect(vp, touch)
-	var hovered := r.has_point(mouse)
+	var hovered := not dead and r.has_point(mouse)
 	var label := toggle_label()
 	p.panel(self, Color(0.02, 0.03, 0.04, 0.92 if hovered else 0.62), r, 8,
 		Color(1, 1, 1, 0.18 if hovered else 0.10))
 	var size := 11
 	var x: float = r.position.x + 12.0
+	var ink: Color = UiChrome.C_TEXT if hovered or not hud_visible else UiChrome.C_DIM
+	if dead:
+		ink = Color(UiChrome.C_DIM.r, UiChrome.C_DIM.g, UiChrome.C_DIM.b, 0.55)
 	p.text(self, Vector2(x, r.position.y + r.size.y * 0.5 + float(size) * 0.36), label, size,
-		UiChrome.C_TEXT if hovered or not hud_visible else UiChrome.C_DIM, f_bold)
-	if not touch:
+		ink, f_bold)
+	if not touch and not dead:
 		p.text_r(self, r.end.x - 12.0, r.position.y + r.size.y * 0.5 + 4.0, "U", 10, UiChrome.C_DIM, f_med)
 
 ## The manager card is a whole-card dismiss target and sits in front of the bar.

@@ -418,11 +418,64 @@ func test_the_full_time_card_is_the_restart_door_only_with_the_chrome_hidden() -
 	# The pill stays the one door back (#158): no card takes its corner.
 	assert_eq(hud.button_at(HudLayout.hud_toggle_rect(vp, true).get_center()), "hud",
 		"the whistle card stole the HUD pill's press")
-	# A league result the season holds is dismissed by its own tap (#124).
+	# A watched league fixture's result is already in the ledger: the held card
+	# owns every press and every key until it is read, so the strip — the
+	# never-hiding pill included — is painted dead rather than advertising a
+	# `PLAY AGAIN` and an `R` the season swallows (#124, #311).
 	hud.game.result_hold = true
 	hud.queue_redraw()
 	await get_tree().process_frame
+	var live: Array = []
+	for b in hud.buttons:
+		var id := str(b["id"])
+		if id in ["team_0", "team_1"]:
+			continue   # the scoreboard's club names carry no key of its own
+		live.append(id)
+	assert_eq(live, [], "a held league result still answered bar doors: %s" % str(live))
 	assert_eq(hud.button_at(card.get_center()), "", "a held league result restarted the match")
+	hud.game.result_hold = false
+	hud.set_hud_visible(true, true)
+	hud.queue_redraw()
+	await get_tree().process_frame
+	# With the season off the screen the whistle gets its way on back: the bar
+	# is a live strip again and the card stops answering.
+	assert_eq(hud.button_at(HudLayout.hud_toggle_rect(vp, true).get_center()), "hud",
+		"the pill stayed dead after the season let go")
+	hud.queue_free()
+
+## #311: a watched league fixture's result is held until it is read, and nothing
+## on the match can replay a game already in the ledger. Over that card the bar
+## paints every door dead and prints no key at all, while a friendly's whistle
+## (a result nobody holds) keeps its live `PLAY AGAIN` and its `R`.
+func test_a_held_league_result_leaves_no_live_door_on_the_bar() -> void:
+	var eng := MatchEngine.new(311)
+	eng.phase = "full_time"
+	var hud := _hud(eng)
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 900.0
+	var vp: Vector2 = hud.design_vp()
+	var paint := HudPaint.new(hud.chrome, vp)
+	var friendly: Array = hud.controls_band.control_specs(paint, hud.game, false, "full_time")
+	var held: Array = hud.controls_band.control_specs(paint, hud.game, false, "full_time", true)
+	assert_eq(friendly.size(), held.size(), "a held result reflowed the strip")
+	for i in range(friendly.size()):
+		assert_eq(str(friendly[i][0]), str(held[i][0]), "door %d changed place under a held result" % i)
+		assert_eq(str(friendly[i][1]), str(held[i][1]), "door %d lost its caption under a held result" % i)
+		assert_false(bool(held[i][3]), "door %s answered over a held league result (#311)" % str(held[i][0]))
+	# A friendly's whistle still offers the doors that are not play: the restart
+	# door the card names, the mode door, the cameras, the league and the menu.
+	var live: Array = []
+	for spec in friendly:
+		if bool(spec[3]):
+			live.append(str(spec[0]))
+	assert_eq(live, ["mode", "camera", "league", "restart", "menu"],
+		"a friendly's whistle lost a door: %s" % str(live))
+	# The friendly's restart door is the one the card names, and it answers.
+	var restart: Array = []
+	for spec in friendly:
+		if str(spec[0]) == "restart":
+			restart = spec
+	assert_eq(str(restart[1]), "PLAY AGAIN", "the friendly's restart door lost its whistle caption")
+	assert_eq(str(restart[2]), "R", "the friendly's restart door lost its key")
 	hud.queue_free()
 
 func test_the_paused_banner_resumes_when_the_chrome_is_hidden() -> void:
