@@ -8,7 +8,7 @@ extends RefCounted
 
 var game = null
 
-func _init(host) -> void:
+func _init(host: Node) -> void:
 	game = host
 
 ## One frame of the broadcast: camera and hover always run; the engine only

@@ -9,7 +9,7 @@ const W := 68.0
 const L := 105.0
 
 ## Build the arena graph and the presentation helpers the host already owns.
-static func build(game) -> void:
+static func build(game: Node) -> void:
 	game.arena = Node2D.new()
 	game.arena.name = "Arena"
 	game.add_child(game.arena)
