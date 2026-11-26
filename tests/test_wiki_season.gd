@@ -73,7 +73,8 @@ func test_the_player_page_reads_the_season_line() -> void:
 	var page := WikiModel.page(WikiModel.PLAYER, scorer)
 	var text := _flatten(page)
 	assert_true(text.contains("IN FOOTBALLSIM  ·  SEASON"), "the ledger block is not labelled for the season")
-	assert_true(text.contains("SEASON  ·  %s SNAPSHOT" % PLRepository.shared().season_label()), "the real-world season block lost its label")
+	assert_true(text.contains("SEASON  ·  %s" % PLRepository.shared().meta().get("season_label", "")), "the real-world season block lost its label")
+	assert_false(text.contains("SNAPSHOT"), "the player page still talks about a snapshot")
 	assert_eq(_kv_value(page, "APPS", true), "1", "the season line lost the appearance")
 	assert_eq(_kv_value(page, "GOALS", true), str(int(scorers[0]["goals"])), "the season line lost his goals")
 	assert_ne(_kv_value(page, "CARDS", true), "", "the season line has no cards")
@@ -84,7 +85,7 @@ func test_a_player_who_has_not_played_says_so() -> void:
 	var squad := PLRepository.shared().squad(club_id)
 	var unused := str(squad[squad.size() - 1]["id"])
 	var page := WikiModel.page(WikiModel.PLAYER, unused)
-	assert_true(_flatten(page).contains("NO SEASON LINE YET"), "an unused bench player reads as if he had played")
+	assert_true(_flatten(page).contains("NO APPEARANCES YET"), "an unused bench player reads as if he had played")
 
 func test_closing_the_season_returns_the_snapshot_pages() -> void:
 	season.close()

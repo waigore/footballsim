@@ -318,12 +318,12 @@ func _process(delta: float) -> void:
 		if not result_recorded:
 			result_recorded = PLSimStats.record_match(engine)
 		return
-	if engine.phase == "half_time":
+	if engine.phase == "half_time" or engine.phase == "et_break":
 		if half_time_timer < 0.0:
 			half_time_timer = 4.0
 		half_time_timer -= delta
 		if half_time_timer <= 0.0 and not paused:
-			engine.begin_second_half()
+			engine.resume_after_break() if engine.phase == "et_break" else engine.begin_second_half()
 			half_time_timer = -1.0
 			highlights.restart()
 		return
@@ -336,7 +336,8 @@ func _process(delta: float) -> void:
 func _advance_ticks(n: int) -> void:
 	var budget := Time.get_ticks_usec() + 9000
 	for i in range(n):
-		if engine.phase == "half_time" or engine.phase == "full_time" or batch_abort:
+		var stopped: bool = engine.phase in ["half_time", "et_break", "full_time"]
+		if stopped or batch_abort:
 			batch_abort = false
 			break
 		engine.tick()
@@ -382,9 +383,10 @@ func _on_engine_event(e: Dictionary) -> void:
 		audio.play("whistle", -12.0, 0.98)
 	elif kind == "save":
 		audio.play("ooh", -9.0)
-	elif kind in ["foul", "offside", "half_time", "full_time", "kickoff"]:
+	elif kind in ["foul", "offside", "half_time", "full_time", "kickoff", "extra_time",
+			"extra_time_break", "shootout_start", "shootout_end"]:
 		audio.play("whistle", -14.0, randf_range(0.97, 1.03))
-	elif kind == "miss":
+	elif kind == "miss" or kind == "penalty_missed":
 		audio.play("ooh", -12.0)
 	highlights.on_event(e)
 

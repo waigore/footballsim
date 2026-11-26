@@ -49,3 +49,17 @@ static func label_r(c: CanvasItem, font: Font, right_x: float, y: float, s: Stri
 static func button(c: CanvasItem, font: Font, r: Rect2, text: String, hovered: bool) -> void:
 	box(c, PANEL_LIGHT if hovered else PANEL, r, 8, Color(1, 1, 1, 0.14 if hovered else 0.07))
 	label_c(c, font, r.position.x + r.size.x * 0.5, r.position.y + r.size.y * 0.66, text, 13, TEXT if hovered else DIM)
+
+## The one line of instructions under the body (#203). It names only gestures a
+## player can make right now: a phone has no keys to press, a page with no link
+## on screen has no row to open, and a page that fits has nothing to scroll.
+## Empty when there is nothing to say, and the caller then draws nothing.
+static func footer_hint(touch: bool, can_open: bool, can_scroll: bool) -> String:
+	var parts: Array = []
+	if can_open:
+		parts.append("TAP A ROW TO OPEN" if touch else "CLICK A ROW TO OPEN")
+	if not touch:
+		parts.append("ESC BACK")
+	if can_scroll:
+		parts.append("DRAG TO SCROLL" if touch else "WHEEL, DRAG OR KEYS SCROLL")
+	return "  ·  ".join(PackedStringArray(parts))

@@ -22,7 +22,7 @@ Base rules for opening and landing PRs (humans and agents).
 | `build` | [CI](../.github/workflows/ci.yml) | Headless import/compile; else no-op |
 | `e2e-smoke` | [CI](../.github/workflows/ci.yml) | Needs `build`; smoke script when present; else no-op |
 | `docs-lint` | [CI](../.github/workflows/ci.yml) | Docs ≤ 500 words — always |
-| `arch-lint` | [CI](../.github/workflows/ci.yml) | P3 bars (`tools/lint_arch.py`) — always |
+| `arch-lint` | [CI](../.github/workflows/ci.yml) | P3 + static P1 (2D/icons/hover) — always |
 | `skills-isolation` | [CI](../.github/workflows/ci.yml) | PR-only: fail if code **and** skills both change |
 | `ai-bench-report` | [CI](../.github/workflows/ci.yml) | PR AI paths: hills report ≥ baseline; else no-op |
 

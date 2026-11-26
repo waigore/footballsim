@@ -39,7 +39,8 @@ var holding := false
 
 var mode := MODE_WIZARD
 var season: LeagueSeason = null
-var wizard := {"name": "League 1", "calendar_mode": "generated", "advance_mode": "fixture_days", "error": ""}
+var wizard := {"name": "League 1", "calendar_mode": "generated", "advance_mode": "fixture_days",
+	"competitions": ["PL"], "error": ""}
 var saves: Array = []
 ## The load list's delete question, over the sheet that raised it (DR-20261125-06).
 var delete := LeagueDelete.new()
@@ -64,6 +65,9 @@ var system := LeagueSystemSheet.new()
 var sheet_extra := LeagueExtra.new()
 ## The shortlist search field, and where BACK from a report returns (#103).
 var interest_query := ""
+## STATS filters (#189): league, month, team query and the leader stat. Session
+## state, so a filtered reading never rewrites the save.
+var stats_filter := {"league": "", "month": "", "team": "", "stat": "goals"}
 var report_back := MODE_HUB
 ## The season's page history (#169): session state only, never saved. BACK walks
 ## it; MAIN MENU closes the season and empties it.
@@ -148,7 +152,7 @@ func open_wizard() -> void:
 	delete.clear()
 	nav.clear()
 	wizard = {"name": "League %d" % (saves.size() + 1), "calendar_mode": "generated",
-		"advance_mode": "fixture_days", "error": ""}
+		"advance_mode": "fixture_days", "competitions": ["PL"], "error": ""}
 	visible = true
 	refresh()
 
@@ -157,7 +161,7 @@ func open_load() -> void:
 	delete.clear()
 	nav.clear()
 	load_from = "menu"
-	saves = LeagueSave.list()
+	saves = LeagueSaveCatalog.list()
 	visible = true
 	refresh()
 

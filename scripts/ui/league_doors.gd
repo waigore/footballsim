@@ -88,6 +88,13 @@ static func _typed(screen, code: int, ch: String = "") -> bool:
 			screen.interest_query = str(typed[1]).to_lower()
 			screen.refresh()
 			return true
+	# The STATS team filter is a typed field while that sheet is open.
+	if screen.mode == screen.MODE_STATS:
+		var typed_stats: Array = LeagueTextField.type_name(str(screen.stats_filter.get("team", "")), code)
+		if bool(typed_stats[0]):
+			screen.stats_filter["team"] = str(typed_stats[1])
+			screen.refresh()
+			return true
 	if screen.mode != screen.MODE_REPORT or code < KEY_1 or code > KEY_9:
 		return false
 	var want := code - KEY_1
@@ -124,6 +131,8 @@ static func press(screen, id: String) -> void:
 	if id == "delete_no":
 		screen.delete.cancel(screen)
 		return
+	if LeagueStatsActions.press(screen, id):
+		return
 	if id.begins_with("match:"):
 		screen.show_report(id.substr(6))
 	elif id.begins_with("goal:"):
@@ -140,6 +149,8 @@ static func press(screen, id: String) -> void:
 	elif id.begins_with("delete:"):
 		screen.delete.ask_from(screen.saves, id.substr(7))
 		screen.refresh()
+	elif id.begins_with("wleague:"):
+		LeagueWizardActions.toggle_league(screen, id.substr(8))
 	elif id.begins_with("mode:"):
 		screen.wizard["calendar_mode"] = id.substr(5)
 		screen.refresh()
@@ -265,11 +276,14 @@ static func read_podium(screen) -> void:
 	go(screen, screen.MODE_PODIUM)
 	screen.refresh()
 
-## New season from the wizard: the name, the calendar and the clock the player
-## chose. A refusal stays on the wizard with its message.
+## New season from the wizard: the name, the calendar, the leagues and the clock
+## the player chose. A refusal stays on the wizard with its message.
 static func create(screen) -> void:
-	var created: LeagueSeason = LeagueSeason.create(str(screen.wizard["name"]), str(screen.wizard["calendar_mode"]),
-		str(screen.wizard["advance_mode"]), 0)
+	var comps: Array = screen.wizard.get("competitions", ["PL"])
+	if comps.is_empty():
+		comps = ["PL"]
+	var created: LeagueSeason = LeagueSeason.create(str(screen.wizard["name"]),
+		str(screen.wizard["calendar_mode"]), str(screen.wizard["advance_mode"]), 0, comps)
 	if created == null:
 		screen.wizard["error"] = "The season could not be created."
 		screen.refresh()
@@ -300,8 +314,8 @@ static func open_save(screen, slug: String) -> void:
 static func delete_save(screen, slug: String) -> void:
 	if screen.season != null and screen.season.save.slug == slug:
 		LeagueSystemActions.unload(screen)
-	LeagueSave.remove(slug)
-	screen.saves = LeagueSave.list()
+	LeagueSaveCatalog.remove(slug)
+	screen.saves = LeagueSaveCatalog.list()
 	screen.refresh()
 
 ## Teams of Interest from the list: add or remove a club in this save (#104).

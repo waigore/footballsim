@@ -89,45 +89,19 @@ func test_the_hub_lays_out_an_empty_day_and_no_table() -> void:
 		if str(item["kind"]) == "table_row":
 			tables += 1
 	assert_eq(rows, 0, "an empty day laid out fixture rows")
-	assert_eq(tables, 20, "a wide hub lost its table")
+	assert_eq(tables, 0, "the hub drew a side table")
 	var compact: Array = sheet.hub_layout(Vector2(913, 411), _state([], _table()))
 	for item in compact:
 		assert_eq(str(item["kind"]) != "table_row", true, "a phone hub tried to draw the table")
 
-## #102: the hub's side table carries the same compact record as the TABLE
-## sheet (`#`, club, P W D L GF GA GD PTS). It paints the abbreviation, so the
-## club column gives the numbers more of the lane, and every column stays inside
-## the row it belongs to.
-func test_the_hub_side_table_carries_the_compact_record() -> void:
+## #189: the hub keeps no side table. The standings live on the TABLES sheet, so
+## a wide hub spends its whole width on the day's fixtures.
+func test_the_hub_has_no_side_table() -> void:
 	var sheet := LeagueSheet.new()
-	var keys: Array = []
-	for col in LeagueColumns.COMPACT_COLS:
-		if bool(col["num"]):
-			keys.append(str(col["key"]))
-	assert_eq(keys, ["played", "won", "drawn", "lost", "gf", "ga", "gd", "points"],
-		"the compact column order moved")
 	for vp in [Vector2(760, 640), Vector2(1280, 720), Vector2(1600, 900)]:
-		var item := {}
-		for candidate in sheet.hub_layout(vp, _state([], _table())):
-			if str(candidate["kind"]) == "table_row":
-				item = candidate
-				break
-		assert_false(item.is_empty(), "the wide hub laid out no table at %s" % vp)
-		var places: Dictionary = item["places"]
-		var rect: Rect2 = item["rect"]
-		var rail := places["cols"] as Array
-		assert_eq(rail.size(), 8, "the hub side table lost a column at %s" % vp)
-		assert_eq(rail.map(func(c): return str(c["key"])), keys,
-			"the hub side table paints another column set at %s" % vp)
-		assert_gt(float(places["club_x"]), float(places["pos_x"]), "# and club overlap at %s" % vp)
-		var previous := float(places["club_x"]) + float(places["club_w"])
-		for col in rail:
-			assert_gt(float(col["right"]) - float(col["w"]), previous - 0.01,
-				"%s overlaps the club abbreviation at %s" % [col["label"], vp])
-			previous = float(col["right"])
-		assert_lte(previous, rect.end.x + 0.01, "PTS is drawn outside the hub row at %s" % vp)
-		assert_gte(float(places["club_w"]), LeagueSideTable.CLUB_MIN - 0.01,
-			"the abbreviation column is too narrow at %s" % vp)
+		for item in sheet.hub_layout(vp, _state([], _table())):
+			assert_eq(str(item["kind"]) != "table_row", true,
+				"the hub drew a side table at %s" % vp)
 
 func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 	var sheet := LeagueStartSheet.new()
@@ -139,8 +113,45 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			for item in items:
 				if str(item["kind"]) == "choice" and bool(item["selected"]):
 					chosen += 1
-			assert_eq(chosen, 2, "one choice per group should be selected")
-			assert_eq(items.size(), 7, "the wizard is missing a control")
+			assert_eq(chosen, 3, "one choice per group should be selected")
+			# NAME + LEAGUES caption + three league controls (PL, La Liga, the
+			# linked German pair) + two calendar + two advance + CREATE + BACK.
+			assert_eq(items.size(), 11, "the wizard is missing a control")
+
+func test_the_wizard_turns_the_german_pair_on_together() -> void:
+	var sheet := LeagueStartSheet.new()
+	var items: Array = sheet.wizard_layout(Vector2(1280, 720),
+		{"name": "Save", "calendar_mode": "real", "advance_mode": "fixture_days",
+		"competitions": ["PL"]})
+	var ids: Array = []
+	for item in items:
+		if str(item["id"]).begins_with("wleague:"):
+			ids.append(str(item["id"]))
+	assert_eq(ids, ["wleague:PL", "wleague:LL", "wleague:DE"],
+		"the wizard did not fold the German tiers into one control")
+	var screen := FakeWizard.new()
+	screen.wizard = {"competitions": ["PL"]}
+	LeagueWizardActions.toggle_league(screen, "DE")
+	assert_eq(screen.wizard["competitions"], ["PL", "BL", "BL2"],
+		"the German control did not pick both tiers")
+	LeagueWizardActions.toggle_league(screen, "DE")
+	assert_eq(screen.wizard["competitions"], ["PL"], "the German control did not drop both tiers")
+	# The pair alone cannot be turned off: a save needs one competition.
+	screen.wizard = {"competitions": ["BL", "BL2"]}
+	LeagueWizardActions.toggle_league(screen, "DE")
+	assert_eq(screen.wizard["competitions"], ["BL", "BL2"], "the wizard emptied itself")
+
+func test_the_save_keeps_the_leagues_in_the_published_order() -> void:
+	var season := LeagueSeason.create("Order", "real", "every_day", 240, ["BL2", "LL", "BL", "PL"])
+	assert_not_null(season, "the four-league save did not build")
+	assert_eq(season.save.competition_ids(), ["PL", "LL", "BL", "BL2"],
+		"the save kept the wizard's pick order instead of the fixture order")
+	season.close()
+
+class FakeWizard extends RefCounted:
+	var wizard: Dictionary = {}
+	func refresh() -> void:
+		pass
 
 func test_the_load_list_lays_out_zero_and_many_saves() -> void:
 	var sheet := LeagueStartSheet.new()
@@ -252,6 +263,28 @@ func test_a_long_club_name_is_shortened_instead_of_overlapping() -> void:
 		"a name that fits was shortened anyway")
 	assert_eq(LeagueColumns.fit_name(longest, null, 12, 60.0), longest,
 		"a missing font must not drop the name")
+
+## The fixture picker's venue caption (#200): it sits in the centre column
+## between the two club cards, so on a handset's narrowest gap a ground name
+## must be shortened to the column instead of painted over both cards.
+func test_a_venue_caption_is_fitted_to_its_centre_column() -> void:
+	var font: Font = load("res://fonts/BarlowCondensed-Medium.ttf")
+	# The gap on a handset is 130 design units, less 12 of air either side.
+	var room := 130.0 - 24.0
+	assert_gt(font.get_string_size("COVENTRY BUILDING SOCIETY ARENA", HORIZONTAL_ALIGNMENT_LEFT,
+		-1, 10).x, room, "the probe font measured every venue as zero width")
+	assert_eq(LeagueColumns.fit_caption("OLD TRAFFORD", font, 10, room), "OLD TRAFFORD",
+		"a venue that fits its column was altered")
+	var shown := LeagueColumns.fit_caption("COVENTRY BUILDING SOCIETY ARENA", font, 10, room)
+	assert_true(shown.ends_with("…"), "a venue wider than its column was not shortened")
+	assert_lte(font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x, room,
+		"the shortened venue still runs out of the centre column")
+	assert_eq(LeagueColumns.fit_caption("COVENTRY BUILDING SOCIETY ARENA", font, 10, 196.0),
+		"COVENTRY BUILDING SOCIETY ARENA", "a wide column shortened a venue that fits it")
+	assert_eq(LeagueColumns.fit_caption("OLD TRAFFORD", font, 10, 0.0), "",
+		"a column with no room still painted a venue")
+	assert_eq(LeagueColumns.fit_caption("", font, 10, room), "",
+		"a club with no ground name painted one anyway")
 
 func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 	var book := LeagueBook.new()

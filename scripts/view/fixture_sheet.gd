@@ -72,7 +72,7 @@ func confirm(home: String, away: String) -> void:
 	game.select_open = false
 	if game.sel_layer != null:
 		game.sel_layer.visible = false
-	MatchBilling.bind_scene(game, home, {})
+	MatchBilling.bind_scene(game, home, {}, away)
 	if game.prematch != null:
 		var req := PreMatchModel.build(home, away, {}, LeagueSeason.active)
 		game.prematch.ask(req, Callable(self, "start_confirmed"), Callable(self, "back_from_briefing"))
@@ -102,6 +102,10 @@ func start(home: String, away: String) -> void:
 	game.match_started = true
 	game.seeded += randi_range(1, 9999)
 	game.new_match(game.seeded)
+	# The picker's winner choice belongs to this kick-off only (#249); the engine
+	# starts level-allowed and every competition path leaves it that way.
+	if game.engine != null:
+		game.engine.requires_winner = game.selector.winner_mode == "extra"
 
 ## BACK from the briefing: the picker comes back on the same two clubs.
 func reopen() -> void:

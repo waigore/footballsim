@@ -62,4 +62,4 @@ P1 = look; P4 = latency; P5 = agency.
 
 ## Non-goals
 
-Club-manager career mode; licensed data beyond the shipped PL 2026-27 snapshot (intentional — [DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01)); photoreal/3D primary; desktop-only mobile.
+Club-manager career mode; licensed data beyond the shipped 2026-27 PL/LL/BL/BL2 snapshots ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01)); photoreal/3D primary; desktop-only mobile.

@@ -23,7 +23,7 @@ func _rules() -> Dictionary:
 	return r
 
 func test_a_generated_season_is_a_double_round_robin() -> void:
-	var rows := FixtureCalendar.generate(TeamData.team_ids(), _rules(), 42)
+	var rows := FixtureCalendar.generate(TeamData.team_ids("PL"), _rules(), 42)
 	assert_eq(rows.size(), 380, "a twenty-club double round robin is 380 fixtures")
 	var home := {}
 	var away := {}
@@ -33,14 +33,14 @@ func test_a_generated_season_is_a_double_round_robin() -> void:
 		away[str(fx["away"])] = int(away.get(str(fx["away"]), 0)) + 1
 		rounds[int(fx["matchday"])] = int(rounds.get(int(fx["matchday"]), 0)) + 1
 	assert_eq(rounds.size(), 38, "the calendar does not have 38 gameweeks")
-	for id in TeamData.team_ids():
+	for id in TeamData.team_ids("PL"):
 		assert_eq(int(home.get(id, 0)), 19, "%s does not host 19 games" % id)
 		assert_eq(int(away.get(id, 0)), 19, "%s does not travel 19 times" % id)
 	for round in rounds:
 		assert_eq(int(rounds[round]), 10, "gameweek %d does not have ten games" % round)
 
 func test_generated_pairings_meet_every_club_twice() -> void:
-	var rows := FixtureCalendar.generate(TeamData.team_ids(), _rules(), 7)
+	var rows := FixtureCalendar.generate(TeamData.team_ids("PL"), _rules(), 7)
 	var pairs := {}
 	for fx in rows:
 		var key := [str(fx["home"]), str(fx["away"])]
@@ -53,7 +53,7 @@ func test_generated_pairings_meet_every_club_twice() -> void:
 
 func test_generated_dates_are_pl_like() -> void:
 	var rules := _rules()
-	var rows := FixtureCalendar.generate(TeamData.team_ids(), rules, 99)
+	var rows := FixtureCalendar.generate(TeamData.team_ids("PL"), rules, 99)
 	var by_round := {}
 	for fx in rows:
 		by_round[int(fx["matchday"])] = str(fx["kickoff"])
@@ -71,9 +71,9 @@ func test_generated_dates_are_pl_like() -> void:
 	assert_gte(FixtureCalendar.days_from(str(by_round[1])), FixtureCalendar.days_from("2026-08-15") - 7, "the season starts too early")
 
 func test_generation_is_seeded_and_repeatable() -> void:
-	var a := FixtureCalendar.generate(TeamData.team_ids(), _rules(), 1234)
-	var b := FixtureCalendar.generate(TeamData.team_ids(), _rules(), 1234)
-	var c := FixtureCalendar.generate(TeamData.team_ids(), _rules(), 4321)
+	var a := FixtureCalendar.generate(TeamData.team_ids("PL"), _rules(), 1234)
+	var b := FixtureCalendar.generate(TeamData.team_ids("PL"), _rules(), 1234)
+	var c := FixtureCalendar.generate(TeamData.team_ids("PL"), _rules(), 4321)
 	assert_eq(a.size(), b.size(), "two runs of one seed differ in size")
 	assert_eq(str(a[0]["home"]), str(b[0]["home"]), "one seed produced two calendars")
 	assert_eq(str(a[0]["kickoff"]), str(b[0]["kickoff"]), "one seed produced two dates")
@@ -93,7 +93,8 @@ func test_a_real_calendar_matches_the_snapshot() -> void:
 	assert_eq(rounds.size(), 38, "the real calendar does not rebuild 38 gameweeks")
 	for round in rounds:
 		assert_eq(int(rounds[round]), 10, "real gameweek %d does not have ten games" % round)
-	var snapshot := PLDatabase.rows("SELECT id, kickoff, home_club_id, away_club_id FROM fixture;")
+	var snapshot := PLDatabase.rows(
+		"SELECT id, kickoff, home_club_id, away_club_id FROM fixture WHERE competition_id = 'PL';")
 	assert_eq(snapshot.size(), rows.size(), "the snapshot fixture count moved")
 	var seen := {}
 	for row in snapshot:

@@ -1,13 +1,8 @@
 extends GdToolsTest
 
-## Competitions in one database: the shipped seed carries one, and a file that
-## carries two must give each its own hub, table, club index and fixtures — with
-## no page hard-coded to "the" league (#190, parent #185).
-##
-## The second competition is built here on purpose: the shipped seed is
-## Premier-League-only until the La Liga snapshot lands (#186), and the code has
-## to be proved against the shape it is being written for, not just the shape it
-## happens to ship with.
+## Competitions in one database: the shipped seed carries the Premier League,
+## La Liga and the German pair, and each gets its own hub, table, club index and
+## fixtures — with no page hard-coded to "the" league (#190, parent #185, #239).
 
 var CACHE_DIR := TestScratch.dir("cache_test_competitions")
 
@@ -17,21 +12,27 @@ func before_all() -> void:
 	PLRepository.shared().invalidate()
 
 func after_all() -> void:
-	_drop_second_competition()
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
 
-func test_the_seed_carries_one_competition() -> void:
+func test_the_seed_carries_every_competition() -> void:
 	var all := PLCompetitions.all()
-	assert_eq(all.size(), 1, "the shipped seed should carry one competition")
-	var pl: Dictionary = all[0]
-	assert_eq(str(pl["id"]), "PL", "the seed's competition is not the Premier League")
-	assert_eq(str(pl["name"]), "Premier League", "the competition name drifted")
-	assert_eq(int(pl["clubs"]), 20, "the Premier League club count is wrong")
+	assert_eq(all.size(), 4, "the shipped seed should carry four competitions")
+	var ids: Array = []
+	for comp in all:
+		ids.append(str(comp["id"]))
+	assert_has(ids, "PL", "the seed's Premier League is missing")
+	assert_has(ids, "LL", "the seed's La Liga is missing")
+	assert_has(ids, "BL", "the seed's Bundesliga is missing")
+	assert_has(ids, "BL2", "the seed's 2. Bundesliga is missing")
+	assert_eq(int(PLCompetitions.clubs("PL")), 20, "the Premier League club count is wrong")
+	assert_eq(int(PLCompetitions.clubs("LL")), 20, "the La Liga club count is wrong")
+	assert_eq(int(PLCompetitions.clubs("BL")), 18, "the Bundesliga club count is wrong")
+	assert_eq(int(PLCompetitions.clubs("BL2")), 18, "the 2. Bundesliga club count is wrong")
 	assert_eq(PLCompetitions.default_id(), "PL", "the default competition is not the seed's")
 	assert_eq(str(PLCompetitions.one("PL").get("season_label", "")), "2026-27", "season label drifted")
-	assert_true(PLCompetitions.one("LL").is_empty(), "an unknown competition resolved")
+	assert_true(PLCompetitions.one("NOPE").is_empty(), "an unknown competition resolved")
 
 func test_the_shipped_hub_names_its_competition() -> void:
 	var page := WikiModel.league_page()
@@ -39,10 +40,18 @@ func test_the_shipped_hub_names_its_competition() -> void:
 	assert_eq(str(page["title"]), "PREMIER LEAGUE", "the hub title is not the competition's")
 	assert_true(str(page["subtitle"]).contains("20 CLUBS"), "the hub's club count is hard-coded")
 	var index := _chips(page)
-	assert_eq(index.size(), 1, "the competition index should hold the one league")
-	assert_eq(str(index[0]["text"]), "PREMIER LEAGUE", "the index names the wrong league")
-	assert_true((index[0] as Dictionary).get("target", {}).is_empty(),
-		"the league you are reading should be a badge, not a door to itself")
+	assert_eq(index.size(), 4, "the competition index should hold every league")
+	assert_true(_chip_target(index, "LA LIGA", "LL"),
+		"the Premier League hub does not offer La Liga")
+	assert_true(_chip_target(index, "BUNDESLIGA", "BL"),
+		"the Premier League hub does not offer the Bundesliga")
+	var badge := 0
+	for item in index:
+		if str(item.get("text", "")) == "PREMIER LEAGUE":
+			badge += 1
+			assert_true((item as Dictionary).get("target", {}).is_empty(),
+				"the league you are reading should be a badge, not a door to itself")
+	assert_eq(badge, 1, "the index lost the competition being read")
 
 func test_a_club_and_its_players_point_at_their_competition() -> void:
 	var club := WikiModel.page(WikiModel.TEAM, "MUN")
@@ -53,34 +62,43 @@ func test_a_club_and_its_players_point_at_their_competition() -> void:
 	assert_true(_has_target(player_targets, WikiModel.LEAGUE, "PL"),
 		"a player page does not link its league")
 
-func test_two_competitions_get_two_hubs() -> void:
-	_add_second_competition()
+func test_every_competition_gets_its_own_hub() -> void:
 	var all := PLCompetitions.all()
-	assert_eq(all.size(), 2, "the second competition was not read")
+	assert_eq(all.size(), 4, "the competitions were not all read")
 	assert_eq(PLCompetitions.default_id(), "PL", "the default competition moved")
-	assert_eq(PLCompetitions.clubs("LL"), 2, "the second competition's club count is wrong")
+	assert_eq(PLCompetitions.clubs("LL"), 20, "La Liga's club count is wrong")
 
 	var theirs := WikiModel.page(WikiModel.LEAGUE, "LL")
 	assert_eq(str(theirs["title"]), "LA LIGA", "the second hub is not its own competition")
-	assert_true(str(theirs["subtitle"]).contains("2 CLUBS"),
+	assert_true(str(theirs["subtitle"]).contains("20 CLUBS"),
 		"the second hub kept the first's club count")
-	assert_eq(_rows_in(theirs, "LEAGUE TABLE"), 2, "the second hub shows the wrong table")
+	assert_eq(_rows_in(theirs, "LEAGUE TABLE"), 20, "the second hub shows the wrong table")
 	var index := _chips(theirs)
-	assert_eq(index.size(), 2, "the index does not list both competitions")
+	assert_eq(index.size(), 4, "the index does not list every competition")
 	assert_true(_chip_target(index, "PREMIER LEAGUE", "PL"),
 		"the second hub does not offer the Premier League")
 
+	var german := WikiModel.page(WikiModel.LEAGUE, "BL")
+	assert_eq(str(german["title"]), "BUNDESLIGA", "the German hub is not its own competition")
+	assert_true(str(german["subtitle"]).contains("18 CLUBS"),
+		"the German hub reads the wrong club count")
+	assert_eq(_rows_in(german, "LEAGUE TABLE"), 18, "the German hub shows the wrong table")
+	var lower := WikiModel.page(WikiModel.LEAGUE, "BL2")
+	assert_eq(str(lower["title"]), "2. BUNDESLIGA", "the second German hub is missing")
+	assert_eq(_rows_in(lower, "LEAGUE TABLE"), 18, "the second German hub shows the wrong table")
+
 	var ours := WikiModel.page(WikiModel.LEAGUE, "PL")
-	assert_eq(_rows_in(ours, "LEAGUE TABLE"), 20, "the Premier League hub picked up the second league")
+	assert_eq(_rows_in(ours, "LEAGUE TABLE"), 20, "the Premier League hub picked up another league")
 	assert_true(_chip_target(_chips(ours), "LA LIGA", "LL"),
 		"the Premier League hub does not offer the second league")
+	assert_true(_chip_target(_chips(ours), "2. BUNDESLIGA", "BL2"),
+		"the Premier League hub does not offer the second German tier")
 
-	var club := WikiModel.page(WikiModel.TEAM, "RMA")
+	var club := WikiModel.page(WikiModel.TEAM, "LL-RMA")
 	assert_eq(str(club["title"]), "REAL MADRID", "the second league's club page is missing")
 	var club_targets := _targets(club)
 	assert_true(_has_target(club_targets, WikiModel.LEAGUE, "LL"),
 		"the club does not link its own league")
-	_drop_second_competition()
 
 func test_an_unknown_competition_is_rejected() -> void:
 	assert_false(WikiModel.has_page(WikiModel.LEAGUE, "NOPE"), "a made-up competition resolved")
@@ -88,51 +106,6 @@ func test_an_unknown_competition_is_rejected() -> void:
 		"the crumb numbers the wrong league")
 
 # ------------------------------------------------------------------ helpers ---
-
-## Copy one club row under a new id and competition, keeping every column the
-## seed requires: the point is that a second league's clubs are ordinary rows.
-func _clone_club(source: String, club_id: String, name: String, competition_id: String) -> void:
-	var columns: Array = []
-	for info in PLDatabase.rows("PRAGMA table_info(club);"):
-		columns.append(str(info["name"]))
-	var picks: Array = []
-	for column in columns:
-		match column:
-			"id":
-				picks.append("'%s'" % club_id)
-			"competition_id":
-				picks.append("'%s'" % competition_id)
-			"name":
-				picks.append("'%s'" % name)
-			"short", "abbr":
-				picks.append("'%s'" % club_id)
-			_:
-				picks.append(column)
-	PLDatabase.execute(
-		"INSERT INTO club (%s) SELECT %s FROM club WHERE id = '%s';" % [
-			", ".join(columns), ", ".join(picks), source])
-
-func _add_second_competition() -> void:
-	PLDatabase.execute(
-		"INSERT INTO competition (id, name, short_name, season_label) "
-		+ "VALUES ('LL', 'La Liga', 'LA LIGA', '2026-27');")
-	_clone_club("MUN", "RMA", "Real Madrid", "LL")
-	_clone_club("LIV", "BAR", "Barcelona", "LL")
-	PLDatabase.execute(
-		"INSERT INTO table_row (club_id, position, played, won, drawn, lost, gf, ga, points) "
-		+ "VALUES ('RMA', 1, 1, 1, 0, 0, 2, 0, 3), ('BAR', 2, 1, 0, 0, 1, 0, 2, 0);")
-	PLDatabase.execute(
-		"INSERT INTO fixture (id, competition_id, matchday, kickoff, home_club_id, "
-		+ "away_club_id, home_goals, away_goals, played) "
-		+ "VALUES ('ll-1', 'LL', 1, '2026-08-22', 'RMA', 'BAR', 2, 0, 1);")
-	PLRepository.shared().invalidate()
-
-func _drop_second_competition() -> void:
-	PLDatabase.execute("DELETE FROM fixture WHERE competition_id = 'LL';")
-	PLDatabase.execute("DELETE FROM table_row WHERE club_id IN ('RMA', 'BAR');")
-	PLDatabase.execute("DELETE FROM club WHERE competition_id = 'LL';")
-	PLDatabase.execute("DELETE FROM competition WHERE id = 'LL';")
-	PLRepository.shared().invalidate()
 
 ## The chips block carrying the competition index: a hub opens with it.
 func _chips(page: Dictionary) -> Array:

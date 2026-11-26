@@ -42,7 +42,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Lint modular architecture (P3 / RUB-P3-*)
+      - name: Lint architecture (P3 + static P1 2D/icons/hover)
         env:
           ARCH_LINT_RULES_DIFF: "1"
         run: python tools/lint_arch.py --require-rules-tests

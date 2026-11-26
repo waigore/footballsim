@@ -61,6 +61,14 @@ static func sortable(column: String) -> bool:
 			return true
 	return false
 
+## How many columns are number boxes: the rail width walks them.
+static func numeric(cols: Array) -> int:
+	var count := 0
+	for col in cols:
+		if bool(col["num"]):
+			count += 1
+	return count
+
 ## A row's value for one column. Goal difference is derived, the club column
 ## sorts by name, everything else is a saved integer.
 static func cell(row: Dictionary, column: String) -> int:

@@ -29,9 +29,9 @@ func test_a_save_is_a_self_contained_copy_of_the_seed() -> void:
 	assert_true(save.path.begins_with(SAVE_DIR), "the save escaped its directory")
 	assert_eq(PLDatabase.current_path(), save.path, "the connection is not on the save")
 	var clubs := PLDatabase.row("SELECT COUNT(*) AS n FROM club;")
-	assert_eq(int(clubs["n"]), 20, "the save did not copy the clubs")
+	assert_eq(int(clubs["n"]), 76, "the save did not copy every competition's clubs")
 	var players := PLDatabase.row("SELECT COUNT(*) AS n FROM player;")
-	assert_gte(int(players["n"]), 360, "the save did not copy the squads")
+	assert_gte(int(players["n"]), 1000, "the save did not copy the squads")
 	for table in ["save_meta", "league_rules", "league_fixture", "league_table", "match_event", "league_player_stat"]:
 		var found := PLDatabase.row(
 			"SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?;", [table])
@@ -57,7 +57,7 @@ func test_name_rules_and_status_round_trip() -> void:
 func test_a_finished_save_can_be_listed_and_reopened() -> void:
 	var save := LeagueSave.create("Listed Season", LeagueRules.defaults())
 	save.set_status("complete")
-	var entries := LeagueSave.list()
+	var entries := LeagueSaveCatalog.list()
 	var found := {}
 	for entry in entries:
 		if str(entry["slug"]) == save.slug:
@@ -84,7 +84,7 @@ func test_two_saves_are_separate_files() -> void:
 func test_deleting_a_save_unbinds_and_removes_it() -> void:
 	var save := LeagueSave.create("Doomed", LeagueRules.defaults())
 	var file := save.path
-	assert_true(LeagueSave.remove(save.slug), "the save was not deleted")
+	assert_true(LeagueSaveCatalog.remove(save.slug), "the save was not deleted")
 	assert_false(FileAccess.file_exists(file), "the save file survived deletion")
 	assert_eq(PLDatabase.current_path(), "", "the connection still points at the deleted save")
 
@@ -102,7 +102,7 @@ func test_closing_returns_to_the_single_match_cache() -> void:
 	var db := PLDatabase.get_db()
 	assert_not_null(db, "the cached seed did not reopen")
 	assert_eq(PLDatabase.current_path(), cache, "single-match mode is not on the cached seed")
-	assert_eq(PLRepository.shared().table().size(), 20, "the seed table did not come back")
+	assert_eq(PLRepository.shared().table("PL").size(), 20, "the seed table did not come back")
 
 # ------------------------------------------------------ system saves (#109) ---
 
@@ -131,7 +131,7 @@ func test_save_as_writes_a_named_copy_and_keeps_the_original_live() -> void:
 	assert_not_null(copy, "the copy did not reopen")
 	assert_eq(copy.name(), "Origin Snapshot", "the copy lost its typed name")
 	assert_eq(copy.current_date(), "2027-04-05", "the copy did not carry the clock")
-	var listed := LeagueSave.list()
+	var listed := LeagueSaveCatalog.list()
 	var slugs: Array = []
 	for entry in listed:
 		slugs.append(str(entry["slug"]))
@@ -150,18 +150,18 @@ func test_save_as_writes_a_named_copy_and_keeps_the_original_live() -> void:
 func test_save_as_with_the_seasons_own_name_rewrites_in_place() -> void:
 	var save := LeagueSave.create("Same Name", LeagueRules.defaults())
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
-	var before := LeagueSave.list().size()
+	var before := LeagueSaveCatalog.list().size()
 	assert_eq(save.write_copy("Same Name"), save.slug, "naming the save did not rewrite it")
-	assert_eq(LeagueSave.list().size(), before, "naming the save wrote a second file")
+	assert_eq(LeagueSaveCatalog.list().size(), before, "naming the save wrote a second file")
 	assert_true(str(save.read_meta().get("saved_at", "")) != "", "the rewrite was not stamped")
 
 ## An empty name writes nothing and reports it, so the sheet can refuse.
 func test_save_as_refuses_an_empty_name() -> void:
 	var save := LeagueSave.create("Refused Copy", LeagueRules.defaults())
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
-	var before := LeagueSave.list().size()
+	var before := LeagueSaveCatalog.list().size()
 	assert_eq(save.write_copy("   "), "", "an empty name was written")
-	assert_eq(LeagueSave.list().size(), before, "an empty name made a file")
+	assert_eq(LeagueSaveCatalog.list().size(), before, "an empty name made a file")
 
 # --------------------------------------------------- home/away table (#73) ---
 
@@ -176,7 +176,7 @@ func test_the_league_table_keeps_home_and_away_aggregates() -> void:
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
 	var columns := _columns()
 	assert_true(columns.has("home_played"), "the table has no home record")
-	for column in LeagueSave.SIDE_COLUMNS:
+	for column in LeagueSaveSchema.SIDE_COLUMNS:
 		assert_true(columns.has(column), "the table is missing %s" % column)
 
 ## A save written before the home/away columns existed gets them on open; the
@@ -195,7 +195,7 @@ func test_an_older_save_gains_the_side_columns_when_it_opens() -> void:
 	var reopened := LeagueSave.open(save.slug)
 	assert_not_null(reopened, "the older save did not open")
 	var upgraded := _columns()
-	for column in LeagueSave.SIDE_COLUMNS:
+	for column in LeagueSaveSchema.SIDE_COLUMNS:
 		assert_true(upgraded.has(column), "opening an older save did not add %s" % column)
 	var row := PLDatabase.row("SELECT home_played, away_ga FROM league_table LIMIT 1;")
 	assert_eq(int(row["home_played"]), 0, "a migrated row should start on zero")
@@ -267,18 +267,18 @@ func test_table_choices_belong_to_their_own_save() -> void:
 	assert_eq(view.order.dir, -1, "a fresh save borrowed another save's direction")
 
 func test_slugs_are_readable_and_files_stay_in_the_folder() -> void:
-	assert_eq(LeagueSave.slugify(""), "", "an empty name should fold to nothing")
-	assert_eq(LeagueSave.unique_slug("!!!"), "league", "an empty name has no fallback slug")
-	assert_eq(LeagueSave.slugify("  My  Save!! "), "my-save", "punctuation was not folded")
-	assert_eq(LeagueSave.slugify("2026/27"), "2026-27", "digits and slashes were mishandled")
+	assert_eq(LeagueSaveCatalog.slugify(""), "", "an empty name should fold to nothing")
+	assert_eq(LeagueSaveCatalog.unique_slug("!!!"), "league", "an empty name has no fallback slug")
+	assert_eq(LeagueSaveCatalog.slugify("  My  Save!! "), "my-save", "punctuation was not folded")
+	assert_eq(LeagueSaveCatalog.slugify("2026/27"), "2026-27", "digits and slashes were mishandled")
 	var notes := LeagueSave.dir.path_join("notes.txt")
 	var out := FileAccess.open(notes, FileAccess.WRITE)
 	out.store_string("not a save")
 	out.close()
-	for entry in LeagueSave.list():
+	for entry in LeagueSaveCatalog.list():
 		assert_ne(str(entry["slug"]), "notes", "a stray file was listed as a save")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(notes))
-	assert_false(LeagueSave.remove("no-such-save"), "removing a missing save reported success")
+	assert_false(LeagueSaveCatalog.remove("no-such-save"), "removing a missing save reported success")
 
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:

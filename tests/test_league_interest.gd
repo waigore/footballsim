@@ -173,9 +173,9 @@ func test_the_hub_and_the_table_mark_a_followed_club() -> void:
 	var chip := _hub_chip(hub_items, str(view["plan"][0]["id"]))
 	assert_true(bool(chip.get("followed", false)), "the followed game still offers an AUTO/WATCH chip")
 	assert_eq(str(chip["id"]), "", "the followed game's chip is still a door")
-	var table_row := _item_with(hub_items, "table_row", club_id)
-	assert_true(bool(table_row.get("interested", false)), "the hub table does not mark the followed club")
-	var table_items := LeagueTableView.new().layout(Vector2(1200.0, 900.0),
+	# #189: the hub keeps no side table; the TABLES sheet is where a followed
+	# club is marked in the standings.
+	var table_items: Array = LeagueTableView.new().layout(Vector2(1200.0, 900.0),
 		{"table": view["table"], "rules": view["rules"], "interests": view["interests"]})
 	var full_row := _item_with(table_items, "table_row", club_id)
 	assert_true(bool(full_row.get("interested", false)), "the full table does not mark the followed club")
