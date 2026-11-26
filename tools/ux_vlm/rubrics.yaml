@@ -1,0 +1,35 @@
+# Machine-readable UX visual rubrics. Wiki SoT:
+# https://github.com/waigore/footballsim/wiki/ux-visual-rubrics
+version: 1
+rubrics:
+  - id: overflow
+    title: Overflow
+    prompt: >-
+      Fail if any primary text, control, icon, or door is cut off by the
+      viewport edge, a parent clip, or another panel. Pass if all primary
+      content is fully visible.
+  - id: cta
+    title: Primary CTA
+    prompt: >-
+      Fail if the main call-to-action (CONTINUE, KICK OFF, Start Sim, or the
+      screen's obvious primary door) is missing, too weak to spot, or
+      competing with equally loud secondary actions. Pass if one clear
+      primary action stands out.
+  - id: contrast
+    title: Contrast
+    prompt: >-
+      Fail if body text, labels, or icons are hard to read against their
+      background (low contrast, busy underlay, or washed-out colour). Pass
+      if primary text and icons read clearly.
+  - id: clipping
+    title: Clipping and overlap
+    prompt: >-
+      Fail if controls, titles, or panels overlap in a way that hides text
+      or blocks taps; or if layers stack so chrome covers content. Pass if
+      layers are clear and interactive targets are unobstructed.
+  - id: spacing
+    title: Spacing
+    prompt: >-
+      Fail if gaps look crushed (controls touching) or wildly uneven for a
+      finished layout, or if columns/rows collide. Pass if spacing looks
+      intentional and readable.

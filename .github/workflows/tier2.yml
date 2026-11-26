@@ -1,8 +1,8 @@
 name: CI tier 2
 
-# Full unit suite + overall 80% coverage. Does not block PR merge.
-# Sticky GitHub issue (label ci-tier2) for the fix-tests agent.
-# Until project.godot exists, the job no-ops successfully.
+# Full unit suite + overall 80% coverage + full-catalogue UX VLM.
+# Does not block PR merge. Sticky GitHub issue (label ci-tier2) for agents.
+# Until project.godot exists, the suite job no-ops successfully.
 
 on:
   workflow_dispatch:
@@ -84,17 +84,61 @@ jobs:
       n: 32
       budget_ms: 120000
 
-  # Sticky issue for fix-tests agent (at most one open ci-tier2). Own job so a
-  # census failure raises it too, not just the full suite.
+  # Full screen catalogue vs desktop baseline wiki URLs (≤10 min).
+  ux-vlm-catalogue:
+    name: ux-vlm-catalogue
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ux_vlm deps
+        run: pip install -r tools/ux_vlm/requirements.txt
+
+      - name: Full-catalogue UX VLM check
+        id: ux
+        env:
+          CHEAPER_INFERENCE_API_KEY: ${{ secrets.CHEAPER_INFERENCE_API_KEY }}
+          CHEAPER_INFERENCE_BASE_URL: ${{ vars.CHEAPER_INFERENCE_BASE_URL }}
+          CHEAPER_INFERENCE_MODEL: ${{ vars.CHEAPER_INFERENCE_MODEL }}
+        run: |
+          set -euo pipefail
+          mkdir -p .gd-tools
+          python tools/ux_vlm/check_screens.py \
+            --mode catalogue \
+            --fail-file .gd-tools/ux_vlm_failures.json
+
+      - name: Upload UX failure report
+        if: failure() && !cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ux-vlm-failures
+          path: .gd-tools/ux_vlm_failures.json
+          if-no-files-found: ignore
+
+  # Sticky issue for fix-tests / UX agents (at most one open ci-tier2).
   sticky:
     name: sticky ci-tier2 issue
-    needs: [tests-full, census]
+    needs: [tests-full, census, ux-vlm-catalogue]
     if: failure() && !cancelled()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Download UX failure report
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ux-vlm-failures
+          path: .gd-tools
 
       - name: Open or refresh sticky ci-tier2 issue
         env:
@@ -106,15 +150,39 @@ jobs:
             --description "Sticky issue for failed CI tier-2 full suite; fix-tests agent" \
             --color B60205 2>/dev/null || true
 
+          ux_block=""
+          if [ -f .gd-tools/ux_vlm_failures.json ]; then
+            ux_block="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path(".gd-tools/ux_vlm_failures.json")
+          fails = json.loads(path.read_text(encoding="utf-8"))
+          if not fails:
+              print("")
+          else:
+              lines = ["", "**UX VLM failures** (catalogue baselines):", ""]
+              for fail in fails:
+                  sid = fail.get("screen_id", "?")
+                  scripts = fail.get("scripts") or []
+                  joined = ", ".join(scripts) if scripts else "(no scripts)"
+                  lines.append(f"- `{sid}` ← `{joined}`")
+              print("\n".join(lines))
+          PY
+          )"
+          fi
+
           open=$(gh issue list --label ci-tier2 --state open --limit 5 --json number \
             --jq '.[].number')
           body="$(cat <<EOF
-          Scheduled tier-2 full suite failed on \`main\`.
+          Scheduled tier-2 gate failed on \`main\`.
 
           **Run:** ${RUN_URL}
-          **Job:** tests-full (full suite + overall 80% coverage)
+          **Jobs:** tests-full (full suite + 80% coverage), census, ux-vlm-catalogue
+          ${ux_block}
 
-          The **fix-tests** agent should clear this: reproduce, fix, open one PR, babysit to auto-merge, then close this issue.
+          The **fix-tests** agent should clear suite/coverage failures; for UX
+          VLM failures, refresh desktop wiki baselines or fix the mapped scripts,
+          then close this issue.
           EOF
           )"
           # Trim leading spaces from heredoc indent.
@@ -131,7 +199,7 @@ jobs:
             echo "Refreshed sticky issue #${issue}"
           else
             url=$(gh issue create \
-              --title "CI tier 2: full suite failed on main" \
+              --title "CI tier 2: gate failed on main" \
               --label ci-tier2 \
               --body "$body")
             echo "Opened sticky issue: ${url}"
