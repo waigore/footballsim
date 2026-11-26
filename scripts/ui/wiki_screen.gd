@@ -297,7 +297,7 @@ func _draw_furniture(vp: Vector2, br: Rect2) -> void:
 		WikiChrome.label(self, f_med, Vector2(br.position.x, vp.y - 14.0), hint, 10, WikiChrome.DIM)
 	var snap := str(WikiModel.repo().meta().get("snapshot_date", ""))
 	var label := FixtureCalendar.day_label(snap)
-	WikiChrome.label_r(self, f_med, br.end.x, vp.y - 14.0, "SNAPSHOT %s" % label, 10,
+	WikiChrome.label_r(self, f_med, br.end.x, vp.y - 14.0, "DATA  ·  %s" % label, 10,
 		Color(0.96, 0.78, 0.30, 0.55))
 	if snap != "":
 		hints.add(DateHints.strip_right(f_med, label, br.end.x, vp.y - 14.0, 10), snap)
