@@ -151,7 +151,8 @@ static func is_over(phase: String) -> bool:
 	return phase == "full_time"
 
 ## The play-state line's words: paused first, then the whistle, then the mode.
-## Exposed so the copy is read by a test instead of a screenshot.
+## Exposed so the copy is read by a test instead of a screenshot. `speed_label`
+## is the bar's own speed caption, which already carries its `x` (#265).
 func state_label(game, speed_label: String, phase: String = "") -> String:
 	if game.paused:
 		return "PAUSED"
@@ -161,7 +162,7 @@ func state_label(game, speed_label: String, phase: String = "") -> String:
 		return "%s  ·  SIMMING 24x" % Prefs.mode_label(game.mode)
 	if game.mode != "full":
 		return "%s  ·  LIVE" % Prefs.mode_label(game.mode)
-	return "FULL MATCH  ·  %sx" % speed_label
+	return "FULL MATCH  ·  %s" % speed_label
 
 ## Hovered player's dossier card, offset from the pointer and flipped near edges.
 func tooltip(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:

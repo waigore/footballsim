@@ -244,20 +244,16 @@ func _draw_league_chips(vp: Vector2) -> void:
 	var rows: Array = LeagueChrome.competition_rows()
 	if rows.size() < 2:
 		return
-	var chip_h := 24.0
-	var gap := 8.0
-	var w: float = minf(150.0, (vp.x - 48.0 - gap * float(rows.size() - 1)) / float(rows.size()))
-	var x := 24.0
-	var y: float = vp.y * (0.155 if vp.y < 620.0 else 0.175)
-	for row in rows:
-		var chip := Rect2(x, y, w, chip_h)
+	var rects: Array = LeagueChrome.picker_chip_rects(vp, rows.size())
+	for i in range(rows.size()):
+		var row: Dictionary = rows[i]
+		var chip: Rect2 = rects[i]
 		var on := str(row["id"]) == league_filter
 		rect(C_GOLD.darkened(0.1) if on else C_PANEL, chip, 6,
 			C_GOLD if on else Color(1, 1, 1, 0.10))
-		text_c(chip.get_center().x, chip.position.y + 16.0, LeagueChrome.competition_chip_label(row, w), 10,
+		text_c(chip.get_center().x, chip.position.y + 16.0, LeagueChrome.competition_chip_label(row, chip.size.x), 10,
 			Color(0.06, 0.06, 0.05) if on else C_DIM, f_bold)
 		_add_button("league:" + str(row["id"]), chip)
-		x += w + gap
 
 func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	rect(C_PANEL, r, 14, Color(1, 1, 1, 0.10))
@@ -305,10 +301,16 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.015, 0.025, 0.032, 0.94))
 	draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
 	draw_rect(Rect2(0, vp.y - 3, vp.x, 3), Color(0, 0, 0, 0.5))
-	UiChrome.sheet_header(self, vp, {"bold": f_bold, "med": f_med, "body": f_body}, "SELECT FIXTURE")
-	# BACK owns the top-left corner on every sheet (#163); the league door takes
-	# the other one, so the wordmark rides the centre of the header.
-	UiChrome.wordmark_c(self, vp.x * 0.5, vp.y * (0.075 if vp.y < 620.0 else 0.105), 12, f_bold)
+	# The header band is one geometry for the wordmark, the rule and the heading:
+	# a phone drops the ghosted heading so the league chips can hold the band under
+	# the rule (#266). BACK owns the top-left corner and the league door the other
+	# (#163), so what is left rides the centre.
+	var head: Dictionary = LeagueChrome.picker_header(vp)
+	UiChrome.wordmark_c(self, vp.x * 0.5, float(head["wordmark_y"]), 12, f_bold)
+	UiChrome.rule(self, vp.x * 0.5, float(head["rule_y"]), float(head["rule_w"]))
+	if bool(head["title"]):
+		UiChrome.text_c(self, vp.x * 0.5, float(head["title_y"]), "SELECT FIXTURE",
+			int(head["title_size"]), C_TEXT, f_bold)
 	_draw_league_chips(vp)
 
 	var card_w := minf(vp.x * 0.30, 460.0)

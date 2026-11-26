@@ -88,6 +88,51 @@ static func winner_rects(vp: Vector2, card_bottom: float) -> Array:
 static func winner_bottom(card_bottom: float) -> float:
 	return card_bottom + WINNER_GAP + WINNER_H
 
+## The picker's top band, as geometry: the wordmark line, the league chip row,
+## the sheet's gold rule and (on a roomy sheet) its ghosted title. A phone has no
+## room for the heading between the rule and the club cards, so the compact
+## reading drops it and the chips take the band under the rule (#266). One
+## function for both the paint and the test, so the chips can never land in the
+## title's ink again.
+const PICKER_CHIP_H := 24.0
+static func picker_header(vp: Vector2) -> Dictionary:
+	var compact: bool = vp.y < COMPACT_H
+	var rule_y: float = vp.y * (0.135 if compact else 0.185)
+	return {
+		"compact": compact,
+		"title": not compact,
+		"wordmark_y": vp.y * (0.075 if compact else 0.105),
+		"rule_y": rule_y,
+		# Roomy: the chips ride above the rule, which anchors the title below
+		# them. Compact: no title, so they keep the band under the rule they
+		# always had, clear of the club cards' HOME/AWAY labels.
+		"chips_y": vp.y * 0.155 if compact else rule_y - PICKER_CHIP_H - 6.0,
+		"title_y": vp.y * (0.195 if compact else 0.235),
+		"title_size": 30 if compact else 38,
+		"rule_w": 48.0 if compact else 54.0,
+	}
+
+## The picker's league chip row as one rect: the row spans the sheet's content
+## width and its top comes from `picker_header`, so the paint and the hit box
+## share the band (#266).
+static func picker_chips_band(vp: Vector2) -> Rect2:
+	return Rect2(24.0, float(picker_header(vp)["chips_y"]), vp.x - 48.0, PICKER_CHIP_H)
+
+## The chip row's own rects, one per competition door. Paint and press both come
+## from here, so a chip can never be drawn where nothing answers (#266).
+const PICKER_CHIP_GAP := 8.0
+static func picker_chip_rects(vp: Vector2, count: int) -> Array:
+	var out: Array = []
+	if count <= 0:
+		return out
+	var y: float = float(picker_header(vp)["chips_y"])
+	var w: float = minf(150.0, (vp.x - 48.0 - PICKER_CHIP_GAP * float(count - 1)) / float(count))
+	var x := 24.0
+	for i in range(count):
+		out.append(Rect2(x, y, w, PICKER_CHIP_H))
+		x += w + PICKER_CHIP_GAP
+	return out
+
 ## The picker's KICK OFF and RANDOM doors, always below the winner control. They
 ## keep their own height and their air under them; what a short design space
 ## takes away is how far they rise, never the control they would cover.

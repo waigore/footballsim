@@ -107,10 +107,14 @@ func item_rect(vp: Vector2, index: int) -> Rect2:
 ##
 ## A pose with no reading — the New League and Load sheets, which exist before a
 ## season does — has no door: there is nothing behind it to reach, and on a
-## handset the floating square would sit over the sheet's own text (#261).
+## handset the floating square would sit over the sheet's own text (#261). That
+## holds for the open panel too: a drawer left out on the last season must never
+## eat a press on the form that replaced it (#273).
 func hit(p: Vector2, vp: Vector2) -> String:
+	if active == "":
+		return ""
 	if slide <= 0.02:
-		return "panel" if active != "" and tab_rect(vp).has_point(p) and target <= 0.5 else ""
+		return "panel" if tab_rect(vp).has_point(p) and target <= 0.5 else ""
 	var rect := panel_rect(vp)
 	if not rect.has_point(p):
 		return "panel:close"
@@ -126,10 +130,12 @@ func hit(p: Vector2, vp: Vector2) -> String:
 # gd-tools: no cover start
 
 func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, active_pose: String) -> void:
+	# No reading, no panel — not even a drawer left out on the last season: the
+	# New League and Load forms are the only thing on screen (#261/#273).
+	if active_pose == "":
+		return
 	if slide <= 0.01:
-		# No reading, no door: the front-door poses have nothing behind it.
-		if active_pose != "":
-			_draw_tab(c, vp, fonts)
+		_draw_tab(c, vp, fonts)
 		return
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
@@ -171,18 +177,21 @@ func _draw_icon(c: CanvasItem, name: String, rect: Rect2, ink: Color) -> void:
 ## for (#204: the old sliver was unlabelled and 9x15 dp). It is an overlay door
 ## like the broadcast's HUD pill — the rows scroll under it, so nothing it covers
 ## is stranded.
+##
+## The plate is painted on exactly the rect that answers a press: a tap box and a
+## painted square that disagree leave a strip of gold that does nothing (#273).
 func _draw_tab(c: CanvasItem, vp: Vector2, fonts: Dictionary) -> void:
 	var rect := tab_rect(vp)
 	if touch:
 		UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 7, Color(0.96, 0.78, 0.30, 0.55), 1)
 		for i in range(3):
-			c.draw_rect(Rect2(rect.position.x + 13.0, rect.position.y + 12.0 + float(i) * 7.0,
-				22.0, 2.0), UiChrome.C_GOLD)
+			c.draw_rect(Rect2(rect.position.x + (rect.size.x - 22.0) * 0.5,
+				rect.position.y + rect.size.y * 0.30 + float(i) * 7.0, 22.0, 2.0),
+				UiChrome.C_GOLD)
 		UiChrome.text_c(c, rect.get_center().x, rect.end.y - 10.0, "NAV", 10, UiChrome.C_GOLD,
 			fonts.get("bold", null))
 		return
-	UiChrome.panel(c, cache, Rect2(rect.position.x, rect.position.y, rect.size.x + 6.0, rect.size.y),
-		UiChrome.C_PANEL_LIGHT, 6, Color(0.96, 0.78, 0.30, 0.35), 1)
+	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, Color(0.96, 0.78, 0.30, 0.35), 1)
 	for i in range(3):
 		c.draw_rect(Rect2(rect.position.x + 7.0, rect.position.y + 44.0 + float(i) * 7.0, 10.0, 2.0),
 			UiChrome.C_GOLD)
