@@ -140,6 +140,7 @@ suites = [
   "test_attributes.gd",
   "test_engine_rules.gd",
   "test_extra_time.gd",
+  "test_match_contact.gd",
 ]
 
 [domains.teams]
@@ -272,6 +273,14 @@ domain = "poisson"
 [[rules]]
 match = "scripts/sim/match_engine_actions.gd*"
 domain = "finishing"
+
+[[rules]]
+match = "scripts/sim/match_contact.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "tests/test_match_contact.gd*"
+domain = "match_engine"
 
 [[rules]]
 match = "scripts/sim/match_engine_duels.gd*"

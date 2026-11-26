@@ -87,6 +87,10 @@ func _attempt_tackle(d, carrier) -> void:
 	var speed_adv: float = clampf((carrier.vel.length() - d.vel.length()) / 8.0, -1.0, 1.0)
 	var chance: float = 0.10 + def * 0.50 - dri * 0.30 + (1.0 - dist / 1.9) * 0.22 + align * 0.10 - maxf(0.0, speed_adv) * 0.14
 	chance += 0.020 if d.team == home_team else -0.015
+	# How hard this side goes in: the club's own `aggression` bar (wiki Live
+	# tactics). Zero at the league's neutral value, so a default side is
+	# unchanged; an aggressive side wins a little more of the same challenge.
+	chance += MatchContact.tackle_bonus(style_of(d.team))
 	chance = clampf(chance, 0.04, 0.60)
 	if rng.randf() < chance:
 		d.stats["tackles"] += 1
@@ -113,6 +117,9 @@ func _attempt_tackle(d, carrier) -> void:
 			foul_p += 0.02
 		if in_penalty_box(carrier.pos, d.team):
 			foul_p *= 0.40
+		# The same bar widens the other half of the duel: a side that goes in
+		# harder misses harder too, so aggression is a style and not a free win.
+		foul_p *= MatchContact.foul_multiplier(style_of(d.team))
 		if rng.randf() < foul_p:
 			_award_foul(d, carrier)
 
