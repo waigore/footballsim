@@ -39,8 +39,8 @@ static func record_label(snapshot: String) -> String:
 static func player_line(line: Dictionary, season_open: bool) -> Dictionary:
 	if int(line.get("apps", 0)) <= 0:
 		if season_open:
-			return {"k": "note", "text": "NO SEASON LINE YET  ·  HE HAS NOT PLAYED IN THIS SAVE"}
-		return {"k": "note", "text": "NO MATCHES RECORDED YET  ·  PLAY A MATCH TO START THIS LEDGER"}
+			return {"k": "note", "text": "NO APPEARANCES YET  ·  HE HAS NOT PLAYED IN THIS SAVE"}
+		return {"k": "note", "text": "NO APPEARANCES YET  ·  PLAY A MATCH TO START THE RECORD"}
 	if season_open:
 		return {
 			"k": "kv",
