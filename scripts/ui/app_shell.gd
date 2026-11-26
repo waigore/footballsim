@@ -266,11 +266,23 @@ func key(code: int) -> bool:
 		return _settings_key(code)
 	return false
 
+## The confirm key presses whichever door wears the gold (#277): with a match
+## waiting that is Resume, so the key the sheet advertises returns to the match
+## instead of leaving it. Start Sim keeps `T`, the broadcast's own teams key, so
+## every door stays reachable without a pointer. Both go through the pointer
+## path, so a key can never do something the door under it would not.
 func _menu_key(code: int) -> bool:
+	var want := ""
 	if code == KEY_ENTER or code == KEY_KP_ENTER:
-		close(true)
-		start_requested.emit()
-	elif code == KEY_N:
+		want = MenuScreen.primary_id(has_match)
+	elif code == KEY_T:
+		want = "start"
+	if want != "":
+		for b in MenuScreen.door_rects(design_vp(), has_match):
+			if str(b["id"]) == want:
+				return _menu_click((b["rect"] as Rect2).get_center())
+		return false
+	if code == KEY_N:
 		close(true)
 		new_league_requested.emit()
 	elif code == KEY_L:
