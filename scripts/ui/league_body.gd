@@ -4,10 +4,15 @@ extends Control
 ## Scroll window for the league sheets. It clips the season content to the band
 ## between the header and the bottom bar, owns the scroll offset (both axes) that
 ## the hit test and the painted rows must share, and hands the paint to the sheet
-## that laid the rows out. The doors a sheet pins (the header band's BACK and
-## primary door, the bottom bar's reading doors) are its paint too: they are not
-## clipped, and they cover the rows underneath them, exactly like the encyclopedia's
-## body sits under its own header.
+## that laid the rows out.
+##
+## The doors a sheet pins (the header band's BACK and primary door, the bottom
+## bar's reading doors, the calendar's month chips) are kept apart from the rows
+## here: `pinned` holds their rects, `button_rects()` and `hit()` answer them in
+## screen space whatever the scroll. Their paint is not this node's, because
+## `clip_contents` clips a Control's own draw as well as its children's and every
+## one of those doors sits outside the band — `LeaguePinned` paints them on the
+## layer above (#284).
 
 ## Sheet chrome above the content (LeagueChrome.HEADER).
 const TOP := LeagueChrome.HEADER
@@ -25,16 +30,11 @@ var content_height := 0.0
 var content_width := 0.0
 ## Bound painter from the sheet on screen: `(c, vp, fonts, items, view)`.
 var painter: Callable = Callable()
-## The font set the painter and the pinned doors draw with, refreshed by the
-## screen on every layout.
-var fonts: Dictionary = {}
-## The sheet's style cache for the pinned doors: the body builds one when nobody
-## hands it the host's, so a bare body in a test still paints its buttons.
-var cache: Dictionary = {}
 ## The live pause: set by a modal layer (the load list's delete question, the
 ## long-press menu) so the body draws the sheet but its doors go quiet.
 var frozen := false
 ## The current sheet: rows that scroll, and doors that stay where they were put.
+## The rows are this node's paint; the doors are `LeaguePinned`'s.
 var content: Array = []
 var pinned: Array = []
 ## The host above the sheet: a leftover watched match takes a slice of its
@@ -152,21 +152,13 @@ func hit(p: Vector2) -> String:
 
 # gd-tools: no cover start
 
-## Layers, bottom to top: the sheet's scrolling rows (offset and clipped by
-## `clip_contents`), then the doors it pins — which are laid out in screen space,
-## so they are painted after the scroll is cancelled and cover the clip. The
-## pinned rects are screen rects while this node sits at `position.y`, so the
-## node's own offset is cancelled too: without it every pinned door painted 58
-## units low, over the first field or row of the sheet.
+## The scrolling rows, offset by both scroll axes and clipped by this node's
+## `clip_contents`. The doors a sheet pins are not painted here: every one of
+## them sits outside this window (the header lane, the bottom bar), where the
+## clip would throw the paint away — `LeaguePinned` draws them instead (#284).
 func _draw() -> void:
 	if painter.is_valid():
 		draw_set_transform(Vector2(-hscroll, -position.y - scroll))
 		painter.call(self)
-		draw_set_transform(Vector2(0.0, -position.y))
-	for item in pinned:
-		_door(item)
-
-func _door(item: Dictionary) -> void:
-	LeagueChrome.pinned_door(self, cache, item, fonts)
 
 # gd-tools: no cover end
