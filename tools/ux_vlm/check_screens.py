@@ -182,7 +182,7 @@ def _parse_verdict(text: str) -> tuple[bool, str]:
 
 
 _CTA_REPORT = (
-    'For the cta rubric, also report "cta_label": the exact label text of the '
+    'In the cta rubric row, also report "cta_label": the exact label text of the '
     'primary action you can read (empty string if none), and "cta_side": '
     '"left", "center", or "right" for where that control sits.'
 )
@@ -323,10 +323,14 @@ def grade_image(
                 }
             )
             if rid == "cta":
-                if row.get("cta_label") is not None:
-                    results[-1]["cta_label"] = str(row.get("cta_label")).strip()
-                if row.get("cta_side") is not None:
-                    results[-1]["cta_side"] = str(row.get("cta_side")).strip().lower()
+                label = row.get("cta_label")
+                if label is None:
+                    label = obj.get("cta_label")
+                side = row.get("cta_side") or obj.get("cta_side")
+                if label is not None:
+                    results[-1]["cta_label"] = str(label).strip()
+                if side is not None:
+                    results[-1]["cta_side"] = str(side).strip().lower()
     except (json.JSONDecodeError, ValueError, TypeError):
         passed, reason = _parse_verdict(content)
         for rubric in rubrics:

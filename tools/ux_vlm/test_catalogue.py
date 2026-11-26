@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -116,6 +117,43 @@ def _check_cta_requirement(screens: list[dict]) -> None:
     _assert("Required primary CTA" not in plain, "no screen, no CTA demand")
 
 
+def _check_cta_parse(screens: list[dict]) -> None:
+    """grade_image parses the label the grader reports (row or top level)."""
+    import check_screens as cs
+
+    rubrics, _, _ = load_catalogue()
+    image = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+    image.write(b"not really a png")
+    image.close()
+
+    def fake_chat(reply: dict):
+        def chat(messages: list[dict], timeout: float = 45.0) -> str:
+            return json.dumps(reply)
+
+        return chat
+
+    rows = [
+        {"rubric_id": r["id"], "pass": True, "reason": "clear door"} for r in rubrics
+    ]
+    top_level = {"results": rows, "cta_label": "CONTINUE", "cta_side": "right"}
+    cs._chat = fake_chat(top_level)
+    hub = _screen(screens, "league-hub")
+    results = cs.grade_image(image.name, rubrics, screen=hub)
+    cta = next(r for r in results if r["rubric_id"] == "cta")
+    _assert(cta["pass"], f"top-level cta_label must satisfy the hub: {cta}")
+    _assert(cta["cta_label"] == "CONTINUE", str(cta))
+
+    for row in rows:
+        if row["rubric_id"] == "cta":
+            row.update({"cta_label": "BACK", "cta_side": "left"})
+    cs._chat = fake_chat({"results": rows})
+    results = cs.grade_image(image.name, rubrics, screen=hub)
+    cta = next(r for r in results if r["rubric_id"] == "cta")
+    _assert(not cta["pass"], "a lenient pass on BACK must be forced to fail")
+
+    Path(image.name).unlink(missing_ok=True)
+
+
 def _check_cta_enforcement(screens: list[dict]) -> None:
     hub = _screen(screens, "league-hub")
     ok, = enforce_cta(hub, _cta(label="CONTINUE", side="right"))
@@ -179,6 +217,7 @@ def main() -> int:
     _check_cta_map(screens)
     _check_cta_requirement(screens)
     _check_cta_enforcement(screens)
+    _check_cta_parse(screens)
     _check_validation()
 
     _assert(is_ui_path("scripts/ui/menu_screen.gd"), "menu script is UI")
