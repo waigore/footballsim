@@ -68,8 +68,17 @@ func test_the_seed_ships_the_multi_competition_set() -> void:
 		for id in german:
 			assert_true(str(id).begins_with(cid + "-"),
 				"%s does not carry its competition namespace" % id)
+	# The English pyramid below the Premier League (#259): four 24-club tiers,
+	# each id namespaced so a refresh can never collide one with another.
+	for cid in ["CH", "L1", "L2", "NL"]:
+		assert_true(comps.has(cid), "the seed has no %s" % cid)
+		var tier := TeamData.team_ids(cid)
+		assert_eq(tier.size(), 24, "%s should ship twenty-four clubs" % cid)
+		for id in tier:
+			assert_true(str(id).begins_with(cid + "-"),
+				"%s does not carry its competition namespace" % id)
 	var all_ids := TeamData.team_ids()
-	assert_eq(all_ids.size(), 76, "the seed should ship seventy-six clubs")
+	assert_eq(all_ids.size(), 172, "the seed should ship the whole pyramid")
 	var unique := {}
 	for id in all_ids:
 		unique[str(id)] = true

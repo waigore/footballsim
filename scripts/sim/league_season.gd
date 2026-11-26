@@ -21,8 +21,10 @@ signal state_changed
 static var active: LeagueSeason = null
 
 ## The order a save keeps its competitions in, whatever order the wizard picked:
-## fixtures, hub groups and the podium all read it (#241).
-const COMPETITION_ORDER: Array = ["PL", "LL", "BL", "BL2"]
+## fixtures, hub groups and the podium all read it (#241). `LeagueTiers.order()`
+## is the same order and a test pins them together; it is spelled out here so a
+## const read needs no call.
+const COMPETITION_ORDER: Array = ["PL", "CH", "L1", "L2", "NL", "LL", "BL", "BL2"]
 
 var save: LeagueSave = null
 var record: LeagueRecord = null
@@ -43,8 +45,7 @@ var last_advance: Dictionary = {}
 # ------------------------------------------------------------------ setup ---
 
 ## New named save: calendar, strongest XIs, ledger, clock on gameweek one.
-## `competitions` lists the leagues to run (Premier League, La Liga, or both);
-## one is always active.
+## `competitions` names the leagues to run; the graph closes over the tiers above each.
 static func create(name: String, calendar_mode: String, advance_mode: String, seed: int = 0,
 		competitions: Array = ["PL"]) -> LeagueSeason:
 	var saved_mode := calendar_mode if LeagueRules.CALENDAR_MODES.has(calendar_mode) else "generated"
@@ -103,20 +104,22 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	return season
 
 ## Only competitions the seed carries, in the canonical order — the wizard's
-## pick order is not the fixture order — and never none (#241).
+## pick order is not the fixture order — and never none (#241). A lower tier
+## closes over every tier above it (#258).
 static func _known_competitions(wanted: Array) -> Array:
 	var known: Array = []
 	for row in PLDatabase.rows("SELECT id FROM competition ORDER BY rowid;"):
 		known.append(str(row["id"]))
+	var closed := LeagueTiers.close_up(wanted)
 	var out: Array = []
 	for cid in COMPETITION_ORDER:
-		if wanted.has(cid) and known.has(cid):
+		if closed.has(cid) and known.has(cid):
 			out.append(cid)
-	for cid in wanted:
+	for cid in closed:
 		if known.has(str(cid)) and not out.has(str(cid)):
 			out.append(str(cid))
-	if out.is_empty():
-		out.append("PL" if known.has("PL") or known.is_empty() else str(known[0]))
+	if out.is_empty() and not known.is_empty():
+		out.append(str(known[0]))
 	return out
 
 ## Resume a save from disk and put the clock on the next unplayed fixture day.

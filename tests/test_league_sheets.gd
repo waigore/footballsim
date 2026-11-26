@@ -113,34 +113,55 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			for item in items:
 				if str(item["kind"]) == "choice" and bool(item["selected"]):
 					chosen += 1
+			# The default set is the Premier League, so one league toggle plus the
+			# one selected reading of each shared pair.
 			assert_eq(chosen, 3, "one choice per group should be selected")
-			# NAME + LEAGUES caption + three league controls (PL, La Liga, the
-			# linked German pair) + two calendar + two advance + CREATE + BACK.
-			assert_eq(items.size(), 11, "the wizard is missing a control")
+			# NAME + LEAGUES caption + three country headers + eight league toggles
+			# + two calendar + two advance + CREATE + BACK (#261).
+			assert_eq(items.size(), 19, "the wizard is missing a control")
 
-func test_the_wizard_turns_the_german_pair_on_together() -> void:
+## #261: the wizard groups the leagues under their country and cascades the
+## linked tiers, so a lower tier can never run without the tiers above it.
+func test_the_wizard_cascades_a_country_chain() -> void:
 	var sheet := LeagueStartSheet.new()
 	var items: Array = sheet.wizard_layout(Vector2(1280, 720),
 		{"name": "Save", "calendar_mode": "real", "advance_mode": "fixture_days",
 		"competitions": ["PL"]})
 	var ids: Array = []
+	var countries: Array = []
 	for item in items:
 		if str(item["id"]).begins_with("wleague:"):
 			ids.append(str(item["id"]))
-	assert_eq(ids, ["wleague:PL", "wleague:LL", "wleague:DE"],
-		"the wizard did not fold the German tiers into one control")
+		elif str(item["kind"]) == "country":
+			countries.append(str(item["label"]))
+	assert_eq(ids, ["wleague:PL", "wleague:CH", "wleague:L1", "wleague:L2", "wleague:NL",
+		"wleague:LL", "wleague:BL", "wleague:BL2"], "the wizard did not list every league")
+	assert_eq(countries, ["ENGLAND", "SPAIN", "GERMANY"], "the country headers are wrong")
 	var screen := FakeWizard.new()
+	# Turning a lower tier on selects every tier above it in that country.
 	screen.wizard = {"competitions": ["PL"]}
-	LeagueWizardActions.toggle_league(screen, "DE")
+	LeagueWizardActions.toggle_league(screen, "L2")
+	assert_eq(screen.wizard["competitions"], ["PL", "CH", "L1", "L2"],
+		"League Two did not bring the tiers above it")
+	LeagueWizardActions.toggle_league(screen, "NL")
+	assert_eq(screen.wizard["competitions"], ["PL", "CH", "L1", "L2", "NL"],
+		"the National League did not complete the pyramid")
+	# Turning a tier off clears it and everything below it.
+	LeagueWizardActions.toggle_league(screen, "CH")
+	assert_eq(screen.wizard["competitions"], ["PL"], "the English pyramid did not cascade off")
+	# The top flight alone cannot be turned off: a save needs a competition.
+	LeagueWizardActions.toggle_league(screen, "PL")
+	assert_eq(screen.wizard["competitions"], ["PL"], "the wizard emptied itself")
+	# Spain is one league under its own header; Germany cascades like England.
+	screen.wizard = {"competitions": ["PL"]}
+	LeagueWizardActions.toggle_league(screen, "BL2")
 	assert_eq(screen.wizard["competitions"], ["PL", "BL", "BL2"],
-		"the German control did not pick both tiers")
-	LeagueWizardActions.toggle_league(screen, "DE")
-	assert_eq(screen.wizard["competitions"], ["PL"], "the German control did not drop both tiers")
-	# The pair alone cannot be turned off: a save needs one competition.
+		"2. Bundesliga did not bring the Bundesliga")
+	LeagueWizardActions.toggle_league(screen, "BL")
+	assert_eq(screen.wizard["competitions"], ["PL"], "the German pair did not cascade off")
 	screen.wizard = {"competitions": ["BL", "BL2"]}
-	LeagueWizardActions.toggle_league(screen, "DE")
+	LeagueWizardActions.toggle_league(screen, "BL")
 	assert_eq(screen.wizard["competitions"], ["BL", "BL2"], "the wizard emptied itself")
-
 func test_the_save_keeps_the_leagues_in_the_published_order() -> void:
 	var season := LeagueSeason.create("Order", "real", "every_day", 240, ["BL2", "LL", "BL", "PL"])
 	assert_not_null(season, "the four-league save did not build")

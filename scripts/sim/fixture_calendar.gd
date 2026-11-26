@@ -187,19 +187,25 @@ static func pairings(clubs: Array) -> Array:
 
 ## One date per round: Saturdays across the window, with the regulated number
 ## of rounds moved to the Wednesday before. Dates stay strictly increasing.
+##
+## A season with more rounds than the window has weekends — the English lower
+## tiers play 46 rounds — cannot give every round a Saturday: the rounds that do
+## not fit land on Tuesday nights, spread evenly between the weekends, which is
+## how those leagues actually play them. The window still holds the season.
 static func round_dates(start: String, end: String, rounds: int, midweek: int) -> Array:
 	var first := days_from(start)
 	var last := days_from(end)
 	var saturdays: Array = []
+	var tuesdays: Array = []
 	var d := first
 	while d <= last:
 		if weekday_of(d) == 6:
 			saturdays.append(d)
+		elif weekday_of(d) == 2:
+			tuesdays.append(d)
 		d += 1
 	if saturdays.size() < rounds:
-		saturdays.clear()
-		for i in range(rounds):
-			saturdays.append(first + i * 7)
+		return _weekend_and_midweek(saturdays, tuesdays, rounds)
 	var picks: Array = []
 	for i in range(rounds):
 		var span: float = float(maxi(saturdays.size() - 1, 0))
@@ -218,6 +224,26 @@ static func round_dates(start: String, end: String, rounds: int, midweek: int) -
 	var out: Array = []
 	for v in picks:
 		out.append(date_from(int(v)))
+	return out
+
+## A window with fewer weekends than rounds: every Saturday, then the missing
+## rounds on Tuesday nights spread evenly between them, in date order.
+static func _weekend_and_midweek(saturdays: Array, tuesdays: Array, rounds: int) -> Array:
+	var picks := saturdays.duplicate()
+	var extra := rounds - picks.size()
+	for j in range(extra):
+		if tuesdays.is_empty():
+			picks.append(int(picks[picks.size() - 1]) + 1)
+			continue
+		var idx := clampi(int(round((float(j) + 0.5) * float(tuesdays.size())
+			/ float(maxi(extra, 1)))), 0, tuesdays.size() - 1)
+		picks.append(int(tuesdays[idx]))
+	picks.sort()
+	var out: Array = []
+	var prev := 0
+	for v in picks:
+		prev = int(v) if int(v) > prev else prev + 1
+		out.append(date_from(prev))
 	return out
 
 # ------------------------------------------------------------------ dates ---

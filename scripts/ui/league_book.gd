@@ -112,6 +112,8 @@ func frame_height(view: Dictionary) -> float:
 	if summary.is_empty():
 		return 0.0
 	var h := 0.0
+	var summary_data: Dictionary = view.get("summary", {})
+	var brackets: Dictionary = summary_data.get("playoffs", {})
 	for section in _podium_sections(summary):
 		var section_rules: Dictionary = section.get("rules", view.get("rules", {}))
 		h += 30.0
@@ -123,6 +125,9 @@ func frame_height(view: Dictionary) -> float:
 		var up := int(section_rules.get("promotion_places", 0))
 		if up > 0:
 			h += 6.0 + 16.0 + 16.0 * float(up)
+		# And its play-off bracket reads as one line in its own block (#260).
+		if brackets.has(str(section.get("id", ""))):
+			h += 6.0 + 16.0
 		h += 12.0
 	if not (summary.get("relegation", {}) as Dictionary).is_empty():
 		h += 8.0 + 16.0
@@ -279,6 +284,7 @@ func _draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dict
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	var summary: Dictionary = view.get("summary", {})
+	var brackets: Dictionary = summary.get("playoffs", {})
 	var y := HEADER + 6.0
 	if summary.is_empty():
 		return
@@ -326,6 +332,12 @@ func _draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dict
 			UiChrome.text_r(c, vp.x - 24.0, y + 12.0, "TOP SCORER  %s (%d)" % [str(scorers[0]["name"]),
 				int(scorers[0]["goals"])], 11, UiChrome.C_SOFT, bold)
 		y += 12.0
+		# This league's play-off bracket, under its own promotion block (#260).
+		var bracket: Dictionary = brackets.get(str(section.get("id", "")), {})
+		if not bracket.is_empty():
+			UiChrome.text(c, Vector2(24.0, y + 12.0), "PLAY-OFFS  %s" % str(bracket.get("text", "")),
+				10, UiChrome.C_GOLD, bold)
+			y += 16.0
 	# One Relegation block under both tiers: the tie is one match, not a row of
 	# either league's podium.
 	var tie: Dictionary = summary.get("relegation", {})

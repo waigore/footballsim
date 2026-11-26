@@ -119,6 +119,92 @@ COMPETITIONS = {
             "weekend_bias": 0.88, "midweek_matchdays": 4,
         },
     },
+    # The English pyramid below the Premier League (#258/#259). Each tier is a
+    # 24-club, 46-matchday double round robin; the promotion picture is the
+    # 2026/27 one: a tier's top places go up automatically and its next places
+    # play the mini-tournament that decides the last promotion, while the
+    # tier above sends its bottom places down. `promotion_playoff_places` is the
+    # size of that bracket (the band the table paints), and the bracket itself
+    # is named by `playoff_format` in LeagueRules' compiled templates.
+    #
+    # `strength` is the squad band the seed hands a tier (top of the league to
+    # the bottom): the pyramid descends, so a promoted side is the weakest club
+    # in the division above rather than an equal. `capacity` is the ground-size
+    # band used where ESPN publishes no attendance figure.
+    "CH": {
+        "espn": "eng.2",
+        "name": "Championship",
+        "short_name": "CHAMPIONSHIP",
+        "country": "England",
+        "prefix": "CH-",
+        "strength": (78.0, 68.0),
+        "capacity": (33000, 12000),
+        "rules": {
+            # 1-2 up, 3-8 into the six-team play-offs for one place; 22-24 down.
+            "win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
+            "promotion_places": 2, "promotion_playoff_places": 6,
+            "relegation_places": 3,
+            "ucl_places": 0, "uel_places": 0, "uecl_places": 0,
+            "season_start": "2026-08-07", "season_end": "2027-05-10",
+            "weekend_bias": 0.85, "midweek_matchdays": 8,
+        },
+    },
+    "L1": {
+        "espn": "eng.3",
+        "name": "League One",
+        "short_name": "LEAGUE ONE",
+        "country": "England",
+        "prefix": "L1-",
+        "strength": (72.0, 63.0),
+        "capacity": (28000, 9000),
+        "rules": {
+            # 1-2 up, 3-6 into the four-team play-offs; 21-24 down.
+            "win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
+            "promotion_places": 2, "promotion_playoff_places": 4,
+            "relegation_places": 4,
+            "ucl_places": 0, "uel_places": 0, "uecl_places": 0,
+            "season_start": "2026-08-07", "season_end": "2027-05-10",
+            "weekend_bias": 0.85, "midweek_matchdays": 8,
+        },
+    },
+    "L2": {
+        "espn": "eng.4",
+        "name": "League Two",
+        "short_name": "LEAGUE TWO",
+        "country": "England",
+        "prefix": "L2-",
+        "strength": (68.0, 59.0),
+        "capacity": (20000, 6000),
+        "rules": {
+            # 1-3 up, 4-7 into the four-team play-offs; 23-24 down.
+            "win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
+            "promotion_places": 3, "promotion_playoff_places": 4,
+            "relegation_places": 2,
+            "ucl_places": 0, "uel_places": 0, "uecl_places": 0,
+            "season_start": "2026-08-07", "season_end": "2027-05-10",
+            "weekend_bias": 0.85, "midweek_matchdays": 8,
+        },
+    },
+    "NL": {
+        "espn": "eng.5",
+        "name": "National League",
+        "short_name": "NATIONAL LEAGUE",
+        "country": "England",
+        "prefix": "NL-",
+        "strength": (64.0, 55.0),
+        "capacity": (12000, 3000),
+        "rules": {
+            # 1 up, 2-7 into the National League's own one-leg ladder for one
+            # place; 21-24 read RELEGATED with nowhere further to go (no
+            # National League North/South in the save).
+            "win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
+            "promotion_places": 1, "promotion_playoff_places": 6,
+            "relegation_places": 4,
+            "ucl_places": 0, "uel_places": 0, "uecl_places": 0,
+            "season_start": "2026-08-08", "season_end": "2027-05-02",
+            "weekend_bias": 0.85, "midweek_matchdays": 8,
+        },
+    },
 }
 
 ## The club count a competition ships, used by seed/fetch/verify instead of a
@@ -134,6 +220,12 @@ ESPN_ALIASES = {"MAN": "MUN", "MNC": "MCI"}
 ALIASES_BY_COMP = {
     "PL": {"MAN": "MUN", "MNC": "MCI"},
     "BL": {"MUN": "FCB"},
+}
+## Two clubs in one competition can share an ESPN abbreviation (the National
+## League ships Harrogate Town and Hartlepool United as `HAR`). The shipped code
+## is keyed by ESPN team id there, so the pair cannot collide inside the tier.
+ABBR_BY_ESPN_ID = {
+    "NL": {"19262": "HGT", "323": "HPL"},
 }
 STYLE_KEYS = (
     "possession", "tempo", "press", "line", "width", "directness", "crossing",
@@ -389,12 +481,19 @@ def spec_for(competition_id: str) -> dict:
     return COMPETITIONS[competition_id]
 
 
-def club_id_for(competition_id: str, abbr: str) -> str:
-    return spec_for(competition_id)["prefix"] + shippable_abbr(competition_id, abbr)
+def club_id_for(competition_id: str, abbr: str, espn_id: str = "") -> str:
+    return spec_for(competition_id)["prefix"] + shippable_abbr(competition_id, abbr, espn_id)
 
 
-def shippable_abbr(competition_id: str, abbr: str) -> str:
-    """The abbreviation the seed ships for a competition's ESPN team."""
+def shippable_abbr(competition_id: str, abbr: str, espn_id: str = "") -> str:
+    """The abbreviation the seed ships for a competition's ESPN team.
+
+    An ESPN team id wins over the abbreviation, so a tier that ships two clubs
+    under one short code can still name both (see ABBR_BY_ESPN_ID).
+    """
+    by_id = ABBR_BY_ESPN_ID.get(competition_id, {}).get(str(espn_id))
+    if by_id:
+        return by_id
     up = str(abbr).upper()
     return ALIASES_BY_COMP.get(competition_id, ESPN_ALIASES).get(up, up)
 
@@ -449,7 +548,7 @@ def fetch_table(competition_id: str, season: int, snapshot: dict) -> dict[str, s
     espn_ids: dict[str, str] = {}
     for entry in entries:
         abbr = entry["team"]["abbreviation"].upper()
-        club_id = by_abbr.get(shippable_abbr(competition_id, abbr))
+        club_id = by_abbr.get(shippable_abbr(competition_id, abbr, entry["team"].get("id", "")))
         if club_id is None:
             club_id = by_name.get(slug(entry["team"].get("displayName", "")))
         if club_id is None:
@@ -679,6 +778,41 @@ def _role_for(group: str, counts: dict[str, int]) -> str:
     return min(options, key=lambda role: (counts.get(role, 0), ROLE_ORDER.index(role)))
 
 
+def _ground(competition_id: str, season: int, team: dict, abbr: str,
+            rank: int, size: int) -> tuple[str, str, int]:
+    """The ground a seeded club ships: name, city and capacity.
+
+    A hand-authored VENUES entry wins; otherwise ESPN's own venue for the season
+    supplies the name and the city, and the capacity comes from the
+    competition's band (ESPN publishes none for these leagues), stepped by
+    league place and nudged per club so no two grounds read alike. A club ESPN
+    knows no venue for keeps a synthetic name — the seed fills the gap rather
+    than dropping the club.
+    """
+    if abbr in VENUES:
+        return VENUES[abbr]
+    city = str(team.get("location", ""))
+    spec = spec_for(competition_id)
+    try:
+        detail = get_json(
+            f"{ESPN_CORE}/sports/soccer/leagues/{spec['espn']}/seasons/{season}"
+            f"/teams/{team['id']}",
+            missing_ok=True,
+        )
+    except SystemExit:
+        detail = {}
+    venue = detail.get("venue") or {}
+    ground = str(venue.get("fullName") or "")
+    city = str((venue.get("address") or {}).get("city") or city)
+    if ground == "":
+        ground = f"{team.get('location', team['displayName'])} Stadium"
+    high, low = spec.get("capacity", (25000, 25000))
+    span = float(high) - float(low)
+    stepped = float(high) - float(rank - 1) * (span / float(max(size - 1, 1)))
+    capacity = int(round(stepped / 500.0) * 500) + _jitter(abbr + competition_id, 1) * 500
+    return ground, city, max(2000, min(int(high), capacity))
+
+
 def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
     """Create a competition's clubs and squads from ESPN rosters."""
     spec = spec_for(competition_id)
@@ -693,7 +827,7 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
 
     def build(entry: dict) -> dict:
         team = entry["team"]
-        abbr = shippable_abbr(competition_id, team["abbreviation"])
+        abbr = shippable_abbr(competition_id, team["abbreviation"], team.get("id", ""))
         club_id = club_id_for(competition_id, abbr)
         meta = get_json(f"{ESPN_SITE}/soccer/{league}/teams/{team['id']}").get("team", {})
         roster = get_json(
@@ -701,13 +835,13 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
         ).get("athletes", [])
         color = _hex(_rgb(meta.get("color", team.get("color", "888888"))))
         rank = rank_of.get(str(team["id"]), size)
-        # Club strength runs 84 at the top down to 71 at the bottom: the same
-        # band the hand-authored Premier League squads occupy, whatever the
-        # league size.
-        club_base = 84.0 - float(rank - 1) * (13.0 / float(size - 1))
-        ground, city, capacity = VENUES.get(
-            abbr, (f"{team.get('location', team['displayName'])} Stadium",
-                   team.get("location", ""), 25000))
+        # Club strength runs from the top of the competition's own band down to
+        # its bottom: the same 84-to-71 stretch the hand-authored squads occupy
+        # for a league that names no band, and a down-stepping band for the
+        # pyramid's lower tiers so a promoted side is the weakest club above.
+        high, low = spec.get("strength", (84.0, 71.0))
+        club_base = float(high) - float(rank - 1) * ((float(high) - float(low)) / float(size - 1))
+        ground, city, capacity = _ground(competition_id, season, team, abbr, rank, size)
         players: list[dict] = []
         seen_ids: set[str] = set()
         role_counts: dict[str, int] = {}
@@ -779,7 +913,12 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
             "name": team["displayName"], "short": team.get("shortDisplayName", team["displayName"]),
             "abbr": abbr, "nickname": meta.get("nickname", ""),
             "manager": GERMAN_MANAGERS.get(competition_id, {}).get(abbr)
-            or (MANAGERS.get(abbr, "") if competition_id == "LL" else ""),
+            or (MANAGERS.get(abbr, "") if competition_id == "LL" else "")
+            # ESPN publishes no current coach for the tiers below the top
+            # flights (its roster coach list is a club's history, not a
+            # touchline today), so the seed ships a role, never an invented
+            # name: the briefing reads THE MANAGER until the source carries one.
+            or "The Manager",
             "stadium": ground, "city": city, "capacity": int(capacity),
             "formation": "4-2-3-1", "color": color,
             "color_dark": _shade(color, 0.65), "color_light": _shade(color, 1.35),

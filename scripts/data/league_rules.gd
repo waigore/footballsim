@@ -23,6 +23,7 @@ const TEMPLATES := {
 		"season_start": "2026-08-15", "season_end": "2027-05-23",
 		"weekend_bias": 0.85, "midweek_matchdays": 5,
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
+		"playoff_format": "",
 	},
 	"LL": {
 		# La Liga runs the same 20-club shape; Spain's own band counts are the
@@ -34,6 +35,7 @@ const TEMPLATES := {
 		"season_start": "2026-08-15", "season_end": "2027-05-23",
 		"weekend_bias": 0.88, "midweek_matchdays": 4,
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
+		"playoff_format": "",
 	},
 	"BL": {
 		# The Bundesliga's 18-club, 34-matchday shape. Without a domestic cup
@@ -46,6 +48,7 @@ const TEMPLATES := {
 		"season_start": "2026-08-28", "season_end": "2027-05-22",
 		"weekend_bias": 0.88, "midweek_matchdays": 4,
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
+		"playoff_format": "",
 	},
 	"BL2": {
 		# 18 clubs, 34 matchdays. 1st and 2nd go up and 3rd plays the Relegation;
@@ -58,6 +61,56 @@ const TEMPLATES := {
 		"season_start": "2026-08-07", "season_end": "2027-05-23",
 		"weekend_bias": 0.88, "midweek_matchdays": 4,
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
+		"playoff_format": "",
+	},
+	# The English pyramid (#258). Two up-and-down tiers of 24 clubs, 46
+	# matchdays; the promotion play-offs are a mini-tournament inside the lower
+	# tier, so `promotion_playoff_places` is how many places enter it and
+	# `playoff_format` names the bracket LeaguePlayoffs settles.
+	"CH": {
+		# 1-2 up, 3-8 into the six-team play-offs for one place; 22-24 down.
+		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
+		"promotion_places": 2, "promotion_playoff_places": 6,
+		"relegation_places": 3, "relegation_playoff_places": 0,
+		"ucl_places": 0, "uel_places": 0, "uecl_places": 0,
+		"season_start": "2026-08-07", "season_end": "2027-05-10",
+		"weekend_bias": 0.85, "midweek_matchdays": 8,
+		"advance_mode": "fixture_days", "calendar_mode": "generated",
+		"playoff_format": "six_two_leg",
+	},
+	"L1": {
+		# 1-2 up, 3-6 into the four-team play-offs; 21-24 down.
+		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
+		"promotion_places": 2, "promotion_playoff_places": 4,
+		"relegation_places": 4, "relegation_playoff_places": 0,
+		"ucl_places": 0, "uel_places": 0, "uecl_places": 0,
+		"season_start": "2026-08-07", "season_end": "2027-05-10",
+		"weekend_bias": 0.85, "midweek_matchdays": 8,
+		"advance_mode": "fixture_days", "calendar_mode": "generated",
+		"playoff_format": "four_two_leg",
+	},
+	"L2": {
+		# 1-3 up, 4-7 into the four-team play-offs; 23-24 down.
+		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
+		"promotion_places": 3, "promotion_playoff_places": 4,
+		"relegation_places": 2, "relegation_playoff_places": 0,
+		"ucl_places": 0, "uel_places": 0, "uecl_places": 0,
+		"season_start": "2026-08-07", "season_end": "2027-05-10",
+		"weekend_bias": 0.85, "midweek_matchdays": 8,
+		"advance_mode": "fixture_days", "calendar_mode": "generated",
+		"playoff_format": "four_two_leg",
+	},
+	"NL": {
+		# 1 up, 2-7 into the National League's one-leg ladder; 21-24 read
+		# RELEGATED with nowhere further to go (the chain ends here).
+		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
+		"promotion_places": 1, "promotion_playoff_places": 6,
+		"relegation_places": 4, "relegation_playoff_places": 0,
+		"ucl_places": 0, "uel_places": 0, "uecl_places": 0,
+		"season_start": "2026-08-08", "season_end": "2027-05-02",
+		"weekend_bias": 0.85, "midweek_matchdays": 8,
+		"advance_mode": "fixture_days", "calendar_mode": "generated",
+		"playoff_format": "six_one_leg",
 	},
 }
 
@@ -78,15 +131,16 @@ const CREATE_SQL := (
 	+ "advance_mode TEXT NOT NULL, calendar_mode TEXT NOT NULL, "
 	+ "clubs INTEGER NOT NULL DEFAULT 20, promotion_places INTEGER NOT NULL DEFAULT 0, "
 	+ "promotion_playoff_places INTEGER NOT NULL DEFAULT 0, "
-	+ "relegation_playoff_places INTEGER NOT NULL DEFAULT 0);"
+	+ "relegation_playoff_places INTEGER NOT NULL DEFAULT 0, "
+	+ "playoff_format TEXT NOT NULL DEFAULT '');"
 )
 
 const UPSERT_SQL := (
 	"INSERT INTO league_rules (competition_id, win_points, draw_points, relegation_places, "
 	+ "ucl_places, uel_places, uecl_places, matchdays, season_start, season_end, weekend_bias, "
 	+ "midweek_matchdays, advance_mode, calendar_mode, clubs, promotion_places, "
-	+ "promotion_playoff_places, relegation_playoff_places) "
-	+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+	+ "promotion_playoff_places, relegation_playoff_places, playoff_format) "
+	+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
 	+ "ON CONFLICT(competition_id) DO UPDATE SET win_points = excluded.win_points, "
 	+ "draw_points = excluded.draw_points, relegation_places = excluded.relegation_places, "
 	+ "ucl_places = excluded.ucl_places, uel_places = excluded.uel_places, "
@@ -96,7 +150,8 @@ const UPSERT_SQL := (
 	+ "advance_mode = excluded.advance_mode, calendar_mode = excluded.calendar_mode, "
 	+ "clubs = excluded.clubs, promotion_places = excluded.promotion_places, "
 	+ "promotion_playoff_places = excluded.promotion_playoff_places, "
-	+ "relegation_playoff_places = excluded.relegation_playoff_places;"
+	+ "relegation_playoff_places = excluded.relegation_playoff_places, "
+	+ "playoff_format = excluded.playoff_format;"
 )
 
 ## The linked-tier columns (#240): a competition's own size, its promotion
@@ -105,11 +160,16 @@ const LINK_COLUMNS := [
 	"clubs", "promotion_places", "promotion_playoff_places", "relegation_playoff_places",
 ]
 
+## The bracket name an English tier's promotion play-offs use (#260); the German
+## pair leaves it empty because its extra place is a cross-tier Relegation, not a
+## mini-tournament.
+const TEXT_COLUMNS := ["playoff_format"]
+
 const COLUMNS := [
 	"win_points", "draw_points", "relegation_places", "ucl_places", "uel_places",
 	"uecl_places", "matchdays", "season_start", "season_end", "weekend_bias",
 	"midweek_matchdays", "advance_mode", "calendar_mode", "clubs", "promotion_places",
-	"promotion_playoff_places", "relegation_playoff_places",
+	"promotion_playoff_places", "relegation_playoff_places", "playoff_format",
 ]
 
 ## The template with both setup choices filled in.
@@ -162,7 +222,7 @@ static func normalize(raw: Dictionary) -> Dictionary:
 			"promotion_places", "promotion_playoff_places", "relegation_playoff_places"]:
 		if raw.has(key):
 			out[key] = int(raw[key])
-	for key in ["season_start", "season_end", "advance_mode", "calendar_mode"]:
+	for key in ["season_start", "season_end", "advance_mode", "calendar_mode", "playoff_format"]:
 		if raw.has(key):
 			out[key] = str(raw[key])
 	if raw.has("weekend_bias"):
@@ -204,6 +264,12 @@ static func migrate(default_competition: String = "") -> void:
 	for column in LINK_COLUMNS:
 		if not have.has(column):
 			PLDatabase.execute("ALTER TABLE league_rules ADD COLUMN %s INTEGER NOT NULL DEFAULT 0;"
+				% column)
+	# A save written before the English pyramid has no bracket name; its own
+	# competition cannot run a mini-tournament, so the empty default is right.
+	for column in TEXT_COLUMNS:
+		if not have.has(column):
+			PLDatabase.execute("ALTER TABLE league_rules ADD COLUMN %s TEXT NOT NULL DEFAULT '';"
 				% column)
 
 static func _columns(table: String) -> Dictionary:

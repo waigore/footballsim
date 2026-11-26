@@ -104,9 +104,13 @@ func item_rect(vp: Vector2, index: int) -> Rect2:
 ## What a press lands on. Closed: only the edge tab. Open: a nav row, or the
 ## scrim that dismisses the panel; the rest of the sheet is not reachable while
 ## the panel is out, so a stray tap can never press a row underneath it.
+##
+## A pose with no reading — the New League and Load sheets, which exist before a
+## season does — has no door: there is nothing behind it to reach, and on a
+## handset the floating square would sit over the sheet's own text (#261).
 func hit(p: Vector2, vp: Vector2) -> String:
 	if slide <= 0.02:
-		return "panel" if tab_rect(vp).has_point(p) and target <= 0.5 else ""
+		return "panel" if active != "" and tab_rect(vp).has_point(p) and target <= 0.5 else ""
 	var rect := panel_rect(vp)
 	if not rect.has_point(p):
 		return "panel:close"
@@ -123,7 +127,9 @@ func hit(p: Vector2, vp: Vector2) -> String:
 
 func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, active_pose: String) -> void:
 	if slide <= 0.01:
-		_draw_tab(c, vp, fonts)
+		# No reading, no door: the front-door poses have nothing behind it.
+		if active_pose != "":
+			_draw_tab(c, vp, fonts)
 		return
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]

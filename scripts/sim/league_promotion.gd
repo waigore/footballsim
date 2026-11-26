@@ -82,23 +82,15 @@ static func apply(season: LeagueSeason, movers: Dictionary) -> bool:
 ## True while any mover still sits in the tier it is leaving.
 static func _needs_swap(up: Array, down: Array) -> bool:
 	for club_id in up:
-		if _competition_of(str(club_id)) != TOP:
+		if LeaguePyramid.competition_of(str(club_id)) != TOP:
 			return true
 	for club_id in down:
-		if _competition_of(str(club_id)) != SECOND:
+		if LeaguePyramid.competition_of(str(club_id)) != SECOND:
 			return true
 	return false
-
-static func _competition_of(club_id: String) -> String:
-	var row := PLDatabase.row("SELECT competition_id FROM club WHERE id = ?;", [club_id])
-	return str(row.get("competition_id", ""))
 
 ## One club's identity: its membership row and its club row. The season's own
 ## fixtures and table rows are the record of what was played, so they stay in
 ## the competition that was played — only who belongs where changes.
 static func _move(club_id: String, competition_id: String) -> void:
-	PLDatabase.execute("DELETE FROM competition_member WHERE member_kind = 'club' AND member_id = ?;",
-		[club_id])
-	PLDatabase.execute("INSERT OR REPLACE INTO competition_member (competition_id, member_kind, "
-		+ "member_id, role) VALUES (?, 'club', ?, 'member');", [competition_id, club_id])
-	PLDatabase.execute("UPDATE club SET competition_id = ? WHERE id = ?;", [competition_id, club_id])
+	LeaguePyramid.move_club(club_id, competition_id)
