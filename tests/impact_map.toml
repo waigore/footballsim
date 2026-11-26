@@ -57,6 +57,7 @@ suites = [
   "test_wiki_entry.gd",
   "test_chrome_density.gd",
   "test_match_mode.gd",
+  "test_ux_parity.gd",
 ]
 
 [domains.tactics]
@@ -105,6 +106,8 @@ suites = [
   "test_ui_chrome_doors.gd",
   # The match view preference: the settings sheet and the broadcast's door.
   "test_match_mode.gd",
+  # Phone↔desktop intent parity for menu/settings/confirm (REQ-P5-07).
+  "test_ux_parity.gd",
 ]
 
 # Shared engine spine: laws + finishing + restart + managers when a core file moves.
@@ -191,6 +194,8 @@ suites = [
   "test_interest_long_press.gd",
   # The painted name fields and the keyboard they hand to the platform (#201).
   "test_league_text_fields.gd",
+  # Phone↔desktop league-panel intent parity (REQ-P5-07).
+  "test_ux_parity.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -226,6 +231,7 @@ suites = [
 suites = [
   "test_date_labels.gd",
   "test_wiki_render.gd",
+  "test_ux_parity.gd",
 ]
 
 # Lightest suite for tooling / project / addons / map edits.
@@ -586,6 +592,10 @@ domain = "misc"
 [[rules]]
 match = "tests/test_pitch_queries.gd*"
 domain = "pitch_queries"
+
+[[rules]]
+match = "tests/test_ux_parity.gd*"
+domain = "shell"
 
 # ------------------------------------------------------------- project ---
 
