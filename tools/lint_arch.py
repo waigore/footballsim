@@ -32,8 +32,46 @@ ALLOWED_GD_PREFIXES = (
 
 SIZE_ALLOWLIST_PATH = ROOT / "tools" / "arch_size_allowlist.txt"
 AUTOLOAD_ALLOWLIST_PATH = ROOT / "tools" / "arch_autoload_allowlist.txt"
+AUTOLOAD_CONSUMERS_PATH = ROOT / "tools" / "arch_autoload_consumers.txt"
 UI_ICONS_PATH = ROOT / "tools" / "arch_ui_icons.txt"
 PROJECT_GODOT = ROOT / "project.godot"
+
+# Presentation / scene paths sim+data must not load (RUB-P3-03).
+LOAD_RES_RE = re.compile(r"""(?:preload|load)\s*\(\s*["'](res://[^"']+)["']""")
+EXTENDS_RES_RE = re.compile(r"""(?m)^extends\s+["'](res://[^"']+)["']""")
+FUNC_SIG_RE = re.compile(
+    r"(?ms)^(static\s+)?func\s+(\w+)\s*\((.*?)\)\s*(?:->\s*[^:\n]+)?\s*:"
+)
+
+# Layer of a res:// or repo-relative path for dependency bans.
+_LAYER_PREFIXES = (
+    ("scripts/sim/", "sim"),
+    ("scripts/data/", "data"),
+    ("scripts/ui/", "ui"),
+    ("scripts/view/", "view"),
+    ("scripts/platform/", "platform"),
+    ("scripts/audio/", "audio"),
+    ("autoload/", "autoload"),
+    ("scenes/", "scenes"),
+    ("ui/", "ui_scenes"),
+)
+# src_layer -> forbidden target layers (presentation must not flow into core).
+LAYER_FORBIDDEN: dict[str, frozenset[str]] = {
+    "sim": frozenset(
+        {"ui", "view", "scenes", "ui_scenes", "autoload", "audio", "platform"}
+    ),
+    "data": frozenset(
+        {"ui", "view", "scenes", "ui_scenes", "autoload", "platform"}
+    ),
+    "view": frozenset({"ui"}),
+}
+CORE_PURE_DIRS = (
+    ROOT / "scripts" / "sim",
+    ROOT / "scripts" / "data",
+    ROOT / "scripts" / "rules",
+)
+CORE_OK_EXTENDS = frozenset({"RefCounted", "Object", "Resource"})
+CORE_PURE_PATH_PREFIXES = ("scripts/sim/", "scripts/data/", "scripts/rules/")
 
 # REQ-P1-01 / RUB-P1-01 — 2D primary; no 3D core loops.
 FORBIDDEN_3D_EXTENDS = frozenset(
@@ -91,7 +129,7 @@ HOVER_ONLY_API_RE = re.compile(
 )
 
 FUNC_RE = re.compile(r"(?m)^(static\s+)?func\s+")
-EXTENDS_RE = re.compile(r"(?m)^extends\s+(\w+)")
+EXTENDS_RE = re.compile(r"(?m)^extends\s+(\S+)")
 GET_NODE_RE = re.compile(
     r"""get_node\s*\(\s*(?:["']([^"']+)["']|([A-Za-z_][\w.]*))"""
 )
@@ -157,7 +195,29 @@ NODEISH_EXTENDS = frozenset(
         "TileMapLayer",
     }
 )
-RULES_OK_EXTENDS = frozenset({"RefCounted", "Object"})
+def _script_layer(rel_or_res: str) -> str | None:
+    path = rel_or_res.replace("res://", "")
+    for prefix, name in _LAYER_PREFIXES:
+        if path.startswith(prefix):
+            return name
+    return None
+
+
+def _core_extends_ok(base: str) -> bool:
+    if base in CORE_OK_EXTENDS:
+        return True
+    if base in NODEISH_EXTENDS or base in FORBIDDEN_3D_EXTENDS:
+        return False
+    if len(base) >= 2 and base[0] in "\"'" and base[-1] == base[0]:
+        inner = base[1:-1]
+        if inner.startswith("res://"):
+            rel = inner[len("res://") :]
+            return any(rel.startswith(p) for p in CORE_PURE_PATH_PREFIXES)
+        return False
+    # Bare class_name of a peer RefCounted type — reject known Node-ish only.
+    if re.match(r"^[A-Za-z_]\w*$", base):
+        return True
+    return False
 
 
 def _strip_comments_and_strings(text: str) -> str:
@@ -408,11 +468,13 @@ def check_autoloads(failures: list[str], allowlist: set[str]) -> None:
             )
 
 
-def check_rules_purity(failures: list[str]) -> None:
-    rules_dir = ROOT / "scripts" / "rules"
-    if not rules_dir.is_dir():
-        return
-    for path in sorted(rules_dir.rglob("*.gd")):
+def check_core_purity(failures: list[str]) -> None:
+    """RUB-P3-03: sim/data/rules stay RefCounted-ish; no scene tree reach-ins."""
+    paths: list[Path] = []
+    for root in CORE_PURE_DIRS:
+        if root.is_dir():
+            paths.extend(sorted(root.rglob("*.gd")))
+    for path in paths:
         rel = path.relative_to(ROOT).as_posix()
         raw = path.read_text(encoding="utf-8")
         ext = EXTENDS_RE.search(raw)
@@ -420,16 +482,11 @@ def check_rules_purity(failures: list[str]) -> None:
             failures.append(f"{rel}:1: RUB-P3-03 missing extends")
         else:
             base = ext.group(1)
-            if base not in RULES_OK_EXTENDS:
+            if not _core_extends_ok(base):
                 line = _line_of(raw, ext.start())
                 failures.append(
-                    f"{rel}:{line}: RUB-P3-03 rules must extend "
-                    f"RefCounted/Object, not {base}"
-                )
-            if base in NODEISH_EXTENDS:
-                line = _line_of(raw, ext.start())
-                failures.append(
-                    f"{rel}:{line}: RUB-P3-03 rules must not extend Node types"
+                    f"{rel}:{line}: RUB-P3-03 sim/data/rules must extend "
+                    f"RefCounted/Object/Resource (or pure peer), not {base}"
                 )
 
         for match in GET_NODE_RE.finditer(raw):
@@ -437,7 +494,9 @@ def check_rules_purity(failures: list[str]) -> None:
             if "#" in raw[line_start : match.start()]:
                 continue
             line = _line_of(raw, match.start())
-            failures.append(f"{rel}:{line}: RUB-P3-03 rules must not call get_node")
+            failures.append(
+                f"{rel}:{line}: RUB-P3-03 sim/data/rules must not call get_node"
+            )
 
         for match in DOLLAR_PATH_RE.finditer(raw):
             line_start = raw.rfind("\n", 0, match.start()) + 1
@@ -445,7 +504,9 @@ def check_rules_purity(failures: list[str]) -> None:
             if "#" in prefix or prefix.count('"') % 2 == 1 or prefix.count("'") % 2 == 1:
                 continue
             line = _line_of(raw, match.start())
-            failures.append(f"{rel}:{line}: RUB-P3-03 rules must not use $ node paths")
+            failures.append(
+                f"{rel}:{line}: RUB-P3-03 sim/data/rules must not use $ node paths"
+            )
 
         for match in PERCENT_RE.finditer(raw):
             line_start = raw.rfind("\n", 0, match.start()) + 1
@@ -458,7 +519,196 @@ def check_rules_purity(failures: list[str]) -> None:
                 continue
             line = _line_of(raw, match.start())
             failures.append(
-                f"{rel}:{line}: RUB-P3-03 rules must not use % unique node names"
+                f"{rel}:{line}: RUB-P3-03 sim/data/rules must not use "
+                f"% unique node names"
+            )
+
+
+def check_layer_imports(failures: list[str]) -> None:
+    """RUB-P3-03: ban upward preload/load/extends from core into presentation."""
+    for path in iter_script_gd():
+        rel = path.relative_to(ROOT).as_posix()
+        src = _script_layer(rel)
+        if src is None or src not in LAYER_FORBIDDEN:
+            continue
+        forbidden = LAYER_FORBIDDEN[src]
+        raw = path.read_text(encoding="utf-8")
+        for match in LOAD_RES_RE.finditer(raw):
+            line_start = raw.rfind("\n", 0, match.start()) + 1
+            if "#" in raw[line_start : match.start()]:
+                continue
+            target = match.group(1)
+            tlayer = _script_layer(target)
+            if tlayer is None or tlayer not in forbidden:
+                continue
+            line = _line_of(raw, match.start())
+            failures.append(
+                f"{rel}:{line}: RUB-P3-03 layer ban {src} must not load "
+                f"{tlayer} ({target})"
+            )
+        for match in EXTENDS_RES_RE.finditer(raw):
+            line_start = raw.rfind("\n", 0, match.start()) + 1
+            if "#" in raw[line_start : match.start()]:
+                continue
+            target = match.group(1)
+            tlayer = _script_layer(target)
+            if tlayer is None or tlayer not in forbidden:
+                continue
+            line = _line_of(raw, match.start())
+            failures.append(
+                f"{rel}:{line}: RUB-P3-03 layer ban {src} must not extend "
+                f"{tlayer} ({target})"
+            )
+
+
+def load_autoload_consumers() -> dict[str, list[str]]:
+    """Map autoload name -> list of allowed consumer path prefixes/globs."""
+    result: dict[str, list[str]] = {}
+    if not AUTOLOAD_CONSUMERS_PATH.is_file():
+        return result
+    for raw in AUTOLOAD_CONSUMERS_PATH.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = re.split(r"\s+", line, maxsplit=1)
+        if len(parts) != 2:
+            raise ValueError(
+                f"bad autoload consumers line: {raw!r} "
+                f"(want: Name<path-prefix>)"
+            )
+        name, prefix = parts
+        result.setdefault(name, []).append(prefix)
+    return result
+
+
+def _path_allowed_for_autoload(rel: str, allowed: list[str]) -> bool:
+    for entry in allowed:
+        if entry.endswith(".gd"):
+            if rel == entry:
+                return True
+        elif rel.startswith(entry):
+            return True
+    return False
+
+
+def check_autoload_usage(
+    failures: list[str],
+    consumers: dict[str, list[str]],
+) -> None:
+    """RUB-P3-02: autoload identifiers only from declared consumer paths."""
+    autoloads = parse_project_autoloads()
+    if not autoloads:
+        return
+    # Own script path per autoload name from project.godot.
+    own_script: dict[str, str] = {}
+    if PROJECT_GODOT.is_file():
+        text = PROJECT_GODOT.read_text(encoding="utf-8")
+        in_section = False
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("[") and stripped.endswith("]"):
+                in_section = stripped == "[autoload]"
+                continue
+            if not in_section or "=" not in stripped:
+                continue
+            name, rhs = stripped.split("=", 1)
+            name = name.strip()
+            m = re.search(r"res://[^\s\"']+", rhs)
+            if name and m:
+                own_script[name] = m.group(0).replace("res://", "")
+
+    names = [n for n, _ in autoloads]
+    for path in iter_script_gd():
+        rel = path.relative_to(ROOT).as_posix()
+        raw = path.read_text(encoding="utf-8")
+        scanned = _strip_comments_and_strings(raw)
+        for name in names:
+            allowed = list(consumers.get(name, []))
+            own = own_script.get(name, "")
+            if own:
+                allowed.append(own)
+            allowed.append("tests/")
+            if _path_allowed_for_autoload(rel, allowed):
+                continue
+            for match in re.finditer(rf"\b{re.escape(name)}\s*\.", scanned):
+                line = _line_of(raw, min(match.start(), len(raw) - 1))
+                failures.append(
+                    f"{rel}:{line}: RUB-P3-02 autoload {name!r} used outside "
+                    f"consumers (tools/arch_autoload_consumers.txt)"
+                )
+
+
+def _untyped_params(text: str) -> set[tuple[str, str]]:
+    """Return (func_name, param_name) for parameters lacking a `: Type`."""
+    found: set[tuple[str, str]] = set()
+    for match in FUNC_SIG_RE.finditer(text):
+        func_name = match.group(2)
+        params = match.group(3).strip()
+        if not params:
+            continue
+        depth = 0
+        current: list[str] = []
+        parts: list[str] = []
+        for ch in params:
+            if ch in "([{":
+                depth += 1
+            elif ch in ")]}":
+                depth = max(0, depth - 1)
+            if ch == "," and depth == 0:
+                parts.append("".join(current))
+                current = []
+                continue
+            current.append(ch)
+        if current:
+            parts.append("".join(current))
+        for part in parts:
+            part = part.strip()
+            if not part:
+                continue
+            # Drop default value.
+            head = part.split("=", 1)[0].strip()
+            # Typed if `: Type` present before optional default was stripped.
+            if ":" in head:
+                continue
+            pname = head.split()[-1] if head else ""
+            if not pname or not re.match(r"^_?[A-Za-z]\w*$", pname):
+                continue
+            found.add((func_name, pname))
+    return found
+
+
+def _git_show_text(base_ref: str, rel: str) -> str | None:
+    try:
+        return subprocess.check_output(
+            ["git", "show", f"{base_ref}:{rel}"],
+            cwd=ROOT,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def check_typed_diff(failures: list[str], base_ref: str) -> None:
+    """RUB-P3-01: no new untyped func params on changed scripts/** .gd files."""
+    changed = _git_changed_paths(base_ref)
+    if not changed:
+        return
+    for rel in sorted(changed):
+        if not rel.startswith("scripts/") or not rel.endswith(".gd"):
+            continue
+        path = ROOT / rel
+        if not path.is_file():
+            continue
+        head_text = path.read_text(encoding="utf-8")
+        head_unt = _untyped_params(head_text)
+        base_text = _git_show_text(base_ref, rel)
+        base_unt = _untyped_params(base_text) if base_text is not None else set()
+        new_unt = sorted(head_unt - base_unt)
+        for func_name, pname in new_unt:
+            failures.append(
+                f"{rel}:1: RUB-P3-01 new untyped param {func_name}({pname}) "
+                f"vs {base_ref} (add a type annotation)"
             )
 
 
@@ -680,14 +930,19 @@ def check_rules_tests_pairing(failures: list[str], base_ref: str) -> None:
     if not changed:
         # First push / empty diff — nothing to pair.
         return
-    rules_changed = any(
-        p.startswith("scripts/rules/") and p.endswith(".gd") for p in changed
+    core_changed = any(
+        (
+            p.startswith("scripts/rules/")
+            or p.startswith("scripts/sim/")
+        )
+        and p.endswith(".gd")
+        for p in changed
     )
     tests_changed = any(p.startswith("tests/") for p in changed)
-    if rules_changed and not tests_changed:
+    if core_changed and not tests_changed:
         failures.append(
-            f"scripts/rules/:1: RUB-P3-04 scripts/rules/** changed vs {base_ref} "
-            "without any tests/** change"
+            f"scripts/sim/:1: RUB-P3-04 scripts/sim/** (or rules) changed vs "
+            f"{base_ref} without any tests/** change"
         )
 
 
@@ -697,12 +952,12 @@ def main(argv: list[str] | None = None) -> int:
         "--require-rules-tests",
         action="store_true",
         default=os.environ.get("ARCH_LINT_RULES_DIFF", "") == "1",
-        help="Fail if scripts/rules/** changes without tests/** (CI default).",
+        help="Fail if scripts/sim/** (or rules) changes without tests/** (CI).",
     )
     parser.add_argument(
         "--base-ref",
         default=None,
-        help="Git ref for pairing diff (default: GITHUB_BASE_REF or origin/main).",
+        help="Git ref for pairing/typed diff (default: GITHUB_BASE_REF or origin/main).",
     )
     args = parser.parse_args(argv)
 
@@ -710,6 +965,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         size_allowlist = load_size_allowlist()
         autoload_allowlist = load_autoload_allowlist()
+        autoload_consumers = load_autoload_consumers()
     except ValueError as exc:
         print(f"Allowlist error: {exc}", file=sys.stderr)
         return 2
@@ -720,11 +976,14 @@ def main(argv: list[str] | None = None) -> int:
     check_size(failures, size_allowlist)
     check_reach_ins(failures)
     check_autoloads(failures, autoload_allowlist)
-    check_rules_purity(failures)
+    check_autoload_usage(failures, autoload_consumers)
+    check_core_purity(failures)
+    check_layer_imports(failures)
     check_platform(failures)
     check_no_3d_core(failures)
     check_ui_icons(failures)
     check_no_hover_only_ux(failures)
+    check_typed_diff(failures, base_ref)
     if args.require_rules_tests:
         check_rules_tests_pairing(failures, base_ref)
 

@@ -1,2 +1,3 @@
 # Allowed project.godot [autoload] names (one per line). Empty = ban all.
 # Names match the left-hand identifier before '=' in [autoload].
+# Call sites: tools/arch_autoload_consumers.txt (own script + tests/** always OK).

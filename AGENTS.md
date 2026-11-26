@@ -39,7 +39,7 @@ Root and `docs/` Markdown must stay **≤ 500 words** (fenced code excluded). CI
 ## Conventions
 
 - **Reuse first**; typed GDScript; signals over deep node reach-ins. Scripts ≤400 lines / ≤25 methods; size allowlist ≤5 and shrink-only (`arch-lint`).
-- **Sim vs UI**: engines deterministic/seedable and testable without UI; Godot screens stay thin; god-actions are explicit sim inputs.
+- **Sim vs UI**: engines deterministic/seedable and testable without UI; sim/data must not load ui/view; god-actions are explicit sim inputs.
 - **Input**: mouse/keyboard + touch via InputMap actions.
 - **UI**: containers + anchors + theme; no fixed pixel layouts; no hover-only critical UX.
 - **Exports**: platform diffs isolated; shared core. P3 + static P1 (2D/icons/hover) gated by `arch-lint`.
