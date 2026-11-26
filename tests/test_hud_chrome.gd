@@ -388,8 +388,8 @@ func test_every_whistle_hint_names_a_door_the_player_can_reach() -> void:
 	# hidden HUD's full-time card names its own press instead (#202).
 	assert_eq(HudBannersBand.break_hint("half_time", true, false, false), "SECOND HALF STARTS SHORTLY",
 		"the half-time card offered a door")
-	assert_eq(HudBannersBand.break_hint("full_time", true, false, false), "TAP RESTART TO PLAY AGAIN",
-		"the shown chrome's card stopped naming the bar's RESTART")
+	assert_eq(HudBannersBand.break_hint("full_time", true, false, false), "TAP PLAY AGAIN",
+		"the shown chrome's card stopped naming the bar's PLAY AGAIN door")
 	assert_eq(HudBannersBand.break_hint("full_time", true, true, false), "TAP THE CARD TO PLAY AGAIN",
 		"a hidden chrome's card named a door that is not on screen")
 	assert_eq(HudBannersBand.break_hint("full_time", false, true, false), "PRESS R TO PLAY AGAIN",
@@ -475,6 +475,14 @@ func test_a_finished_match_offers_no_play_doors() -> void:
 		assert_eq(hud.button_at(cell.get_center()), "", "dead door %d still answered a press" % i)
 	assert_eq(hud.button_at(Rect2(bar.position.x + 6.0 * (bw + gap), bar.position.y, bw, HudLayout.CONTROL_H).get_center()), "restart",
 		"a finished match lost its way to play again")
+	var paint := HudPaint.new(hud.chrome, hud.design_vp())
+	var restart_spec: Array = []
+	for spec in hud.controls_band.control_specs(paint, hud.game, hud.touch, "full_time"):
+		if str(spec[0]) == "restart":
+			restart_spec = spec
+			break
+	assert_eq(str(restart_spec[1]), "PLAY AGAIN",
+		"a finished match kept the live RESTART caption instead of PLAY AGAIN")
 	assert_eq(hud.roster_band.state_label(hud.game, "SIM", "full_time"), "FULL TIME  ·  MATCH OVER",
 		"the state line still calls a finished match live")
 	hud.queue_free()

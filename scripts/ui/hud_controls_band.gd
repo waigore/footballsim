@@ -12,6 +12,7 @@ func controls(p: HudPaint, c: CanvasItem, game, touch: bool, mouse: Vector2, f_b
 	var gap: float = HudLayout.CONTROL_GAP
 	var per: int = HudLayout.controls_per_row(p.vp, touch)
 	var specs := control_specs(p, game, touch, phase)
+	var over: bool = phase == "full_time"
 	for i in range(specs.size()):
 		var spec: Array = specs[i]
 		# A door with nothing left to do keeps its box but not its press: the
@@ -22,7 +23,9 @@ func controls(p: HudPaint, c: CanvasItem, game, touch: bool, mouse: Vector2, f_b
 		var r := Rect2(bar.position.x + float(i % per) * (bw + gap),
 			bar.position.y + float(row) * (HudLayout.CONTROL_H + gap), bw, HudLayout.CONTROL_H)
 		var hovered := not dead and r.has_point(mouse)
-		var active: bool = spec[0] == "mode" and game.mode == "highlights"
+		# Live play marks HIGHLIGHTS; at the whistle PLAY AGAIN is the way on.
+		var active: bool = (over and spec[0] == "restart") \
+			or (not over and spec[0] == "mode" and game.mode == "highlights")
 		var fill: Color = UiChrome.C_PANEL_LIGHT if hovered else UiChrome.C_PANEL
 		if active:
 			fill = Color(0.16, 0.13, 0.05, 0.96)
@@ -43,7 +46,8 @@ func controls(p: HudPaint, c: CanvasItem, game, touch: bool, mouse: Vector2, f_b
 
 ## `[id, label, key-or-tap hint, answers-presses]` per door, in bar order. Once
 ## the whistle has gone there is no play to pause, pace or skip, so those three
-## doors are painted dead (`phase` is the engine's own) (#276).
+## doors are painted dead (`phase` is the engine's own). The restart door then
+## reads PLAY AGAIN so the card's hint names a control that is on the bar (#276).
 func control_specs(p: HudPaint, game, touch: bool, phase: String = "") -> Array:
 	var over: bool = phase == "full_time"
 	var specs := [
@@ -53,7 +57,7 @@ func control_specs(p: HudPaint, game, touch: bool, phase: String = "") -> Array:
 		["skip", "SKIP", "S", not over],
 		["camera", "FOLLOW" if game.camera_follow else "WIDE", "C", true],
 		["league", "LEAGUE", "L", true],
-		["restart", "RESTART", "R", true],
+		["restart", "PLAY AGAIN" if over else "RESTART", "R", true],
 		["menu", "MENU", "M", true],
 	]
 	if touch or p.compact():
