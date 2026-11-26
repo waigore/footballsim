@@ -43,7 +43,7 @@ static func capture(season: LeagueSeason, pack: Dictionary) -> void:
 		return
 	season.captured.append(pack)
 
-static func record_engine(season: LeagueSeason, engine) -> void:
+static func record_engine(season: LeagueSeason, engine: MatchEngine) -> void:
 	if season == null:
 		return
 	var fixture_id := season.watching_fixture
