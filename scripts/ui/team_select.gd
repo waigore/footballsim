@@ -229,7 +229,9 @@ func _arrow(r: Rect2, glyph: String, id: String) -> void:
 
 ## Competition chips over the cards: ALL, then each league the seed (or the open
 ## save) carries. The pool the arrows walk is the selected set, so picking both
-## leagues is what makes a cross-league fixture.
+## leagues is what makes a cross-league fixture. With four competitions on a
+## phone five chips no longer hold their full names, so a narrow chip falls back
+## to the competition's short code (PL, LL, BL, 2.BL) instead of overflowing.
 func _draw_league_chips(vp: Vector2) -> void:
 	var rows: Array = [{"id": "", "short_name": "ALL"}]
 	rows.append_array(PLCompetitions.active())
@@ -245,8 +247,7 @@ func _draw_league_chips(vp: Vector2) -> void:
 		var on := str(row["id"]) == league_filter
 		rect(C_GOLD.darkened(0.1) if on else C_PANEL, chip, 6,
 			C_GOLD if on else Color(1, 1, 1, 0.10))
-		var name := str(row.get("short_name", row.get("name", "")))
-		text_c(chip.get_center().x, chip.position.y + 16.0, name, 10,
+		text_c(chip.get_center().x, chip.position.y + 16.0, LeagueChrome.competition_chip_label(row, w), 10,
 			Color(0.06, 0.06, 0.05) if on else C_DIM, f_bold)
 		_add_button("league:" + str(row["id"]), chip)
 		x += w + gap

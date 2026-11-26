@@ -38,6 +38,24 @@ static func zone_color(band: String) -> Color:
 		return UiChrome.C_DANGER
 	return UiChrome.C_DIM
 
+## A competition chip's caption: its short name when the chip can hold one,
+## otherwise the competition's own code. Four leagues make five chips on a
+## phone, where "2. BUNDESLIGA" would overflow a sixty-unit chip (#242).
+static func competition_chip_label(row: Dictionary, width: float) -> String:
+	var name := str(row.get("short_name", row.get("name", "")))
+	if width >= 100.0 or name.length() <= 5:
+		return name
+	match str(row.get("id", "")):
+		"BL":
+			return "BL"
+		"BL2":
+			return "2.BL"
+		"PL":
+			return "PL"
+		"LL":
+			return "LL"
+	return name.substr(0, 5)
+
 ## Paint one of the doors a sheet pinning in place (BACK, the primary door, the
 ## month chips, the table's reading doors). They are not part of the scrolling
 ## rows, so the body draws them itself with the host's paint grammar — button
