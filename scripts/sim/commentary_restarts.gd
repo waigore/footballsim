@@ -4,11 +4,11 @@ extends RefCounted
 ## Set-piece, kick-off and whistle lines. Split from Commentary so the in-play
 ## event voice stays inside its size budget (RUB-P3-01).
 
-static func _pick(rng, lines: Array) -> String:
+static func _pick(rng: RandomNumberGenerator, lines: Array) -> String:
 	return lines[rng.randi_range(0, lines.size() - 1)]
 
 
-static func kickoff(rng, team_name: String) -> String:
+static func kickoff(rng: RandomNumberGenerator, team_name: String) -> String:
 	return _pick(rng, [
 		"We're underway — %s get us started." % team_name,
 		"Kick-off! %s to get us going." % team_name,
@@ -17,7 +17,8 @@ static func kickoff(rng, team_name: String) -> String:
 
 ## Set-piece / restart line. `waiting` marks the taker holding play up for
 ## team-mates to arrive.
-static func restart(rng, kind: String, team_short: String, taker: String, waiting: bool) -> String:
+static func restart(rng: RandomNumberGenerator, kind: String, team_short: String, taker: String,
+		waiting: bool) -> String:
 	if waiting:
 		match kind:
 			"corner":
@@ -66,14 +67,16 @@ static func restart(rng, kind: String, team_short: String, taker: String, waitin
 	return "Restart to %s." % team_short
 
 
-static func half_time(rng, short_a: String, score_a: int, short_b: String, score_b: int) -> String:
+static func half_time(rng: RandomNumberGenerator, short_a: String, score_a: int, short_b: String,
+		score_b: int) -> String:
 	return _pick(rng, [
 		"Half-time: %s %d-%d %s." % [short_a, score_a, score_b, short_b],
 		"That's the half-time whistle — %s %d, %s %d." % [short_a, score_a, short_b, score_b],
 	])
 
 
-static func full_time(rng, short_a: String, score_a: int, short_b: String, score_b: int) -> String:
+static func full_time(rng: RandomNumberGenerator, short_a: String, score_a: int, short_b: String,
+		score_b: int) -> String:
 	var tail := ""
 	if score_a == score_b:
 		tail = " Honours even."
@@ -84,7 +87,7 @@ static func full_time(rng, short_a: String, score_a: int, short_b: String, score
 	return "Full time: %s %d-%d %s.%s" % [short_a, score_a, score_b, short_b, tail]
 
 
-static func penalty_taken(rng, name: String) -> String:
+static func penalty_taken(rng: RandomNumberGenerator, name: String) -> String:
 	return _pick(rng, [
 		"%s steps up..." % name,
 		"%s places the ball. Big moment." % name,

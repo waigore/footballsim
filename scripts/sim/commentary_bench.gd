@@ -5,12 +5,12 @@ extends RefCounted
 ## Split from Commentary so the in-play event voice stays inside its size
 ## budget (RUB-P3-01).
 
-static func _pick(rng, lines: Array) -> String:
+static func _pick(rng: RandomNumberGenerator, lines: Array) -> String:
 	return lines[rng.randi_range(0, lines.size() - 1)]
 
 
 ## `continues` is false when the side has no change left to make.
-static func injury(rng, name: String, continues: bool) -> String:
+static func injury(rng: RandomNumberGenerator, name: String, continues: bool) -> String:
 	if continues:
 		return _pick(rng, [
 			"%s is down and can't continue — a change is coming." % name,
@@ -23,8 +23,8 @@ static func injury(rng, name: String, continues: bool) -> String:
 	])
 
 
-static func substitution(rng, team_short: String, on_name: String, off_name: String,
-		manager: String = "") -> String:
+static func substitution(rng: RandomNumberGenerator, team_short: String, on_name: String,
+		off_name: String, manager: String = "") -> String:
 	if manager != "":
 		return _pick(rng, [
 			"%s sends on %s for %s." % [manager, on_name, off_name],
@@ -38,7 +38,8 @@ static func substitution(rng, team_short: String, on_name: String, off_name: Str
 
 
 ## Manager tinkering: one short line naming the manager and what moved.
-static func tactics(rng, manager: String, _team_short: String, changes: Array) -> String:
+static func tactics(rng: RandomNumberGenerator, manager: String, _team_short: String,
+		changes: Array) -> String:
 	var what := _brief(changes)
 	return _pick(rng, [
 		"%s signals a change — %s." % [manager, what],

@@ -7,13 +7,14 @@ extends RefCounted
 
 ## One line from a set. `i >= 0` takes that variant deterministically — the
 ## live line must not disturb the sim — and otherwise the match RNG chooses.
-static func _pick(rng, lines: Array, i: int = -1) -> String:
+## `rng` is unused when `i >= 0` (deterministic live lines); callers may pass null.
+static func _pick(rng: Variant, lines: Array, i: int = -1) -> String:
 	if i >= 0:
 		return lines[i % lines.size()]
-	return lines[rng.randi_range(0, lines.size() - 1)]
+	return lines[(rng as RandomNumberGenerator).randi_range(0, lines.size() - 1)]
 
 
-static func _lane(e, t: int, pos: Vector2) -> String:
+static func _lane(e: MatchEngine, t: int, pos: Vector2) -> String:
 	var ax: float = e.attacking_x(t, pos)
 	if absf(pos.y - 34.0) > 17.0:
 		if ax > 60.0:
@@ -30,13 +31,13 @@ static func _lane(e, t: int, pos: Vector2) -> String:
 	return "deep"
 
 
-static func _scoreline(e) -> String:
+static func _scoreline(e: MatchEngine) -> String:
 	return "%s %d-%d %s" % [e.teams[0]["data"]["short"], e.score[0], e.score[1], e.teams[1]["data"]["short"]]
 
 
 ## A truthful description of the current picture, for when no fresh event has
 ## fired: possession, ball zone, pressure and, late on, the scoreline.
-static func live(e) -> String:
+static func live(e: MatchEngine) -> String:
 	var t: int = e.possession_team
 	var tn: String = e.teams[t]["data"]["short"]
 	var on: String = e.teams[1 - t]["data"]["short"]
