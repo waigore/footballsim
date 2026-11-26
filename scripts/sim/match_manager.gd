@@ -6,14 +6,15 @@ extends RefCounted
 ## Event-driven by design. Goals, cards, injuries and half-time feed urgency;
 ## fatigue and a chasing game are polled on a slow timer. Each side may change
 ## tactics at most three times (about 2–3 in a normal game) and must leave a
-## gap between changes, so the touchline tinkers rather than thrashes.
+## gap between changes, so the touchline tinkers rather than thrashes. How long
+## that gap is — the law's seven minutes stretched by the manager's own
+## `patience` — lives in `MatchCadence`.
 ##
 ## Substitutions are a separate budget: IFAB five changes in three windows
 ## (half-time free), chosen by the manager from fatigue, cards and game state.
 ## All rolls use the match RNG, so a seed always produces the same decisions.
 
 const TACTICS_CAP := 3
-const MIN_GAP := 420.0          # seconds between tactical changes
 const EARLIEST := 900.0         # no touchline panic inside the first fifteen minutes
 const EVAL_INTERVAL := 120.0    # fatigue / chasing poll (not per tick)
 const SUB_EARLIEST := 2700.0    # no changes before half-time unless forced
@@ -120,7 +121,7 @@ func _consider_tactics(t: int, trigger: String, weight: float) -> bool:
 		return false
 	if changes[t] >= TACTICS_CAP or e.clock < EARLIEST:
 		return false
-	if e.clock - float(last_change[t]) < MIN_GAP:
+	if not MatchCadence.may_change(profiles[t], e.clock - float(last_change[t])):
 		return false
 	if e.rng.randf() >= _act_probability(t, weight):
 		return false

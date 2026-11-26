@@ -436,6 +436,13 @@ domain = "league"
 match = "scripts/sim/match_manager.gd*"
 domain = "managers"
 
+# How long a dugout waits between tactical changes: the law's seven-minute floor
+# stretched by the manager's own `patience`. It is pinned by the managers suite
+# beside the decision engine it gates, so the domain is the same one.
+[[rules]]
+match = "scripts/sim/match_cadence.gd*"
+domain = "managers"
+
 [[rules]]
 match = "scripts/sim/attributes.gd*"
 domain = "match_engine"
