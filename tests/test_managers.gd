@@ -231,13 +231,13 @@ func test_the_patience_lever_reaches_the_dugout() -> void:
 	eng.manager.last_change[0] = 3000.0 - 450.0
 	var quiet := 0
 	for i in range(200):
-		if eng.manager._consider_tactics(0, "chasing", 0.9):
+		if MatchManagerTactics.consider(eng.manager, 0, "chasing", 0.9):
 			quiet += 1
 	assert_eq(quiet, 0, "a patient manager acted inside his own wait (450s of 596s)")
 	eng.manager.last_change[0] = 3000.0 - 620.0
 	var acted := false
 	for i in range(200):
-		if eng.manager._consider_tactics(0, "chasing", 0.9):
+		if MatchManagerTactics.consider(eng.manager, 0, "chasing", 0.9):
 			acted = true
 			break
 	assert_true(acted, "a patient manager never acted once his wait had passed")
@@ -376,7 +376,7 @@ func test_manager_picks_the_change_not_the_clock() -> void:
 	tired.stamina = 0.30
 	var made := false
 	for i in range(400):
-		if eng.manager._consider_subs(0, false, 0.5):
+		if MatchManagerSubs.consider(eng.manager, 0, false, 0.5):
 			made = true
 			break
 	assert_true(made, "the manager never used a change")
