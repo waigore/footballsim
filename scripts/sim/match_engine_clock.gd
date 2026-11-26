@@ -84,7 +84,10 @@ func start() -> void:
 # -------------------------------------------------------------------- tick --
 
 func tick() -> void:
-	if phase == "full_time" or phase == "half_time":
+	if phase == "shootout":
+		_tick_shootout(DT)
+		return
+	if phase == "full_time" or phase == "half_time" or phase == "et_break":
 		return
 	sim_tick += 1
 	clock += DT
@@ -94,7 +97,9 @@ func tick() -> void:
 
 	if phase != "goal":
 		_tick_clock_end()
-		if phase == "half_time" or phase == "full_time":
+		# A break or a shootout stops the regulation tick here; the caller resumes.
+		if (phase == "half_time" or phase == "full_time" or phase == "et_break"
+				or phase == "shootout"):
 			return
 
 	if phase == "goal":
@@ -132,8 +137,12 @@ func _tick_clock_end() -> void:
 			added[0] = 20.0 + rng.randf_range(0.0, 50.0) + minf(100.0, stoppage_events * 4.0)
 		if clock >= 2700.0 + added[0]:
 			_end_first_half()
-	elif half == 2 and clock >= 5400.0 + added[1]:
-		_end_match()
+	elif half == 2:
+		if clock >= 5400.0 + added[1]:
+			_second_half_over()
+	else:
+		# Extra time: the decider layer owns both periods' clocks and breaks.
+		_tick_extra_time_period()
 
 func _end_first_half() -> void:
 	phase = "half_time"
@@ -165,13 +174,35 @@ func begin_second_half() -> void:
 func _end_match() -> void:
 	phase = "full_time"
 	finished = true
+	if winner < 0 and int(score[0]) != int(score[1]):
+		winner = 0 if int(score[0]) > int(score[1]) else 1
 	# The summary carries the rating it is read by. One formula, the same one the
 	# player card and the in-sim ledger use, computed once at the final whistle
 	# (DR-20261125-01) instead of three times from three copies.
 	for p in players:
 		p.stats["rating"] = PLSimStats.rating(p.stats)
-	var line = Commentary.full_time(rng, teams[0]["data"]["short"], score[0], teams[1]["data"]["short"], score[1])
+	var line: String = _full_time_text()
 	_emit("full_time", line, -1, null)
+
+## The final whistle's line. A match that went to penalties says so.
+func _full_time_text() -> String:
+	return Commentary.full_time(rng, teams[0]["data"]["short"], score[0],
+		teams[1]["data"]["short"], score[1])
+
+# Hooks the decider layer (extra time + shootouts) fills in. They live here so
+# the regulation lane can reach them without knowing the tie-break rules.
+func _second_half_over() -> void:
+	_end_match()
+
+func _tick_extra_time_period() -> void:
+	pass
+
+func _tick_shootout(_dt: float) -> void:
+	pass
+
+## Leave the break after 90 (or after the first extra-time period).
+func resume_after_break() -> void:
+	pass
 
 ## Play the rest of the match out with no presentation: a caller that has left
 ## the viewer drives this in slices. `budget_usec` caps the work in one call so
@@ -183,6 +214,8 @@ func run_to_full_time(budget_usec: int = -1) -> bool:
 	while phase != "full_time" and guard < FAST_FORWARD_TICKS:
 		if phase == "half_time":
 			begin_second_half()
+		elif phase == "et_break":
+			resume_after_break()
 		tick()
 		guard += 1
 		if budget_usec >= 0 and Time.get_ticks_usec() - started >= budget_usec:
@@ -237,6 +270,9 @@ func from_dict(d: Dictionary) -> void:
 	restart = d["restart"].duplicate(true)
 	restart_timer = d["restart_timer"]
 	added = d["added"].duplicate()
+	# Snapshots taken before extra time existed carry only the two halves.
+	while added.size() < 4:
+		added.append(0.0)
 	score = d["score"].duplicate()
 	teams[0]["score"] = score[0]
 	teams[1]["score"] = score[1]

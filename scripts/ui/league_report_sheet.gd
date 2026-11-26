@@ -53,8 +53,22 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": "continue", "kind": "button", "label": "CONTINUE", "primary": true,
 			"pinned": true, "rect": LeagueExtra.primary_rect(vp)})
 	var y := HEADER + 70.0
+	var mixed := false
+	if roundup.size() > 1:
+		var ids := {}
+		for report in roundup:
+			ids[str(block_fixture(report).get("competition_id", ""))] = true
+		mixed = ids.size() > 1
+	var last_comp := ""
 	for report in roundup:
 		var fx := block_fixture(report)
+		var comp := str(fx.get("competition_id", ""))
+		if mixed and comp != last_comp:
+			last_comp = comp
+			items.append({"id": "", "kind": "league_head", "competition": comp,
+				"matchday": int(fx.get("matchday", 1)),
+				"rect": Rect2(24.0, y, vp.x - 48.0, 16.0)})
+			y += 18.0
 		var row := Rect2(24.0, y, vp.x - 48.0, LeagueBlock.height(fx) + 10.0)
 		items.append({"id": "match:" + str(fx.get("id", "")), "kind": "result",
 			"report": report, "rect": row})
@@ -151,6 +165,9 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 		var kind := str(item["kind"])
 		if kind == "play":
 			_draw_play(c, rect, bold)
+		elif kind == "league_head":
+			LeagueExtra.draw_league_head(c, rect, str(item.get("competition", "")),
+				int(item.get("matchday", 1)), fonts)
 		elif kind == "result":
 			var block := block_fixture(item["report"])
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 5)

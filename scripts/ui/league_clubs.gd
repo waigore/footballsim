@@ -23,7 +23,10 @@ static func search(query: String, exclude: Array) -> Array:
 	if q == "":
 		return []
 	var found: Array = []
-	for id in PLRepository.shared().club_ids():
+	var ids: Array = []
+	for comp_id in PLCompetitions.active_ids():
+		ids.append_array(PLRepository.shared().club_ids(str(comp_id)))
+	for id in ids:
 		if exclude.has(str(id)):
 			continue
 		var club := PLRepository.shared().club(str(id))

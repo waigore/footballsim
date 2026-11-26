@@ -39,8 +39,8 @@ static func record_label(snapshot: String) -> String:
 static func player_line(line: Dictionary, season_open: bool) -> Dictionary:
 	if int(line.get("apps", 0)) <= 0:
 		if season_open:
-			return {"k": "note", "text": "NO SEASON LINE YET  ·  HE HAS NOT PLAYED IN THIS SAVE"}
-		return {"k": "note", "text": "NO MATCHES RECORDED YET  ·  PLAY A MATCH TO START THIS LEDGER"}
+			return {"k": "note", "text": "NO APPEARANCES YET  ·  HE HAS NOT PLAYED IN THIS SAVE"}
+		return {"k": "note", "text": "NO APPEARANCES YET  ·  PLAY A MATCH TO START THE RECORD"}
 	if season_open:
 		return {
 			"k": "kv",
@@ -61,21 +61,26 @@ static func player_line(line: Dictionary, season_open: bool) -> Dictionary:
 		],
 	}
 
-## The league page's in-sim block: the season's scorer chart, or the
+## A competition hub's in-sim block: that league's scorer chart, or the
 ## single-match one. Absent (not an empty table) until someone has scored.
-static func league_blocks() -> Array:
+static func competition_blocks(competition_id: String = "") -> Array:
 	var top: Array = []
-	for row in repo().sim_leaders(5):
+	for row in repo().sim_leaders(5, competition_id):
 		top.append({
 			"cells": [str(row["name"]), str(row["abbr"]), str(int(row["apps"])), str(int(row["goals"]))],
 			"target": {"page": WikiModel.PLAYER, "id": str(row["player_id"])},
 		})
 	if top.is_empty():
 		return []
+	var label := "FOOTBALLSIM  ·  IN-SIM SCORERS"
 	return [
-		{"k": "section", "text": "FOOTBALLSIM  ·  IN-SIM SCORERS"},
+		{"k": "section", "text": label},
 		{"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"], "widths": [0.36, 0.22, 0.20, 0.22], "text_cols": [0, 1], "rows": top},
 	]
+
+## The hub's in-sim block, scoped to the competition it belongs to.
+static func league_blocks(competition_id: String = "") -> Array:
+	return competition_blocks(competition_id)
 
 ## A club page's in-sim blocks. While a season is open the record is already in
 ## the page's season header, so only the club's scorer chart is appended here.

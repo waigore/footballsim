@@ -112,8 +112,13 @@ static func apply(club_id: String) -> bool:
 ## so both outcome paths field the same elevens all season.
 static func apply_all() -> int:
 	var count := 0
+	var ids: Array = []
+	for cid in PLCompetitions.active_ids():
+		ids.append_array(TeamData.team_ids(str(cid)))
+	if ids.is_empty():
+		ids = TeamData.team_ids()
 	PLDatabase.transaction("BEGIN TRANSACTION;")
-	for id in TeamData.team_ids():
+	for id in ids:
 		if apply(str(id)):
 			count += 1
 	PLDatabase.transaction("COMMIT;")

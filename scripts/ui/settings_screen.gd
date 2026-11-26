@@ -10,6 +10,10 @@ var mouse := Vector2(-1000, -1000)
 var dragging := false
 var _cache := {}
 
+## The match HUD row's caption (#202): the switch's `ON` is chrome shown (#158),
+## so the line says what `ON` does instead of describing the other state.
+const HUD_ROW_HINT := "ON SHOWS THE BARS · SCORE AND MATCH CARDS STAY"
+
 ## Three rows share one card: the volume row keeps its shipped geometry on top,
 ## the match HUD switch sits a row below it and the match view a row below that.
 const CARD_H := 366.0
@@ -169,7 +173,7 @@ func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, volume: float, touch: b
 		var hy := hud_row_y(vp)
 		c.draw_line(Vector2(card.position.x + 14.0, hy - 12.0), Vector2(card.end.x - 14.0, hy - 12.0), Color(1, 1, 1, 0.07), 1)
 		UiChrome.text(c, Vector2(card.position.x + 24.0, hy + 26.0), "MATCH HUD", 18, UiChrome.C_TEXT, bold)
-		UiChrome.text(c, Vector2(card.position.x + 24.0, hy + 44.0), "HIDES THE BARS · SCORE AND MATCH CARDS STAY", 10, UiChrome.C_SOFT, med)
+		UiChrome.text(c, Vector2(card.position.x + 24.0, hy + 44.0), HUD_ROW_HINT, 10, UiChrome.C_SOFT, med)
 	else:
 		UiChrome.text(c, Vector2(card.position.x + 24.0, hud_row_y(vp) + 26.0), "MATCH HUD", 13, UiChrome.C_TEXT, bold)
 	_draw_switch(c, hud_toggle_rect(vp), hud_on, fonts)

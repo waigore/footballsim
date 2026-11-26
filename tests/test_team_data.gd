@@ -6,20 +6,23 @@ extends GdToolsTest
 const CLUBS := 20
 
 func test_every_club_has_a_full_squad() -> void:
-	var ids: Array = TeamData.team_ids()
-	assert_eq(ids.size(), CLUBS, "the league table does not hold twenty clubs")
-	var names := {}
-	for id in ids:
-		var team: Dictionary = TeamData.get_team(id)
-		assert_false(team.is_empty(), "%s resolves to no squad" % id)
-		assert_false(str(team["name"]) == "", "%s has no club name" % id)
-		assert_false(str(team["short"]) == "", "%s has no short name" % id)
-		assert_false(str(team["manager"]) == "", "%s has no manager" % id)
-		names[str(team["name"])] = true
-		assert_eq((team["starters"] as Array).size(), 11, "%s does not field eleven starters" % id)
-		assert_gte((team["bench"] as Array).size(), 7, "%s bench is too short to make five changes" % id)
-		assert_true(TeamData.FORMATIONS.has(str(team["formation"])), "%s lines up in an unknown formation" % id)
-	assert_eq(names.size(), CLUBS, "two clubs share a name")
+	for competition_id in ["PL", "LL"]:
+		var ids: Array = TeamData.team_ids(competition_id)
+		assert_eq(ids.size(), CLUBS, "%s does not hold twenty clubs" % competition_id)
+		var names := {}
+		for id in ids:
+			var team: Dictionary = TeamData.get_team(id)
+			assert_false(team.is_empty(), "%s resolves to no squad" % id)
+			assert_false(str(team["name"]) == "", "%s has no club name" % id)
+			assert_false(str(team["short"]) == "", "%s has no short name" % id)
+			assert_false(str(team["manager"]) == "", "%s has no manager" % id)
+			assert_eq(str(team["competition_id"]), competition_id,
+				"%s is filed under the wrong competition" % id)
+			names[str(team["name"])] = true
+			assert_eq((team["starters"] as Array).size(), 11, "%s does not field eleven starters" % id)
+			assert_gte((team["bench"] as Array).size(), 7, "%s bench is too short to make five changes" % id)
+			assert_true(TeamData.FORMATIONS.has(str(team["formation"])), "%s lines up in an unknown formation" % id)
+		assert_eq(names.size(), CLUBS, "%s has two clubs sharing a name" % competition_id)
 
 func test_starters_cover_every_role_in_their_formation() -> void:
 	for id in TeamData.team_ids():

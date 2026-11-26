@@ -122,6 +122,23 @@ func test_the_back_door_and_the_close_door() -> void:
 	assert_false(wiki.is_open(), "the close door did not close the sheet")
 	assert_eq(closed[0], 2, "the close door did not signal the host")
 
+func test_the_german_hubs_browse_on_desktop_and_phone() -> void:
+	for phone in [false, true]:
+		wiki.touch = phone
+		wiki.ui_scale = 1.0 if not phone else 2.2
+		for pair in [["BL", "BUNDESLIGA", 18], ["BL2", "2. BUNDESLIGA", 18]]:
+			wiki.open(WikiModel.LEAGUE, str(pair[0]))
+			await get_tree().process_frame
+			assert_eq(str(wiki.page_data["title"]), str(pair[1]),
+				"the German hub did not open (phone=%s)" % phone)
+			assert_true(str(wiki.page_data["subtitle"]).contains("18 CLUBS"),
+				"the German hub names the wrong club count (phone=%s)" % phone)
+			assert_gte(wiki.body.rows().size(), int(pair[2]),
+				"the German hub laid out no table (phone=%s)" % phone)
+	wiki.touch = false
+	wiki.ui_scale = 1.0
+	wiki.open(WikiModel.LEAGUE, "")
+
 func test_a_snapshot_date_reveals_its_weekday_on_hover() -> void:
 	wiki.open(WikiModel.LEAGUE, "")
 	await get_tree().process_frame
@@ -132,6 +149,61 @@ func test_a_snapshot_date_reveals_its_weekday_on_hover() -> void:
 	wiki.mouse = (zone["rect"] as Rect2).get_center()
 	assert_eq(str(wiki.tooltip.zone_at().get("date", "")), str(zone["date"]),
 		"a hovered snapshot date did not reach the overlay")
+
+# ------------------------------------------------------------ footer advice --
+
+## A phone has no keys, so the footer names none (#203): the touch copy is the
+## drag-and-tap one, and no word of it belongs to a keyboard.
+func test_the_touch_footer_names_no_keys() -> void:
+	var hint := WikiChrome.footer_hint(true, true, true)
+	assert_eq(hint, "TAP A ROW TO OPEN  ·  DRAG TO SCROLL", "the phone footer is not the touch copy")
+	for word in ["KEY", "ESC", "WHEEL", "CLICK"]:
+		assert_false(hint.contains(word), "the phone footer still says %s" % word)
+
+## The desktop keeps the keys it really has, and the escape door.
+func test_the_desktop_footer_keeps_its_keys() -> void:
+	var hint := WikiChrome.footer_hint(false, true, true)
+	assert_eq(hint, "CLICK A ROW TO OPEN  ·  ESC BACK  ·  WHEEL, DRAG OR KEYS SCROLL",
+		"the desktop footer lost its own copy")
+
+## A surface with nothing to open says nothing about rows.
+func test_a_page_with_nothing_to_open_advertises_no_row() -> void:
+	var hint := WikiChrome.footer_hint(true, false, true)
+	assert_eq(hint, "DRAG TO SCROLL", "a stat-only page still advertises a row to open")
+	assert_false(WikiChrome.footer_hint(false, false, true).contains("ROW"),
+		"the desktop footer advertises a row a stat-only page does not have")
+
+## A page that fits has nothing to scroll, so the footer drops that too; with
+## nothing to say at all it is empty and the sheet paints no strip.
+func test_a_short_page_has_no_scroll_advice() -> void:
+	assert_eq(WikiChrome.footer_hint(true, true, false), "TAP A ROW TO OPEN", "a fitting page still says drag")
+	assert_eq(WikiChrome.footer_hint(true, false, false), "", "a fitted stat page still paints a footer")
+	assert_eq(WikiChrome.footer_hint(false, false, false), "ESC BACK", "the desktop footer lost the escape door")
+
+## The body reports a row to open only while a link is on screen: the top of a
+## club page lists values, the squad below it opens player pages.
+func test_a_club_page_top_has_no_row_to_open_but_its_squad_has() -> void:
+	var body := WikiBody.new()
+	body.size = Vector2(800.0, 360.0)
+	body.set_page(WikiModel.page(WikiModel.TEAM, "MUN"), true)
+	assert_false(body.has_open_row_in_view(), "the club page top advertises a row it does not paint")
+	var squad: Rect2 = Rect2()
+	for row in body.rows():
+		if str(row["k"]) == "trow" and not (row.get("target", {}) as Dictionary).is_empty():
+			squad = row["rect"]
+			break
+	assert_gt(squad.size.y, 0.0, "the club page drew no link row")
+	body.scroll_to(squad.position.y)
+	assert_true(body.has_open_row_in_view(), "the squad on screen is not read as rows to open")
+	body.free()
+
+## The league table opens a club from its first row, so its footer keeps the hint.
+func test_the_league_table_keeps_the_row_hint() -> void:
+	var body := WikiBody.new()
+	body.size = Vector2(800.0, 360.0)
+	body.set_page(WikiModel.page(WikiModel.LEAGUE, ""), true)
+	assert_true(body.has_open_row_in_view(), "the league table's own rows are not read as links")
+	body.free()
 
 func _first_data_row() -> Dictionary:
 	for row in wiki.body.rows():

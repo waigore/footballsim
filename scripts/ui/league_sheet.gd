@@ -1,7 +1,7 @@
 class_name LeagueSheet
 extends RefCounted
 
-## The season hub pose: today's plan beside the table, with CONTINUE.
+## The season hub pose: today's plan across the sheet, with CONTINUE.
 ##
 ## The hub is pure: `hub_layout()` turns the season state into rows and chips
 ## with rects (so a headless test can press them), and `draw_hub_*()` paints
@@ -10,8 +10,10 @@ extends RefCounted
 ## LeagueBody.
 ##
 ## The hub owns the pose, not the rows: `LeaguePlanSheet` lays and paints the
-## plan, `LeagueSideTable` the side standings, and `LeagueChrome` the bars every
-## league sheet shares (header, bottom bar, compact breakpoint, zone colours).
+## plan — grouped under a league heading on a mixed day (#189) — and
+## `LeagueChrome` the bars every league sheet shares (header, bottom bar,
+## compact breakpoint, zone colours). The hub keeps no side table: the standings
+## live on the TABLES sheet, so the whole width belongs to the day's fixtures.
 ## The New League wizard and the Load library are the menu-level front door, not
 ## the hub: they live in `LeagueStartSheet`.
 
@@ -28,9 +30,8 @@ var hints := DateHints.new()
 ## occupies (#107): a long press on one raises the Teams of Interest menu.
 ## Design space, like `hints`.
 var names := InterestNames.new()
-## The plan's rows and their own name registry, and the side standings.
+## The plan's rows and their own name registry.
 var plan := LeaguePlanSheet.new()
-var side := LeagueSideTable.new()
 
 func _init() -> void:
 	# One registry, so a long press reads every club strip the hub painted.
@@ -55,19 +56,7 @@ static func interest_view(state: Dictionary) -> Dictionary:
 ## The plan's left edge, its right edge, and where its first row starts.
 func _plan_lane(vp: Vector2) -> Dictionary:
 	var top: float = HEADER + (14.0 if not compact(vp) else 8.0)
-	var wide := vp.x >= 760.0 and not compact(vp)
-	var right: float = (vp.x - 72.0) * 0.58 + 24.0 if wide else vp.x - 24.0
-	return {"left": 24.0, "right": right, "top": top + 24.0, "chrome_top": top}
-
-## The lane the wide hub's side table occupies, beside the fixture list.
-func _hub_table_box(vp: Vector2) -> Rect2:
-	return LeagueSideTable.box(vp, float(_plan_lane(vp)["right"]))
-
-## The side table's column rail: the same compact set the TABLE sheet paints,
-## spread across the whole lane so the numbers fill it (a club abbreviation needs
-## far less room than a club name).
-func _hub_table_places(box: Rect2) -> Dictionary:
-	return LeagueSideTable.places(box)
+	return {"left": 24.0, "right": vp.x - 24.0, "top": top + 24.0, "chrome_top": top}
 
 func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	var lane := _plan_lane(vp)
@@ -75,9 +64,6 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	var interest := interest_view(state)
 	var items: Array = LeaguePlanSheet.layout(state.get("plan", []), interest,
 		float(lane["left"]), float(lane["right"]), float(lane["top"]))
-	if vp.x >= 760.0 and not compact(vp):
-		items.append_array(LeagueSideTable.layout(state.get("table", []),
-			state.get("rules", {}), interest, _hub_table_box(vp), float(lane["top"])))
 	if bool(state.get("can_suggest", false)):
 		var left_w: float = float(lane["right"]) - 24.0
 		items.append({"id": "suggest", "kind": "chip", "label": "SUGGEST WATCHES",
@@ -95,8 +81,13 @@ func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dicti
 		hints_out: DateHints) -> void:
 	var date := str(state.get("date", ""))
 	var label: String = FixtureCalendar.day_label(date) if date != "" else str(state.get("day", ""))
-	var rest := " · GW %d · %d OF %d PLAYED" % [int(state.get("matchday", 1)),
-		int(state.get("played", 0)), int(state.get("total", 0))]
+	# One gameweek per active league, then the season-wide count (#189).
+	var parts: Array = []
+	for comp in state.get("competitions", []):
+		parts.append("%s GW %d" % [str(comp.get("short", comp.get("id", ""))),
+			int(comp.get("matchday", 1))])
+	parts.append("%d OF %d PLAYED" % [int(state.get("played", 0)), int(state.get("total", 0))])
+	var rest := " · " + " · ".join(PackedStringArray(parts))
 	# A left-behind watch is still being played out: the result lands on its own.
 	if bool(state.get("settling", false)):
 		rest += " · FINISHING THE WATCHED MATCH"
@@ -116,19 +107,16 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 	names.clear()
 	var lane := _plan_lane(vp)
 	# The body hands back only the rows that scroll; the pinned doors are painted
-	# by the screen itself. Split them by the grammar that owns them.
+	# by the screen itself. Split by the grammar that owns them.
 	var plan_items: Array = []
-	var table_items: Array = []
 	var suggest: Dictionary = {}
 	for item in items:
 		if str(item.get("id", "")) == "suggest":
 			suggest = item
 			continue
 		match str(item.get("kind", "")):
-			"row", "chip":
+			"row", "chip", "league_head":
 				plan_items.append(item)
-			"table_row":
-				table_items.append(item)
 	## The plan hint rides the caption: the first fixture row starts right under
 	## it, so a second line would print through the row. A day that still holds
 	## watches says what CONTINUE does with them (#100); a played row never
@@ -138,8 +126,6 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		hint = " · CONTINUE OPENS THE NEXT WATCH"
 	UiChrome.text(c, Vector2(24.0, HEADER + 18.0), "TODAY'S FIXTURES" + hint, 11,
 		UiChrome.C_DIM, fonts["bold"])
-	if vp.x >= 760.0 and not compact(vp):
-		side.draw_head(c, _hub_table_box(vp), float(lane["chrome_top"]), fonts)
 	if (state.get("plan", []) as Array).is_empty():
 		UiChrome.text(c, Vector2(24.0, HEADER + 44.0),
 			"No fixtures on this day — CONTINUE moves the clock.", 12, UiChrome.C_SOFT, fonts["med"])
@@ -149,6 +135,5 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, UiChrome.C_GOLD, 1)
 		UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 4.0,
 			"SUGGEST WATCHES", 10, UiChrome.C_GOLD, fonts["bold"])
-	side.draw(c, table_items, fonts, names)
 
 # gd-tools: no cover end

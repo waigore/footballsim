@@ -126,7 +126,7 @@ static func league_page(competition_id: String = "") -> Dictionary:
 	var claims_ledger := PLCompetitions.season_owns(comp_id) \
 		or (not LeagueLedger.bound() and comp_id == PLCompetitions.default_id())
 	if claims_ledger:
-		out["blocks"].append_array(WikiLedger.league_blocks())
+		out["blocks"].append_array(WikiLedger.league_blocks(comp_id))
 	out["blocks"].append({"k": "note", "text": "SELECTED BY CLUB OR PLAYER  ·  ESC OR BACK RETURNS  ·  REAL DATA: %s" % str(meta.get("source", ""))})
 	return out
 
@@ -318,7 +318,13 @@ static func player_page(player_id: String) -> Dictionary:
 		for pair in [["pac", "PACE"], ["sho", "SHOOTING"], ["pas", "PASSING"], ["dri", "DRIBBLING"], ["def", "DEFENDING"], ["phy", "PHYSICAL"]]:
 			bars.append([str(pair[1]), float(p[pair[0]]) / 100.0])
 	out["blocks"].append({"k": "bars", "items": bars})
-	out["blocks"].append({"k": "section", "text": "SEASON  ·  %s SNAPSHOT" % str(season.get("season_label", ""))})
+	# The real-world season wears its label, not the pipeline's name for the
+	# file: a player reads a season, not a snapshot (#208).
+	var season_label := str(season.get("season_label", ""))
+	var season_head := "SEASON"
+	if season_label != "":
+		season_head += "  ·  " + season_label
+	out["blocks"].append({"k": "section", "text": season_head})
 	if int(season.get("matches", 0)) > 0:
 		out["blocks"].append({
 			"k": "kv",
@@ -330,8 +336,8 @@ static func player_page(player_id: String) -> Dictionary:
 			],
 		})
 	else:
-		out["blocks"].append({"k": "note", "text": "NO REAL-WORLD SEASON LINE IN THE SNAPSHOT  ·  RATINGS ARE THE GAME'S DATASET"})
-	out["blocks"].append({"k": "section", "text": "CAREER  ·  BEST EFFORT"})
+		out["blocks"].append({"k": "note", "text": "NO SEASON STATISTICS YET"})
+	out["blocks"].append({"k": "section", "text": "CAREER"})
 	if int(career.get("matches", 0)) > 0:
 		out["blocks"].append({
 			"k": "kv",
@@ -341,7 +347,7 @@ static func player_page(player_id: String) -> Dictionary:
 			],
 		})
 	else:
-		out["blocks"].append({"k": "note", "text": "NO CAREER TOTALS IN THE SNAPSHOT"})
+		out["blocks"].append({"k": "note", "text": "NO CAREER TOTALS YET"})
 	var season_open := repo().season_active()
 	out["blocks"].append({"k": "section", "text": WikiLedger.heading("IN FOOTBALLSIM")})
 	out["blocks"].append(WikiLedger.player_line(sim, season_open))

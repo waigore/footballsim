@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_clock.gd"
+extends "res://scripts/sim/match_engine_decider.gd"
 
 class_name MatchEngine
 

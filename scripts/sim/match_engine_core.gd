@@ -157,10 +157,16 @@ var stoppage_seq := 0  # dead-ball counter; subs in the same stoppage share a wi
 
 var clock = 0.0
 var half = 1
-var phase = "play"                 # play, restart, goal, half_time, full_time
+var phase = "play"                 # play, restart, goal, half_time, et_break, full_time, shootout
 var restart: Dictionary = {}
 var restart_timer = 0.0
-var added: Array = [0.0, 0.0]
+## Added time per period: two halves, then the two extra-time periods.
+var added: Array = [0.0, 0.0, 0.0, 0.0]
+## Set by a caller whose competition cannot end level (a knockout tie). The
+## regulation life cycle then plays extra time and, if still level, penalties.
+var requires_winner := false
+## Which side won the tie: 0, 1, or -1 while it is drawn.
+var winner := -1
 var kickoff_team = 0
 var possession_team = 0
 var possession_loose = true

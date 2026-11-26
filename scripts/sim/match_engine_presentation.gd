@@ -41,6 +41,15 @@ func elapsed_minutes() -> float:
 	return clock / 60.0
 
 func display_clock() -> String:
+	if phase == "shootout":
+		return "PENALTIES"
+	if half >= 3:
+		# Extra time reads 91:00–105:00 and 106:00–120:00, then its own added time.
+		var end_clock: float = 6300.0 if half == 3 else 7200.0
+		var board: String = "105:00" if half == 3 else "120:00"
+		if clock <= end_clock:
+			return "%02d:%02d" % [int(clock) / 60, int(clock) % 60]
+		return "%s +%02d:%02d" % [board, int(clock - end_clock) / 60, int(clock - end_clock) % 60]
 	if half == 1:
 		if clock <= 2700.0:
 			return "%02d:%02d" % [int(clock) / 60, int(clock) % 60]

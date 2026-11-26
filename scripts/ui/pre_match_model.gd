@@ -21,7 +21,7 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 		return {}
 	var live := season != null and season.save != null
 	var billing := MatchBilling.new()
-	billing.bind_fixture(home_id, fixture)
+	billing.bind_fixture(home_id, fixture, away_id)
 	var home_xi := StrongestXI.pick(home)
 	var away_xi := StrongestXI.pick(away)
 	var seed := _seed(home_id, away_id, fixture)

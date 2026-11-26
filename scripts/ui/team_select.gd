@@ -16,6 +16,9 @@ const C_DIM := Color(0.55, 0.64, 0.69)
 const C_GOLD := Color(0.96, 0.78, 0.30)
 
 var ids: Array = []
+## Competition filter for the club pool: "" reads both leagues, otherwise one id.
+## A cross-league friendly is simply a filtered pool of both.
+var league_filter := ""
 var home_idx := 0
 var away_idx := 1
 ## Design-space multiplier and touch flag, pushed in by main.gd: on a phone the
@@ -32,6 +35,9 @@ var interest := InterestHold.new()
 var menu_layer: InterestLayer = null
 ## The followed club ids as a set: their card names print gold.
 var followed := {}
+## A friendly is level at full time unless the picker asks for extra time and
+## penalties (#249); the engine path is the competition one (#238).
+var winner_mode := "draw"
 
 var f_bold: FontFile
 var f_med: FontFile
@@ -62,13 +68,30 @@ func _ready() -> void:
 
 func setup(home_id: String, away_id: String) -> void:
 	if ids.is_empty():
-		ids = TeamData.team_ids()
+		ids = TeamData.team_ids(league_filter)
 		ids.sort()
 	home_idx = maxi(0, ids.find(home_id))
 	away_idx = maxi(0, ids.find(away_id))
 	if away_idx == home_idx:
 		away_idx = (home_idx + 1) % ids.size()
 	mouse = Vector2(-1000, -1000)
+
+## Filter the picker by league, keeping the two selected clubs when they are
+## still in the pool and otherwise falling back to the first two.
+func set_league(competition_id: String) -> void:
+	if competition_id == league_filter:
+		return
+	var home := home_id()
+	var away := away_id()
+	league_filter = competition_id
+	ids = TeamData.team_ids(league_filter)
+	ids.sort()
+	if ids.is_empty():
+		return
+	home_idx = maxi(0, ids.find(home))
+	away_idx = maxi(0, ids.find(away))
+	if away_idx == home_idx:
+		away_idx = (home_idx + 1) % ids.size()
 
 func home_id() -> String:
 	return str(ids[home_idx]) if not ids.is_empty() else "MUN"
@@ -78,19 +101,18 @@ func away_id() -> String:
 
 # ------------------------------------------------------------------ actions --
 
-func cycle_home(dir: int) -> void:
+## Step one side's club through the current pool. `side` 0 = home, 1 = away.
+func cycle(side: int, dir: int) -> void:
 	if ids.size() < 2:
 		return
-	home_idx = posmod(home_idx + dir, ids.size())
-	if home_idx == away_idx:
-		home_idx = posmod(home_idx + dir, ids.size())
-
-func cycle_away(dir: int) -> void:
-	if ids.size() < 2:
-		return
-	away_idx = posmod(away_idx + dir, ids.size())
-	if away_idx == home_idx:
-		away_idx = posmod(away_idx + dir, ids.size())
+	var index: int = home_idx if side == 0 else away_idx
+	index = posmod(index + dir, ids.size())
+	if index == (away_idx if side == 0 else home_idx):
+		index = posmod(index + dir, ids.size())
+	if side == 0:
+		home_idx = index
+	else:
+		away_idx = index
 
 func randomize_fixture() -> void:
 	if ids.size() < 2:
@@ -111,19 +133,23 @@ func click(id: String) -> void:
 	if id == "back" or id == "cancel":
 		cancelled.emit()
 	elif id == "home_prev":
-		cycle_home(-1)
+		cycle(0, -1)
 	elif id == "home_next":
-		cycle_home(1)
+		cycle(0, 1)
 	elif id == "away_prev":
-		cycle_away(-1)
+		cycle(1, -1)
 	elif id == "away_next":
-		cycle_away(1)
+		cycle(1, 1)
 	elif id == "random":
 		randomize_fixture()
 	elif id == "confirm":
 		confirm()
 	elif id == "league":
 		browse.emit(WikiModel.LEAGUE, "")
+	elif id.begins_with("league:"):
+		set_league(id.substr(7))
+	elif id.begins_with("win:"):
+		winner_mode = id.substr(4)
 	elif id == "team_home":
 		browse.emit(WikiModel.TEAM, home_id())
 	elif id == "team_away":
@@ -131,13 +157,13 @@ func click(id: String) -> void:
 
 func key(code: int) -> bool:
 	if code == KEY_LEFT or code == KEY_A:
-		cycle_home(-1)
+		cycle(0, -1)
 	elif code == KEY_RIGHT or code == KEY_D:
-		cycle_home(1)
+		cycle(0, 1)
 	elif code == KEY_UP or code == KEY_W:
-		cycle_away(-1)
+		cycle(1, -1)
 	elif code == KEY_DOWN or code == KEY_S:
-		cycle_away(1)
+		cycle(1, 1)
 	elif code == KEY_TAB:
 		randomize_fixture()
 	elif code == KEY_ENTER or code == KEY_KP_ENTER or code == KEY_SPACE:
@@ -146,6 +172,10 @@ func key(code: int) -> bool:
 		cancelled.emit()
 	elif code == KEY_L:
 		browse.emit(WikiModel.LEAGUE, "")
+	elif code >= KEY_1 and code <= KEY_9:
+		var comps := PLCompetitions.active()
+		var pick := code - KEY_1 - 1
+		set_league("" if pick < 0 else str(comps[mini(pick, comps.size() - 1)]["id"]))
 	else:
 		return false
 	return true
@@ -202,6 +232,31 @@ func _arrow(r: Rect2, glyph: String, id: String) -> void:
 	text_c(r.position.x + r.size.x * 0.5, r.position.y + r.size.y * 0.66, glyph, 24, C_TEXT if hovered else C_DIM, f_bold)
 	_add_button(id, r)
 
+## Competition chips over the cards: ALL, then each league the seed (or the open
+## save) carries. The pool the arrows walk is the selected set, so picking both
+## leagues is what makes a cross-league fixture. With four competitions on a
+## phone five chips no longer hold their full names, so a narrow chip falls back
+## to the competition's short code (PL, LL, BL, 2.BL) instead of overflowing.
+func _draw_league_chips(vp: Vector2) -> void:
+	var rows: Array = [{"id": "", "short_name": "ALL"}]
+	rows.append_array(PLCompetitions.active())
+	if rows.size() < 2:
+		return
+	var chip_h := 24.0
+	var gap := 8.0
+	var w: float = minf(150.0, (vp.x - 48.0 - gap * float(rows.size() - 1)) / float(rows.size()))
+	var x := 24.0
+	var y: float = vp.y * (0.155 if vp.y < 620.0 else 0.175)
+	for row in rows:
+		var chip := Rect2(x, y, w, chip_h)
+		var on := str(row["id"]) == league_filter
+		rect(C_GOLD.darkened(0.1) if on else C_PANEL, chip, 6,
+			C_GOLD if on else Color(1, 1, 1, 0.10))
+		text_c(chip.get_center().x, chip.position.y + 16.0, LeagueChrome.competition_chip_label(row, w), 10,
+			Color(0.06, 0.06, 0.05) if on else C_DIM, f_bold)
+		_add_button("league:" + str(row["id"]), chip)
+		x += w + gap
+
 func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	rect(C_PANEL, r, 14, Color(1, 1, 1, 0.10))
 	draw_rect(Rect2(r.position.x + 1, r.position.y + 1, 6, r.size.y - 2), t["color"])
@@ -216,7 +271,7 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	text_c(cx, r.position.y + r.size.y * 0.64, str(t["nickname"]).to_upper(), 11, C_DIM, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.80, "%s  ·  %s" % [str(t["formation"]), str(t["manager"]).to_upper()], 10, C_GOLD, f_med)
 	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 10, C_DIM, f_bold)
-	var label := "HOME" if side == 0 else "AWAY"
+	var label: String = "HOME" if side == 0 else "AWAY"
 	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
 
 ## How many clubs the picker offers, and the competition it files them under —
@@ -229,8 +284,7 @@ static func clubs_line(count: int, competition_name: String) -> String:
 
 ## The clubs line under the doors: the count and the league, from the file (#209).
 func _clubs_line() -> String:
-	var name := str(TeamData.get_team(str(home_id())).get("competition_name", ""))
-	return clubs_line(ids.size(), name)
+	return LeagueChrome.picker_clubs_line(self)
 
 ## Design space this sheet draws in (the layer is scaled up by main.gd).
 func design_vp() -> Vector2:
@@ -242,6 +296,7 @@ func design_vp() -> Vector2:
 func back_rect(vp: Vector2) -> Rect2:
 	return Rect2(24.0, 12.0, 116.0, 44.0)
 
+# gd-tools: no cover start
 func _draw() -> void:
 	var vp := design_vp()
 	buttons.clear()
@@ -252,6 +307,7 @@ func _draw() -> void:
 	# BACK owns the top-left corner on every sheet (#163); the league door takes
 	# the other one, so the wordmark rides the centre of the header.
 	UiChrome.wordmark_c(self, vp.x * 0.5, vp.y * (0.075 if vp.y < 620.0 else 0.105), 12, f_bold)
+	_draw_league_chips(vp)
 
 	var card_w := minf(vp.x * 0.30, 460.0)
 	var card_h := minf(vp.y * 0.32, 250.0)
@@ -283,12 +339,16 @@ func _draw() -> void:
 	_arrow(Rect2(away_rect.position.x + away_rect.size.x + 12.0, ay, arrow, arrow), "›", "away_next")
 
 	text_c(vp.x * 0.5, card_y + card_h * 0.50, "v", 22, C_DIM, f_med)
-	var venue := str(home.get("stadium", "")).to_upper()
+	# The venue clears the inner arrows and is fitted to the column it sits in,
+	# with 12 units of air either side (#200).
+	var venue := LeagueColumns.fit_caption(str(home.get("stadium", "")).to_upper(), f_med,
+		10, gap - 24.0)
 	if venue != "":
-		text_c(vp.x * 0.5, card_y + card_h * 0.64, venue, 10, C_DIM, f_med)
+		text_c(vp.x * 0.5, ay + arrow + 22.0, venue, 10, C_DIM, f_med)
 
 	var bw := 190.0
 	var bh := 50.0
+	LeagueChrome.winner_control(self, vp, card_y + card_h, winner_mode, f_bold)
 	var by: float = minf(card_y + card_h + 54.0, vp.y - bh - 78.0)
 	var confirm_rect := Rect2(vp.x * 0.5 - bw - 8.0, by, bw, bh)
 	var random_rect := Rect2(vp.x * 0.5 + 8.0, by, bw, bh)
@@ -313,13 +373,11 @@ func _draw() -> void:
 					C_DIM, f_med)
 		_add_button(spec[0], r)
 
-	if touch:
-		text_c(vp.x * 0.5, vp.y - 44, "TAP THE ARROWS TO CHANGE CLUBS  ·  TAP KICK OFF", 11, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, _clubs_line(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
-	else:
-		text_c(vp.x * 0.5, vp.y - 64, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 44, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   ESC  %s" % ("MENU" if back_to_menu else "BACK"), 10, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, _clubs_line(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
+	# Footer: the same words on both shells, owned by the chrome module so this
+	# script stays inside its size budget.
+	for spec in LeagueChrome.picker_hints(self, touch, back_to_menu):
+		text_c(vp.x * 0.5, vp.y + float(spec[0]), str(spec[1]), int(spec[2]),
+			spec[3] as Color, f_med)
 
 	# A touch build has no Escape key: the sheet needs a visible way out.
 	var back := back_rect(vp)
@@ -335,3 +393,4 @@ func _draw() -> void:
 	rect(C_PANEL_LIGHT if league_hover else C_PANEL, league_btn, 8, Color(1, 1, 1, 0.14 if league_hover else 0.07))
 	text_c(league_btn.position.x + league_btn.size.x * 0.5, league_btn.position.y + league_btn.size.y * 0.66, "◈  LEAGUE", 13, C_TEXT if league_hover else C_DIM, f_bold)
 	_add_button("league", league_btn)
+# gd-tools: no cover end

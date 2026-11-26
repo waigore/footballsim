@@ -10,6 +10,27 @@ extends RefCounted
 ## because the shipped seed's one competition is the Premier League, and falls
 ## back to whatever the file actually holds.
 
+## Ids of the competitions a season can run: the open save's actives, or every
+## league the file carries when no season is bound.
+static func active_ids() -> Array:
+	var out: Array = []
+	for row in active():
+		out.append(str(row["id"]))
+	return out
+
+## Competitions a player can actually pick: the open save's active leagues, or
+## every league the file carries when no season is bound.
+static func active() -> Array:
+	var all := PLRepository.shared().competitions()
+	if not LeagueLedger.bound():
+		return all
+	var actives: Array = LeagueLedger.competition_ids()
+	var out: Array = []
+	for row in all:
+		if actives.has(str(row["id"])):
+			out.append(row)
+	return out if not out.is_empty() else all
+
 ## Every competition with the club count its hub needs, in name order.
 static func all() -> Array:
 	var out: Array = []
@@ -59,7 +80,9 @@ static func default_id() -> String:
 ## True while the open season's ledger holds clubs of this competition, i.e. it
 ## is one of the competitions the save is playing. An inactive competition in
 ## the same file (or any competition when no season is open) reads the snapshot.
-## An empty id asks about the file's default competition.
+## An empty id asks about the file's default competition. The table row answers,
+## not the club: after a season's membership swap the finished table still
+## belongs to the competition it was played in.
 static func season_owns(competition_id: String) -> bool:
 	if not LeagueLedger.bound():
 		return false
@@ -67,7 +90,7 @@ static func season_owns(competition_id: String) -> bool:
 	if id == "":
 		return false
 	return not PLDatabase.row(
-		"SELECT t.club_id FROM league_table t JOIN club c ON c.id = t.club_id "
-		+ "WHERE c.competition_id = ? LIMIT 1;",
+		"SELECT t.club_id FROM league_table t "
+		+ "WHERE t.competition_id = ? LIMIT 1;",
 		[id],
 	).is_empty()

@@ -234,6 +234,33 @@ func test_goal_and_half_time_banners_draw_on_a_phone() -> void:
 	assert_true(HudLayout.is_compact(hud.design_vp()), "banners were drawn in desktop metrics")
 	hud.queue_free()
 
+func test_extra_time_and_shootout_cards_draw_on_both_metrics() -> void:
+	var eng := MatchEngine.new(38)
+	eng.half = 3
+	eng.clock = 5600.0
+	eng.phase = "et_break"
+	var hud := _hud(eng)
+	hud.queue_redraw()
+	await get_tree().process_frame
+	hud.queue_free()
+	eng.phase = "shootout"
+	eng.shootout_score = [3, 2]
+	eng.shootout = [{"team": 0, "player": "E. Haaland", "scored": true, "pens": [1, 0]}]
+	var phone := _hud(eng)
+	phone.touch = true
+	phone.ui_scale = phone.get_viewport().get_visible_rect().size.y / 411.0
+	phone.queue_redraw()
+	await get_tree().process_frame
+	assert_true(HudLayout.is_compact(phone.design_vp()), "the shootout card did not use phone metrics")
+	phone.queue_free()
+	eng.phase = "full_time"
+	eng.shootout_score = [4, 3]
+	var desk := _hud(eng)
+	desk.queue_redraw()
+	await get_tree().process_frame
+	assert_eq(HudBannersBand.pens_line(eng), "PENS 4 – 3", "the card did not name the shootout")
+	desk.queue_free()
+
 func test_the_whistle_card_lists_its_goals_on_both_metrics() -> void:
 	# DR-20261125-04: the half/full-time card is a summary, not just a score. It
 	# lists the goals on phone and desktop metrics alike, counts the ones it
@@ -337,3 +364,62 @@ func test_the_fixture_card_and_team_sheet_follow_the_scene_billing() -> void:
 ## home club's league rather than crash on the read.
 class BareScene extends RefCounted:
 	pass
+
+# ------------------------------------------------ hidden HUD's cards (#202) ---
+
+func test_every_whistle_hint_names_a_door_the_player_can_reach() -> void:
+	# The bar's RESTART door and its key line leave with the chrome (#158), so a
+	# hidden HUD's full-time card names its own press instead (#202).
+	assert_eq(HudBannersBand.break_hint("half_time", true, false, false), "SECOND HALF STARTS SHORTLY",
+		"the half-time card offered a door")
+	assert_eq(HudBannersBand.break_hint("full_time", true, false, false), "TAP RESTART TO PLAY AGAIN",
+		"the shown chrome's card stopped naming the bar's RESTART")
+	assert_eq(HudBannersBand.break_hint("full_time", true, true, false), "TAP THE CARD TO PLAY AGAIN",
+		"a hidden chrome's card named a door that is not on screen")
+	assert_eq(HudBannersBand.break_hint("full_time", false, true, false), "PRESS R TO PLAY AGAIN",
+		"a keyboard lost its key hint with the chrome")
+	assert_eq(HudBannersBand.break_hint("full_time", true, false, true), "TAP TO RETURN TO THE SEASON",
+		"a held league result stopped pointing at the season")
+	assert_eq(HudBannersBand.break_hint("full_time", false, true, true), "PRESS SPACE TO RETURN TO THE SEASON",
+		"a held desktop result lost its SPACE hint")
+
+func test_the_full_time_card_is_the_restart_door_only_with_the_chrome_hidden() -> void:
+	var eng := MatchEngine.new(202)
+	eng.phase = "full_time"
+	var hud := _hud(eng)
+	hud.touch = true
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 411.0
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var vp: Vector2 = hud.design_vp()
+	var card: Rect2 = HudLayout.break_metrics(vp, 0, 0)["rect"]
+	assert_eq(hud.button_at(card.get_center()), "", "the shown chrome's card answered a press")
+	hud.set_hud_visible(false, true)
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_eq(hud.button_at(card.get_center()), "restart",
+		"a hidden chrome left no way to play again from the card")
+	# The pill stays the one door back (#158): no card takes its corner.
+	assert_eq(hud.button_at(HudLayout.hud_toggle_rect(vp, true).get_center()), "hud",
+		"the whistle card stole the HUD pill's press")
+	# A league result the season holds is dismissed by its own tap (#124).
+	hud.game.result_hold = true
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_eq(hud.button_at(card.get_center()), "", "a held league result restarted the match")
+	hud.queue_free()
+
+func test_the_paused_banner_resumes_when_the_chrome_is_hidden() -> void:
+	var eng := MatchEngine.new(203)
+	var hud := _hud(eng)
+	hud.touch = true
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 411.0
+	hud.game.paused = true
+	hud.set_hud_visible(false, true)
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var vp: Vector2 = hud.design_vp()
+	var banner := Rect2(vp.x * 0.5 - 130.0, vp.y * 0.5 - 27.0, 260.0, 54.0)
+	assert_eq(hud.button_at(banner.get_center()), "pause",
+		"a hidden chrome's PAUSED banner pointed at a RESUME door that is not on screen")
+	hud.queue_free()
