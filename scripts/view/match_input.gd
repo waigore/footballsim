@@ -18,6 +18,14 @@ func _init(host) -> void:
 ## Route one event to whoever owns the screen. Returns true when a sheet over
 ## the pitch (encyclopedia, menus, fixture picker) swallowed it.
 func handle(event: InputEvent) -> bool:
+	# The pre-match briefing is the top modal while it is up: it answers every
+	# event, and nothing underneath it can start or scroll a match (#157).
+	if game.prematch != null and game.prematch.is_open():
+		var point: Vector2 = Vector2.ZERO
+		if event is InputEventMouse:
+			point = game.view.design(event.position, game.chrome_scale)
+		game.prematch.handle_input(event, point)
+		return true
 	if game.wiki_host != null and game.wiki_host.is_open():
 		game.wiki_host.handle_input(event)
 		return true
@@ -75,6 +83,12 @@ func _pointer(event: InputEventMouseButton) -> void:
 				held_by = game.hud.interest
 				held_at = event.position
 				return
+			# The HUD show/hide pill is the overlay's own door (#158): it never
+			# hides, so the router answers it here and the scene's click table
+			# stays about the match.
+			if game.view.button_at(event.position) == "hud":
+				game.hud.toggle_hud()
+				return
 			game._click(event.position)
 		else:
 			_release(event.position)
@@ -122,6 +136,8 @@ func _key(k: int) -> void:
 		game.actors.names_visible = game.names_visible
 	elif k == KEY_C:
 		game.camera_follow = not game.camera_follow
+	elif k == KEY_U:
+		game.hud.toggle_hud()
 	elif k == KEY_M:
 		game.menus.open_menu()
 	elif k == KEY_T:

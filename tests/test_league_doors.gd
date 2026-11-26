@@ -46,6 +46,9 @@ func _clean() -> void:
 func _hub() -> void:
 	screen.season = season
 	screen.mode = LeagueScreen.MODE_HUB
+	# An open surface: a case that closed it earlier must not change what the
+	# next one is testing.
+	screen.visible = true
 
 func _fixture(watched: int = 0) -> Dictionary:
 	for fx in season.record.fixtures.all():
@@ -66,15 +69,23 @@ func test_the_key_map_walks_a_sheet_without_a_window() -> void:
 	assert_true(screen.key(KEY_DOWN), "a screen without a window stopped taking scroll keys")
 	screen.body = body
 
-func test_enter_continues_the_hub_and_escape_leaves_it() -> void:
+func test_enter_continues_the_hub_and_escape_walks_it_back() -> void:
 	_hub()
+	screen.nav.clear()
 	assert_true(screen.key(KEY_ENTER), "Enter did not press Continue")
 	assert_ne(screen.mode, LeagueScreen.MODE_HUB, "Continue left the hub without settling")
-	screen.mode = LeagueScreen.MODE_TABLE
+	# A reading opens over the hub, so BACK has a page to return to (#169).
+	screen.mode = LeagueScreen.MODE_HUB
+	screen.nav.clear()
+	screen.click("table")
+	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table door did not open the table")
 	assert_true(screen.key(KEY_ESCAPE), "Esc was not taken on a reading")
 	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "Esc did not return to the hub")
+	# At the root BACK is consumed but does nothing: it is not a way out.
 	assert_true(screen.key(KEY_BACKSPACE), "Backspace was not taken on the hub")
-	assert_false(screen.visible, "the hub did not close the surface")
+	assert_true(screen.visible, "BACK at the root closed the season")
+	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "BACK at the root moved the sheet")
+	screen.close()
 
 func test_the_wizard_and_the_report_take_their_own_keys() -> void:
 	screen.mode = LeagueScreen.MODE_WIZARD
@@ -88,19 +99,28 @@ func test_the_wizard_and_the_report_take_their_own_keys() -> void:
 
 func test_the_pose_doors_move_the_surface_between_its_sheets() -> void:
 	_hub()
+	screen.nav.clear()
 	screen.click("table")
 	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table door did not open the table")
 	screen.click("calendar")
 	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR, "the calendar door did not open the calendar")
 	screen.click("podium")
 	assert_eq(screen.mode, LeagueScreen.MODE_PODIUM, "the podium door did not open the podium")
+	# BACK unwinds the trail one page at a time; the season stays open (#169).
 	screen.click("back")
-	assert_false(screen.visible, "BACK on the podium did not close the surface")
-	_hub()
-	screen.click("menu")
-	assert_false(screen.visible, "MENU did not close the surface")
+	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR, "BACK did not return to the calendar")
+	screen.click("back")
+	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "BACK did not return to the table")
+	screen.click("back")
+	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "BACK did not return to the hub")
+	assert_true(screen.visible, "BACK at the root closed the surface")
 	screen.click("")
-	assert_false(screen.visible, "an empty press reopened something")
+	assert_true(screen.visible, "an empty press reopened something")
+	# The podium's own MAIN MENU door is a leave action, not BACK.
+	screen.mode = LeagueScreen.MODE_PODIUM
+	screen.refresh()
+	screen.click("menu")
+	assert_false(screen.visible, "MAIN MENU did not close the surface")
 
 func test_the_table_door_opens_without_a_season() -> void:
 	screen.season = null
@@ -222,23 +242,122 @@ func test_a_goal_door_plays_a_stored_clip_and_names_its_fixture() -> void:
 	assert_true(screen.key(KEY_1), "the report's goal key was not taken")
 	assert_eq(played.size(), 2, "the report's goal key did not play the clip")
 
+func test_the_moved_doors_answer_on_their_own() -> void:
+	# The goal doors and the season doors live beside the press table, so each
+	# one is pinned without the dispatch in front of it.
+	LeagueGoalDoors.play(screen, 7)
+	assert_false(LeagueGoalDoors.has_clip(screen, 7), "an ordinal the report never stored claimed a clip")
+	screen.mode = LeagueScreen.MODE_REPORT
+	screen.report = {"fixture": {"id": "gw01-HOM-AWY"}, "highlights": [{"goal_index": 0}]}
+	assert_false(LeagueGoalDoors.has_clip(screen, 3), "a missing ordinal claimed a clip")
+	_hub()
+	assert_false(LeagueSeasonDoors.set_interest(screen, "", true), "an empty club is never a shortlist entry")
+	assert_true(LeagueSeasonDoors.set_interest(screen, "ARS", true), "an add was refused")
+	assert_eq(str(screen.interest_query), "", "an add kept the search")
+	assert_true(LeagueSeasonDoors.set_interest(screen, "ARS", false), "a remove was refused")
+	screen.season = null
+	assert_false(LeagueSeasonDoors.set_interest(screen, "ARS", true), "a surface with no season took a shortlist")
+	screen.mode = LeagueScreen.MODE_STATS
+	LeagueSeasonDoors.open_day(screen, "1990-01-01")
+	assert_eq(screen.mode, LeagueScreen.MODE_STATS, "a day with no season moved the sheet")
+	assert_eq(screen.report_back, LeagueScreen.MODE_HUB, "an inert day door moved the report's return")
+
+func test_the_panel_doors_jump_pose_and_bind_the_table() -> void:
+	# The panel's destinations live in their own module, so each jump is pinned
+	# without the dispatch in front of it.
+	_hub()
+	var depth: int = screen.nav.depth()
+	LeaguePanelDoors.nav(screen, "table")
+	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table destination did not open the table")
+	# Closing is a slide the screen's own clock finishes: the door only aims it.
+	assert_false(screen.panel.is_open(), "the panel did not head back in")
+	assert_eq(screen.book.table.order.key, str(season.save.read_meta().get(LeagueTableView.META_SORT, "")),
+		"the table did not read the season save's own sort")
+	assert_eq(screen.nav.depth(), depth + 1, "the jump did not become one page of history")
+	LeaguePanelDoors.nav(screen, "interest")
+	assert_eq(screen.mode, LeagueScreen.MODE_INTEREST, "the shortlist does not open from its panel row")
+	assert_eq(str(screen.interest_query), "", "the shortlist kept a search it never asked for")
+	LeaguePanelDoors.nav(screen, "calendar")
+	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR, "the calendar does not open from its panel row")
+	assert_false(screen.days_cache.is_empty(), "the calendar opened with no day index")
+	LeaguePanelDoors.stats(screen, "stats:podium")
+	assert_eq(screen.mode, LeagueScreen.MODE_PODIUM, "the podium does not open from the Stats sheet")
+	LeaguePanelDoors.stats(screen, "stats:reports")
+	assert_eq(screen.mode, LeagueScreen.MODE_STATS, "the reports reading did not come back")
+	_hub()
+	LeaguePanelDoors.nav(screen, "fixtures")
+	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "Today's Fixtures did not land on the hub")
+
 func test_deleting_the_open_save_unloads_it_first() -> void:
-	# The already-open season unloads before its file goes, so nothing keeps
-	# reading a save that no longer exists.
+	# The delete door asks first: the file stays until the answer is DELETE.
 	var throwaway := LeagueSeason.create("Doors Throwaway", "generated", "fixture_days", SEED + 1)
 	assert_not_null(throwaway, "the throwaway season was not created")
 	screen.season = throwaway
 	screen.mode = LeagueScreen.MODE_LOAD
+	screen.saves = LeagueSave.list()
+	screen.refresh()
 	var slug := throwaway.save.slug
 	screen.click("delete:" + slug)
+	assert_true(screen.delete.is_open(), "the delete door did not ask")
+	assert_eq(screen.delete.name, "Doors Throwaway", "the question did not name the save")
+	assert_true(screen.season == throwaway, "asking to delete unloaded the season already")
+	var still: Array = []
+	for row in LeagueSave.list():
+		still.append(str(row["slug"]))
+	assert_true(still.has(slug), "the save went before the answer")
+	# DELETE confirms: the already-open season unloads before its file goes, so
+	# nothing keeps reading a save that no longer exists.
+	screen.click("delete_yes")
 	assert_null(screen.season, "the deleted save stayed bound to the surface")
+	assert_false(screen.delete.is_open(), "the question outlived its answer")
 	var left: Array = []
 	for row in LeagueSave.list():
 		left.append(str(row["slug"]))
 	assert_false(left.has(slug), "the deleted save is still on disk")
-	# A save that is not the open one deletes straight off the load list.
+	# A save that is not the open one leaves the season alone.
 	var copy := season.save.write_copy("Doors other copy")
 	assert_true(copy != "", "the stand-in save was not written")
 	screen.season = season
+	screen.saves = LeagueSave.list()
+	screen.refresh()
 	screen.click("delete:" + copy)
+	assert_eq(screen.season, season, "asking to delete another save unloaded the open one")
+	screen.click("delete_yes")
 	assert_eq(screen.season, season, "deleting another save unloaded the open one")
+	assert_false(screen.delete.is_open(), "the question outlived its answer")
+
+func test_the_delete_question_is_a_door_of_its_own() -> void:
+	# Cancel is the safe answer: the save is untouched and the list stays put.
+	var copy := season.save.write_copy("Doors kept copy")
+	assert_true(copy != "", "the kept save was not written")
+	screen.season = season
+	screen.mode = LeagueScreen.MODE_LOAD
+	screen.saves = LeagueSave.list()
+	screen.refresh()
+	var vp: Vector2 = screen.design_vp()
+	screen.click("delete:" + copy)
+	assert_eq(screen.button_at(ConfirmPrompt.confirm_rect(vp).get_center()), "delete_yes",
+		"the dialog's DELETE is not its own door")
+	assert_eq(screen.button_at(ConfirmPrompt.cancel_rect(vp).get_center()), "delete_no",
+		"the dialog's CANCEL is not its own door")
+	assert_eq(screen.button_at(Vector2(4.0, vp.y - 4.0)), "", "a press behind the dialog reached the list")
+	screen.overlay._process(0.0)
+	assert_true(screen.key(KEY_ESCAPE), "Esc was not taken by the dialog")
+	assert_false(screen.delete.is_open(), "Esc did not put the question away")
+	var kept: Array = []
+	for row in LeagueSave.list():
+		kept.append(str(row["slug"]))
+	assert_true(kept.has(copy), "cancelling deleted the save")
+	# The dialog's own CANCEL is the other safe answer.
+	screen.click("delete:" + copy)
+	screen.click("delete_no")
+	assert_false(screen.delete.is_open(), "the dialog's CANCEL did not put the question away")
+	# Enter is the answer.
+	screen.click("delete:" + copy)
+	assert_true(screen.key(KEY_ENTER), "Enter was not taken by the dialog")
+	assert_false(screen.delete.is_open(), "Enter did not answer the dialog")
+	var gone: Array = []
+	for row in LeagueSave.list():
+		gone.append(str(row["slug"]))
+	assert_false(gone.has(copy), "Enter did not delete the save")
+	assert_eq(screen.mode, LeagueScreen.MODE_LOAD, "answering the dialog left the load list")

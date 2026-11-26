@@ -22,27 +22,76 @@ var hints := DateHints.new()
 static func back_rect() -> Rect2:
 	return Rect2(24.0, 12.0, 96.0, 32.0)
 
+## The one BACK door in the header lane: every league sheet builds the same row.
+static func back_item() -> Dictionary:
+	return {"id": "back", "kind": "button", "label": "BACK", "pinned": true,
+		"rect": back_rect()}
+
+## The primary door's corner: CONTINUE on the hub, KICK OFF on the pre-match
+## briefing. The same header band as BACK, on the other side of it (#163).
+static func primary_rect(vp: Vector2, width: float = 140.0) -> Rect2:
+	return Rect2(vp.x - 24.0 - width, 12.0, width, 32.0)
+
+## Where a header's title starts: clear of BACK's right edge, so the two never
+## share a pixel however long the season's name is.
+const TITLE_X := 136.0
+const TITLE_SIZE := 16
+## The smallest caption the header still paints after the title: a date or kicker
+## shortened to less than a line is dropped, not clipped to a stub.
+const CAPTION_MIN := 160.0
+
 static var header_cache := {}
+
+## The header band as geometry, so a sheet's title and caption are fitted to the
+## lane between BACK and whatever door owns the right corner (#180). A title too
+## long for the lane is shortened with an ellipsis; the caption only rides what
+## the title leaves, and is dropped when that is too narrow to read.
+static func header_band(vp: Vector2, bold: Font, title: String, caption: String = "",
+		right: float = 0.0) -> Dictionary:
+	var lane_end: float = vp.x - 24.0 - right
+	var label: String = title.to_upper()
+	var room: float = lane_end - TITLE_X
+	var shown: String = "" if room <= 0.0 else LeagueColumns.fit_name(label, bold, TITLE_SIZE, room)
+	var title_w: float = UiChrome.text_width(bold, shown, TITLE_SIZE)
+	var out := {"title": shown, "title_rect": Rect2(TITLE_X, 20.0, title_w, 16.0),
+		"caption": "", "caption_rect": Rect2()}
+	if caption == "":
+		return out
+	# The caption starts only where the title ends, with one gutter between, so
+	# neither can be painted through the other.
+	var space: float = lane_end - (TITLE_X + title_w + 12.0)
+	if space < CAPTION_MIN:
+		return out
+	var fit: String = LeagueColumns.fit_name(caption, bold, 10, space)
+	var caption_w: float = UiChrome.text_width(bold, fit, 10)
+	out["caption"] = fit
+	out["caption_rect"] = Rect2(lane_end - caption_w, 24.0, caption_w, 14.0)
+	return out
 
 ## One header for every league season sheet: BACK top-left, the sheet's title
 ## in the gold kicker position, and an optional right-hand caption. Continue is
 ## the only control that ever shares the row, and the hub adds it itself.
+## `right` reserves room for a door in the corner; the title and caption are
+## fitted inside what it leaves (#180). Returns the band it painted, so a date
+## caption can register its hint on the strip it really occupies.
 static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
-		caption: String = "") -> void:
+		caption: String = "", right: float = 0.0) -> Dictionary:
 	var bold: Font = fonts["bold"]
 	var rect := back_rect()
 	UiChrome.panel(c, header_cache, rect, UiChrome.C_PANEL_LIGHT, 7)
 	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 21.0, "BACK", 12, UiChrome.C_TEXT, bold)
-	UiChrome.text(c, Vector2(136.0, 36.0), title.to_upper(), 16, UiChrome.C_GOLD, bold)
-	if caption != "":
-		UiChrome.text_r(c, vp.x - 24.0, 34.0, caption, 10, UiChrome.C_DIM, bold)
+	var band := header_band(vp, bold, title, caption, right)
+	UiChrome.text(c, Vector2(TITLE_X, 36.0), str(band["title"]), TITLE_SIZE, UiChrome.C_GOLD, bold)
+	if str(band["caption"]) != "":
+		UiChrome.text_r(c, vp.x - 24.0 - right, 34.0, str(band["caption"]), 10, UiChrome.C_DIM, bold)
 	c.draw_rect(Rect2(24.0, HEADER - 8.0, vp.x - 48.0, 1.0), Color(1, 1, 1, 0.08))
+	return band
 
 # ------------------------------------------------------------------- stats ---
 
 func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true, "rect": back_rect()})
+	items.append(back_item())
 	var y := HEADER + 14.0
 	items.append({"id": "stats:reports", "kind": "door", "label": "MATCHDAY REPORTS", "primary": true,
 		"rect": Rect2(24.0, y, minf(300.0, vp.x - 48.0), 44.0)})
@@ -73,12 +122,11 @@ func draw_stats_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 		_view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
-	var sheet := LeagueSheet.new()
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
 		if kind == "door":
-			sheet.draw_button(c, rect, str(item["label"]), bold, bool(item["primary"]))
+			UiChrome.button(c, cache, rect, str(item["label"]), bold, bool(item["primary"]))
 		elif kind == "caption":
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), str(item["label"]), 10,
 				UiChrome.C_DIM, bold)
@@ -101,7 +149,7 @@ func draw_stats_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 
 func interest_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
-	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true, "rect": back_rect()})
+	items.append(back_item())
 	var y := HEADER + 10.0
 	items.append({"id": "interest:search", "kind": "field", "value": str(view.get("query", "")),
 		"rect": Rect2(24.0, y, vp.x - 48.0, FIELD_H)})
@@ -136,9 +184,10 @@ func draw_interest_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: D
 	header(c, vp, fonts, "TEAMS OF INTEREST", "%d MARKED" % (view.get("clubs", []) as Array).size())
 
 func draw_interest_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
-		_view: Dictionary) -> void:
+		view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
+	var live := str(view.get("focus", "")) == LeagueFieldFocus.INTEREST
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
@@ -148,8 +197,9 @@ func draw_interest_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Ar
 			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 25.0),
 				typed if typed != "" else "SEARCH CLUBS", 14,
 				UiChrome.C_TEXT if typed != "" else UiChrome.C_DIM, bold)
-			c.draw_rect(Rect2(rect.position.x + 14.0 + float(typed.length()) * 8.0, rect.position.y + 10.0,
-				2.0, 20.0), UiChrome.C_GOLD)
+			# The caret is the keyboard's own mark: it shows while the field
+			# owns the IME and not a moment longer (#201).
+			LeagueFieldFocus.caret(c, rect, typed, bold, 14, live)
 		elif kind == "caption":
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), str(item["label"]), 10,
 				UiChrome.C_DIM, bold)

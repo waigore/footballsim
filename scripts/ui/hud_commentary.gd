@@ -56,7 +56,7 @@ func tick(d: float, engine, game) -> void:
 		text = str(ev.get("text", ""))
 		minute = int(ev.get("minute", 0))
 		hold = _freshness(label)
-		if game.mode == "highlights" and game.fast_mode:
+		if game.mode != "full" and game.fast_mode:
 			hold *= 0.55
 	if hold <= 0.0 or text == "":
 		label = "LIVE"

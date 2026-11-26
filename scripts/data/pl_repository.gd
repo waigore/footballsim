@@ -39,22 +39,36 @@ func source_label() -> String:
 	var meta_rows := meta()
 	return str(meta_rows.get("source", "")) + " · " + str(meta_rows.get("snapshot_date", ""))
 
-func club_ids() -> Array:
+## Club ids, optionally only those filed under one competition.
+func club_ids(competition_id: String = "") -> Array:
 	var ids: Array = []
-	for row in PLDatabase.rows("SELECT id FROM club ORDER BY name;"):
+	var sql := "SELECT id FROM club "
+	var bindings: Array = []
+	if competition_id != "":
+		sql += "WHERE competition_id = ? "
+		bindings.append(competition_id)
+	for row in PLDatabase.rows(sql + "ORDER BY name;", bindings):
 		ids.append(str(row["id"]))
 	return ids
 
 ## Club row plus its league table line: what the team dashboard header needs.
+## The row also names the competition the club plays in (#209): the id, its
+## short name for chrome and its full name for prose. They ride the memoised
+## club row so a match bound to a competition never has to read the file again
+## — the broadcast paints every frame.
 func club(club_id: String) -> Dictionary:
 	if _clubs.has(club_id):
 		return _clubs[club_id]
 	var row := PLDatabase.row("SELECT * FROM club WHERE id = ?;", [club_id])
 	if row.is_empty():
 		return {}
+	var competition_id := str(row.get("competition_id", ""))
+	var competition := PLDatabase.row(
+		"SELECT name, short_name FROM competition WHERE id = ?;", [competition_id])
 	# A season save owns its own standings, so the header reads the row the
 	# season keeps; without one it is the snapshot's reading of the real table.
-	var table: Dictionary = LeagueLedger.club_record(club_id) if LeagueLedger.bound() \
+	var table: Dictionary = LeagueLedger.club_record(club_id) \
+		if PLCompetitions.season_owns(competition_id) \
 		else PLDatabase.row("SELECT * FROM table_row WHERE club_id = ?;", [club_id])
 	var style := {}
 	for key in ["possession", "tempo", "press", "line", "width", "directness", "crossing", "aggression"]:
@@ -65,6 +79,9 @@ func club(club_id: String) -> Dictionary:
 		"short": str(row["short"]),
 		"abbr": str(row["abbr"]),
 		"nickname": str(row["nickname"]),
+		"competition": competition_id,
+		"competition_short": str(competition.get("short_name", competition_id)),
+		"competition_name": str(competition.get("name", competition_id)),
 		"manager": str(row["manager"]),
 		"stadium": str(row["stadium"]),
 		"city": str(row["city"]),
@@ -155,17 +172,24 @@ func player_by_name(club_id: String, name: String) -> Dictionary:
 	return player(str(row["id"])) if not row.is_empty() else {}
 
 ## League table: the save's live standings while a league season owns the
-## connection, otherwise the snapshot's table as of its snapshot date.
-func table() -> Array:
-	if _live_table_exists():
-		return _live_table()
-	var out: Array = []
-	for row in PLDatabase.rows(
+## connection, otherwise the snapshot's table as of its snapshot date. One
+## competition per call, so two hubs can never mix their rows.
+func table(competition_id: String = "") -> Array:
+	if PLCompetitions.season_owns(competition_id):
+		return _live_table(competition_id)
+	return _snapshot_table(competition_id)
+
+## The snapshot's own table, filtered to one competition when one is named.
+func _snapshot_table(competition_id: String = "") -> Array:
+	var sql := (
 		"SELECT t.*, c.name AS club_name, c.abbr AS club_abbr, c.color AS club_color "
-		+ "FROM table_row t JOIN club c ON c.id = t.club_id ORDER BY t.position;"
-	):
-		out.append(row)
-	return out
+		+ "FROM table_row t JOIN club c ON c.id = t.club_id "
+	)
+	var bindings: Array = []
+	if competition_id != "":
+		sql += "WHERE c.competition_id = ? "
+		bindings.append(competition_id)
+	return PLDatabase.rows(sql + "ORDER BY t.position;", bindings)
 
 ## A league save adds `league_table` beside the snapshot's `table_row`; when it
 ## is there, the encyclopedia must show the season the player is actually in.
@@ -174,63 +198,79 @@ func _live_table_exists() -> bool:
 		"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'league_table';"
 	).is_empty()
 
-func _live_table() -> Array:
-	var rows := PLDatabase.rows(
+func _live_table(competition_id: String = "") -> Array:
+	var sql := (
 		"SELECT t.*, c.name AS club_name, c.abbr AS club_abbr, c.color AS club_color "
 		+ "FROM league_table t JOIN club c ON c.id = t.club_id "
-		+ "ORDER BY t.points DESC, (t.gf - t.ga) DESC, t.gf DESC, c.name ASC;"
 	)
+	var bindings: Array = []
+	if competition_id != "":
+		sql += "WHERE c.competition_id = ? "
+		bindings.append(competition_id)
+	var rows := PLDatabase.rows(
+		sql + "ORDER BY t.points DESC, (t.gf - t.ga) DESC, t.gf DESC, c.name ASC;", bindings)
 	for i in range(rows.size()):
 		rows[i]["position"] = i + 1
 	return rows
 
 
 ## Top scorers from the real-world snapshot; `stat` is goals or assists.
-func leaders(limit: int = 6, stat: String = "goals") -> Array:
+func leaders(limit: int = 6, stat: String = "goals", competition_id: String = "") -> Array:
 	var column := "assists" if stat == "assists" else "goals"
-	var out: Array = []
-	for row in PLDatabase.rows(
+	var sql := (
 		"SELECT s.player_id, s.matches, s.goals, s.assists, p.name, p.pos, c.abbr "
 		+ "FROM season_stat s JOIN player p ON p.id = s.player_id JOIN club c ON c.id = p.club_id "
-		+ "ORDER BY s.%s DESC, s.assists DESC, p.name LIMIT ?;" % column,
-		[limit],
-	):
-		out.append(row)
-	return out
+	)
+	var bindings: Array = []
+	if competition_id != "":
+		sql += "WHERE c.competition_id = ? "
+		bindings.append(competition_id)
+	bindings.append(limit)
+	return PLDatabase.rows(
+		sql + "ORDER BY s.%s DESC, s.assists DESC, p.name LIMIT ?;" % column, bindings)
 
 ## Fixtures for one club (or the whole league), newest first. Only a played game
 ## is a result: an unplayed one is `upcoming()`'s reading, never a 0 – 0 line.
 ## A season save answers with the fixtures it has actually played.
-func fixtures(club_id: String = "", limit: int = 8) -> Array:
-	if LeagueLedger.bound():
+func fixtures(club_id: String = "", limit: int = 8, competition_id: String = "") -> Array:
+	if PLCompetitions.season_owns(competition_id):
 		return LeagueLedger.fixtures(club_id, limit)
 	var sql := (
 		"SELECT f.*, h.abbr AS home_abbr, a.abbr AS away_abbr, h.name AS home_name, "
 		+ "a.name AS away_name FROM fixture f JOIN club h ON h.id = f.home_club_id "
-		+ "JOIN club a ON a.id = f.away_club_id "
+		+ "JOIN club a ON a.id = f.away_club_id WHERE f.played = 1 "
 	)
+	var bindings: Array = []
+	if competition_id != "":
+		sql += "AND f.competition_id = ? "
+		bindings.append(competition_id)
 	if club_id.is_empty():
-		sql += "WHERE f.played = 1 ORDER BY f.kickoff DESC LIMIT ?;"
-		return PLDatabase.rows(sql, [limit])
-	sql += "WHERE f.played = 1 AND (f.home_club_id = ? OR f.away_club_id = ?) "
+		return PLDatabase.rows(sql + "ORDER BY f.kickoff DESC LIMIT ?;",
+			bindings + [limit])
+	sql += "AND (f.home_club_id = ? OR f.away_club_id = ?) "
 	sql += "ORDER BY f.kickoff DESC, f.id DESC LIMIT ?;"
-	return PLDatabase.rows(sql, [club_id, club_id, limit])
+	return PLDatabase.rows(sql, bindings + [club_id, club_id, limit])
 
 ## The fixtures still ahead, soonest first: what a page reads as what comes next
 ## for a club. A season answers with the games its clock still holds; the
 ## snapshot answers with the remaining schedule it ships.
-func upcoming(club_id: String = "", limit: int = 6) -> Array:
-	if LeagueLedger.bound():
+func upcoming(club_id: String = "", limit: int = 6, competition_id: String = "") -> Array:
+	if PLCompetitions.season_owns(competition_id):
 		return LeagueLedger.upcoming(club_id, limit)
 	var sql := (
 		"SELECT f.*, h.abbr AS home_abbr, a.abbr AS away_abbr, h.name AS home_name, "
 		+ "a.name AS away_name FROM fixture f JOIN club h ON h.id = f.home_club_id "
 		+ "JOIN club a ON a.id = f.away_club_id WHERE f.played = 0 "
 	)
+	var bindings: Array = []
+	if competition_id != "":
+		sql += "AND f.competition_id = ? "
+		bindings.append(competition_id)
 	if club_id.is_empty():
-		return PLDatabase.rows(sql + "ORDER BY f.kickoff ASC, f.id ASC LIMIT ?;", [limit])
+		return PLDatabase.rows(sql + "ORDER BY f.kickoff ASC, f.id ASC LIMIT ?;",
+			bindings + [limit])
 	sql += "AND (f.home_club_id = ? OR f.away_club_id = ?) ORDER BY f.kickoff ASC, f.id ASC LIMIT ?;"
-	return PLDatabase.rows(sql, [club_id, club_id, limit])
+	return PLDatabase.rows(sql, bindings + [club_id, club_id, limit])
 
 ## True while a league save owns the connection (DR-20261125-08): the pages
 ## label which season their Footballsim readings belong to.

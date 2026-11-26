@@ -54,23 +54,29 @@ func _possession(p: HudPaint, c: CanvasItem, engine, bar_r: Rect2, panel_bottom:
 	p.text(c, Vector2(bar_r.position.x, panel_bottom + 26), "%d%%" % pct_a, 11, UiChrome.C_DIM, f_bold)
 	p.text_r(c, bar_r.position.x + bar_r.size.x, panel_bottom + 26, "%d%%" % (100 - pct_a), 11, UiChrome.C_DIM, f_bold)
 
-## Highlights broadcast: the pulsing "next chance" chip while the director
-## fast-forwards, and the replay flag while a goal clip runs.
+## A replay mode fast-forwarding between the moments it replays: the pulsing
+## chip says which moment the director is waiting for (#164), and the replay flag
+## reads while a goal clip runs.
 func flags(p: HudPaint, c: CanvasItem, game, touch: bool, f_bold: Font) -> void:
-	if game.mode == "highlights" and game.fast_mode and not game.paused and game.match_time > 9.0:
+	if game.mode != "full" and game.fast_mode and not game.paused and game.match_time > 9.0:
 		var band := HudLayout.pitch_band(p.vp, touch)
 		var chip_y: float = band.position.y + 6.0 if p.compact() else p.vp.y - 156.0
 		var sw := 226.0
 		var sx := p.vp.x * 0.5 - sw * 0.5
 		var pulse := 0.55 + 0.25 * sin(Time.get_ticks_msec() * 0.006)
 		p.panel(c, Color(0.03, 0.05, 0.06, 0.82), Rect2(sx, chip_y, sw, 26), 6, Color(1, 1, 1, 0.10))
-		p.text_c(c, p.vp.x * 0.5, chip_y + 18.0, "SIMULATING  ·  NEXT CHANCE", 11, Color(0.62, 0.82, 0.86, pulse), f_bold)
+		p.text_c(c, p.vp.x * 0.5, chip_y + 18.0, sim_chip_label(game.mode), 11, Color(0.62, 0.82, 0.86, pulse), f_bold)
 	if game.replay_banner > 0.0:
 		var ry: float = HudLayout.scoreboard_rect(p.vp).end.y + 34
 		var rw := 126.0
 		var rxp := p.vp.x * 0.5 - rw * 0.5
 		p.panel(c, Color(0.12, 0.09, 0.03, 0.95), Rect2(rxp, ry, rw, 24), 6, Color(0.96, 0.78, 0.30, 0.35))
 		p.text_c(c, p.vp.x * 0.5, ry + 17, "◀  REPLAY", 12, UiChrome.C_GOLD, f_bold)
+
+## What the simulating chip is waiting for: a chance in Highlights, a goal in
+## Goals only.
+static func sim_chip_label(mode: String) -> String:
+	return "SIMULATING  ·  NEXT GOAL" if mode == "goals" else "SIMULATING  ·  NEXT CHANCE"
 
 func _badge(p: HudPaint, c: CanvasItem, engine, r: Rect2, t: int, f_bold: Font) -> void:
 	var d: Dictionary = engine.teams[t]["data"]
@@ -81,10 +87,12 @@ func _badge(p: HudPaint, c: CanvasItem, engine, r: Rect2, t: int, f_bold: Font) 
 	var col: Color = Kits.ink(d["color"].lightened(0.10))
 	p.text(c, Vector2(r.position.x + r.size.x * 0.5 - w * 0.5, r.position.y + r.size.y * 0.62), code, 17, col, f_bold)
 
-## Fixture card: venue, attendance, referee and the teams door. Desktop only:
-## phone metrics need the width for the scoreboard and stats, and a touch build
-## will not aim at a 20-unit row — the teams door moves onto the control bar.
-func meta(p: HudPaint, c: CanvasItem, engine, touch: bool, mouse: Vector2, f_bold: Font, f_med: Font) -> void:
+## Fixture card: venue, competition, attendance, referee and the teams door.
+## Desktop only: phone metrics need the width for the scoreboard and stats, and a
+## touch build will not aim at a 20-unit row — the teams door moves onto the
+## control bar. The competition is the match's own (#209), read from the scene's
+## `billing`, so a friendly's card never claims a league.
+func meta(p: HudPaint, c: CanvasItem, engine, game, touch: bool, mouse: Vector2, f_bold: Font, f_med: Font) -> void:
 	if touch or p.compact():
 		return
 	var x := 24.0
@@ -96,7 +104,7 @@ func meta(p: HudPaint, c: CanvasItem, engine, touch: bool, mouse: Vector2, f_bol
 	var city := str(home.get("city", "")).to_upper()
 	UiChrome.wordmark(c, Vector2(x + 14, y + 16), 13, f_bold)
 	p.text(c, Vector2(x + 14, y + 33), "%s  ·  %s" % [venue, city], 13, UiChrome.C_TEXT, f_bold)
-	p.text(c, Vector2(x + 14, y + 47), "PREMIER LEAGUE  ·  ATT. %s" % thousands(int(home.get("capacity", 0))), 9, UiChrome.C_DIM, f_med)
+	p.text(c, Vector2(x + 14, y + 47), "%s  ·  ATT. %s" % [billing_name(game, engine), thousands(int(home.get("capacity", 0)))], 9, UiChrome.C_DIM, f_med)
 	p.text(c, Vector2(x + 14, y + 60), "REFEREE", 9, UiChrome.C_DIM, f_bold)
 	p.text(c, Vector2(x + 70, y + 60), engine.referee_name, 10, UiChrome.C_TEXT, f_bold)
 	var btn := Rect2(x + 12, y + 68, 262, 20)
@@ -105,6 +113,17 @@ func meta(p: HudPaint, c: CanvasItem, engine, touch: bool, mouse: Vector2, f_bol
 	# Mirror the bar door's `[id, label, hint]` shape so probes reading `label`
 	# get "CHANGE TEAMS", never the key badge drawn on the right of the row.
 	p.add_button("teams", btn, "CHANGE TEAMS", "T")
+
+## The competition the scene's match is billed in (#209): the scene's own
+## `billing` when it has one, and the home club's own league when it does not —
+## a probe or a suite that builds the overlay without a scene still reads a name
+## rather than crashing on a missing field.
+static func billing_name(game, engine) -> String:
+	var binding = game.get("billing") if game != null else null
+	if binding is MatchBilling:
+		return (binding as MatchBilling).chrome_name()
+	var home: Dictionary = engine.teams[0]["data"]
+	return str(home.get("competition_short", MatchBilling.FRIENDLY))
 
 static func thousands(n: int) -> String:
 	var s := str(n)

@@ -12,6 +12,11 @@ var game = null
 func _init(host) -> void:
 	game = host
 
+## A phone opens a match already tracking the ball; the desktop broadcast starts
+## wide (#158). Read once, when the scene initialises its camera state.
+static func default_follow() -> bool:
+	return OS.has_feature("mobile")
+
 ## Handhelds read the match overlay at one density point per design unit; the
 ## non-match chrome (menus, settings, league and encyclopedia sheets) has its
 ## own scale. `dev` may force the handheld overlay on desktop builds.
@@ -63,12 +68,29 @@ func hover(screen: Vector2) -> void:
 		var over_button: bool = game.hud.button_at(game.hud.mouse) != ""
 		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if (game.hover_id >= 0 or over_button) else Input.CURSOR_ARROW)
 
-## Ticks this frame may run: highlights lean on the director's fast-forward,
-## the full match follows the chosen speed. Both capped so a slow frame cannot
-## stall the loop.
+## Ticks this frame may run: the two replay modes lean on the director's
+## fast-forward, the full match follows the chosen speed. Both capped so a slow
+## frame cannot stall the loop.
 func ticks_this_frame(delta: float) -> int:
-	var fast: bool = game.mode == "highlights" and game.fast_mode
+	var fast: bool = game.mode != "full" and game.fast_mode
 	game.accumulator += delta * 60.0 * (24.0 if fast else game.speed)
 	var n: int = int(game.accumulator)
 	game.accumulator -= n
 	return mini(n, 60 if fast else 120)
+
+## Switch the live view and put the broadcast flags in the state it asks for
+## (#164). The full match runs at the player's pace; the two replay modes
+## fast-forward between the moments the director picks, and a view swapped while
+## a replay is open keeps that replay running.
+func set_mode(next: String) -> void:
+	game.mode = Prefs.normalize_mode(next)
+	if game.mode == "full":
+		game.fast_mode = false
+		game.in_highlight = false
+		game.highlight_until = -1.0
+		game.paused = false
+		game.speed = 1.0
+		return
+	game.fast_mode = not game.in_highlight
+	if not game.in_highlight:
+		game.highlight_until = -1.0

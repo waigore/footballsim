@@ -49,6 +49,13 @@ const YELLOWS_PER_SIDE := 1.8
 const RED_CHANCE := 0.04
 ## Share of goals that carry a recorded assist at all.
 const ASSIST_CHANCE := 0.62
+## Share of a side's goals that are converted penalties. The physics engine does
+## not hand an auto fixture its own spot kicks, so a calibrated share of
+## synthetic goals is tagged instead; the scoreline stays pure Poisson. The
+## figure tracks the engine's own ledger: a 12-match seeded sample (MUN v MCI,
+## 9000–9011) scored 41 goals, 5 of them from penalties — about one goal in
+## eight.
+const PENALTY_SHARE := 0.12
 ## Minutes are sampled across the 90 regulation minutes.
 const MATCH_MINUTES := 90
 
@@ -65,6 +72,12 @@ static func side(seed: int, fixture_id: String, club_id: String, xi: Array, goal
 		if scorer.is_empty():
 			continue
 		var row := _row(fixture_id, minute, "goal", scorer, club_id)
+		# A spot kick is a goal with no assist: the taker is the whole story, and
+		# the report marks the row so a penalty never reads as open play.
+		if rng.randf() < PENALTY_SHARE:
+			row["penalty"] = true
+			out.append(row)
+			continue
 		var assist_row := {}
 		if rng.randf() < ASSIST_CHANCE:
 			var helper := pick(xi, ASSIST_SHARE, "pas", rng, str(scorer["id"]))
@@ -91,6 +104,13 @@ static func side(seed: int, fixture_id: String, club_id: String, xi: Array, goal
 		var sent_off := pick(xi, CARD_SHARE, "def", rng)
 		if not sent_off.is_empty():
 			out.append(_row(fixture_id, _minute(rng), "red", sent_off, club_id))
+	# A body breaks down at the rate the engine's own fatigue path lands on, so an
+	# auto-simmed season loses players the way a watched one does (#155). The season
+	# grades the injury; this row only says who went down and when.
+	if rng.randf() < SeasonAvailability.INJURY_RATE:
+		var hurt := pick(xi, CARD_SHARE, "phy", rng)
+		if not hurt.is_empty():
+			out.append(_row(fixture_id, _minute(rng), "injury", hurt, club_id))
 	out.sort_custom(func(a, b): return int(a["minute"]) < int(b["minute"]))
 	return out
 

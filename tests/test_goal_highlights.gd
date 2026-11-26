@@ -77,6 +77,30 @@ func test_the_same_save_seed_reproduces_the_same_clip() -> void:
 	assert_true(a == b, "the same goal produced two different clips")
 	assert_true(a != c, "a new seed reproduced the old clip")
 
+## #171: a tagged penalty keeps its scorer and minute but reads and plays as a
+## spot kick — no assist, a line from the spot, and a different picture from the
+## open-play chance the same seed would have drawn.
+func test_a_penalty_clip_reads_and_plays_as_a_spot_kick() -> void:
+	var goal := _goal()
+	goal["penalty"] = true
+	goal["assist_id"] = ""
+	goal["assist_name"] = ""
+	var seed := GoalHighlight.seed_for(SEED, "gw01-MUN-MCI", 1)
+	var open_goal := _goal()
+	goal["commentary"] = GoalHighlight.commentary(goal, seed)
+	open_goal["commentary"] = GoalHighlight.commentary(open_goal, seed)
+	var pen := GoalHighlight.build(goal, _sides(), seed)
+	var open := GoalHighlight.build(open_goal, _sides(), seed)
+	assert_eq(str(pen["scorer_id"]), str(goal["player_id"]), "the spot kick lost its taker")
+	assert_eq(int(pen["minute"]), int(goal["minute"]), "the spot kick lost its minute")
+	var line := str(pen["commentary"]).to_upper()
+	assert_true(line.find("PENALTY") >= 0 or line.find("SPOT") >= 0 or line.find("TWELVE") >= 0,
+		"the penalty clip's line did not say what it was: %s" % pen["commentary"])
+	assert_ne(str(pen["commentary"]), str(open["commentary"]),
+		"a penalty was narrated as open play")
+	assert_true(GoalHighlight.pack(pen) != GoalHighlight.pack(open),
+		"a penalty played the open-play picture")
+
 func test_the_seed_follows_the_goal_index() -> void:
 	var a := GoalHighlight.seed_for(SEED, "gw01-MUN-MCI", 0)
 	var b := GoalHighlight.seed_for(SEED, "gw01-MUN-MCI", 1)
@@ -120,6 +144,112 @@ func test_an_away_goal_is_mirrored() -> void:
 	var frames: Array = clip["frames"]
 	var end := GoalHighlight.ball_at(frames[frames.size() - 1])
 	assert_lt(end.x, 5.0, "an away goal was played toward the home net")
+
+# ------------------------------------------------------------- simulation ---
+
+## #162: an AUTO clip is simulated, not posed. Bodies move at football speeds
+## under acceleration, the ball obeys gravity, and the keeper dives late.
+func test_the_auto_clip_is_a_physics_vignette() -> void:
+	var clip := GoalHighlight.build(_goal(), _sides(), 21)
+	var frames: Array = clip["frames"]
+	var fastest := 0.0
+	for i in range(1, frames.size()):
+		var a: Dictionary = frames[i - 1]
+		var b: Dictionary = frames[i]
+		var span := maxf(float(b["t"]) - float(a["t"]), 0.001)
+		for p in range(22):
+			var step := GoalHighlight.player_at(a, p).distance_to(GoalHighlight.player_at(b, p))
+			fastest = maxf(fastest, step / span)
+	assert_lt(fastest, 11.5, "a body outran the pitch: the clip is posed, not simulated")
+	# Gravity: the ball leaves the turf, peaks and comes back down into the net.
+	var peak := 0.0
+	var at := 0
+	for i in range(frames.size()):
+		var z := GoalHighlight.ball_at(frames[i]).z
+		if z > peak:
+			peak = z
+			at = i
+	assert_gt(peak, 0.4, "the shot never left the turf")
+	assert_lt(peak, 4.0, "the shot ballooned over the stand")
+	assert_lt(GoalHighlight.ball_at(frames[frames.size() - 1]).z, 0.4,
+		"the ball never came back down")
+	assert_gt(at, 0, "the ball was already airborne at kick-off")
+	# The keeper is beaten by the dive, not by standing still.
+	var keeper := 0
+	for i in range(away_xi.size()):
+		if str(away_xi[i].get("role", "")) == "GK":
+			keeper = home_xi.size() + i
+			break
+	var from := GoalHighlight.player_at(frames[at], keeper)
+	var to := GoalHighlight.player_at(frames[frames.size() - 1], keeper)
+	assert_gt(from.distance_to(to), 0.3, "the keeper never dived")
+
+## The seed decides the chance: two goals from one report do not share a shape.
+func test_the_seed_shapes_the_chance() -> void:
+	var a: Array = GoalHighlight.build(_goal(), _sides(), 31)["frames"]
+	var b: Array = GoalHighlight.build(_goal(), _sides(), 77)["frames"]
+	assert_eq(a.size(), b.size(), "two clips of one goal are different lengths")
+	var apart := 0.0
+	var path := 0.0
+	for i in range(a.size()):
+		apart = maxf(apart, GoalHighlight.ball_at(a[i]).distance_to(
+			GoalHighlight.ball_at(b[i])))
+		path = maxf(path, GoalHighlight.player_at(a[i], 0).distance_to(
+			GoalHighlight.player_at(b[i], 0)))
+	assert_gt(apart, 1.0, "two seeds played the same ball")
+	assert_gt(path, 1.0, "two seeds put the same bodies in the same place")
+
+## Every seeded chance is constrained to score: the ball crosses inside the
+## frame and the report's own scoreline lands with it.
+func test_every_seeded_chance_finishes_inside_the_frame() -> void:
+	for seed in range(1, 9):
+		var clip := GoalHighlight.build(_goal(34), _sides(), seed)
+		var frames: Array = clip["frames"]
+		var first := -1
+		for i in range(frames.size()):
+			if int(frames[i]["g"]) == 1:
+				first = i
+				break
+		assert_gt(first, 0, "seed %d never scored" % seed)
+		var ball := GoalHighlight.ball_at(frames[first])
+		assert_gt(ball.x, 100.0, "seed %d missed the goal" % seed)
+		assert_lt(absf(ball.y - 34.0), 3.66, "seed %d put the shot wide" % seed)
+		assert_lt(ball.z, 2.44, "seed %d put the shot over the bar" % seed)
+		assert_eq(int(frames[first]["s"][0]), 2, "seed %d lost its scoreline" % seed)
+		assert_eq(int(frames[first]["s"][1]), 1, "seed %d lost its scoreline" % seed)
+
+## The report's men play their parts: the recorded assist carries the ball and
+## the recorded scorer strikes it.
+func test_the_reported_men_play_their_parts() -> void:
+	var goal := _goal(34)
+	var clip := GoalHighlight.build(goal, _sides(), 42)
+	var frames: Array = clip["frames"]
+	var keys: Array = clip["keys"]
+	var assist := keys.find(str(home_xi[6]["id"]))
+	var scorer := keys.find(str(home_xi[9]["id"]))
+	assert_gte(assist, 0, "the assist is not in the clip")
+	assert_gte(scorer, 0, "the scorer is not in the clip")
+	var carried := GoalHighlight.player_at(frames[0], assist)
+	var at0 := GoalHighlight.ball_at(frames[0])
+	assert_lt(carried.distance_to(Vector2(at0.x, at0.y)), 1.2,
+		"the recorded assist never had the ball")
+	# The strike is the frame where the ball's speed jumps.
+	var strike := 0
+	var jump := 0.0
+	for i in range(1, frames.size()):
+		var speed := GoalHighlight.ball_at(frames[i]).distance_to(GoalHighlight.ball_at(frames[i - 1]))
+		var before := 0.0
+		if i > 1:
+			before = GoalHighlight.ball_at(frames[i - 1]).distance_to(
+				GoalHighlight.ball_at(frames[i - 2]))
+		if speed > before * 1.8 and speed - before > jump:
+			jump = speed - before
+			strike = i
+	assert_gt(strike, 0, "the clip never struck the ball")
+	var shooter := GoalHighlight.player_at(frames[strike - 1], scorer)
+	var hit := GoalHighlight.ball_at(frames[strike - 1])
+	assert_lt(shooter.distance_to(Vector2(hit.x, hit.y)), 3.5,
+		"the recorded scorer was not the man striking the ball")
 
 func test_every_frame_carries_all_twenty_two_players() -> void:
 	var clip := GoalHighlight.build(_goal(), _sides(), 3)
@@ -257,6 +387,41 @@ func test_a_shot_rewinds_the_live_picture_once() -> void:
 	director.on_event({"type": "shot", "clock": trigger, "player_id": -1})
 	assert_false(host.in_highlight, "the same shot was replayed twice")
 
+## Goals only (#164): the ring replays the goal and nothing else, and the report
+## clip is still cut — the capture path never reads the live mode.
+func test_goals_only_rewinds_on_a_goal_and_not_on_a_chance() -> void:
+	var ring := _ring_host(606)
+	var host: FakeHost = ring[0]
+	var director: HighlightDirector = ring[1]
+	var engine = ring[2]
+	host.mode = "goals"
+	var trigger := float(engine.clock)
+	director.on_event({"type": "shot", "clock": trigger, "player_id": -1})
+	assert_false(host.in_highlight, "Goals only replayed a shot")
+	director.on_event({"type": "corner", "clock": trigger, "player_id": -1})
+	assert_false(host.in_highlight, "Goals only replayed a corner")
+	director.on_event({"type": "card", "clock": trigger, "player_id": -1})
+	assert_false(host.in_highlight, "Goals only replayed a card")
+	director.on_event({"type": "penalty_taken", "clock": trigger, "player_id": -1})
+	assert_false(host.in_highlight, "Goals only replayed a penalty that never scored")
+	director.on_event({"type": "goal", "clock": trigger, "player_id": -1, "team": 0, "text": "GOAL!"})
+	assert_true(host.in_highlight, "Goals only did not replay the goal")
+	assert_false(host.fast_mode, "the goal replay did not hold the fast-forward")
+	assert_gt(host.highlight_until, float(engine.clock), "the replay window is empty")
+
+func test_goals_only_still_cuts_the_report_clip() -> void:
+	var ring := _ring_host(707)
+	var host: FakeHost = ring[0]
+	var director: HighlightDirector = ring[1]
+	var engine = ring[2]
+	host.mode = "goals"
+	var fx := str((season.plan()[0] as Dictionary)["id"])
+	season.start_watch(fx)
+	var before := season.captured.size()
+	director.on_event({"type": "goal", "clock": float(engine.clock), "minute": 4,
+		"player_id": -1, "team": 0, "text": "GOAL!"})
+	assert_eq(season.captured.size(), before + 1, "Goals only stopped cutting the report clip")
+
 func test_a_watch_goal_keeps_the_captured_clip() -> void:
 	# A watched fixture the engine has just finished: its goal rows are written,
 	# one goal has a live capture and the other does not.
@@ -295,6 +460,33 @@ func test_a_watch_goal_keeps_the_captured_clip() -> void:
 	assert_eq(int(live["score"][0]), 1, "the captured clip lost its scoreline")
 	season.record.clips.clear(fx)
 	assert_true(season.record.clips.list(fx).is_empty(), "clearing a fixture left clip rows")
+
+## #171: a stored penalty recipe is drawn as a spot kick, and the line the
+## settling pass wrote survives beside it. The tag is part of the ledger, so a
+## reopened report still plays the right picture.
+func test_a_stored_penalty_clip_draws_as_a_spot_kick() -> void:
+	var fx := str((season.plan()[0] as Dictionary)["id"])
+	var row := season.record.fixtures.one(fx)
+	var home := str(row["home_club_id"])
+	var away := str(row["away_club_id"])
+	var scorer: Dictionary = StrongestXI.pick(TeamData.get_team(home))[9]
+	season.record.clips.clear(fx)
+	LeagueHighlights.store_auto(season.record, SEED, fx, [{
+		"fixture_id": fx, "minute": 20, "kind": "goal", "club_id": home,
+		"player_id": str(scorer["id"]), "player_name": str(scorer["name"]),
+		"detail": str(scorer["name"]), "penalty": true,
+	}], home, away)
+	var stored := season.record.clips.list(fx)
+	assert_eq(stored.size(), 1, "the penalty goal stored no clip")
+	assert_eq(int(stored[0].get("penalty", 0)), 1, "the stored clip lost the tag")
+	var pack := season.record.clips.pack(fx, 0)
+	assert_false(pack.is_empty(), "the stored penalty clip does not decode")
+	var line := str(pack.get("commentary", "")).to_upper()
+	assert_true(line.find("PENALTY") >= 0 or line.find("SPOT") >= 0 or line.find("TWELVE") >= 0,
+		"the stored penalty clip was narrated as open play: %s" % line)
+	assert_eq(str(pack.get("scorer_id", "")), str(scorer["id"]), "the clip lost its taker")
+	assert_eq(int(pack.get("minute", 0)), 20, "the clip lost its minute")
+	season.record.clips.clear(fx)
 
 func test_a_settled_matchday_stores_a_clip_for_every_goal() -> void:
 	var result := season.advance()
@@ -358,6 +550,7 @@ func test_a_settled_clip_is_drawn_from_its_recipe() -> void:
 		"club_short": LeagueHighlights.short_name(club),
 		"opp_short": LeagueHighlights.short_name(away if club == home else home),
 		"score_after": score, "source": "auto", "commentary": str(row["commentary"]),
+		"penalty": int(row.get("penalty", 0)) == 1,
 	}
 	var sides := {"home": StrongestXI.pick(TeamData.get_team(home)),
 		"away": StrongestXI.pick(TeamData.get_team(away))}

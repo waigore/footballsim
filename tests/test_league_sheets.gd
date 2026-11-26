@@ -74,9 +74,9 @@ func test_a_played_fixture_loses_its_watch_chip() -> void:
 		assert_false(chips.has("toggle:" + str(played["id"])), "a played row offers a watch chip at %s" % vp)
 		assert_true(chips.has("toggle:" + str(pending["id"])), "a pending row lost its watch chip at %s" % vp)
 	# CONTINUE's caption only promises a hand-off while a watch is still unplayed.
-	assert_false(LeagueSheet.watch_pending([played]), "a played watch still claims CONTINUE opens it")
-	assert_true(LeagueSheet.watch_pending(plan), "an unplayed watch lost its CONTINUE caption")
-	assert_false(LeagueSheet.watch_pending([]), "an empty day claims a pending watch")
+	assert_false(LeagueChrome.watch_pending([played]), "a played watch still claims CONTINUE opens it")
+	assert_true(LeagueChrome.watch_pending(plan), "an unplayed watch lost its CONTINUE caption")
+	assert_false(LeagueChrome.watch_pending([]), "an empty day claims a pending watch")
 
 func test_the_hub_lays_out_an_empty_day_and_no_table() -> void:
 	var sheet := LeagueSheet.new()
@@ -126,11 +126,11 @@ func test_the_hub_side_table_carries_the_compact_record() -> void:
 				"%s overlaps the club abbreviation at %s" % [col["label"], vp])
 			previous = float(col["right"])
 		assert_lte(previous, rect.end.x + 0.01, "PTS is drawn outside the hub row at %s" % vp)
-		assert_gte(float(places["club_w"]), LeagueSheet.HUB_CLUB_MIN - 0.01,
+		assert_gte(float(places["club_w"]), LeagueSideTable.CLUB_MIN - 0.01,
 			"the abbreviation column is too narrow at %s" % vp)
 
 func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueStartSheet.new()
 	for mode in ["real", "generated"]:
 		for advance in ["fixture_days", "every_day"]:
 			var items: Array = sheet.wizard_layout(Vector2(1280, 720),
@@ -143,7 +143,7 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			assert_eq(items.size(), 7, "the wizard is missing a control")
 
 func test_the_load_list_lays_out_zero_and_many_saves() -> void:
-	var sheet := LeagueSheet.new()
+	var sheet := LeagueStartSheet.new()
 	var empty: Array = sheet.load_layout(Vector2(1280, 720), {"saves": []})
 	assert_eq(empty.size(), 1, "an empty load list should only have BACK")
 	var saves: Array = []
@@ -154,13 +154,19 @@ func test_the_load_list_lays_out_zero_and_many_saves() -> void:
 	var items: Array = sheet.load_layout(Vector2(1280, 720), {"saves": saves})
 	var open_doors := 0
 	var delete_doors := 0
+	var last_row := Rect2()
 	for item in items:
 		if str(item["kind"]) == "save_row":
 			open_doors += 1
+			last_row = item["rect"]
 		if str(item["kind"]) == "delete":
 			delete_doors += 1
-	assert_eq(open_doors, 7, "the load list should show seven rows")
-	assert_eq(delete_doors, 7, "every shown save needs a delete door")
+	# Every save is laid out: the body scrolls a long library instead of dropping
+	# the rows past the seventh (REQ-P5-08).
+	assert_eq(open_doors, 9, "the load list dropped a save")
+	assert_eq(delete_doors, 9, "every save needs a delete door")
+	assert_gte(last_row.end.y, LeagueChrome.HEADER + 26.0 + 46.0 * 8.0,
+		"the ninth save was laid over an earlier row")
 
 ## The compact column set (#, club, P W D L GF GA GD PTS) has to fit inside the
 ## row at every width the handheld overlay scale can produce: the numbers ride
@@ -263,9 +269,9 @@ func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 				assert_true(bool(item.get("pinned", false)), "BACK must stay out of the scroll")
 		assert_eq(rows, 20, "the table screen lost rows")
 		if vp.y < 620.0:
-			assert_gt(bottom, vp.y - LeagueSheet.BAR_H, "a phone table must overflow so the body scrolls")
+			assert_gt(bottom, vp.y - LeagueChrome.BAR_H, "a phone table must overflow so the body scrolls")
 		else:
-			assert_lte(bottom, vp.y - LeagueSheet.BAR_H, "a desktop table should fit in one window")
+			assert_lte(bottom, vp.y - LeagueChrome.BAR_H, "a desktop table should fit in one window")
 		var calendar: Array = book.calendar_layout(vp, {
 			"month": "2026-10", "day": "2026-10-17",
 			"days": {"2026-10-17": {"n": 10, "played": 4}},
@@ -280,6 +286,138 @@ func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 				matches += 1
 		assert_eq(cells, 31, "October should have 31 cells")
 		assert_eq(matches, 2, "the day lost its fixtures")
+
+## #163: every sheet that shows BACK keeps it in the top-left corner, the hub's
+## CONTINUE and the pre-match kick door take the top-right corner, and the table
+## keeps only its two readings in the bottom bar.
+func test_the_sheet_chrome_keeps_back_top_left_and_the_primary_top_right() -> void:
+	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
+		var book := LeagueBook.new()
+		var sheets := {
+			"table": book.table_layout(vp, {"table": _table(), "rules": LeagueRules.defaults()}),
+			"calendar": book.calendar_layout(vp, {"month": "2026-10", "day": "", "days": {}, "day_fixtures": []}),
+			"report": book.report_layout(vp, {"fixture": _fixture(1), "events": [], "day": "x"}),
+			"podium": book.podium_layout(vp, {"summary": {}}),
+			"system": LeagueSystemSheet.new().layout(vp, {"date": "2026-08-15", "name": "S"}),
+			"stats": LeagueExtra.new().stats_layout(vp, {"name": "S", "reports": []}),
+			"interest": LeagueExtra.new().interest_layout(vp, {"query": "", "results": [], "clubs": []}),
+			"hub": LeagueSheet.new().hub_layout(vp, _state([_fixture(1)], _table())),
+		}
+		for label in sheets:
+			assert_eq(_item_rect(sheets[label], "back"), LeagueExtra.back_rect(),
+				"%s: BACK is not in the top-left corner at %s" % [label, vp])
+		var cont := _item_rect(sheets["hub"], "continue")
+		var kick := _item_rect(sheets["table"], "tbl:mode:full")
+		assert_almost_eq(cont.end.x, vp.x - 24.0, 0.5, "CONTINUE is not top-right")
+		assert_lte(cont.end.y, LeagueChrome.HEADER, "CONTINUE left the header")
+		assert_gt(kick.position.y, LeagueChrome.HEADER, "the reading doors left the bottom bar")
+		assert_almost_eq(_item_rect(sheets["table"], "tbl:mode:compact").end.y, vp.y - 8.0, 0.5,
+			"COMPACT left the bottom bar")
+		assert_almost_eq(kick.end.y, vp.y - 8.0, 0.5, "FULL left the bottom bar")
+		assert_eq(SettingsScreen.back_rect(vp), Rect2(24.0, 12.0, 116.0, 44.0),
+			"settings BACK is not top-left")
+		var picker = load("res://scripts/ui/team_select.gd").new()
+		assert_almost_eq(picker.back_rect(vp).position.x, 24.0, 0.5, "the picker's BACK is not top-left")
+		picker.free()
+		var pre := PreMatchScreen.new()
+		pre.setup({"kick": "KICK OFF"})
+		var doors: Array = pre.layout(vp)["buttons"]
+		assert_eq(_item_rect(doors, "back"), LeagueExtra.back_rect(), "pre-match BACK is not top-left")
+		assert_almost_eq(_item_rect(doors, "kick").end.x, vp.x - 24.0, 0.5, "the kick is not top-right")
+		assert_lte(_item_rect(doors, "kick").end.y, LeagueChrome.HEADER, "the kick left the header")
+		assert_gt(_item_rect(doors, "kick").position.x, _item_rect(doors, "back").end.x,
+			"the kick sits on BACK at %s" % vp)
+		pre.free()
+
+func _item_rect(items: Array, id: String) -> Rect2:
+	for item in items:
+		if str(item["id"]) == id:
+			return item["rect"]
+	return Rect2()
+
+## The body clips the scrolling rows to the band between the header and the
+## bottom bar, so it paints the doors a sheet pins itself: BACK and CONTINUE in
+## the header, the table's readings in the bottom bar. Those doors stand outside
+## the clipped window and are laid out in screen space, so the body must keep
+## them out of its rows and out of its scroll — a door that rode the clip or the
+## scroll would drift off the corner the layout put it in.
+func test_the_body_keeps_the_pinned_doors_outside_the_clipped_window() -> void:
+	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
+		var hub: Array = LeagueSheet.new().hub_layout(vp, _state([_fixture(1)], _table()))
+		var table: Array = LeagueBook.new().table_layout(vp, {
+			"table": _table(), "rules": LeagueRules.defaults()})
+		var cont: Rect2 = _item_rect(hub, "continue")
+		var reading: Rect2 = _item_rect(table, "tbl:mode:full")
+		var body := _body(vp)
+		body.set_sheet(hub, vp, true, 0.0)
+		assert_lte(cont.end.y, LeagueChrome.HEADER, "CONTINUE left the header at %s" % vp)
+		assert_true(cont.end.y <= body.position.y, "the clip covers CONTINUE at %s" % vp)
+		assert_eq(body.content.size(), hub.size() - body.pinned.size(),
+			"a pinned door rode the scrolling rows at %s" % vp)
+		body.set_sheet(table, vp, true, LeagueChrome.BAR_H)
+		var window := Rect2(body.position, body.size)
+		assert_eq(window.end.y, vp.y - LeagueChrome.BAR_H, "the wrong band is clipped at %s" % vp)
+		assert_eq(body.pinned.size(), 3, "the table lost a pinned door at %s" % vp)
+		assert_gte(reading.position.y, window.end.y, "FULL is inside the scrolling band at %s" % vp)
+		# A scroll moves the rows and leaves the pinned doors where they were.
+		body.scroll_to(400.0)
+		var door := _body_item(body.pinned, "back")
+		var row := _body_item(body.button_rects(), "back")
+		assert_eq(door["rect"], row["rect"], "the scroll carried BACK off its corner at %s" % vp)
+		# The calendar pins chips instead of buttons; the body paints both.
+		var calendar: Array = LeagueBook.new().calendar_layout(vp, {
+			"month": "2026-10", "day": "", "days": {}, "day_fixtures": []})
+		body.set_sheet(calendar, vp, true, 0.0)
+		assert_false(_body_item(body.pinned, "month:1").is_empty(),
+			"the calendar's month chips were not pinned at %s" % vp)
+		body.free()
+
+## A body with the window `_ready` would give it, so its hit test has the band
+## the screen lays it in (a bare Control has no size yet).
+func _body(vp: Vector2) -> LeagueBody:
+	var body := LeagueBody.new()
+	body.position = Vector2(0.0, LeagueChrome.HEADER)
+	body.size = Vector2(vp.x, vp.y - LeagueChrome.HEADER)
+	return body
+
+func _body_item(items: Array, id: String) -> Dictionary:
+	for item in items:
+		if str(item["id"]) == id:
+			return item
+	return {}
+
+## A frozen body answers nothing: the delete question or the long-press menu
+## owns the press while it is up, and a door under it must never fire.
+func test_a_frozen_body_answers_no_door() -> void:
+	var vp := Vector2(1600, 900)
+	var hub: Array = LeagueSheet.new().hub_layout(vp, _state([_fixture(1)], _table()))
+	var body := _body(vp)
+	body.set_sheet(hub, vp, true, 0.0)
+	var at: Vector2 = _item_rect(hub, "continue").get_center() + Vector2(0.0, -6.0)
+	assert_eq(body.hit(at), "continue", "an unfrozen body lost its pinned door")
+	body.frozen = true
+	assert_eq(body.hit(at), "", "a frozen body still answered its doors")
+	body.free()
+
+## A page taller than the window scrolls: a row comes to the pointer as it
+## rides up, then goes quiet under the bar, and a point outside the body answers
+## nothing even while the page is scrolled.
+func test_a_scrolling_page_claims_its_rows_only_inside_the_window() -> void:
+	var vp := Vector2(1600, 260)
+	var body := _body(vp)
+	var items: Array = LeagueBook.new().table_layout(vp,
+		{"table": _table(), "rules": LeagueRules.defaults()})
+	body.set_sheet(items, vp, true, LeagueChrome.BAR_H)
+	assert_gt(body.max_scroll(), 0.0, "the page never needed a scroll")
+	var row: Rect2 = _item_rect(items, "club:C10")
+	assert_gte(row.position.y, LeagueChrome.HEADER, "the probe row starts on screen")
+	body.scroll_to(row.position.y + 10.0 - LeagueChrome.HEADER)
+	var at := Vector2(row.get_center().x, row.position.y + 10.0 - body.scroll)
+	assert_eq(body.hit(at), "club:C10", "a row that scrolled into the window did not answer")
+	assert_eq(body.hit(Vector2(at.x, vp.y - 8.0)), "",
+		"a row under the bottom bar still answered")
+	assert_eq(body.hit(Vector2(vp.x + 40.0, at.y)), "", "a point outside the body answered")
+	body.free()
 
 ## #126: the caption floor lifts the shortest type on the hub and the calendar to
 ## ten design units. The chip label and the day-cell counter must still fit the
@@ -314,9 +452,10 @@ func test_the_shortest_captions_fit_after_the_floor() -> void:
 
 func test_every_phone_sheet_overflows_into_the_scroll_window() -> void:
 	var sheet := LeagueSheet.new()
+	var start := LeagueStartSheet.new()
 	var book := LeagueBook.new()
 	var vp := Vector2(913, 411)
-	var window := vp.y - LeagueSheet.BAR_H
+	var window := vp.y - LeagueChrome.BAR_H
 	var plan: Array = []
 	for i in range(10):
 		plan.append(_fixture(i))
@@ -326,7 +465,7 @@ func test_every_phone_sheet_overflows_into_the_scroll_window() -> void:
 	for i in range(7):
 		saves.append({"slug": "s%d" % i, "name": "Save %d" % i, "status": "in_progress",
 			"current_date": "2026-09-0%d" % (i + 1), "matchday": i + 1, "path": "", "modified": i})
-	assert_gt(_bottom(sheet.load_layout(vp, {"saves": saves})), window,
+	assert_gt(_bottom(start.load_layout(vp, {"saves": saves})), window,
 		"a full load list should scroll on a phone")
 	var events: Array = []
 	for i in range(14):
@@ -385,10 +524,10 @@ func test_a_roundup_offers_no_play_doors() -> void:
 	for item in items:
 		assert_ne(str(item["kind"]), "play", "a roundup row offered a play door")
 
-## #125: the run mixes both sides' goals, so every entry names the club that
-## scored it and the goals read in minute order — not in the order they were
-## stored (head first, then away).
-func test_a_roundup_row_names_the_club_of_every_scorer() -> void:
+## #168: a fixture's events are read as two sides — each row sits under the
+## club stored on it, and the columns are in minute order. The old mixed run
+## needed a club label on every entry; a column is the label now.
+func test_a_fixture_reads_as_two_event_columns() -> void:
 	var fixture := _fixture(1)
 	var report := {
 		"fixture": fixture,
@@ -400,56 +539,99 @@ func test_a_roundup_row_names_the_club_of_every_scorer() -> void:
 			{"id": 9, "minute": 58, "kind": "goal", "club_id": "A1", "player_name": "J. Mateta"},
 		],
 	}
-	var entries: Array = LeagueRoundup.entries(report)
-	assert_eq(entries, [
-		"HOM 6' Y. Pino", "HOM 7' J. Mateta", "AWY 23' M. Cunha", "HOM 58' J. Mateta",
-	], "the roundup lost its clubs or its minute order")
-	# A card is not a goal, and the away side's goals follow the home side's.
-	assert_eq(entries.size(), 4, "the roundup listed something that was not a goal")
-	var once := LeagueRoundup.run(report, UiChrome.fonts()["med"], 600.0, 10)
-	assert_eq(once, "  ·  ".join(entries), "a run that fits dropped a goal")
+	var sides: Dictionary = LeagueRoundup.sides(report)
+	var home: Array = sides["home"]
+	var away: Array = sides["away"]
+	assert_eq(home.map(func(e): return "%d' %s" % [int(e["minute"]), str(e["player_name"])]),
+		["6' Y. Pino", "7' J. Mateta", "58' J. Mateta"], "the home column lost its minute order")
+	assert_eq(away.map(func(e): return "%d' %s" % [int(e["minute"]), str(e["player_name"])]),
+		["23' M. Cunha", "30' D. Back"], "the away column lost a row")
+	# The club is the column, not a prefix on every line.
+	assert_eq(LeagueRoundup.line(home[0]), "6' Y. Pino", "an entry repeated its club")
+	assert_eq(LeagueRoundup.line(away[0]), "23' M. Cunha", "an away entry repeated its club")
 
-## A row cannot grow, so a busy scoreline names what it can and counts the rest:
-## the rule the whistle card uses (DR-20261125-04), never a silent drop.
-func test_a_roundup_run_that_does_not_fit_counts_the_rest() -> void:
-	var report := {"fixture": _fixture(1), "events": []}
-	for i in range(6):
-		(report["events"] as Array).append({
-			"id": i, "minute": 5 + i, "kind": "goal", "club_id": "A1",
-			"player_name": "A. Striker",
-		})
-	var all: Array = LeagueRoundup.entries(report)
-	var font: Font = UiChrome.fonts()["med"]
-	var wide := LeagueRoundup.run(report, font, 900.0, 10)
-	assert_eq(wide, LeagueRoundup.SEP.join(all), "a run with room counted goals it could show")
-	var narrow := LeagueRoundup.run(report, font, 160.0, 10)
-	assert_ne(narrow, wide, "a run measured for 160 units kept every entry")
-	var parts: PackedStringArray = narrow.split(LeagueRoundup.SEP)
-	var shown := parts.size()
-	assert_gte(shown, 1, "a run too wide for its row showed no scorer at all")
-	assert_lt(shown, all.size(), "a run measured for 160 units kept every entry")
-	for i in range(shown):
-		assert_true(str(parts[i]).begins_with(str(all[i])), "the run reordered or dropped a goal")
-	var tail := str(parts[shown - 1])
-	assert_true(tail.ends_with("+%d" % (all.size() - shown)),
-		"the run miscounted what it dropped: %s" % tail)
-	var room := 160.0 + UiChrome.text_width(font, "  +5", 10)
-	assert_lte(UiChrome.text_width(font, narrow, 10), room,
-		"the counted run runs past the row it was measured for")
-	assert_eq(LeagueRoundup.run({"fixture": _fixture(1), "events": []}, font, 900.0, 10), "",
-		"a goalless report produced a run")
-
-## Rows stored before a club id was written (and test rows) still read: the
-## scorer is named, without a prefix the fixture cannot prove.
-func test_a_scorer_with_no_known_club_still_reads() -> void:
+## A row with no club id (an older save, a hand-made report) still reads, under
+## the home column rather than disappearing.
+func test_an_event_with_no_known_club_still_reads() -> void:
 	var fixture := _fixture(1)
-	assert_eq(LeagueRoundup.entry(fixture, {"minute": 12, "player_name": "A. Striker"}),
-		"12' A. Striker", "a clubless goal invented a club")
-	assert_eq(LeagueRoundup.entry(fixture, {"minute": 12, "club_id": "ZZ", "player_name": "A. Striker"}),
-		"12' A. Striker", "a stranger's goal took the home club's label")
-	# An engine row names its scorer in `detail`; the run reads that too.
-	assert_eq(LeagueRoundup.entry(fixture, {"minute": 12, "detail": "A. Striker"}),
-		"12' A. Striker", "a row with no player_name lost its scorer")
+	var report := {"fixture": fixture, "events": [
+		{"id": 1, "minute": 12, "kind": "goal", "player_name": "A. Striker"},
+		{"id": 2, "minute": 40, "kind": "goal", "club_id": "ZZ", "detail": "B. Stranger"},
+	]}
+	var sides: Dictionary = LeagueRoundup.sides(report)
+	assert_eq((sides["home"] as Array).size(), 2, "a clubless row vanished")
+	assert_eq((sides["away"] as Array).size(), 0, "a stranger took the away column")
+	assert_eq(LeagueRoundup.line((sides["home"] as Array)[0]), "12' A. Striker",
+		"a clubless goal invented a club")
+
+## An assist is a bracket on the goal it served, never a row of its own. The
+## synthetic report writes the assist as its own event at the same minute.
+func test_an_assist_rides_the_goal_line_in_brackets() -> void:
+	var report := {"fixture": _fixture(1), "events": [
+		{"id": 2, "minute": 6, "kind": "goal", "club_id": "A1", "player_name": "Y. Pino"},
+		{"id": 3, "minute": 6, "kind": "assist", "club_id": "A1", "player_name": "J. Eze"},
+		{"id": 4, "minute": 23, "kind": "goal", "club_id": "B1", "player_name": "M. Cunha"},
+		{"id": 5, "minute": 23, "kind": "assist", "club_id": "B1", "player_name": "B. Saka"},
+	]}
+	var lines: Array = LeagueRoundup.lines(report)
+	assert_eq(lines.size(), 2, "an assist took a line of its own")
+	assert_eq(LeagueRoundup.line(lines[0]), "6' Y. Pino (J. Eze)", "the home assist was lost")
+	assert_eq(LeagueRoundup.line(lines[1]), "23' M. Cunha (B. Saka)", "the away assist was lost")
+	# An assist row that never found its goal is not printed alone either.
+	var orphan := {"fixture": _fixture(1), "events": [
+		{"id": 2, "minute": 6, "kind": "goal", "club_id": "A1", "player_name": "Y. Pino"},
+		{"id": 3, "minute": 7, "kind": "assist", "club_id": "A1", "player_name": "J. Eze"},
+	]}
+	assert_eq(LeagueRoundup.line(LeagueRoundup.lines(orphan)[0]), "6' Y. Pino",
+		"a mismatched assist was attached to a goal")
+
+## An own goal counts for the side that gained it — the club on the row — and is
+## marked so the reader still sees whose mistake it was. It takes no assist.
+func test_an_own_goal_is_credited_to_the_side_that_gained_it() -> void:
+	var fixture := _fixture(1)
+	var report := {"fixture": fixture, "events": [
+		{"id": 1, "minute": 12, "kind": "own_goal", "club_id": "A1", "player_name": "D. Back",
+			"assist_name": "B. Saka"},
+		{"id": 2, "minute": 30, "kind": "goal", "club_id": "A1", "player_name": "Y. Pino"},
+	]}
+	var sides: Dictionary = LeagueRoundup.sides(report)
+	assert_eq((sides["home"] as Array).size(), 2, "the own goal left the gaining side")
+	assert_eq((sides["away"] as Array).size(), 0, "the own goal was credited to the conceding side")
+	assert_eq(LeagueRoundup.goals(report).size(), 2, "an own goal stopped counting as a goal")
+	assert_eq(LeagueRoundup.line((sides["home"] as Array)[0]), "12' D. Back (OG)",
+		"the own goal lost its mark")
+	assert_eq(LeagueRoundup.line((sides["home"] as Array)[1]), "30' Y. Pino",
+		"a normal goal took an own-goal mark")
+
+## #171: a converted penalty is marked on the scorer's name, the shape an own
+## goal takes on the live HUD. The report row and the roundup read the mark from
+## one helper, so desktop and phone cannot disagree about it.
+func test_a_penalty_goal_is_marked_on_its_scorer() -> void:
+	var fixture := _fixture(1)
+	assert_eq(LeagueRoundup.line({"minute": 12, "club_id": "A1",
+		"player_name": "A. Striker", "penalty": true}), "12' A. Striker (PEN)",
+		"the report did not mark the penalty")
+	# A reopened save hands the flag back as SQLite's 1, not a bool.
+	assert_eq(LeagueRoundup.line({"minute": 12, "detail": "A. Striker", "penalty": 1}),
+		"12' A. Striker (PEN)", "a stored penalty lost its mark")
+	assert_eq(LeagueRoundup.line({"minute": 30, "player_name": "B. Winger",
+		"assist_name": "C. Pivot"}), "30' B. Winger (C. Pivot)",
+		"an open-play goal took a mark")
+	assert_false(LeagueRoundup.is_penalty({"player_name": "A. Striker"}),
+		"an open-play goal read as a penalty")
+	# The report layout carries the flag through on both sheet sizes.
+	for vp in [Vector2(1280, 720), Vector2(913, 411)]:
+		var book := LeagueBook.new()
+		var items: Array = book.report_layout(vp, {
+			"fixture": fixture, "day": "2026-08-15", "events": [
+				{"minute": 12, "kind": "goal", "player_name": "A. Striker", "penalty": true},
+			],
+		})
+		var marked := false
+		for item in items:
+			if str(item["kind"]) == "event" and bool(item["event"].get("penalty", false)):
+				marked = true
+		assert_true(marked, "the report dropped the penalty flag at %s" % vp)
 
 func _bottom(items: Array) -> float:
 	var bottom := 0.0
@@ -461,19 +643,159 @@ func _bottom(items: Array) -> float:
 func test_the_report_lays_out_events_and_a_roundup() -> void:
 	var book := LeagueBook.new()
 	var events := [
-		{"minute": 12, "kind": "goal", "player_name": "A. Striker"},
-		{"minute": 12, "kind": "assist", "player_name": "B. Winger"},
-		{"minute": 30, "kind": "yellow", "player_name": "C. Pivot"},
-		{"minute": 77, "kind": "red", "player_name": "D. Back"},
+		{"minute": 12, "kind": "goal", "club_id": "A1", "player_name": "A. Striker"},
+		{"minute": 12, "kind": "assist", "club_id": "A1", "player_name": "B. Winger"},
+		{"minute": 30, "kind": "yellow", "club_id": "B1", "player_name": "C. Pivot"},
+		{"minute": 77, "kind": "red", "club_id": "B1", "player_name": "D. Back"},
 	]
 	var single: Array = book.report_layout(Vector2(1280, 720), {
 		"fixture": _fixture(1), "events": events, "day": "2026-08-15",
 	})
-	assert_eq(single.size(), 5, "the report lost an event or the back door")
+	# Three lines (the assist rides its goal) and the back door.
+	assert_eq(single.size(), 4, "the report lost an event or the back door")
+	var places := LeagueReportSheet.columns(Vector2(1280, 720))
+	var xs := {}
+	for item in single:
+		if str(item["kind"]) != "event":
+			continue
+		xs[str(item["side"])] = (item["rect"] as Rect2).position.x
+		assert_ne(str(item["event"].get("kind", "")), "assist", "an assist took a row of its own")
+	assert_eq(xs.get("home", -1.0), float(places["home_x"]), "the home column moved")
+	assert_eq(xs.get("away", -1.0), float(places["away_x"]), "the away column moved")
 	var roundup: Array = book.report_layout(Vector2(1280, 720), {
 		"roundup": [{"fixture": _fixture(1), "events": events, "score": [1, 0], "played": true}],
 	})
-	assert_eq(roundup.size(), 2, "the roundup lost its row or the back door")
+	# One result block, BACK, and the hub's CONTINUE (#180).
+	assert_eq(roundup.size(), 3, "the roundup lost its row or a header door")
+
+## #180: a settled day's RESULTS carries the hub's CONTINUE in the hub's corner;
+## BACK stays the leave control beside it, and a single match report — a drill
+## into one fixture, not a day to move on from — stays read-only.
+func test_the_results_sheet_adds_the_hubs_continue_beside_back() -> void:
+	var book := LeagueBook.new()
+	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(730, 411)]:
+		var items: Array = book.report_layout(vp, {
+			"roundup": [{"fixture": _fixture(1), "events": [], "score": [1, 0], "played": true}],
+			"day": "2026-08-15",
+		})
+		var cont := _item_rect(items, "continue")
+		assert_eq(cont, LeagueExtra.primary_rect(vp), "RESULTS: CONTINUE is not in the hub's corner at %s" % vp)
+		assert_almost_eq(cont.end.x, vp.x - 24.0, 0.5, "RESULTS: CONTINUE is not top-right at %s" % vp)
+		assert_lte(cont.end.y, LeagueChrome.HEADER, "RESULTS: CONTINUE left the header at %s" % vp)
+		assert_eq(_item_rect(items, "back"), LeagueExtra.back_rect(), "RESULTS: BACK moved at %s" % vp)
+		assert_gt(cont.position.x, LeagueExtra.back_rect().end.x,
+			"RESULTS: the two header doors sit on each other at %s" % vp)
+		var pinned := 0
+		for item in items:
+			if str(item["id"]) in ["back", "continue"] and bool(item.get("pinned", false)):
+				pinned += 1
+		assert_eq(pinned, 2, "a RESULTS header door scrolls away at %s" % vp)
+	var single: Array = book.report_layout(Vector2(1280, 720), {
+		"fixture": _fixture(1), "events": [], "day": "2026-08-15",
+	})
+	assert_eq(_item_rect(single, "continue"), Rect2(), "a single match report gained CONTINUE")
+
+## #180: whatever the save is called, the header's title and caption stay in the
+## lane between BACK and the right-hand door. The title is shortened instead of
+## painted under CONTINUE, and the caption starts only where the title ends.
+func test_the_header_title_and_caption_clear_the_header_doors() -> void:
+	var bold: Font = UiChrome.fonts()["bold"]
+	var long_name := "MANCHESTER DERBY LEAGUE"
+	var caption := "15/AUG/2026 · GW 1 · 0 OF 380 PLAYED"
+	var sheet := LeagueSheet.new()
+	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(730, 411), Vector2(460, 400)]:
+		var state := _state([_fixture(1)], _table())
+		state["name"] = long_name
+		var cont := _item_rect(sheet.hub_layout(vp, state), "continue")
+		var band := LeagueExtra.header_band(vp, bold, long_name, caption, cont.size.x + 12.0)
+		var title: Rect2 = band["title_rect"]
+		assert_gte(title.position.x, LeagueExtra.back_rect().end.x,
+			"the title starts on BACK at %s" % vp)
+		assert_lte(title.end.x, cont.position.x, "the title runs under CONTINUE at %s" % vp)
+		assert_true(str(band["title"]) == long_name or str(band["title"]).ends_with("…"),
+			"the title lost its name instead of being shortened at %s" % vp)
+		if str(band["caption"]) != "":
+			var strip: Rect2 = band["caption_rect"]
+			assert_lte(strip.end.x, cont.position.x - 12.0,
+				"the caption runs under CONTINUE at %s" % vp)
+			assert_gte(strip.position.x, title.end.x,
+				"the caption is painted through the title at %s" % vp)
+	# A desktop lane leaves the name whole, so fitting only touches what cannot fit.
+	var wide := LeagueExtra.header_band(Vector2(1280, 720), bold, long_name, "", 152.0)
+	assert_eq(str(wide["title"]), long_name, "a name that fits was shortened")
+
+## #162: the report keeps the league's chrome — BACK top-left, not a bottom door.
+func test_the_report_keeps_back_in_the_top_left_chrome() -> void:
+	var book := LeagueBook.new()
+	var vp := Vector2(1280, 720)
+	var events := [{"minute": 12, "kind": "goal", "player_name": "A. Striker"}]
+	var items: Array = book.report_layout(vp, {
+		"fixture": _fixture(1), "events": events, "day": "2026-08-15",
+	})
+	var backs: Array = []
+	for item in items:
+		if str(item["id"]) == "back":
+			backs.append(item)
+	assert_eq(backs.size(), 1, "the report offers more than one BACK")
+	var back: Dictionary = backs[0]
+	assert_true(bool(back.get("pinned", false)), "the report's BACK scrolls away")
+	assert_eq(back["rect"], LeagueExtra.back_rect(), "the report's BACK left the header lane")
+	assert_lt((back["rect"] as Rect2).end.y, LeagueChrome.HEADER,
+		"the report's BACK sits below the header rule")
+	assert_lt((back["rect"] as Rect2).position.y, vp.y - LeagueChrome.BAR_H,
+		"the report's BACK is still a bottom door")
+
+## #168: a played hub row is a block tall enough for both columns; a pending row
+## keeps the planner's one line. The hub and the calendar read the same height.
+func test_a_played_row_grows_for_its_events() -> void:
+	var sheet := LeagueSheet.new()
+	var played := _fixture(1)
+	played["status"] = "played"
+	played["home_goals"] = 1
+	played["away_goals"] = 0
+	played["events"] = [
+		{"minute": 12, "kind": "goal", "club_id": "A1", "player_name": "A. Striker"},
+		{"minute": 40, "kind": "yellow", "club_id": "B1", "player_name": "C. Pivot"},
+		{"minute": 66, "kind": "injury", "club_id": "A1", "player_name": "D. Back"},
+	]
+	var pending := _fixture(2)
+	var plan := [played, pending]
+	var items: Array = sheet.hub_layout(Vector2(913, 411), _state(plan, _table()))
+	var rows: Array = []
+	for item in items:
+		if str(item["kind"]) == "row":
+			rows.append(item)
+	assert_eq(rows.size(), 2, "the hub lost a row")
+	var played_row: Rect2 = rows[0]["rect"]
+	var pending_row: Rect2 = rows[1]["rect"]
+	assert_eq(played_row.size.y, LeagueBlock.height(played), "the played row is not its block")
+	assert_gt(played_row.size.y, pending_row.size.y, "a played row did not grow for its events")
+	assert_eq(pending_row.size.y, LeagueChrome.ROW_H, "a pending row left the planner's line")
+	# The two event columns share the row and never overlap.
+	var places := LeagueBlock.columns(played_row)
+	assert_lt(float(places["home_x"]) + float(places["home_w"]), float(places["away_x"]),
+		"the event columns overlap")
+	assert_lte(float(places["away_x"]) + float(places["away_w"]), played_row.end.x + 0.01,
+		"the away column runs off its row")
+	# An empty result is still a block, and it prints no filler line.
+	var bare := _fixture(3)
+	bare["status"] = "played"
+	assert_eq(LeagueBlock.height(bare), LeagueBlock.BASE, "an empty result lost its block")
+	assert_eq(LeagueRoundup.lines({"fixture": bare, "events": []}).size(), 0,
+		"an empty result grew a placeholder row")
+
+## #168: the table is the one season pose that keeps abbreviations; the hub, the
+## calendar, the roundup and the report print the club's full name.
+func test_the_table_keeps_abbreviations_while_rows_print_names() -> void:
+	var row: Dictionary = _table()[0]
+	assert_eq(LeagueTableView.club_label(row), str(row["club_abbr"]),
+		"the table dropped its abbreviation")
+	assert_eq(LeagueTableView.club_label({"club_name": "Coventry City"}), "Coventry City",
+		"a row with no short form lost its name")
+	var fx := _fixture(1)
+	assert_eq(str(fx["home_name"]), "Home 1", "the fixture row lost its full name")
+	assert_ne(str(fx["home_name"]), str(fx["home_abbr"]),
+		"a fixture row still reads only the abbreviation")
 
 func test_the_podium_lays_out_with_and_without_a_summary() -> void:
 	var book := LeagueBook.new()
@@ -485,7 +807,7 @@ func test_the_podium_lays_out_with_and_without_a_summary() -> void:
 			doors += 1
 		elif str(item["kind"]) == "extent":
 			extent += 1
-	assert_eq(doors, 2, "the podium lost its doors")
+	assert_eq(doors, 3, "the podium lost a door (BACK, TABLE, MAIN MENU)")
 	assert_eq(extent, 1, "the podium lost its measured summary height")
 	var summary := {
 		"champion": {"club": "Arsenal", "club_id": "ARS", "points": 90},
@@ -498,193 +820,101 @@ func test_the_podium_lays_out_with_and_without_a_summary() -> void:
 		"a podium with a summary has no height for the scroll window")
 
 func test_month_helpers_walk_the_year() -> void:
-	assert_eq(LeagueBook.shift_month("2026-01", -1), "2025-12", "January did not step back a year")
-	assert_eq(LeagueBook.shift_month("2026-12", 1), "2027-01", "December did not step forward a year")
-	assert_eq(LeagueBook.month_label("2026-08"), "AUGUST 2026", "the month label is wrong")
-	assert_eq(LeagueBook.month_days("2026-02"), 28, "February 2026 is not 28 days")
-	assert_eq(LeagueBook.month_days("2028-02"), 29, "February 2028 is not a leap month")
-	assert_eq(LeagueBook.month_days("2026-04"), 30, "April is not 30 days")
-	assert_eq(LeagueBook.parse_month("bad"), LeagueBook.parse_month("bad"), "a bad month is unstable")
+	assert_eq(LeagueMonth.shift("2026-01", -1), "2025-12", "January did not step back a year")
+	assert_eq(LeagueMonth.shift("2026-12", 1), "2027-01", "December did not step forward a year")
+	assert_eq(LeagueMonth.label("2026-08"), "AUGUST 2026", "the month label is wrong")
+	assert_eq(LeagueMonth.days("2026-02"), 28, "February 2026 is not 28 days")
+	assert_eq(LeagueMonth.days("2028-02"), 29, "February 2028 is not a leap month")
+	assert_eq(LeagueMonth.days("2026-04"), 30, "April is not 30 days")
+	assert_eq(LeagueMonth.parse("bad"), LeagueMonth.parse("bad"), "a bad month is unstable")
+	assert_eq(LeagueMonth.parse_key("bad"), LeagueMonth.key(int(LeagueMonth.parse("bad")[0]),
+		int(LeagueMonth.parse("bad")[1])), "a malformed month key does not round-trip")
+	assert_eq(LeagueMonth.key(2026, 13), "2027-01", "December + 1 is not the next January")
+	assert_eq(LeagueMonth.first_weekday("2026-08"), 6, "1 August 2026 is not a Saturday")
 
 func test_zone_colours_cover_every_band() -> void:
 	for band in ["ucl", "uel", "uecl", "relegation", ""]:
-		var colour := LeagueSheet.zone_color(band)
+		var colour := LeagueChrome.zone_color(band)
 		assert_true(colour.a > 0.0, "band %s has no colour" % band)
 	assert_eq(LeagueRules.zone_label(""), "", "a neutral row has a label")
 
-# -------------------------------------------------------------- full table ---
+# ------------------------------------------------------------ row modules ---
 
-## #72/#74: the full reading is the compact strip plus the overall, home and
-## away columns. On the phone landscape design space (`--ui-scale` on a 1080p
-## handset) every one of them has to sit inside the row.
-func test_the_full_table_shows_every_column_on_a_phone_landscape() -> void:
-	for vp in [Vector2(913, 411), Vector2(873, 393)]:
-		var view := LeagueTableView.new()
-		view.mode = LeagueTableView.FULL
-		var items: Array = view.layout(vp, {"table": _table(), "rules": LeagueRules.defaults()})
-		var rows := 0
-		var heads := []
-		var widest := 0.0
-		for item in items:
-			if str(item["kind"]) == "table_row":
-				rows += 1
-				widest = maxf(widest, (item["rect"] as Rect2).end.x)
-			elif str(item["kind"]) == "head":
-				heads.append(str(item["id"]))
-		assert_eq(rows, 20, "the full table lost rows at %s" % vp)
-		assert_eq(heads.size(), 22, "the full header lost a column at %s" % vp)
-		assert_true(heads.has("tbl:sort:points"), "PTS is not sortable at %s" % vp)
-		assert_true(heads.has("tbl:sort:home_gf"), "the home goals are not sortable at %s" % vp)
-		assert_true(heads.has("tbl:sort:away_ga"), "the away goals against are missing at %s" % vp)
-		assert_lte(widest, vp.x - 24.0, "the full table runs off a phone landscape sheet at %s" % vp)
+## The plan rows carry the shortlist's mark and the hub's side table carries its
+## own: split out of the hub, both still answer the same questions the hub's
+## paint asks them.
+func test_the_plan_rows_and_side_table_carry_the_shortlist_mark() -> void:
+	var plan: Array = [_fixture(1), _fixture(2)]
+	var interest := LeagueInterestMark.set_of(["A1"])
+	var rows: Array = LeaguePlanSheet.layout(plan, interest, 24.0, 600.0, 72.0)
+	assert_eq(rows.size(), 4, "two pending rows lost a chip or a row")
+	assert_eq(str(rows[0]["id"]), "fixture:gw01-A1-B1", "the first row is not the first fixture")
+	var followed_ink: Color = LeagueInterestMark.ink(interest, "A1")
+	assert_eq(rows[0]["home_ink"], followed_ink, "the followed club carries no interest ink")
+	assert_eq(rows[0]["away_ink"], LeagueInterestMark.ink(interest, "B1"),
+		"the unfollowed club picked up the mark")
+	assert_true(bool(rows[1]["followed"]), "a followed club's game still offers a toggle")
+	assert_eq(str(rows[1]["id"]), "", "the followed game's chip is still a door")
+	assert_eq((rows[2]["rect"] as Rect2).position.x, 24.0, "the second row left the lane")
+	var box := LeagueSideTable.box(Vector2(1280.0, 800.0), 600.0)
+	var side: Array = LeagueSideTable.layout(_table(), LeagueRules.defaults(), interest, box, 72.0)
+	assert_eq(side.size(), 20, "the side table lost a place")
+	assert_eq((side[0]["rect"] as Rect2).size.y, LeagueSideTable.ROW_H, "a side row left the pitch")
+	var rail := LeagueSideTable.places(box)
+	assert_eq((side[0]["places"] as Dictionary), rail, "the rows disagree about the rail")
 
-func test_the_full_header_names_its_three_groups() -> void:
-	var view := LeagueTableView.new()
-	view.mode = LeagueTableView.FULL
-	var captions: Array = []
-	for item in view.layout(Vector2(913, 411), {"table": _table(), "rules": LeagueRules.defaults()}):
-		if str(item["kind"]) == "caption":
-			captions.append(str(item["label"]))
-	assert_eq(captions, ["OVERALL", "HOME", "AWAY"], "the full header lost a group caption")
+## The paint path is one frame re-entering the `_draw` call it arrived from
+## (see `LeagueBook._draw_calendar_body`); headless it is a straight call.
+func test_the_calendar_paint_band_reuses_the_draw_call() -> void:
+	var book := LeagueBook.new()
+	var band := _PaintProbe.new()
+	band.book = book
+	add_child(band)
+	await get_tree().process_frame
+	assert_true(band.painted, "the calendar body never reached its paint")
+	band.queue_free()
 
-func test_the_table_defaults_to_compact_on_a_phone_and_full_on_desktop() -> void:
-	var phone := LeagueTableView.new()
-	var heads: Array = []
-	for item in phone.layout(Vector2(913, 411), {"table": _table(), "rules": LeagueRules.defaults()}):
-		if str(item["kind"]) == "head":
-			heads.append(str(item["id"]))
-	assert_eq(phone.mode, LeagueTableView.COMPACT, "a phone did not open the compact table")
-	assert_eq(heads.size(), 10, "the compact header should be #, club and the whole overall record")
-	for key in ["played", "won", "drawn", "lost", "gf", "ga", "gd", "points"]:
-		assert_true(heads.has("tbl:sort:" + key),
-			"compact does not offer a %s column to sort by (#102)" % key)
-	var desktop := LeagueTableView.new()
-	desktop.layout(Vector2(1600, 900), {"table": _table(), "rules": LeagueRules.defaults()})
-	assert_eq(desktop.mode, LeagueTableView.FULL, "a desktop did not open the full table")
+## A tiny canvas item the engine really paints, so the band's paint call runs
+## under a frame rather than outside `_draw`.
+class _PaintProbe extends Control:
+	var book: LeagueBook = null
+	var painted := false
 
-## #102: a column Compact now shows is a column Compact sorts by — the whole
-## overall record behaves like any other visible field.
-func test_the_compact_strip_sorts_by_the_overall_columns_it_shows() -> void:
-	var rows: Array = _table()
-	rows[0]["gf"] = 3
-	rows[1]["gf"] = 30
-	rows[2]["gf"] = 10
-	var view := LeagueTableView.new()
-	view.mode = LeagueTableView.COMPACT
-	for key in ["won", "drawn", "lost", "gf", "ga"]:
-		assert_true(view.press("tbl:sort:" + key, null), "compact did not take a %s sort" % key)
-	view.sort = "gf"
-	view.dir = -1
-	var goals: Array = []
-	for item in view.layout(Vector2(913, 411), {"table": rows, "rules": LeagueRules.defaults()}):
-		if str(item["kind"]) == "table_row":
-			goals.append(int((item["row"] as Dictionary)["gf"]))
-	assert_eq(goals[0], 30, "the compact strip did not sort by goals scored")
+	func _draw() -> void:
+		book.draw_calendar_body(self, Vector2(1280, 800), UiChrome.fonts(), [], {"month": "2026-08"})
+		painted = true
 
-## A full table is wider than a portrait phone: the body offers the sideways
-## pan and every column is reachable by dragging.
-func test_the_full_table_pans_sideways_on_a_portrait_phone() -> void:
-	var view := LeagueTableView.new()
-	view.mode = LeagueTableView.FULL
+## #163: the table sheet keeps its chrome where the other sheets keep theirs —
+## BACK top-left, the reading doors on the bottom bar — at both widths.
+func test_the_table_sheet_keeps_back_top_left_and_its_doors_on_the_bar() -> void:
+	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
+		var table: Array = LeagueBook.new().table_layout(vp,
+			{"table": _table(), "rules": LeagueRules.defaults()})
+		assert_eq(_item_rect(table, "back"), LeagueExtra.back_rect(),
+			"table BACK is not in the top-left corner at %s" % vp)
+		assert_true(_item(table, "back").get("pinned", false), "table BACK is inside the scroll at %s" % vp)
+		assert_gt(_item_rect(table, "tbl:mode:compact").position.y, LeagueChrome.HEADER,
+			"the reading doors left the bottom bar at %s" % vp)
+		assert_almost_eq(_item_rect(table, "tbl:mode:full").end.y, vp.y - 8.0, 0.5,
+			"the readings left the bottom bar at %s" % vp)
+
+## The full table is wider than a portrait phone: the body offers the sideways
+## pan and the last column is reachable by dragging.
+func test_a_portrait_phone_pans_to_the_last_table_column() -> void:
 	var vp := Vector2(360.0, 780.0)
-	var items: Array = view.layout(vp, {"table": _table(), "rules": LeagueRules.defaults()})
+	var view := LeagueTableView.new()
+	view.mode = LeagueTableView.FULL
 	var body := LeagueBody.new()
-	body.set_sheet(items, vp, true)
+	body.set_sheet(view.layout(vp, {"table": _table(), "rules": LeagueRules.defaults()}), vp, true)
 	assert_gt(body.max_hscroll(), 0.0, "the full table does not offer a sideways pan")
 	body.pan_by(Vector2(1000.0, 0.0))
-	assert_almost_eq(body.hscroll, body.max_hscroll(), 0.5, "the pan did not reach the last column")
-	var last: Dictionary = {}
-	for item in body.button_rects():
-		if str(item["id"]) == "tbl:sort:away_ga":
-			last = item
+	var last := _item(body.button_rects(), "tbl:sort:away_ga")
 	assert_false(last.is_empty(), "the away goals column has no door")
-	var rect: Rect2 = last["rect"]
-	assert_lte(rect.end.x, vp.x + 0.5, "the last column is still off the window after the pan")
-	body.pan_by(Vector2(-1.0e7, 0.0))
-	assert_eq(body.hscroll, 0.0, "the pan ran past the first column")
+	assert_lte((last["rect"] as Rect2).end.x, vp.x + 0.5, "the last column is still off the window")
 	body.free()
 
-## Sorting is the player's order; the `#` column and the zone bands stay the
-## league's official place, so a sorted table never lies about the standings.
-func test_sorting_orders_the_rows_but_keeps_the_official_place() -> void:
-	var rows: Array = _table()
-	rows[0]["points"] = 10
-	rows[1]["points"] = 30
-	rows[2]["points"] = 20
-	var view := LeagueTableView.new()
-	view.mode = LeagueTableView.FULL
-	view.sort = "points"
-	view.dir = -1
-	var items: Array = view.layout(Vector2(1600, 900),
-		{"table": rows, "rules": LeagueRules.defaults()})
-	var points: Array = []
-	var by_position := {}
+func _item(items: Array, id: String) -> Dictionary:
 	for item in items:
-		if str(item["kind"]) == "table_row":
-			var row: Dictionary = item["row"]
-			points.append(int(row["points"]))
-			by_position[int(row["position"])] = str(item["zone"])
-	assert_eq(points[0], 30, "the high side did not come first")
-	assert_eq(points[1], 20, "the rows are not sorted by points")
-	assert_eq(points[2], 10, "the rows are not sorted by points")
-	assert_eq(by_position[1], "ucl", "the champion's band left its place")
-	assert_eq(by_position[20], "relegation", "the drop lost its band")
-	view.dir = 1
-	var ascending: Array = []
-	for item in view.layout(Vector2(1600, 900), {"table": rows, "rules": LeagueRules.defaults()}):
-		if str(item["kind"]) == "table_row":
-			ascending.append(int((item["row"] as Dictionary)["points"]))
-	assert_eq(ascending[0], 0, "the low side did not come first when reversed")
-
-func test_a_mode_press_flips_the_reading_and_a_header_press_sorts() -> void:
-	var view := LeagueTableView.new()
-	view.mode = LeagueTableView.FULL
-	assert_true(view.press("tbl:mode:compact", null), "the compact door did nothing")
-	assert_eq(view.mode, LeagueTableView.COMPACT, "the compact door did not take")
-	assert_false(view.press("tbl:mode:compact", null), "the reading already on screen was taken again")
-	assert_true(view.press("tbl:mode:full", null), "the full door did nothing")
-	assert_eq(view.mode, LeagueTableView.FULL, "the full door did not take")
-	assert_false(view.press("tbl:mode:sideways", null), "an unknown reading was taken")
-	assert_true(view.press("tbl:sort:points", null), "a header press did nothing")
-	assert_eq(view.sort, "points", "the header press did not sort")
-	assert_eq(view.dir, -1, "a numeric column should start on the high side")
-	view.press("tbl:sort:points", null)
-	assert_eq(view.dir, 1, "a second tap did not reverse")
-	view.press("tbl:sort:club", null)
-	assert_eq(view.dir, 1, "the club column should start A-Z")
-	assert_false(view.press("tbl:sort:position", null), "the place column is not sortable")
-	assert_false(view.press("nope", null), "an unknown door was taken")
-
-## A sort is only worth honouring in a reading that shows the column: the
-## compact strip keeps the player's full-table sort stored for when they come
-## back to it, but lists the official order while it is hidden.
-func test_a_hidden_sort_column_leaves_the_compact_strip_in_place() -> void:
-	var rows: Array = _table()
-	rows[0]["home_gf"] = 3
-	rows[1]["home_gf"] = 30
-	rows[2]["home_gf"] = 10
-	var view := LeagueTableView.new()
-	view.mode = LeagueTableView.COMPACT
-	view.sort = "home_gf"
-	view.dir = -1
-	var positions: Array = []
-	for item in view.layout(Vector2(913, 411), {"table": rows, "rules": LeagueRules.defaults()}):
-		if str(item["kind"]) == "table_row":
-			positions.append(int((item["row"] as Dictionary)["position"]))
-	assert_eq(positions[0], 1, "the compact strip sorted by a column it does not show")
-	view.mode = LeagueTableView.FULL
-	var by_home: Array = []
-	for item in view.layout(Vector2(1600, 900), {"table": rows, "rules": LeagueRules.defaults()}):
-		if str(item["kind"]) == "table_row":
-			by_home.append(int((item["row"] as Dictionary)["home_gf"]))
-	assert_eq(by_home[0], 30, "the full reading lost the sort it was given")
-
-func test_attach_clears_a_reading_without_a_save() -> void:
-	var view := LeagueTableView.new()
-	view.mode = LeagueTableView.FULL
-	view.sort = "points"
-	view.dir = 1
-	view.attach(null)
-	assert_eq(view.mode, "", "a table with no save kept a reading")
-	assert_eq(view.sort, "", "a table with no save kept a sort")
-	assert_eq(view.dir, -1, "a table with no save kept a direction")
+		if str(item["id"]) == id:
+			return item
+	return {}

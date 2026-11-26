@@ -257,6 +257,44 @@ func test_keeper_smothers_a_carrier_who_broke_through() -> void:
 			assert_true(gk.has_ball, "the keeper smothered the ball but did not hold it")
 	assert_gt(smothered, 0, "a keeper never came out to smother a loose ball at a striker's feet")
 
+func test_keeper_challenges_a_carrier_still_in_control() -> void:
+	# A carrier walking the ball in is a chance the model never priced: the ball
+	# leads his feet by half a metre, so a keeper standing on top of him used to
+	# watch it cross the line (issue #192). The dive has to read the carrier.
+	var smothered := 0
+	for seed_in in range(TRIES):
+		var eng := _eng(seed_in + 300)
+		var gk = _gk_of(eng, 0)
+		_put_on_the_spot(gk, eng.own_goal_pos(0) + Vector2(1.0, 0.0))
+		var carrier = _outfield(eng, 1)
+		_put_on_the_spot(carrier, gk.pos + Vector2(0.8, 0.0))
+		eng.ball.owner_id = carrier.id
+		eng.ball.pos = carrier.pos
+		eng.ball.vel = Vector2.ZERO
+		eng.ball.last_touch_team = 1
+		carrier.has_ball = true
+		eng._ball_interactions(1.0 / 60.0)
+		if eng.ball.owner_id == gk.id:
+			smothered += 1
+	assert_gt(smothered, 0, "a keeper never challenged a carrier in his reach")
+
+func test_a_carried_ball_over_the_line_is_a_goal_once_the_keeper_is_beaten() -> void:
+	# The other half of the same rule: a carrier the keeper cannot reach still
+	# walks it in, and it is a goal.
+	var eng := _eng(77)
+	eng.teams[0]["dir"] = 1
+	eng.teams[1]["dir"] = -1
+	var gk = _gk_of(eng, 0)
+	_put_on_the_spot(gk, eng.own_goal_pos(0) + Vector2(4.5, 0.0))
+	var carrier = _outfield(eng, 1)
+	_put_on_the_spot(carrier, eng.own_goal_pos(0) + Vector2(0.4, 0.0))
+	eng.ball.owner_id = carrier.id
+	eng.ball.pos = Vector2(0.0, 34.0)
+	eng.ball.last_touch_id = carrier.id
+	eng.ball.last_touch_team = 1
+	eng._check_rules()
+	assert_eq(eng.score[1], 1, "a carrier the keeper could not reach did not score")
+
 # -------------------------------------------------------------- headers -----
 
 func test_header_at_goal_is_a_shot() -> void:

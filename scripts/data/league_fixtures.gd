@@ -33,6 +33,8 @@ func install(fixtures: Array) -> bool:
 	PLDatabase.execute("DELETE FROM league_table;")
 	PLDatabase.execute("DELETE FROM match_event;")
 	PLDatabase.execute("DELETE FROM league_player_stat;")
+	PLDatabase.execute("DELETE FROM league_absence;")
+	PLDatabase.execute("DELETE FROM league_discipline;")
 	PLDatabase.execute("DELETE FROM goal_highlight;")
 	var values: Array = []
 	var bindings: Array = []
@@ -69,6 +71,16 @@ func one(fixture_id: String) -> Dictionary:
 func on(date: String) -> Array:
 	save.ensure_open()
 	return PLDatabase.rows(SELECT + "WHERE f.kickoff = ? ORDER BY f.kickoff_time, f.id;", [date])
+
+## A club's last `limit` played fixtures, newest first: the pre-match form line
+## and anything else that reads recent results (#157).
+func recent(club_id: String, limit: int = 5) -> Array:
+	save.ensure_open()
+	if club_id == "":
+		return []
+	return PLDatabase.rows(
+		SELECT + "WHERE f.status = 'played' AND (f.home_club_id = ? OR f.away_club_id = ?) "
+		+ "ORDER BY f.kickoff DESC, f.kickoff_time DESC LIMIT ?;", [club_id, club_id, limit])
 
 ## Unplayed fixtures due on or before `date`: the season clock never runs past
 ## a watched fixture waiting for its match.

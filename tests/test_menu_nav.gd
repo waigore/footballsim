@@ -5,6 +5,15 @@ extends GdToolsTest
 ## contract. The scene is the real main.gd, the same way test_touch_flow drives
 ## the phone overlay.
 
+## The design viewports the menu has to stay navigable at: desktop, a tablet, the
+## playtest's landscape handset (913x411 dp), a short 720p handset, and two
+## portrait phones.
+const HANDSETS := [
+	Vector2(1600, 900), Vector2(1280, 800), Vector2(1024, 600),
+	Vector2(913, 411), Vector2(800, 480), Vector2(640, 360), Vector2(640, 300),
+	Vector2(411, 914), Vector2(375, 812),
+]
+
 var PREFS := TestScratch.file("test_menu_nav_issue36.cfg")
 
 var game = null
@@ -16,6 +25,9 @@ func before_all() -> void:
 	game.menus.shell.prefs_path = PREFS
 	if FileAccess.file_exists(PREFS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
+	# The HUD's show/hide choice is read from the same file (#158): restore it
+	# from the suite's own copy, not the developer's last launch.
+	game.menus.restore_hud()
 	game.menus.open_menu()
 
 func after_all() -> void:
@@ -64,6 +76,64 @@ func test_the_menu_doors_are_tappable_and_inside_the_screen() -> void:
 			assert_lte(r.end.x, size.x, "a door runs off the right edge at %s" % size)
 			assert_lte(r.end.y, size.y, "a door runs off the bottom at %s" % size)
 
+## #199: the title block and the door column are placed by one layout at every
+## window size, so the wordmark and its tagline are never painted under the
+## first door — the fault the phone playtest caught.
+func test_the_title_block_never_crosses_the_door_column() -> void:
+	var bold: Font = UiChrome.fonts()["bold"]
+	for size in HANDSETS:
+		for doors in [false, true]:
+			var sheet := MenuScreen.layout(size, doors, bold)
+			assert_eq(sheet["doors"].size(), 6 if doors else 5, "a door is missing at %s" % size)
+			var top := 1e9
+			for b in sheet["doors"]:
+				var r: Rect2 = b["rect"]
+				assert_gte(r.size.y, 44.0, "a door is too short to tap at %s" % size)
+				assert_lte(r.end.x, size.x + 0.01, "a door runs off the right edge at %s" % size)
+				assert_lte(r.end.y, size.y + 0.01, "the column runs off the bottom at %s" % size)
+				top = minf(top, r.position.y)
+			var title: Dictionary = sheet["title"]
+			if int(title["size"]) == 0:
+				continue
+			var y: float = float(title["y"])
+			assert_gte(y - float(title["size"]), MenuScreen.TITLE_AIR - 0.01,
+				"the wordmark is clipped at the top at %s" % size)
+			var foot: float = y
+			if bool(title["tagline"]):
+				foot += MenuScreen.TAGLINE_FOOT
+			assert_lte(foot, top - MenuScreen.TITLE_GAP + 0.01,
+				"the title block crosses the first door at %s (6 doors: %s)" % [size, doors])
+			assert_lte(UiChrome.wordmark_width(int(title["size"]), bold),
+				size.x - 2.0 * clampf(size.x * 0.07, 24.0, 96.0) + 0.01,
+				"the wordmark runs off the sheet at %s" % size)
+
+## A landscape handset is where the fault showed: the tagline has to read on
+## both door counts, not just the five-door menu.
+func test_a_landscape_phone_keeps_the_tagline_over_the_doors() -> void:
+	var bold: Font = UiChrome.fonts()["bold"]
+	for size in [Vector2(1024, 600), Vector2(913, 411), Vector2(800, 480)]:
+		for doors in [false, true]:
+			var title: Dictionary = MenuScreen.layout(size, doors, bold)["title"]
+			assert_gt(int(title["size"]), 0, "the phone menu lost its wordmark at %s" % size)
+			assert_true(bool(title["tagline"]),
+				"the phone menu lost its tagline at %s (6 doors: %s)" % [size, doors])
+
+## Order of sacrifice on a window with no room for both: the doors keep their tap
+## size, the wordmark shrinks, the tagline goes first, and only a window shorter
+## than any handset gives the wordmark up entirely.
+func test_a_short_window_gives_up_the_wordmark_only_at_the_last() -> void:
+	var bold: Font = UiChrome.fonts()["bold"]
+	var short_phone: Dictionary = MenuScreen.layout(Vector2(640, 360), true, bold)["title"]
+	assert_gt(int(short_phone["size"]), 0, "a 360-unit handset lost its wordmark")
+	assert_false(bool(short_phone["tagline"]), "a 360-unit handset kept a tagline it has no room for")
+	var scrunched: Dictionary = MenuScreen.layout(Vector2(640, 300), false, bold)["title"]
+	assert_gt(int(scrunched["size"]), 0, "a five-door 300-unit window lost its wordmark")
+	assert_lte(int(scrunched["size"]), 40, "a 300-unit window kept a wordmark too tall for it")
+	var cramped := MenuScreen.layout(Vector2(640, 300), true, bold)
+	assert_eq(int(cramped["title"]["size"]), 0, "six doors and a title cannot share a 300-unit window")
+	for b in cramped["doors"]:
+		assert_gte((b["rect"] as Rect2).size.y, 44.0, "the too-short window shrank a door instead")
+
 func test_start_sim_opens_the_fixture_sheet_and_back_returns_to_the_menu() -> void:
 	game.menus.open_menu()
 	press(door("start"))
@@ -77,9 +147,12 @@ func test_start_sim_opens_the_fixture_sheet_and_back_returns_to_the_menu() -> vo
 	assert_true(game.menus.active(), "Back did not return to the main menu")
 	assert_eq(game.menus.shell.screen, AppShell.SCREEN_MENU, "Back did not land on the menu")
 
-func test_kick_off_closes_the_shell_and_stops_the_music() -> void:
+func test_kick_off_opens_the_briefing_then_closes_the_shell_and_stops_the_music() -> void:
 	game.open_select(true)
 	game._on_fixture_confirmed("ARS", "LIV")
+	# #157: KICK OFF opens the pre-match briefing; the match starts from it.
+	assert_true(TestBriefing.is_open(game), "KICK OFF skipped the pre-match briefing")
+	assert_true(TestBriefing.kick(game), "the briefing's KICK OFF did not start the match")
 	assert_false(game.menus.active(), "the shell stayed up after kick-off")
 	assert_true(game.match_started, "the match was not marked started")
 	assert_true(game.hud_layer.visible, "the match HUD did not come back for kick-off")
@@ -327,7 +400,6 @@ func test_closing_keeps_music_only_for_fixture_setup() -> void:
 
 func test_the_backdrop_falls_back_and_crossfades() -> void:
 	game.menus.open_menu()
-	assert_eq(game.menus.shell.volume_percent(), game.menus.shell.volume_percent(), "the volume readout is unstable")
 	var saved: Array = game.menus.shell.stills
 	game.menus.shell.stills = []
 	game.menus.shell.queue_redraw()

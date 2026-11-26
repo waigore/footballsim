@@ -21,8 +21,19 @@ const ITEMS := [
 const HEAD := 84.0
 const ROW_H := 46.0
 const ROW_GAP := 4.0
+## The drawer door on the left edge. A mouse finds a tall thin strip easily, so
+## the desktop door keeps the sliver it always had; a thumb does not, and the old
+## 24x104 strip sat inside Android's system gesture band with nothing printed on
+## it (#204). A touch sheet therefore gets a labelled 48-unit square set inboard
+## of the gesture inset, clear of the club rows, which start at 24.
 const TAB_W := 24.0
 const TAB_H := 104.0
+## The touch door: Android's 48-density-point floor, and a square because a
+## thumb's reach is round rather than tall.
+const TAP_DOOR := 48.0
+## Clear of Android's ~16 dp system-gesture strip, and clear of the sheet edge so
+## a back-swipe never lands on the door.
+const TAB_INSET := 16.0
 ## Seconds the slide takes end to end; a settled panel never blocks input.
 const SLIDE := 0.22
 
@@ -31,6 +42,9 @@ var slide := 0.0
 var target := 0.0
 ## Destination id on screen, supplied by the screen each refresh.
 var active := "nav:fixtures"
+## True when the sheet is presenting to a handheld: the drawer door becomes a
+## finger-sized square inboard of the gesture strip (#204).
+var touch := false
 var cache := {}
 var icons := {}
 
@@ -71,9 +85,16 @@ func panel_rect(vp: Vector2) -> Rect2:
 	var w := width(vp)
 	return Rect2(-w + w * eased(slide), 0.0, w, vp.y)
 
-## The always-available tab on the left edge that opens the panel. It rides
+## The always-available door on the left edge that opens the panel. It rides
 ## above the panel when that is settled open, so closing is never a hunt.
+##
+## A touch sheet gets a 48-unit square set inboard of the gesture strip (#204):
+## the panel is the only way to reach the other readings, so the way in is a real
+## target. A desktop sheet keeps the tall sliver against the edge, where a mouse
+## finds it without it covering any of the club rows behind it.
 func tab_rect(vp: Vector2) -> Rect2:
+	if touch:
+		return Rect2(TAB_INSET, vp.y * 0.5 - TAP_DOOR * 0.5, TAP_DOOR, TAP_DOOR)
 	return Rect2(-2.0, vp.y * 0.5 - TAB_H * 0.5, TAB_W, TAB_H)
 
 func item_rect(vp: Vector2, index: int) -> Rect2:
@@ -139,10 +160,21 @@ func _draw_icon(c: CanvasItem, name: String, rect: Rect2, ink: Color) -> void:
 	if tex != null:
 		c.draw_texture_rect(tex, rect, false, ink)
 
-## Closed state: a thin pull tab on the left edge. Two rules read as a menu at
-## any size and are tinted gold, matching the sheet's accents.
-func _draw_tab(c: CanvasItem, vp: Vector2, _fonts: Dictionary) -> void:
+## Closed state: a labelled door on the left edge. Three rules read as a menu at
+## any size and are tinted gold, and the word under them says what the plate is
+## for (#204: the old sliver was unlabelled and 9x15 dp). It is an overlay door
+## like the broadcast's HUD pill — the rows scroll under it, so nothing it covers
+## is stranded.
+func _draw_tab(c: CanvasItem, vp: Vector2, fonts: Dictionary) -> void:
 	var rect := tab_rect(vp)
+	if touch:
+		UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 7, Color(0.96, 0.78, 0.30, 0.55), 1)
+		for i in range(3):
+			c.draw_rect(Rect2(rect.position.x + 13.0, rect.position.y + 12.0 + float(i) * 7.0,
+				22.0, 2.0), UiChrome.C_GOLD)
+		UiChrome.text_c(c, rect.get_center().x, rect.end.y - 10.0, "NAV", 10, UiChrome.C_GOLD,
+			fonts.get("bold", null))
+		return
 	UiChrome.panel(c, cache, Rect2(rect.position.x, rect.position.y, rect.size.x + 6.0, rect.size.y),
 		UiChrome.C_PANEL_LIGHT, 6, Color(0.96, 0.78, 0.30, 0.35), 1)
 	for i in range(3):
