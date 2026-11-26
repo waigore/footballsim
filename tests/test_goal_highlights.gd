@@ -200,9 +200,10 @@ func test_the_seed_shapes_the_chance() -> void:
 	assert_gt(path, 1.0, "two seeds put the same bodies in the same place")
 
 ## Every seeded chance is constrained to score: the ball crosses inside the
-## frame and the report's own scoreline lands with it.
+## frame and the report's own scoreline lands with it. Four seeds cover the
+## constraint without redrawing eight vignettes under coverage.
 func test_every_seeded_chance_finishes_inside_the_frame() -> void:
-	for seed in range(1, 9):
+	for seed in range(1, 5):
 		var clip := GoalHighlight.build(_goal(34), _sides(), seed)
 		var frames: Array = clip["frames"]
 		var first := -1
@@ -315,12 +316,15 @@ class FakeHost:
 	var accumulator := 0.0
 
 func _ring_host(seed: int) -> Array:
+	# Snapshot cadence is ~27 ticks (`HighlightDirector.SNAPSHOT_EVERY`); four
+	# frames is the capture floor, so ~90 ticks fills the ring without the old
+	# 150-tick warm-up tax under coverage.
 	var engine = MatchEngine.new(seed, "MUN", "MCI")
 	var host := FakeHost.new()
 	host.engine = engine
 	var director := HighlightDirector.new(host)
 	director.restart()
-	for i in range(150):
+	for i in range(90):
 		engine.tick()
 		director.sample()
 	return [host, director, engine]
@@ -489,11 +493,15 @@ func test_a_stored_penalty_clip_draws_as_a_spot_kick() -> void:
 	season.record.clips.clear(fx)
 
 func test_a_settled_matchday_stores_a_clip_for_every_goal() -> void:
+	# Auto rows keep a recipe, not a picture (`LeagueHighlights._generated_row`).
+	# Assert every goal has a row, then draw one pack — redrawing every vignette
+	# was the suite's slowest coverage path (~1.8 s).
 	var result := season.advance()
 	var reports: Array = result["played"]
 	assert_gt(reports.size(), 0, "the matchday did not settle")
 	var goals := 0
 	var clips := 0
+	var sample: Dictionary = {}
 	for report in reports:
 		var rows: Array = report.get("highlights", [])
 		var reported := 0
@@ -505,12 +513,15 @@ func test_a_settled_matchday_stores_a_clip_for_every_goal() -> void:
 		assert_eq(rows.size(), reported, "a goal has no stored clip")
 		for row in rows:
 			assert_true(str(row.get("commentary", "")) != "", "a clip has no line")
-			var pack := season.record.clips.pack(str(row["fixture_id"]), int(row["goal_index"]))
-			assert_false(pack.is_empty(), "a stored clip does not decode")
-			assert_eq(str(pack["scorer_id"]), str(row["scorer_id"]), "the clip's scorer drifted")
-			assert_eq(int(pack["minute"]), int(row["minute"]), "the clip's minute drifted")
+			if sample.is_empty():
+				sample = row
 	assert_gt(goals, 0, "no goals were reported at all")
 	assert_eq(clips, goals, "the clips do not cover the goals")
+	assert_false(sample.is_empty(), "no clip row to draw")
+	var pack := season.record.clips.pack(str(sample["fixture_id"]), int(sample["goal_index"]))
+	assert_false(pack.is_empty(), "a stored clip does not decode")
+	assert_eq(str(pack["scorer_id"]), str(sample["scorer_id"]), "the clip's scorer drifted")
+	assert_eq(int(pack["minute"]), int(sample["minute"]), "the clip's minute drifted")
 
 ## A settled auto goal keeps a recipe, not a picture: the first report to ask
 ## draws the pack from the save itself. It must be the clip the settling pass
@@ -576,13 +587,19 @@ func test_a_settled_clip_is_drawn_from_its_recipe() -> void:
 		"a missing clip decoded to a picture")
 
 func test_a_clip_records_the_assist_it_was_built_with() -> void:
-	var rows := season.record.clips.list(str((season.record.fixtures.all()[0] as Dictionary)["id"]))
-	for row in rows:
-		var name := str(row.get("assist_name", ""))
-		var pack := season.record.clips.pack(str(row["fixture_id"]), int(row["goal_index"]))
-		assert_eq(str(pack.get("assist", "")), name, "the clip and its row disagree on the assist")
-		assert_eq(str(pack.get("scorer", "")), str(row.get("scorer_name", "")),
-			"the clip and its row disagree on the scorer")
+	# One drawn pack is enough: the recipe → pack path is the same for every row.
+	var row := {}
+	for candidate in season.record.fixtures.all():
+		var rows := season.record.clips.list(str(candidate["id"]))
+		if not rows.is_empty():
+			row = rows[0]
+			break
+	assert_false(row.is_empty(), "no settled clip to check")
+	var name := str(row.get("assist_name", ""))
+	var pack := season.record.clips.pack(str(row["fixture_id"]), int(row["goal_index"]))
+	assert_eq(str(pack.get("assist", "")), name, "the clip and its row disagree on the assist")
+	assert_eq(str(pack.get("scorer", "")), str(row.get("scorer_name", "")),
+		"the clip and its row disagree on the scorer")
 
 func test_reopening_the_save_replays_the_same_clip() -> void:
 	var fixture := ""

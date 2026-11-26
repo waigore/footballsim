@@ -3,9 +3,15 @@ extends GdToolsTest
 ## The German pair in one save (#239): the shipped Bundesliga and 2. Bundesliga
 ## snapshots start a season at their own 18-club, 34-matchday shape, on the real
 ## 2026-27 calendar or a generated one, and share the clock.
+##
+## One real BL+BL2 save is built in `before_all` and reused for the shape and
+## Continue asserts so coverage does not pay for two 612-fixture creates.
 
 var SAVE_DIR := TestScratch.dir("saves_test_german_season")
 var CACHE_DIR := TestScratch.dir("cache_test_german_season")
+
+var pair: LeagueSeason = null
+var pair_slug := ""
 
 func before_all() -> void:
 	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
@@ -14,8 +20,13 @@ func before_all() -> void:
 	_clean()
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
+	pair = LeagueSeason.create("German Pair", "real", "fixture_days", 4242, ["BL", "BL2"])
+	pair_slug = pair.save.slug if pair != null else ""
 
 func after_all() -> void:
+	if pair != null:
+		pair.close()
+		pair = null
 	_clean()
 	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR
@@ -29,8 +40,15 @@ func _clean() -> void:
 		if name.ends_with(".sqlite"):
 			DirAccess.remove_absolute(SAVE_DIR.path_join(name))
 
+## The shared real pair, rebound when another create closed it.
+func _pair() -> LeagueSeason:
+	if pair != null and LeagueSeason.active == pair:
+		return pair
+	pair = LeagueSeason.open(pair_slug)
+	return pair
+
 func test_the_german_pair_starts_on_the_real_calendar() -> void:
-	var season := LeagueSeason.create("German Pair", "real", "fixture_days", 4242, ["BL", "BL2"])
+	var season := _pair()
 	assert_not_null(season, "the German pair season was not created")
 	assert_eq(season.save.competition_ids(), ["BL", "BL2"], "the save lost a German tier")
 	var state := season.state()
@@ -53,7 +71,6 @@ func test_the_german_pair_starts_on_the_real_calendar() -> void:
 	assert_eq(int(season.rules_by["BL"]["relegation_places"]), 2, "the Bundesliga drop is wrong")
 	assert_eq(int(season.rules_by["BL2"]["relegation_places"]), 2, "the 2.BL drop is wrong")
 	assert_eq(int(LeagueRules.template("BL2")["promotion_places"]), 2, "2.BL promotion is wrong")
-	season.close()
 
 func test_a_generated_german_calendar_is_the_same_shape() -> void:
 	var season := LeagueSeason.create("German Generated", "generated", "fixture_days", 77, ["BL"])
@@ -68,8 +85,8 @@ func test_a_generated_german_calendar_is_the_same_shape() -> void:
 	season.close()
 
 func test_continue_plays_a_german_matchday() -> void:
-	var season := LeagueSeason.create("German Continue", "real", "fixture_days", 9, ["BL", "BL2"])
-	assert_not_null(season, "the German continue season was not created")
+	var season := _pair()
+	assert_not_null(season, "the German pair season was not created")
 	var before := season.state()
 	var seen := {}
 	for i in range(30):
@@ -87,4 +104,3 @@ func test_continue_plays_a_german_matchday() -> void:
 		for row in (after["tables"] as Dictionary)[cid]:
 			total += int(row["points"])
 		assert_gte(total, 2, "%s paid no points" % cid)
-	season.close()
