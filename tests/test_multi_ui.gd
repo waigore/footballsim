@@ -22,7 +22,14 @@ func test_the_picker_filters_by_league_and_mixes_sides() -> void:
 	for id in picker.ids:
 		assert_true(str(id).begins_with("LL-"), "%s is not a La Liga club" % id)
 	picker.set_league("")
-	assert_eq(picker.ids.size(), 40, "the ALL filter is not both leagues")
+	assert_eq(picker.ids.size(), 76, "the ALL filter is not every competition")
+	picker.set_league("BL")
+	assert_eq(picker.ids.size(), 18, "the Bundesliga filter is not one league")
+	picker.set_league("BL2")
+	assert_eq(picker.ids.size(), 18, "the 2. Bundesliga filter is not one league")
+	for id in picker.ids:
+		assert_true(str(id).begins_with("BL2-"), "%s is not a 2. Bundesliga club" % id)
+	picker.set_league("")
 	picker.setup("ARS", "LL-BAR")
 	assert_eq(picker.home_id(), "ARS", "the home pick was lost")
 	assert_eq(picker.away_id(), "LL-BAR", "a cross-league away pick was refused")

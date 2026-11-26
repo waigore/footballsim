@@ -81,12 +81,60 @@ COMPETITIONS = {
             "weekend_bias": 0.88, "midweek_matchdays": 4,
         },
     },
+    "BL": {
+        "espn": "ger.1",
+        "name": "Bundesliga",
+        "short_name": "BUNDESLIGA",
+        "country": "Germany",
+        "prefix": "BL-",
+        "rules": {
+            # The Bundesliga's 18-club, 34-matchday shape. Without a domestic
+            # cup in the save, 1-4 go to the Champions League, 5th to the
+            # Europa League and 6th to the Conference League. 17th and 18th are
+            # relegated, 16th plays the Relegation against 2.BL's third
+            # (container #237; the graph itself is #240).
+            "win_points": 3, "draw_points": 1, "clubs": 18,
+            "relegation_places": 2, "relegation_playoff_places": 1,
+            "ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 34,
+            "season_start": "2026-08-28", "season_end": "2027-05-22",
+            "weekend_bias": 0.88, "midweek_matchdays": 4,
+        },
+    },
+    "BL2": {
+        "espn": "ger.2",
+        "name": "2. Bundesliga",
+        "short_name": "2. BUNDESLIGA",
+        "country": "Germany",
+        "prefix": "BL2-",
+        "rules": {
+            # 18 clubs, 34 matchdays. 1st and 2nd go up, 3rd plays the
+            # Relegation against the Bundesliga's 16th; 17th and 18th are
+            # relegated. No European bands: the 2.BL podium reads promotion or
+            # RELEGATED only (container #237; the graph itself is #240).
+            "win_points": 3, "draw_points": 1, "clubs": 18,
+            "promotion_places": 2, "promotion_playoff_places": 1,
+            "relegation_places": 2, "relegation_playoff_places": 1,
+            "ucl_places": 0, "uel_places": 0, "uecl_places": 0, "matchdays": 34,
+            "season_start": "2026-08-07", "season_end": "2027-05-23",
+            "weekend_bias": 0.88, "midweek_matchdays": 4,
+        },
+    },
 }
+
+## The club count a competition ships, used by seed/fetch/verify instead of a
+## single 20-club assumption.
+CLUB_COUNTS = {cid: int(spec["rules"].get("clubs", 20)) for cid, spec in COMPETITIONS.items()}
+
 
 PLAYER_ATTRS = ("ovr", "pac", "sho", "pas", "dri", "def", "phy")
 GK_ATTRS = ("div", "han", "kic", "ref", "spd")
-## ESPN abbreviates the Manchester clubs differently from the shipped seed.
+## ESPN abbreviates some clubs differently from the shipped seed. One map per
+## competition, so Bayern's ESPN MUN never collides with Manchester United.
 ESPN_ALIASES = {"MAN": "MUN", "MNC": "MCI"}
+ALIASES_BY_COMP = {
+    "PL": {"MAN": "MUN", "MNC": "MCI"},
+    "BL": {"MUN": "FCB"},
+}
 STYLE_KEYS = (
     "possession", "tempo", "press", "line", "width", "directness", "crossing",
     "aggression",
@@ -112,8 +160,29 @@ MANAGERS = {
     "RAY": "I. Pérez", "VAL": "C. Corberán", "GET": "J. Bordalás",
     "ELC": "E. Sarabia", "MCF": "S. Pellicer",
 }
-## Real La Liga grounds, so a seeded club reads like its own stadium rather than
-## a placeholder. Unknown clubs fall back to "<city> Stadium".
+## Managers for the German pair, in the seed's initial-and-surname style, from
+## the 2026-27 Bundesliga and 2. Bundesliga personnel tables. ESPN's roster
+## `coach` field is stale for the shipped window, so the snapshot keeps its own.
+GERMAN_MANAGERS = {
+    "BL": {
+        "FCA": "M. Baum", "FCU": "M. Lustrinelli", "SVW": "D. Thioune",
+        "DOR": "N. Kovač", "ELV": "V. Wagner", "SGE": "A. Hütter",
+        "SCF": "J. Schuster", "HSV": "M. Polzin", "TSG": "C. Ilzer",
+        "KOE": "R. Wagner", "RBL": "M. Demichelis", "B04": "C. Martínez",
+        "M05": "U. Fischer", "BMG": "A. Blessin", "FCB": "V. Kompany",
+        "SCP": "R. Kettemann", "S04": "M. Muslić", "VFB": "S. Hoeneß",
+    },
+    "BL2": {
+        "BSC": "S. Leitl", "DSC": "O. Kirch", "BOC": "U. Rösler",
+        "EBS": "L. Kornetka", "COT": "C. Wollitz", "SVD": "F. Kohfeldt",
+        "SGD": "T. Stamm", "SGF": "H. Vogel", "H96": "S. Wagner",
+        "HDH": "F. Schmidt", "FCK": "T. Lieberknecht", "KSC": "M. Senft",
+        "KSV": "M. Kniat", "FCM": "P. Sander", "FCN": "M. Klose",
+        "OSN": "T. Schultz", "STP": "M. Rapp", "WOB": "T. Strobl",
+    },
+}
+## Real German grounds, in the same shape as the Spanish venues above.
+
 VENUES = {
     "BAR": ("Spotify Camp Nou", "Barcelona", 99354),
     "RMA": ("Santiago Bernabéu", "Madrid", 83186),
@@ -135,6 +204,44 @@ VENUES = {
     "GET": ("Coliseum", "Getafe", 16972),
     "ELC": ("Martínez Valero", "Elche", 31388),
     "MCF": ("La Rosaleda", "Málaga", 30044),
+    # Bundesliga
+    "FCA": ("WWK Arena", "Augsburg", 30660),
+    "FCU": ("Stadion An der Alten Försterei", "Berlin", 22012),
+    "SVW": ("Weserstadion", "Bremen", 42100),
+    "DOR": ("Signal Iduna Park", "Dortmund", 81365),
+    "ELV": ("Waldstadion an der Kaiserlinde", "Spiesen-Elversberg", 10000),
+    "SGE": ("Deutsche Bank Park", "Frankfurt", 59500),
+    "SCF": ("Europa-Park Stadion", "Freiburg im Breisgau", 34700),
+    "HSV": ("Volksparkstadion", "Hamburg", 57000),
+    "TSG": ("PreZero Arena", "Sinsheim", 30150),
+    "KOE": ("RheinEnergieStadion", "Cologne", 49698),
+    "RBL": ("Red Bull Arena", "Leipzig", 47800),
+    "B04": ("BayArena", "Leverkusen", 30210),
+    "M05": ("MEWA Arena", "Mainz", 33305),
+    "BMG": ("Borussia-Park", "Mönchengladbach", 54057),
+    "FCB": ("Allianz Arena", "Munich", 75000),
+    "SCP": ("Home Deluxe Arena", "Paderborn", 15000),
+    "S04": ("Veltins-Arena", "Gelsenkirchen", 62271),
+    "VFB": ("MHPArena", "Stuttgart", 60058),
+    # 2. Bundesliga
+    "BSC": ("Olympiastadion", "Berlin", 74649),
+    "DSC": ("Schüco-Arena", "Bielefeld", 27332),
+    "BOC": ("Vonovia Ruhrstadion", "Bochum", 26000),
+    "EBS": ("Eintracht-Stadion", "Braunschweig", 23325),
+    "COT": ("LEAG Energie Stadion", "Cottbus", 22528),
+    "SVD": ("Merck-Stadion am Böllenfalltor", "Darmstadt", 17650),
+    "SGD": ("Rudolf-Harbig-Stadion", "Dresden", 32249),
+    "SGF": ("Sportpark Ronhof Thomas Sommer", "Fürth", 16626),
+    "H96": ("Heinz von Heiden Arena", "Hanover", 49000),
+    "HDH": ("Voith-Arena", "Heidenheim", 15000),
+    "FCK": ("Fritz-Walter-Stadion", "Kaiserslautern", 49327),
+    "KSC": ("BBBank Wildpark", "Karlsruhe", 34302),
+    "KSV": ("Holstein-Stadion", "Kiel", 15034),
+    "FCM": ("Avnet Arena", "Magdeburg", 30098),
+    "FCN": ("Max-Morlock-Stadion", "Nuremberg", 49923),
+    "OSN": ("Stadion an der Bremer Brücke", "Osnabrück", 15741),
+    "STP": ("Millerntor-Stadion", "Hamburg", 29546),
+    "WOB": ("Volkswagen Arena", "Wolfsburg", 30000),
 }
 
 SCHEMA = """
@@ -283,7 +390,13 @@ def spec_for(competition_id: str) -> dict:
 
 
 def club_id_for(competition_id: str, abbr: str) -> str:
-    return spec_for(competition_id)["prefix"] + abbr.upper()
+    return spec_for(competition_id)["prefix"] + shippable_abbr(competition_id, abbr)
+
+
+def shippable_abbr(competition_id: str, abbr: str) -> str:
+    """The abbreviation the seed ships for a competition's ESPN team."""
+    up = str(abbr).upper()
+    return ALIASES_BY_COMP.get(competition_id, ESPN_ALIASES).get(up, up)
 
 
 def comp_clubs(snapshot: dict, competition_id: str) -> list[dict]:
@@ -336,7 +449,7 @@ def fetch_table(competition_id: str, season: int, snapshot: dict) -> dict[str, s
     espn_ids: dict[str, str] = {}
     for entry in entries:
         abbr = entry["team"]["abbreviation"].upper()
-        club_id = by_abbr.get(ESPN_ALIASES.get(abbr, abbr))
+        club_id = by_abbr.get(shippable_abbr(competition_id, abbr))
         if club_id is None:
             club_id = by_name.get(slug(entry["team"].get("displayName", "")))
         if club_id is None:
@@ -572,24 +685,26 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
     league = spec["espn"]
     data = get_json(f"https://site.api.espn.com/apis/v2/sports/soccer/{league}/standings?season={season}")
     entries = data["children"][0]["standings"]["entries"]
+    size = max(len(entries), 2)
     rank_of = {}
     for entry in entries:
         stats = {s["name"]: s.get("value") for s in entry["stats"] if s.get("value") is not None}
-        rank_of[str(entry["team"]["id"])] = int(stats.get("rank", 20))
+        rank_of[str(entry["team"]["id"])] = int(stats.get("rank", size))
 
     def build(entry: dict) -> dict:
         team = entry["team"]
-        abbr = team["abbreviation"].upper()
+        abbr = shippable_abbr(competition_id, team["abbreviation"])
         club_id = club_id_for(competition_id, abbr)
         meta = get_json(f"{ESPN_SITE}/soccer/{league}/teams/{team['id']}").get("team", {})
         roster = get_json(
             f"{ESPN_SITE}/soccer/{league}/teams/{team['id']}/roster?season={season}"
         ).get("athletes", [])
         color = _hex(_rgb(meta.get("color", team.get("color", "888888"))))
-        rank = rank_of.get(str(team["id"]), 20)
+        rank = rank_of.get(str(team["id"]), size)
         # Club strength runs 84 at the top down to 71 at the bottom: the same
-        # band the hand-authored Premier League squads occupy.
-        club_base = 84.0 - float(rank - 1) * 0.7
+        # band the hand-authored Premier League squads occupy, whatever the
+        # league size.
+        club_base = 84.0 - float(rank - 1) * (13.0 / float(size - 1))
         ground, city, capacity = VENUES.get(
             abbr, (f"{team.get('location', team['displayName'])} Stadium",
                    team.get("location", ""), 25000))
@@ -650,7 +765,7 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
         # line, and an ESPN roster of 34 leaves room for the bench.
         players = players[:26]
         strength = float(rank)
-        profile = 1.0 - (strength - 1.0) / 19.0
+        profile = 1.0 - (strength - 1.0) / float(size - 1)
         style = {
             "possession": round(0.44 + 0.24 * profile, 2),
             "tempo": round(0.48 + 0.12 * profile, 2),
@@ -663,7 +778,9 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
             "id": club_id, "competition_id": competition_id,
             "name": team["displayName"], "short": team.get("shortDisplayName", team["displayName"]),
             "abbr": abbr, "nickname": meta.get("nickname", ""),
-            "manager": MANAGERS.get(abbr, "") if competition_id == "LL" else "", "stadium": ground, "city": city, "capacity": int(capacity),
+            "manager": GERMAN_MANAGERS.get(competition_id, {}).get(abbr)
+            or (MANAGERS.get(abbr, "") if competition_id == "LL" else ""),
+            "stadium": ground, "city": city, "capacity": int(capacity),
             "formation": "4-2-3-1", "color": color,
             "color_dark": _shade(color, 0.65), "color_light": _shade(color, 1.35),
             "shorts": "#ffffff", "gk_color": "#1a1a1a", "text": _ink(color),
@@ -706,11 +823,12 @@ def cmd_fetch(args: argparse.Namespace) -> int:
     snapshot["snapshot_date"] = args.date or time.strftime("%Y-%m-%d", time.gmtime())
     snapshot["season_label"] = f"{args.season}-{str(args.season + 1)[2:]}"
     for cid in targets:
-        if len(comp_clubs(snapshot, cid)) < 20:
+        need = CLUB_COUNTS[cid]
+        if len(comp_clubs(snapshot, cid)) < need:
             raise SystemExit(f"{cid} has no seeded clubs; run seed --competition {cid} first")
         espn_ids = fetch_table(cid, args.season, snapshot)
-        if len(espn_ids) < 20:
-            raise SystemExit(f"ESPN standings covered {len(espn_ids)} {cid} clubs; expected 20")
+        if len(espn_ids) < need:
+            raise SystemExit(f"ESPN standings covered {len(espn_ids)} {cid} clubs; expected {need}")
         fixtures = fetch_fixtures(cid, args.season, espn_ids)
         others = [fx for fx in snapshot.get("fixtures", [])
                   if str(fx.get("competition_id", "PL")) != cid]
@@ -876,17 +994,19 @@ def cmd_verify(args: argparse.Namespace) -> int:
     else:
         problems.append(f"missing {SEED_DB.relative_to(ROOT)}; run build")
     for cid in comps:
+        need = CLUB_COUNTS.get(cid, 20)
         clubs = comp_clubs(snapshot, cid)
-        if len(clubs) != 20:
-            problems.append(f"{cid}: {len(clubs)} clubs, expected 20")
+        if len(clubs) != need:
+            problems.append(f"{cid}: {len(clubs)} clubs, expected {need}")
         table_rows = [r for r in snapshot.get("table", [])
                       if str(r.get("competition_id", "PL")) == cid]
-        if len(table_rows) != 20:
-            problems.append(f"{cid}: {len(table_rows)} table rows, expected 20")
+        if len(table_rows) != need:
+            problems.append(f"{cid}: {len(table_rows)} table rows, expected {need}")
         fixtures = [fx for fx in snapshot.get("fixtures", [])
                     if str(fx.get("competition_id", "PL")) == cid]
-        if len(fixtures) != 380:
-            problems.append(f"{cid}: {len(fixtures)} fixtures, expected 380")
+        expected_fixtures = need * (need - 1)
+        if len(fixtures) != expected_fixtures:
+            problems.append(f"{cid}: {len(fixtures)} fixtures, expected {expected_fixtures}")
     for club in snapshot["clubs"]:
         ids = [p["id"] for p in club["players"]]
         if len(ids) != len(set(ids)):

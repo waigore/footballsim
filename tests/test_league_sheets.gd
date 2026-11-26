@@ -114,7 +114,9 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 				if str(item["kind"]) == "choice" and bool(item["selected"]):
 					chosen += 1
 			assert_eq(chosen, 3, "one choice per group should be selected")
-			assert_eq(items.size(), 10, "the wizard is missing a control")
+			# NAME + LEAGUES caption + four league toggles + two calendar + two
+			# advance + CREATE + BACK.
+			assert_eq(items.size(), 12, "the wizard is missing a control")
 
 func test_the_load_list_lays_out_zero_and_many_saves() -> void:
 	var sheet := LeagueStartSheet.new()

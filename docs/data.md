@@ -19,9 +19,10 @@ stats (accepted: the sim ledger belongs to one snapshot).
 
 ## Competitions
 
-The seed carries the Premier League (`PL`) and La Liga (`LL`) for 2026-27.
-La Liga club ids carry the league namespace (`LL-BAR`), so a refresh can never
-collide a Spanish club with an English one; player and fixture ids inherit it.
+The seed carries the Premier League (`PL`), La Liga (`LL`) and Germany's pair
+(`BL`, `BL2`). Each owns an id namespace (`LL-BAR`, `BL-FCB`), so a refresh
+cannot collide two clubs. The German tiers play 18 clubs over 34 matchdays;
+auto-sim reuses the PL envelope.
 
 ## Tool
 
