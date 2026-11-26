@@ -57,6 +57,12 @@ func test_the_picker_offers_the_german_tiers() -> void:
 		"2.BL", "the second tier's narrow chip is not its code")
 	assert_eq(LeagueChrome.competition_chip_label({"id": "", "short_name": "ALL"}, 66.0), "ALL",
 		"the ALL chip was shortened")
+	assert_eq(LeagueChrome.competition_chip_label({"id": "PL", "short_name": "PREMIER LEAGUE"}, 66.0),
+		"PL", "the Premier League chip is not its code")
+	assert_eq(LeagueChrome.competition_chip_label({"id": "LL", "short_name": "LA LIGA"}, 66.0),
+		"LL", "the La Liga chip is not its code")
+	assert_eq(LeagueChrome.competition_chip_label({"id": "XX", "short_name": "SOMEWHERE"}, 66.0),
+		"SOMEW", "an unknown competition chip was not clipped")
 	picker.set_league("")
 
 func test_a_cross_league_german_friendly_names_both_tiers() -> void:
