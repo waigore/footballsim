@@ -26,6 +26,7 @@ class StubGame extends Node:
 	var selector = null
 	var seeded := 1000
 	var match_started := false
+	var engine = null
 	func new_match(seed: int) -> void:
 		seeded = seed
 		match_started = true
@@ -35,6 +36,7 @@ class StubSelector extends RefCounted:
 	var back_to_menu := false
 	var visible := true
 	var clubs := Vector2.ZERO
+	var winner_mode := "draw"
 	func setup(home: String, away: String) -> void:
 		clubs = Vector2(0, 0)
 		back_to_menu = false
@@ -243,6 +245,41 @@ func test_the_short_name_is_the_last_word() -> void:
 	assert_eq(PreMatchPitch.short_name("Rasmus"), "RASMUS", "a one-word name was cut")
 
 # -------------------------------------------------------------------- hosts ---
+
+func test_the_picker_asks_for_a_decided_match_only_when_chosen() -> void:
+	var picker = load("res://scripts/ui/team_select.gd").new()
+	assert_eq(str(picker.winner_mode), "draw", "a friendly does not default to a draw")
+	var mode_ids: Array = []
+	for spec in LeagueChrome.winner_rects(Vector2(1280, 720), 500.0):
+		mode_ids.append(str(spec["id"]))
+		assert_gt((spec["rect"] as Rect2).position.y, 500.0,
+			"the winner control covers the club cards")
+	assert_eq(mode_ids, ["draw", "extra"], "the winner control is missing a mode")
+	picker.click("win:extra")
+	assert_eq(str(picker.winner_mode), "extra", "the picker did not take extra time")
+	picker.click("win:draw")
+	assert_eq(str(picker.winner_mode), "draw", "the picker did not go back to a draw")
+	# The phone control still sits above the fixed doors.
+	for vp in [Vector2(411, 780), Vector2(914, 411)]:
+		var last: Rect2 = LeagueChrome.winner_rects(vp, vp.y * 0.30)[1]["rect"]
+		assert_lte(last.end.x, vp.x - 8.0, "the winner control runs off the sheet")
+		assert_lte(last.end.y, vp.y - 128.0, "the winner control reaches into the doors")
+
+func test_the_picker_hands_a_decided_match_to_the_engine() -> void:
+	var game := StubGame.new()
+	game.selector = StubSelector.new()
+	game.selector.winner_mode = "extra"
+	game.engine = StubEngine.new()
+	FixtureSheet.new(game).start("MUN", "MCI")
+	assert_true(game.engine.requires_winner, "the picker did not ask the engine for a winner")
+	game.selector.winner_mode = "draw"
+	game.engine = StubEngine.new()
+	FixtureSheet.new(game).start("MUN", "MCI")
+	assert_false(game.engine.requires_winner, "a friendly was forced to a winner")
+	game.free()
+
+class StubEngine extends RefCounted:
+	var requires_winner := false
 
 func test_the_picker_confirms_into_the_briefing_and_back_reopens_it() -> void:
 	var game := StubGame.new()

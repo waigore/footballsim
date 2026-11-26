@@ -35,6 +35,9 @@ var interest := InterestHold.new()
 var menu_layer: InterestLayer = null
 ## The followed club ids as a set: their card names print gold.
 var followed := {}
+## A friendly is level at full time unless the picker asks for extra time and
+## penalties (#249); the engine path is the competition one (#238).
+var winner_mode := "draw"
 
 var f_bold: FontFile
 var f_med: FontFile
@@ -145,6 +148,8 @@ func click(id: String) -> void:
 		browse.emit(WikiModel.LEAGUE, "")
 	elif id.begins_with("league:"):
 		set_league(id.substr(7))
+	elif id.begins_with("win:"):
+		winner_mode = id.substr(4)
 	elif id == "team_home":
 		browse.emit(WikiModel.TEAM, home_id())
 	elif id == "team_away":
@@ -279,15 +284,7 @@ static func clubs_line(count: int, competition_name: String) -> String:
 
 ## The clubs line under the doors: the count and the league, from the file (#209).
 func _clubs_line() -> String:
-	if league_filter != "":
-		return clubs_line(ids.size(), PLRepository.shared().competition_name(league_filter))
-	var names: Array = []
-	for row in PLCompetitions.active():
-		names.append(str(row.get("name", "")))
-	if names.size() > 1:
-		return clubs_line(ids.size(), " + ".join(PackedStringArray(names)))
-	var name := str(TeamData.get_team(str(home_id())).get("competition_name", ""))
-	return clubs_line(ids.size(), name)
+	return LeagueChrome.picker_clubs_line(self)
 
 ## Design space this sheet draws in (the layer is scaled up by main.gd).
 func design_vp() -> Vector2:
@@ -351,6 +348,7 @@ func _draw() -> void:
 
 	var bw := 190.0
 	var bh := 50.0
+	LeagueChrome.winner_control(self, vp, card_y + card_h, winner_mode, f_bold)
 	var by: float = minf(card_y + card_h + 54.0, vp.y - bh - 78.0)
 	var confirm_rect := Rect2(vp.x * 0.5 - bw - 8.0, by, bw, bh)
 	var random_rect := Rect2(vp.x * 0.5 + 8.0, by, bw, bh)
@@ -375,13 +373,11 @@ func _draw() -> void:
 					C_DIM, f_med)
 		_add_button(spec[0], r)
 
-	if touch:
-		text_c(vp.x * 0.5, vp.y - 44, "TAP THE ARROWS TO CHANGE CLUBS  ·  TAP KICK OFF", 11, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, _clubs_line(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
-	else:
-		text_c(vp.x * 0.5, vp.y - 64, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 44, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   1/2/3  LEAGUE   ·   ESC  %s" % ("MENU" if back_to_menu else "BACK"), 10, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, _clubs_line(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
+	# Footer: the same words on both shells, owned by the chrome module so this
+	# script stays inside its size budget.
+	for spec in LeagueChrome.picker_hints(self, touch, back_to_menu):
+		text_c(vp.x * 0.5, vp.y + float(spec[0]), str(spec[1]), int(spec[2]),
+			spec[3] as Color, f_med)
 
 	# A touch build has no Escape key: the sheet needs a visible way out.
 	var back := back_rect(vp)
