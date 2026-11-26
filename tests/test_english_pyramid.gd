@@ -154,21 +154,23 @@ func test_the_table_legend_reads_the_leagues_own_bands() -> void:
 # ----------------------------------------------------------------- clock ---
 
 func test_a_five_tier_save_builds_every_calendar() -> void:
-	var full := LeagueSeason.create("Pyramid Build", "generated", "fixture_days", 99, ENGLISH)
+	# before_all already built the five-tier save (then played it out). Fixture
+	# counts are still on the ledger — read the full set per competition.
+	var full := _current()
 	assert_not_null(full, "the five-tier save did not build")
 	assert_eq(full.save.competition_ids(), ENGLISH, "the save lost a tier")
 	for cid in ENGLISH:
-		var fixtures := full.record.fixtures.unplayed(str(cid))
+		var total := full.record.fixtures.all(-1, str(cid)).size()
 		var per_tier := 380 if cid == "PL" else 552
-		assert_eq(fixtures, per_tier, "%s did not build its double round robin" % cid)
+		assert_eq(total, per_tier, "%s did not build its double round robin" % cid)
 		assert_eq(full.record.standings.table(str(cid)).size(), 20 if cid == "PL" else 24,
 			"%s table is the wrong size" % cid)
-	full.close()
 
 ## Every contiguous English stack a player can pick — the Premier League alone up
-## to all five — builds its own calendars, nothing more.
+## to four tiers — builds its own calendars. The full five-tier stack is already
+## covered by the shared before_all season (and the calendar assert above).
 func test_any_contiguous_english_stack_builds() -> void:
-	for depth in range(1, ENGLISH.size() + 1):
+	for depth in range(1, ENGLISH.size()):
 		var stack: Array = ENGLISH.slice(0, depth)
 		var built := LeagueSeason.create("Stack %d" % depth, "generated", "fixture_days",
 			11 + depth, stack)
