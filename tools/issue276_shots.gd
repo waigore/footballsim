@@ -60,6 +60,8 @@ func _initialize() -> void:
 	print("STATE ", scene.hud.roster_band.state_label(scene, scene.hud.controls_band.speed_label(scene), "full_time"))
 	print("CHIP shown=", HudTopBand.chip_shown(scene.mode, scene.fast_mode, scene.paused, scene.match_time, "play"),
 		" over=", HudTopBand.chip_shown(scene.mode, scene.fast_mode, scene.paused, scene.match_time, "full_time"))
+	print("RESTART door=", scene.hud.controls_band.control_specs(
+		HudPaint.new(scene.hud.chrome, scene.hud.design_vp()), scene, scene.hud.touch, "full_time")[6][1])
 	# Phone design space: the compact bar carries the teams door too.
 	scene.dev.ui_scale = 2.2
 	scene._sync_overlay_scale()
@@ -68,7 +70,26 @@ func _initialize() -> void:
 	_print_pose("phone full time")
 	scene.dev.ui_scale = 0.0
 	scene._sync_overlay_scale()
-	print("EXIT touch=", scene.hud.touch)
+	# In play, the pose the screen catalogue grades the HUD on: the play doors are
+	# live, the state line names the view, and the replay chip is up.
+	scene.new_match(1000)
+	scene.view.set_mode("highlights")
+	scene.paused = false
+	scene.fast_mode = true
+	scene.match_time = 40.0
+	scene.engine.clock = 63.0 * 60.0
+	scene.engine.half = 2
+	scene.engine.score[0] = 1
+	scene.engine.score[1] = 1
+	scene.engine.events = [
+		{"id": 1, "type": "kickoff", "text": "Kick-off! Manchester City to get us going.", "minute": 0},
+		{"id": 2, "type": "goal", "text": "GOAL! P. Foden finds the far corner.", "minute": 22},
+		{"id": 3, "type": "goal", "text": "GOAL! B. Šeško levels it.", "minute": 57},
+	]
+	scene.hud.ticker.hold = 0.0
+	scene.hud.queue_redraw()
+	await _shot("issue276_desktop_in_play")
+	_print_pose("desktop in play")
 	quit()
 
 ## Every door the overlay answered with at this pose, in draw order, plus the
