@@ -64,7 +64,7 @@ func tick(d: float, engine, game) -> void:
 		if str(engine.phase) == "full_time":
 			return
 		label = "LIVE"
-		text = Commentary.live(engine)
+		text = CommentaryLive.live(engine)
 		minute = int(engine.minute_of(engine.clock))
 
 ## How long a line of this type stays on screen, in real seconds.

@@ -1,9 +1,11 @@
 class_name Commentary
 extends RefCounted
 
-## Broadcast voice. Pure text helpers, no engine mutation: the engine calls them
-## at the instant something happens so the log describes the pitch, and the HUD
-## asks for a live line when nothing fresh has happened.
+## Broadcast voice for in-play events. Pure text helpers, no engine mutation:
+## the engine calls them at the instant something happens so the log describes
+## the pitch. Live filler, restarts/whistles and bench lines live in
+## CommentaryLive / CommentaryRestarts / CommentaryBench so this file stays
+## inside its size budget (RUB-P3-01).
 ##
 ## Lines are kept under ~90 characters so the commentary panel never truncates
 ## mid-word, and every variant names a real player/team from the event.
@@ -15,6 +17,7 @@ static func _pick(rng, lines: Array, i: int = -1) -> String:
 		return lines[i % lines.size()]
 	return lines[rng.randi_range(0, lines.size() - 1)]
 
+
 ## Distance phrasing for shots, relative to the goal being attacked.
 static func _shot_range(dist: float) -> String:
 	if dist < 10.0:
@@ -24,6 +27,7 @@ static func _shot_range(dist: float) -> String:
 	if dist < 26.0:
 		return "from the edge of the area"
 	return "from range"
+
 
 static func shot(rng, name: String, dist: float, xg: float, pressure: float, kind: String) -> String:
 	var where := _shot_range(dist)
@@ -51,6 +55,7 @@ static func shot(rng, name: String, dist: float, xg: float, pressure: float, kin
 		"%s tries his luck %s!" % [name, where],
 		"%s strikes it %s!" % [name, where],
 	])
+
 
 ## how: "hold", "parry" or "goal_line".
 static func save(rng, gk: String, shooter: String, how: String, xg: float) -> String:
@@ -86,6 +91,7 @@ static func save(rng, gk: String, shooter: String, how: String, xg: float) -> St
 		"%s scoops it up." % gk,
 	])
 
+
 static func goal(rng, scorer: String, assist: String, own_goal: bool, team_short: String,
 		other_short: String, before_for: int, before_against: int, minute: int,
 		penalty: bool = false) -> String:
@@ -112,6 +118,7 @@ static func goal(rng, scorer: String, assist: String, own_goal: bool, team_short
 		line = "%s %s scores! %s." % [open, scorer, score]
 	return line
 
+
 static func block(rng, name: String, shooter: String) -> String:
 	if shooter != "":
 		return _pick(rng, [
@@ -119,6 +126,7 @@ static func block(rng, name: String, shooter: String) -> String:
 			"%s gets in the way of %s' shot!" % [name, shooter],
 		])
 	return _pick(rng, ["Blocked by %s!" % name, "%s throws his body in the way!" % name])
+
 
 ## The frame denies it: the ball comes back off a post or the bar instead of
 ## going in, which is neither a goal nor a save.
@@ -135,6 +143,7 @@ static func woodwork(rng, name: String, frame: String) -> String:
 		"THE POST! %s is denied by the width of a post!" % name,
 	])
 
+
 static func foul(rng, fouler: String, victim: String, penalty: bool) -> String:
 	if penalty:
 		return _pick(rng, [
@@ -147,6 +156,7 @@ static func foul(rng, fouler: String, victim: String, penalty: bool) -> String:
 		"Foul by %s on %s. Free kick." % [fouler, victim],
 		"%s brings %s down. Free kick." % [fouler, victim],
 	])
+
 
 static func card(rng, name: String, kind: String) -> String:
 	match kind:
@@ -168,11 +178,6 @@ static func card(rng, name: String, kind: String) -> String:
 			])
 	return ""
 
-static func kickoff(rng, team_name: String) -> String:
-	return _pick(rng, [
-		"We're underway — %s get us started." % team_name,
-		"Kick-off! %s to get us going." % team_name,
-	])
 
 static func cross(rng, name: String) -> String:
 	return _pick(rng, [
@@ -181,6 +186,7 @@ static func cross(rng, name: String) -> String:
 		"%s drills it across the six-yard box!" % name,
 		"%s clips it in — dangerous ball!" % name,
 	])
+
 
 static func clearance(rng, name: String, headed: bool) -> String:
 	if headed:
@@ -194,12 +200,14 @@ static func clearance(rng, name: String, headed: bool) -> String:
 		"%s hooks it clear." % name,
 	])
 
+
 static func offside(rng, name: String) -> String:
 	return _pick(rng, [
 		"Flag's up — %s strayed offside." % name,
 		"Offside against %s." % name,
 		"%s went too early — offside." % name,
 	])
+
 
 static func handball(rng, name: String, penalty: bool) -> String:
 	if penalty:
@@ -213,186 +221,3 @@ static func handball(rng, name: String, penalty: bool) -> String:
 		"%s handled that. Free kick given." % name,
 		"%s's arm got in the way — free kick." % name,
 	])
-
-## `continues` is false when the side has no change left to make.
-static func injury(rng, name: String, continues: bool) -> String:
-	if continues:
-		return _pick(rng, [
-			"%s is down and can't continue — a change is coming." % name,
-			"%s pulls up. He signals to the bench." % name,
-			"%s looks in trouble — the stretcher is on." % name,
-		])
-	return _pick(rng, [
-		"%s can't continue and there's no change left — they're down to ten." % name,
-		"%s hobbles off. No substitutions remaining." % name,
-	])
-
-static func substitution(rng, team_short: String, on_name: String, off_name: String, manager: String = "") -> String:
-	if manager != "":
-		return _pick(rng, [
-			"%s sends on %s for %s." % [manager, on_name, off_name],
-			"%s makes his move — %s replaces %s." % [manager, on_name, off_name],
-			"%s turns to the bench: %s on for %s." % [manager, on_name, off_name],
-		])
-	return _pick(rng, [
-		"Change for %s: %s on for %s." % [team_short, on_name, off_name],
-		"%s make a change — %s replaces %s." % [team_short, on_name, off_name],
-	])
-
-## Manager tinkering: one short line naming the manager and what moved.
-static func tactics(rng, manager: String, _team_short: String, changes: Array) -> String:
-	var what := _brief(changes)
-	return _pick(rng, [
-		"%s signals a change — %s." % [manager, what],
-		"%s adjusts it: %s." % [manager, what],
-		"%s has seen enough — %s." % [manager, what],
-		"%s tweaks it from the touchline: %s." % [manager, what],
-	])
-
-static func _brief(changes: Array) -> String:
-	var out := ""
-	for i in range(mini(3, changes.size())):
-		out += ("" if out == "" else ", ") + str(changes[i])
-	return "a shape change" if out == "" else out
-
-## Set-piece / restart line. `waiting` marks the taker holding play up for
-## team-mates to arrive.
-static func restart(rng, kind: String, team_short: String, taker: String, waiting: bool) -> String:
-	if waiting:
-		match kind:
-			"corner":
-				return _pick(rng, [
-					"%s are in no rush — waiting for the box to fill." % team_short,
-					"%s hold the corner back, bodies still arriving." % team_short,
-				])
-			"free_kick":
-				return _pick(rng, [
-					"%s take their time, letting the wall set." % team_short,
-					"%s wait for runners before playing this." % team_short,
-				])
-			_:
-				return _pick(rng, [
-					"%s are still organising." % team_short,
-					"%s wait for support." % team_short,
-				])
-	match kind:
-		"throw_in":
-			return _pick(rng, [
-				"Throw-in to %s." % team_short,
-				"%s restart from the touchline." % team_short,
-			])
-		"corner":
-			return _pick(rng, [
-				"Corner to %s — the big men are on their way up." % team_short,
-				"Corner kick, %s. Plenty in the box." % team_short,
-			])
-		"goal_kick":
-			if taker != "":
-				return _pick(rng, [
-					"Goal kick, %s." % taker,
-					"%s to restart from his own six-yard box." % taker,
-				])
-			return "Goal kick, %s." % team_short
-		"free_kick":
-			return _pick(rng, [
-				"Free kick to %s." % team_short,
-				"%s have a free kick here." % team_short,
-			])
-		"penalty":
-			return _pick(rng, [
-				"PENALTY to %s!" % team_short,
-				"%s have a penalty!" % team_short,
-			])
-	return "Restart to %s." % team_short
-
-static func half_time(rng, short_a: String, score_a: int, short_b: String, score_b: int) -> String:
-	return _pick(rng, [
-		"Half-time: %s %d-%d %s." % [short_a, score_a, score_b, short_b],
-		"That's the half-time whistle — %s %d, %s %d." % [short_a, score_a, short_b, score_b],
-	])
-
-static func full_time(rng, short_a: String, score_a: int, short_b: String, score_b: int) -> String:
-	var tail := ""
-	if score_a == score_b:
-		tail = " Honours even."
-	elif score_a > score_b:
-		tail = " %s take it." % short_a
-	else:
-		tail = " %s take it." % short_b
-	return "Full time: %s %d-%d %s.%s" % [short_a, score_a, score_b, short_b, tail]
-
-static func penalty_taken(rng, name: String) -> String:
-	return _pick(rng, [
-		"%s steps up..." % name,
-		"%s places the ball. Big moment." % name,
-	])
-
-# ------------------------------------------------------------------- live ----
-
-static func _lane(e, t: int, pos: Vector2) -> String:
-	var ax: float = e.attacking_x(t, pos)
-	if absf(pos.y - 34.0) > 17.0:
-		if ax > 60.0:
-			return "out wide in the final third"
-		return "out on the flank"
-	if ax > 88.0:
-		return "right on the edge of the box"
-	if ax > 70.0:
-		return "in the final third"
-	if ax > 45.0:
-		return "in midfield"
-	if ax > 24.0:
-		return "in their own half"
-	return "deep"
-
-static func _scoreline(e) -> String:
-	return "%s %d-%d %s" % [e.teams[0]["data"]["short"], e.score[0], e.score[1], e.teams[1]["data"]["short"]]
-
-## A truthful description of the current picture, for when no fresh event has
-## fired: possession, ball zone, pressure and, late on, the scoreline.
-static func live(e) -> String:
-	var t: int = e.possession_team
-	var tn: String = e.teams[t]["data"]["short"]
-	var on: String = e.teams[1 - t]["data"]["short"]
-	if e.phase == "restart":
-		var k: String = str(e.restart.get("type", ""))
-		if k == "penalty":
-			return "Penalty for %s. The ground holds its breath." % tn
-		if k == "corner":
-			return "Corner for %s — bodies arriving in the box." % tn
-		if k == "throw_in":
-			return "%s to restart from the touchline." % tn
-		if k == "goal_kick":
-			return "Goal kick for %s." % tn
-		if k == "kickoff":
-			return "%s lined up to get us going." % tn
-		return "%s over a free kick." % tn
-	var owner = e.ball_owner()
-	var where := _lane(e, t, e.ball.pos)
-	var i: int = int(e.clock * 0.4) % 3
-	if owner != null and owner.is_gk:
-		return "%s work it out from the back through the keeper." % tn
-	if owner != null:
-		var pu: float = e.pressure_on(owner)
-		var tail := ""
-		if e.clock > 4500.0 and e.score[0] != e.score[1]:
-			tail = "  %s." % _scoreline(e)
-		if pu >= 0.6:
-			return _pick(null, [
-				"%s snap at %s %s." % [on, owner.name, where],
-				"%s is hounded %s by %s." % [owner.name, where, on],
-				"%s press hard and %s has nowhere to go." % [on, owner.name],
-			], i) + tail
-		return _pick(null, [
-			"%s carries it %s for %s." % [owner.name, where, tn],
-			"%s keep it patient %s." % [tn, where],
-			"%s build %s through %s." % [tn, where, owner.name],
-		], i) + tail
-	var tail2 := ""
-	if e.clock > 4500.0 and e.score[0] != e.score[1]:
-		tail2 = "  %s." % _scoreline(e)
-	return _pick(null, [
-		"Loose ball %s — both sides scrapping for it." % where,
-		"Scrappy stuff %s — nobody in control." % where,
-		"It's pinball %s." % where,
-	], i) + tail2

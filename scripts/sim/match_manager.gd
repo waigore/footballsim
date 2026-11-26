@@ -107,7 +107,7 @@ func replace_injured(p) -> bool:
 	var at_ht: bool = e.phase == "half_time"
 	if not e.sub_window_available(t, at_ht):
 		return false
-	e._emit("injury", Commentary.injury(e.rng, p.name, true), t, p)
+	e._emit("injury", CommentaryBench.injury(e.rng, p.name, true), t, p)
 	var ok: bool = e._bring_on(t, p, false, at_ht, {"reason": "injury", "manager": manager_name(t)})
 	if ok:
 		last_sub[t] = e.clock
@@ -200,7 +200,7 @@ func _apply(t: int, change: Dictionary, reason: String) -> bool:
 				q.base = TeamData.formation_slot_for(tactics[t].formation, q.role)
 	e.live_style[t] = tactics[t].style()
 	var short: String = str(e.teams[t]["data"]["short"])
-	var text: String = Commentary.tactics(e.rng, manager_name(t), short, labels)
+	var text: String = CommentaryBench.tactics(e.rng, manager_name(t), short, labels)
 	e._emit("tactics", text, t, null, {
 		"manager": manager_name(t), "changes": labels, "formation": tactics[t].formation,
 		"mentality": tactics[t].mentality, "reason": reason, "count": changes[t],

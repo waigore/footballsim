@@ -89,7 +89,7 @@ func _pointer(event: InputEventMouseButton) -> void:
 			if game.view.button_at(event.position) == "hud":
 				game.hud.toggle_hud()
 				return
-			game._click(event.position)
+			click(event.position)
 		else:
 			_release(event.position)
 
@@ -110,7 +110,51 @@ func _release(screen_point: Vector2) -> void:
 		if sid != "":
 			sheet.click(sid)
 		return
-	game._click(held_at if held_at.x >= 0.0 else screen_point)
+	click(held_at if held_at.x >= 0.0 else screen_point)
+
+## Overlay bar doors and a pitch token pick. The scene keeps the flags; this
+## module owns the branching so main.gd stays a thin host.
+func click(p: Vector2) -> void:
+	var b: String = game.view.button_at(p)
+	if b == "pause":
+		game.paused = not game.paused
+	elif b == "speed":
+		_cycle_speed()
+	elif b == "mode":
+		game._toggle_mode()
+	elif b == "skip":
+		game._skip()
+	elif b == "camera":
+		game.camera_follow = not game.camera_follow
+	elif b == "teams":
+		game.open_select()
+	elif b == "menu":
+		game.menus.open_menu()
+	elif b == "league":
+		game.wiki_host.open_page(WikiModel.LEAGUE, "")
+	elif b == "team_0":
+		game.wiki_host.open_page(WikiModel.TEAM, str(game.engine.teams[0]["id"]))
+	elif b == "team_1":
+		game.wiki_host.open_page(WikiModel.TEAM, str(game.engine.teams[1]["id"]))
+	elif b == "profile":
+		var tracked = game.engine.by_id.get(game.focus_id, null)
+		if tracked != null and str(tracked.key) != "":
+			game.wiki_host.open_page(WikiModel.PLAYER, str(tracked.key))
+	elif b == "manager_card":
+		game.hud.manager_card.dismiss()
+	elif b == "restart":
+		game.new_match(game.seeded + randi_range(0, 9999))
+	if b != "":
+		return
+
+	game.hover_id = game.view.pick(p)
+	game.focus_id = -1 if game.hover_id < 0 or game.focus_id == game.hover_id else game.hover_id
+	game.actors.focus_id = game.focus_id
+
+func _cycle_speed() -> void:
+	var opts := [1.0, 2.0, 4.0, 8.0]
+	var idx := opts.find(game.speed)
+	game.speed = opts[(idx + 1) % opts.size()]
 
 # if/elif rather than match: the coverage injector cannot instrument a match
 # statement, and an uninstrumentable main.gd fails the patch gate.

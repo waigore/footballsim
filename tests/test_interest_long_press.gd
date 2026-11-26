@@ -12,8 +12,10 @@ extends GdToolsTest
 var SAVE_DIR := TestScratch.dir("saves_test_long_press")
 var CACHE_DIR := TestScratch.dir("cache_test_long_press")
 const SEED := 2031
+const PRISTINE := "_pristine.sqlite"
 
 var season: LeagueSeason = null
+var slug := ""
 
 # ------------------------------------------------------------------ fakes ---
 
@@ -41,16 +43,18 @@ class FakeSeason extends RefCounted:
 			record.interest.marked.erase(club_id)
 
 func before_all() -> void:
+	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
 	PLDatabase.cache_dir = CACHE_DIR
 	LeagueSave.dir = SAVE_DIR
 	_clean()
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
-
-func before_each() -> void:
-	_clean()
-	PLDatabase.reset()
-	PLRepository.shared().invalidate()
+	# One create for every surface that needs a live season: hub, picker, HUD
+	# and encyclopedia restore this file instead of paying create again.
+	season = LeagueSeason.create("Long Press", "generated", "fixture_days", SEED)
+	assert_not_null(season, "the shared long-press season was not created")
+	slug = season.save.slug
+	_snapshot()
 
 func after_each() -> void:
 	if season != null:
@@ -59,6 +63,9 @@ func after_each() -> void:
 	LeagueSeason.active = null
 
 func after_all() -> void:
+	if season != null:
+		season.close()
+		season = null
 	_clean()
 	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR
@@ -68,6 +75,38 @@ func after_all() -> void:
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
 		TestScratch.clear(folder)
+
+## Keep a byte-for-byte copy of the fresh save so interest writes can rewind
+## without recreating the calendar.
+func _snapshot() -> void:
+	if season == null or season.save == null:
+		return
+	season.save.ensure_open()
+	PLDatabase.close()
+	var bytes := FileAccess.get_file_as_bytes(season.save.path)
+	var out := FileAccess.open(SAVE_DIR.path_join(PRISTINE), FileAccess.WRITE)
+	if out != null and not bytes.is_empty():
+		out.store_buffer(bytes)
+		out.close()
+	season.save.ensure_open()
+
+## Restore the pristine season and reopen it. Mutating tests each get a clean
+## shortlist this way.
+func _fresh() -> LeagueSeason:
+	if season != null:
+		season.close()
+		season = null
+	LeagueSeason.active = null
+	PLDatabase.close()
+	var bytes := FileAccess.get_file_as_bytes(SAVE_DIR.path_join(PRISTINE))
+	var dest := SAVE_DIR.path_join(slug + LeagueSave.EXT)
+	var out := FileAccess.open(dest, FileAccess.WRITE)
+	assert_true(out != null and not bytes.is_empty(), "the pristine long-press save was missing")
+	out.store_buffer(bytes)
+	out.close()
+	season = LeagueSeason.open(slug)
+	assert_not_null(season, "the pristine long-press save did not reopen")
+	return season
 
 func _down(p: Vector2) -> InputEventMouseButton:
 	var ev := InputEventMouseButton.new()
@@ -292,8 +331,7 @@ func test_a_drag_under_the_pointer_scrolls_instead_of_holding() -> void:
 # ------------------------------------------------------- the league sheet ---
 
 func _open_hub() -> LeagueScreen:
-	season = LeagueSeason.create("Long Press", "generated", "fixture_days", SEED)
-	assert_not_null(season, "the season was not created")
+	_fresh()
 	var screen := LeagueScreen.new()
 	add_child(screen)
 	screen.ui_scale = 1.0
@@ -360,8 +398,7 @@ func test_escape_puts_the_menu_away_before_the_sheet() -> void:
 # ------------------------------------------------------- the fixture picker ---
 
 func test_the_picker_holds_a_club_card() -> void:
-	season = LeagueSeason.create("Picker Press", "generated", "fixture_days", SEED)
-	assert_not_null(season, "the season was not created")
+	_fresh()
 	var picker = load("res://scripts/ui/team_select.gd").new()
 	add_child(picker)
 	picker.ui_scale = 1.0
@@ -410,7 +447,7 @@ func _press_at(game: Node2D, r: Rect2, pressed: bool) -> void:
 	game._input(ev)
 
 func test_the_hud_holds_a_club_name() -> void:
-	season = LeagueSeason.create("Hud Press", "generated", "fixture_days", SEED)
+	_fresh()
 	var game := await _match()
 	var door := _hud_door(game, "team_0")
 	assert_gt(door.size.x, 0.0, "the overlay painted no home club door")
@@ -437,13 +474,14 @@ func test_the_hud_holds_a_club_name() -> void:
 func test_the_overlay_follows_a_season_opening_and_closing() -> void:
 	var game := await _match()
 	assert_true(game.hud.followed.is_empty(), "no season, yet the overlay held a shortlist")
-	season = LeagueSeason.create("Overlay Bind", "generated", "fixture_days", SEED)
+	_fresh()
 	season.set_interest("MUN", true)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	assert_true(bool(game.hud.followed.get("MUN", false)),
 		"the overlay missed the season that opened under it")
 	season.close()
+	season = null
 	LeagueSeason.active = null
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -472,7 +510,7 @@ func _wiki() -> Control:
 	return screen
 
 func test_the_league_page_names_each_club_row() -> void:
-	season = LeagueSeason.create("Wiki Press", "generated", "fixture_days", SEED)
+	_fresh()
 	var screen := _wiki()
 	screen.open(WikiModel.LEAGUE, "")
 	await get_tree().process_frame
@@ -489,7 +527,7 @@ func test_the_league_page_names_each_club_row() -> void:
 	screen.queue_free()
 
 func test_the_team_page_title_is_a_name_and_follows_gold() -> void:
-	season = LeagueSeason.create("Wiki Team", "generated", "fixture_days", SEED)
+	_fresh()
 	var screen := _wiki()
 	screen.open(WikiModel.TEAM, "MUN")
 	await get_tree().process_frame
