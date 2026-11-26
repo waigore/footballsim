@@ -130,17 +130,31 @@ func test_results_and_fixtures_ahead_never_overlap() -> void:
 # ------------------------------------------------------------------ end ---
 
 ## Declared last on purpose: it finishes the shared season, so every reading
-## above has run on a season still in play.
+## above has run on a season still in play. The remaining fixtures are settled
+## by hand (same shape the clock would leave) — no need to sim-walk ~30 Autodays
+## just to prove the encyclopedia reading goes empty.
 func test_a_finished_season_says_nothing_is_left() -> void:
 	var club_id := str(day_one[0]["home_club_id"])
-	var guard := 0
-	while str(season.state().get("status", "")) != "complete" and guard < 60:
-		season.advance()
-		guard += 1
+	_finish_by_hand(season)
 	assert_eq(str(season.state().get("status", "")), "complete", "the season never finished")
 	assert_eq(WikiModel.repo().upcoming(club_id, 6).size(), 0, "a finished season still has fixtures ahead")
 	var text := _flatten(WikiModel.page(WikiModel.TEAM, club_id))
 	assert_true(text.contains("NO FIXTURES LEFT  ·  THE SEASON IS COMPLETE"), "a finished season does not say so")
+
+## Play out every unplayed fixture without running the match model: enough for
+## the club page to see a complete season and an empty fixtures-ahead list.
+func _finish_by_hand(s: LeagueSeason) -> void:
+	for row in PLDatabase.rows(
+			"SELECT id, home_club_id, away_club_id FROM league_fixture WHERE status != 'played';"):
+		var home := str(row["home_club_id"])
+		var away := str(row["away_club_id"])
+		var hg := 2 if home < away else 0
+		var ag := 2 if away < home else 0
+		PLDatabase.execute(
+			"UPDATE league_fixture SET status = 'played', home_goals = ?, away_goals = ? "
+			+ "WHERE id = ?;", [hg, ag, str(row["id"])])
+	s.record.standings.recompute()
+	s.save.set_status("complete")
 
 # --------------------------------------------------------------- helpers ---
 
