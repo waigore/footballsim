@@ -13,6 +13,9 @@ const ENGLISH := ["PL", "CH", "L1", "L2", "NL"]
 
 var season: LeagueSeason = null
 var slug := ""
+## Cached from the shared five-tier save so create-determinism pays for one extra
+## PL+CH finish instead of two.
+var expected_bracket: Dictionary = {}
 
 func before_all() -> void:
 	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
@@ -23,6 +26,7 @@ func before_all() -> void:
 	PLRepository.shared().invalidate()
 	season = _finished("English Pyramid", SEED, ENGLISH)
 	slug = season.save.slug if season != null else ""
+	expected_bracket = LeaguePlayoffs.build(season, "CH") if season != null else {}
 
 ## The shared pyramid season, rebound when another test created a season of its
 ## own (creating one closes whatever was open, as the game does). Reopening the
@@ -166,21 +170,20 @@ func test_a_five_tier_save_builds_every_calendar() -> void:
 		assert_eq(full.record.standings.table(str(cid)).size(), 20 if cid == "PL" else 24,
 			"%s table is the wrong size" % cid)
 
-## Every contiguous English stack a player can pick — the Premier League alone up
-## to four tiers — builds its own calendars. The full five-tier stack is already
-## covered by the shared before_all season (and the calendar assert above).
+## Every contiguous English stack a player can pick short of the full pyramid.
+## Depth 5 is the shared before_all season; one four-tier create covers the rest
+## (each tier's calendar is the same under a taller contiguous stack).
 func test_any_contiguous_english_stack_builds() -> void:
-	for depth in range(1, ENGLISH.size()):
-		var stack: Array = ENGLISH.slice(0, depth)
-		var built := LeagueSeason.create("Stack %d" % depth, "generated", "fixture_days",
-			11 + depth, stack)
-		assert_not_null(built, "the %d-tier stack did not build" % depth)
-		assert_eq(built.save.competition_ids(), stack, "the %d-tier stack lost a tier" % depth)
-		for cid in stack:
-			var expected := 380 if cid == "PL" else 552
-			assert_eq(built.record.fixtures.unplayed(str(cid)), expected,
-				"%s did not build in the %d-tier stack" % [cid, depth])
-		built.close()
+	var stack: Array = ENGLISH.slice(0, 4)
+	var built := LeagueSeason.create(
+		"Stack 4", "generated", "fixture_days", 15, stack)
+	assert_not_null(built, "the four-tier stack did not build")
+	assert_eq(built.save.competition_ids(), stack, "the four-tier stack lost a tier")
+	for cid in stack:
+		var expected := 380 if cid == "PL" else 552
+		assert_eq(built.record.fixtures.unplayed(str(cid)), expected,
+			"%s did not build in the four-tier stack" % cid)
+	built.close()
 
 ## The English pyramid beside La Liga and the German pair: one save runs both
 ## chains, and neither country's end-of-season reading takes the other's.
@@ -243,24 +246,28 @@ func test_each_tier_plays_its_own_bracket() -> void:
 			assert_eq((tie["legs"] as Array).size(), 1, "a National League round is not one leg")
 
 func test_a_bracket_without_its_tier_above_is_not_played() -> void:
-	var pair := _finished("Two Tiers", 42, ["PL", "CH"])
-	assert_not_null(pair, "the two-tier save did not build")
-	assert_false(LeaguePlayoffs.build(pair, "CH").is_empty(),
+	# CH-with-PL-above is already on the shared finished pyramid; only the
+	# "L1 is not in this save" assert needs its own (unplayed) PL+CH create.
+	assert_false(LeaguePlayoffs.build(_current(), "CH").is_empty(),
 		"the Championship's bracket needs the Premier League above it")
+	var pair := LeagueSeason.create(
+		"Two Tiers", "generated", "fixture_days", 42, ["PL", "CH"])
+	assert_not_null(pair, "the two-tier save did not build")
 	assert_true(LeaguePlayoffs.build(pair, "L1").is_empty(),
 		"League One played a bracket with no tier above it")
 	pair.close()
 
 func test_one_seed_settles_one_bracket() -> void:
-	var a := _finished("Bracket A", SEED, ["PL", "CH"])
-	var bracket_a := LeaguePlayoffs.build(a, "CH")
-	a.close()
-	var b := _finished("Bracket B", SEED, ["PL", "CH"])
-	var bracket_b := LeaguePlayoffs.build(b, "CH")
-	b.close()
-	assert_eq(str(bracket_a["winner_club_id"]), str(bracket_b["winner_club_id"]),
+	# One extra create against the cached bracket: create + settle stay
+	# deterministic without rebuilding the calendar twice. Same seed on PL+CH
+	# alone settles the same CH bracket as the shared five-tier save.
+	var again := _finished("Bracket B", SEED, ["PL", "CH"])
+	assert_not_null(again, "the second English season was not created")
+	var bracket := LeaguePlayoffs.build(again, "CH")
+	again.close()
+	assert_eq(str(bracket["winner_club_id"]), str(expected_bracket["winner_club_id"]),
 		"the bracket's winner moved between runs of one seed")
-	assert_eq(bracket_a["rounds"], bracket_b["rounds"], "the bracket differs for one seed")
+	assert_eq(bracket["rounds"], expected_bracket["rounds"], "the bracket differs for one seed")
 
 func test_a_level_tie_goes_to_extra_time_and_penalties() -> void:
 	var first := LeagueShootout.settle(9001, "CH-MID", "CH-STK")

@@ -51,11 +51,20 @@ func test_restart_wait_names_team() -> void:
 	assert_lte(line.length(), MAX_LEN, "restart line too long: " + line)
 
 func test_live_line_describes_state() -> void:
-	var eng := MatchEngine.new(5)
-	for i in range(600):
-		eng.tick()
+	# Craft the picture the live line reads — possession, a carrier, pressure —
+	# instead of ticking six hundred steps to stumble into one under coverage.
+	var eng := TestEngineBoot.match(5)
+	eng.phase = "play"
+	eng.possession_team = 0
+	eng.possession_loose = false
+	var carrier = eng.players[10]
+	eng.ball.owner_id = carrier.id
+	eng.ball.pos = carrier.pos
+	eng.ball.vel = Vector2.ZERO
 	var line: String = CommentaryLive.live(eng)
 	assert_ne(line, "", "live line is empty")
+	assert_true(line.contains(carrier.name) or line.contains(eng.teams[0]["data"]["short"]),
+		"live line lost the side in possession: " + line)
 	assert_lte(line.length(), MAX_LEN, "live line too long: " + line)
 
 # ---------------------------------------------------------- every builder ---
