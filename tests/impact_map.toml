@@ -27,6 +27,7 @@ suites = [
   "test_match_laws.gd",
   "test_engine_rules.gd",
   "test_match_stats.gd",
+  "test_extra_time.gd",
 ]
 
 # The readings a match summary carries: the frame a shot struck, the pass a
@@ -58,6 +59,7 @@ suites = [
   "test_chrome_density.gd",
   "test_match_mode.gd",
   "test_ux_parity.gd",
+  "test_extra_time.gd",
 ]
 
 [domains.tactics]
@@ -137,6 +139,7 @@ suites = [
   "test_managers.gd",
   "test_attributes.gd",
   "test_engine_rules.gd",
+  "test_extra_time.gd",
 ]
 
 [domains.teams]
@@ -276,6 +279,16 @@ domain = "match_stats"
 
 [[rules]]
 match = "scripts/sim/match_engine_clock.gd*"
+domain = "match_laws"
+
+# Extra time and shootouts: the decider lane rides the clock it extends, and
+# its own lines ride with it.
+[[rules]]
+match = "scripts/sim/match_engine_decider.gd*"
+domain = "match_laws"
+
+[[rules]]
+match = "scripts/sim/commentary_extra_time.gd*"
 domain = "match_laws"
 
 [[rules]]

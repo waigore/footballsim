@@ -234,6 +234,33 @@ func test_goal_and_half_time_banners_draw_on_a_phone() -> void:
 	assert_true(HudLayout.is_compact(hud.design_vp()), "banners were drawn in desktop metrics")
 	hud.queue_free()
 
+func test_extra_time_and_shootout_cards_draw_on_both_metrics() -> void:
+	var eng := MatchEngine.new(38)
+	eng.half = 3
+	eng.clock = 5600.0
+	eng.phase = "et_break"
+	var hud := _hud(eng)
+	hud.queue_redraw()
+	await get_tree().process_frame
+	hud.queue_free()
+	eng.phase = "shootout"
+	eng.shootout_score = [3, 2]
+	eng.shootout = [{"team": 0, "player": "E. Haaland", "scored": true, "pens": [1, 0]}]
+	var phone := _hud(eng)
+	phone.touch = true
+	phone.ui_scale = phone.get_viewport().get_visible_rect().size.y / 411.0
+	phone.queue_redraw()
+	await get_tree().process_frame
+	assert_true(HudLayout.is_compact(phone.design_vp()), "the shootout card did not use phone metrics")
+	phone.queue_free()
+	eng.phase = "full_time"
+	eng.shootout_score = [4, 3]
+	var desk := _hud(eng)
+	desk.queue_redraw()
+	await get_tree().process_frame
+	assert_eq(HudBannersBand.pens_line(eng), "PENS 4 – 3", "the card did not name the shootout")
+	desk.queue_free()
+
 func test_the_whistle_card_lists_its_goals_on_both_metrics() -> void:
 	# DR-20261125-04: the half/full-time card is a summary, not just a score. It
 	# lists the goals on phone and desktop metrics alike, counts the ones it

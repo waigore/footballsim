@@ -12,7 +12,7 @@ var chrome_hidden := false
 func events(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:
 	if engine.phase == "goal":
 		_goal(p, c, engine, f_bold, f_med)
-	if engine.phase == "half_time" or engine.phase == "full_time":
+	if engine.phase in ["half_time", "full_time", "et_break", "shootout"]:
 		_break(p, c, engine, game, f_bold, f_med)
 
 func _goal(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> void:
@@ -48,23 +48,48 @@ func _break(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 	var r: Rect2 = m["rect"]
 	p.panel(c, Color(0.02, 0.03, 0.04, 0.94), r, 14, Color(1, 1, 1, 0.12))
 	var cx: float = r.position.x + r.size.x * 0.5
-	var title := "HALF TIME" if engine.phase == "half_time" else "FULL TIME"
+	var title := break_title(str(engine.phase))
 	p.text_c(c, cx, r.position.y + float(m["title_y"]), title, int(m["title_size"]), UiChrome.C_GOLD, f_bold)
-	p.text_c(c, cx, r.position.y + float(m["score_y"]), "%d  –  %d" % [engine.score[0], engine.score[1]], int(m["score_size"]), UiChrome.C_TEXT, f_bold)
+	var shown: Array = engine.shootout_score if engine.phase == "shootout" else engine.score
+	p.text_c(c, cx, r.position.y + float(m["score_y"]), "%d  –  %d" % [shown[0], shown[1]], int(m["score_size"]), UiChrome.C_TEXT, f_bold)
 	var compact := bool(m["compact"])
 	if not compact and r.size.y >= HudLayout.BREAK_BASE_H:
 		p.text_c(c, cx, r.position.y + float(m["abbr_y"]), "%s  ·  %s" % [engine.teams[0]["data"]["abbr"], engine.teams[1]["data"]["abbr"]], int(m["abbr_size"]), UiChrome.C_DIM, f_med)
-	_goals(p, c, engine, r, m, f_med)
+	# A shootout card lists the kicks, not the goals that got the tie there.
+	if engine.phase != "shootout":
+		_goals(p, c, engine, r, m, f_med)
 	# A league watch keeps this card until the player reads it (#124): the result
 	# is in the save, and the season sheet is one tap behind the whistle.
 	var held: bool = engine.phase == "full_time" and game != null and bool(game.result_hold)
 	var sub := break_hint(str(engine.phase), touch, chrome_hidden, held)
+	var pens := pens_line(engine)
+	if engine.phase == "full_time" and pens != "":
+		sub = "%s  ·  %s" % [pens, sub]
 	if float(m["sub_y"]) <= r.size.y - 4.0:
 		p.text_c(c, cx, r.position.y + float(m["sub_y"]), sub, int(m["sub_size"]), UiChrome.C_DIM, f_med)
 		if break_restarts(str(engine.phase), touch, chrome_hidden, held):
 			# Nothing on screen carries RESTART while the chrome is hidden, so
 			# the card the hint names is the door (#202).
 			p.add_button("restart", r, sub, "")
+
+## What the card is called in each break. Full time after penalties still reads
+## FULL TIME; the shootout itself is its own card.
+static func break_title(phase: String) -> String:
+	if phase == "half_time":
+		return "HALF TIME"
+	if phase == "et_break":
+		return "EXTRA TIME"
+	if phase == "shootout":
+		return "PENALTIES"
+	return "FULL TIME"
+
+## The shootout tally once it has been decided: "PENS 4 – 3". Empty otherwise,
+## so a regulation full time keeps the card it always had.
+static func pens_line(engine) -> String:
+	var tally: Array = engine.shootout_score
+	if tally.size() < 2 or int(tally[0]) == int(tally[1]):
+		return ""
+	return "PENS %d – %d" % [int(tally[0]), int(tally[1])]
 
 ## What the card says under the score. Every hint names a control the player can
 ## reach in this state: with the chrome hidden the bar's RESTART door and its
@@ -73,6 +98,10 @@ func _break(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 static func break_hint(phase: String, touch: bool, hidden: bool, held: bool) -> String:
 	if phase == "half_time":
 		return "SECOND HALF STARTS SHORTLY"
+	if phase == "et_break":
+		return "EXTRA TIME STARTS SHORTLY"
+	if phase == "shootout":
+		return "PENALTIES DECIDE IT"
 	if held:
 		if touch:
 			return "TAP TO RETURN TO THE SEASON"
@@ -149,7 +178,8 @@ static func _entry(engine, g: Dictionary, with_club: bool) -> String:
 
 ## Opening team sheet; waits out the kickoff and fades across the first seconds.
 func intro(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:
-	if engine.clock > 90.0 or engine.phase in ["full_time", "half_time", "goal"]:
+	if engine.clock > 90.0 or engine.phase in ["full_time", "half_time", "et_break",
+			"shootout", "goal"]:
 		return
 	var a: float = clampf(1.0 - (game.match_time - 6.5) / 2.0, 0.0, 1.0)
 	if a <= 0.01:
@@ -177,7 +207,7 @@ func paused(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 	var h := 54.0
 	var x := p.vp.x * 0.5 - w * 0.5
 	var y := p.vp.y * 0.5 - h * 0.5
-	if engine.phase in ["goal", "half_time"]:
+	if engine.phase in ["goal", "half_time", "et_break", "shootout"]:
 		y = 116.0
 	var r := Rect2(x, y, w, h)
 	p.panel(c, Color(0.02, 0.03, 0.04, 0.88), r, 12, Color(0.96, 0.78, 0.30, 0.55))

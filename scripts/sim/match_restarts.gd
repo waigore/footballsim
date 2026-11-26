@@ -71,7 +71,16 @@ static func patience(eng, taker, kind: String, team: int) -> float:
 			want *= 0.5
 		elif margin > 0:
 			want *= 1.6 + float(eng.style_of(team)["time_wasting"]) * 0.9
-	var limit: float = 2700.0 + eng.added[0] if eng.half == 1 else 5400.0 + eng.added[1]
+	var limit := 0.0
+	match eng.half:
+		1:
+			limit = 2700.0 + float(eng.added[0])
+		2:
+			limit = 5400.0 + float(eng.added[1])
+		3:
+			limit = 6300.0 + float(eng.added[2])
+		_:
+			limit = 7200.0 + float(eng.added[3])
 	return clampf(minf(want, limit - eng.clock - 1.5), 0.0, 4.5)
 
 ## Hold the ball up or take it now, given how set the side already looks.
