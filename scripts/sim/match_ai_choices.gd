@@ -15,6 +15,26 @@ var chain_team = -1
 var last_progress := [-1.0, -1.0]
 var last_progress_clock := [0.0, 0.0]
 
+## What a cross is worth against the same ball played short, as the side's live
+## `crossing` lever reads it (wiki Live tactics: "cross preference and cross
+## accuracy"): `BASE + crossing · SPAN`. At the league's default 0.5 this is
+## exactly the flat 0.28 the score always carried, so a default side plays the
+## match it always played; the shipped clubs run 0.48–0.60, and at this slope
+## that spread is worth about a tenth of a point of pass score — enough to decide
+## the close calls, which is what a preference is. The accuracy half of the lever
+## lives in `pass_ball`.
+## The slope was measured, not guessed: at a flat pull across the 0–1 range only
+## 2 of 375 staged wide-carrier cells changed the chosen ball, and at `SPAN` 2.0
+## 91 of 375 did. The pull is worth nothing at the low end (a side told never to
+## cross plays the shorter ball) and about 1.03 at the top.
+const CROSS_PULL_BASE := -0.72
+const CROSS_PULL_SPAN := 2.0
+
+## The pull a side's live `crossing` lever puts on the cross, in the same units
+## as the pass score. Pure, so the rule is read in one place and pinned directly.
+static func cross_pull(style: Dictionary) -> float:
+	return CROSS_PULL_BASE + clampf(float(style.get("crossing", 0.5)), 0.0, 1.0) * CROSS_PULL_SPAN
+
 func _init(brain) -> void:
 	e = brain.e
 	pq = brain.pq
@@ -191,12 +211,16 @@ func _best_pass(p, style: Dictionary) -> Dictionary:
 					best_point = thru
 					best_kind = "through"
 					best_loft = false
-		# Cross from wide areas to a runner in the box.
+		# Cross from wide areas to a runner in the box. How much a side wants the
+		# cross is its live `crossing` lever (wiki Live tactics): a side that has
+		# been told to cross more reaches for it here, and one that has been told
+		# to keep the ball goes short instead. The ball's own error is scaled by
+		# the same lever in `pass_ball`.
 		var wide: bool = absf(p.pos.y - 34.0) > 18.0
 		var in_box: bool = e.attacking_x(p.team, q.pos) > e.L - 18.0 and absf(q.pos.y - 34.0) < 13.0
 		if wide and in_box and d > 11.0 and d < 32.0:
 			var cross_pt: Vector2 = q.pos + Vector2(e.teams[p.team]["dir"] * 2.2, 0.0)
-			var cs: float = s + 0.28
+			var cs: float = s + cross_pull(style)
 			if cs > best_s:
 				best_s = cs
 				best = q
