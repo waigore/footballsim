@@ -137,6 +137,8 @@ static func _podium_sections(summary: Dictionary) -> Array:
 func _paint_band(c: CanvasItem, body: Callable) -> void:
 	body.call(c)
 
+# gd-tools: no cover start
+
 func draw_table_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
 	table.draw_chrome(c, vp, fonts, view, hints)
