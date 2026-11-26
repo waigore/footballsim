@@ -38,8 +38,8 @@ func test_a_cross_league_friendly_says_so() -> void:
 	assert_eq(str(mixed["caption"]), "FRIENDLY · PREMIER LEAGUE v LA LIGA",
 		"a cross-league friendly has no mixed caption")
 	var same := PreMatchModel.build("ARS", "MUN", {}, null)
-	assert_eq(str(same["caption"]), "PREMIER LEAGUE · FRIENDLY",
-		"a same-league friendly lost its competition")
+	assert_eq(str(same["caption"]), MatchBilling.FRIENDLY_CAPTION,
+		"a same-league friendly borrowed a league's round")
 
 func test_the_hub_groups_a_mixed_day() -> void:
 	var sheet := LeagueSheet.new()
@@ -145,7 +145,7 @@ func test_the_month_door_steps_from_the_clock() -> void:
 	assert_true(LeagueStatsActions.press(screen, "statsmonth:1"), "the month door was not handled")
 	var date := str(season.state().get("date", ""))
 	var base := date.substr(0, 7)
-	assert_eq(str(screen.stats_filter["month"]), LeagueBook.shift_month(base, 1),
+	assert_eq(str(screen.stats_filter["month"]), LeagueMonth.shift(base, 1),
 		"the month door did not step once from the clock")
 	season.close()
 

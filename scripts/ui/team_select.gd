@@ -65,19 +65,13 @@ func _ready() -> void:
 
 func setup(home_id: String, away_id: String) -> void:
 	if ids.is_empty():
-		ids = _pool()
+		ids = TeamData.team_ids(league_filter)
 		ids.sort()
 	home_idx = maxi(0, ids.find(home_id))
 	away_idx = maxi(0, ids.find(away_id))
 	if away_idx == home_idx:
 		away_idx = (home_idx + 1) % ids.size()
 	mouse = Vector2(-1000, -1000)
-
-## The club pool for the current competition filter, rebuilt when it changes.
-func _pool() -> Array:
-	var out: Array = TeamData.team_ids(league_filter)
-	out.sort()
-	return out
 
 ## Filter the picker by league, keeping the two selected clubs when they are
 ## still in the pool and otherwise falling back to the first two.
@@ -87,23 +81,14 @@ func set_league(competition_id: String) -> void:
 	var home := home_id()
 	var away := away_id()
 	league_filter = competition_id
-	ids = _pool()
+	ids = TeamData.team_ids(league_filter)
+	ids.sort()
 	if ids.is_empty():
 		return
 	home_idx = maxi(0, ids.find(home))
 	away_idx = maxi(0, ids.find(away))
 	if away_idx == home_idx:
 		away_idx = (home_idx + 1) % ids.size()
-
-## The caption under the cards: how many clubs the pool holds and which leagues.
-func pool_label() -> String:
-	var total := ids.size()
-	if league_filter != "":
-		return "%d %s CLUBS" % [total, PLRepository.shared().competition_name(league_filter)]
-	var names: Array = []
-	for row in PLRepository.shared().active_competitions():
-		names.append(str(row.get("short_name", row.get("name", ""))))
-	return "%d CLUBS  ·  %s" % [total, " + ".join(PackedStringArray(names))]
 
 func home_id() -> String:
 	return str(ids[home_idx]) if not ids.is_empty() else "MUN"
@@ -183,7 +168,7 @@ func key(code: int) -> bool:
 	elif code == KEY_L:
 		browse.emit(WikiModel.LEAGUE, "")
 	elif code >= KEY_1 and code <= KEY_9:
-		var comps := PLRepository.shared().active_competitions()
+		var comps := PLCompetitions.active()
 		var pick := code - KEY_1 - 1
 		set_league("" if pick < 0 else str(comps[mini(pick, comps.size() - 1)]["id"]))
 	else:
@@ -247,7 +232,7 @@ func _arrow(r: Rect2, glyph: String, id: String) -> void:
 ## leagues is what makes a cross-league fixture.
 func _draw_league_chips(vp: Vector2) -> void:
 	var rows: Array = [{"id": "", "short_name": "ALL"}]
-	rows.append_array(PLRepository.shared().active_competitions())
+	rows.append_array(PLCompetitions.active())
 	if rows.size() < 2:
 		return
 	var chip_h := 24.0
@@ -282,6 +267,26 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 10, C_DIM, f_bold)
 	var label := "HOME" if side == 0 else "AWAY"
 	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
+
+## How many clubs the picker offers, and the competition it files them under —
+## read from the file, not hard-coded (#209): a multi-competition seed names its
+## own league here. Pure, so a suite can pin it.
+static func clubs_line(count: int, competition_name: String) -> String:
+	if competition_name == "":
+		return "%d CLUBS" % count
+	return "%d %s CLUBS" % [count, competition_name.to_upper()]
+
+## The clubs line under the doors: the count and the league, from the file (#209).
+func _clubs_line() -> String:
+	if league_filter != "":
+		return clubs_line(ids.size(), PLRepository.shared().competition_name(league_filter))
+	var names: Array = []
+	for row in PLCompetitions.active():
+		names.append(str(row.get("name", "")))
+	if names.size() > 1:
+		return clubs_line(ids.size(), " + ".join(PackedStringArray(names)))
+	var name := str(TeamData.get_team(str(home_id())).get("competition_name", ""))
+	return clubs_line(ids.size(), name)
 
 ## Design space this sheet draws in (the layer is scaled up by main.gd).
 func design_vp() -> Vector2:
@@ -367,11 +372,11 @@ func _draw() -> void:
 
 	if touch:
 		text_c(vp.x * 0.5, vp.y - 44, "TAP THE ARROWS TO CHANGE CLUBS  ·  TAP KICK OFF", 11, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, pool_label(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
+		text_c(vp.x * 0.5, vp.y - 24, _clubs_line(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
 	else:
 		text_c(vp.x * 0.5, vp.y - 64, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, C_DIM, f_med)
 		text_c(vp.x * 0.5, vp.y - 44, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   1/2/3  LEAGUE   ·   ESC  %s" % ("MENU" if back_to_menu else "BACK"), 10, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, pool_label(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
+		text_c(vp.x * 0.5, vp.y - 24, _clubs_line(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
 
 	# A touch build has no Escape key: the sheet needs a visible way out.
 	var back := back_rect(vp)

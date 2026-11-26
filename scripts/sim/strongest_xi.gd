@@ -113,7 +113,7 @@ static func apply(club_id: String) -> bool:
 static func apply_all() -> int:
 	var count := 0
 	var ids: Array = []
-	for cid in PLRepository.shared().active_competition_ids():
+	for cid in PLCompetitions.active_ids():
 		ids.append_array(TeamData.team_ids(str(cid)))
 	if ids.is_empty():
 		ids = TeamData.team_ids()

@@ -174,10 +174,9 @@ static func distinct_competitions(fixtures: Array) -> int:
 	return ids.size()
 
 static func _month_label(month: String) -> String:
-	var parts := month.split("-")
-	if parts.size() < 2:
+	if month == "":
 		return "ALL MONTHS"
-	return "%s %s" % [LeagueBook.MONTHS[int(parts[1]) - 1], parts[0]]
+	return LeagueMonth.label(month)
 
 # gd-tools: no cover start
 
@@ -189,12 +188,11 @@ func draw_stats_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 		_view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
-	var sheet := LeagueSheet.new()
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
 		if kind == "door":
-			sheet.draw_button(c, rect, str(item["label"]), bold, bool(item["primary"]))
+			UiChrome.button(c, cache, rect, str(item["label"]), bold, bool(item["primary"]))
 		elif kind == "choice" or kind == "chip":
 			var on := bool(item.get("selected", false))
 			UiChrome.panel(c, cache, rect,
@@ -291,9 +289,10 @@ func draw_interest_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: D
 	header(c, vp, fonts, "TEAMS OF INTEREST", "%d MARKED" % (view.get("clubs", []) as Array).size())
 
 func draw_interest_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
-		_view: Dictionary) -> void:
+		view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
+	var live := str(view.get("focus", "")) == LeagueFieldFocus.INTEREST
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
@@ -303,8 +302,9 @@ func draw_interest_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Ar
 			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 25.0),
 				typed if typed != "" else "SEARCH CLUBS", 14,
 				UiChrome.C_TEXT if typed != "" else UiChrome.C_DIM, bold)
-			c.draw_rect(Rect2(rect.position.x + 14.0 + float(typed.length()) * 8.0, rect.position.y + 10.0,
-				2.0, 20.0), UiChrome.C_GOLD)
+			# The caret is the keyboard's own mark: it shows while the field
+			# owns the IME and not a moment longer (#201).
+			LeagueFieldFocus.caret(c, rect, typed, bold, 14, live)
 		elif kind == "caption":
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), str(item["label"]), 10,
 				UiChrome.C_DIM, bold)

@@ -1,8 +1,8 @@
-extends "res://scripts/sim/match_engine_core.gd"
+extends "res://scripts/sim/match_engine_squad.gd"
 
 ## Pitch geometry over live match state: attacking frames, box tests, the
-## goal-mouth angle and the per-tick offside list. One layer up from the core
-## state so callers (AI, actions, HUD) inherit it without core depending on
+## goal-mouth angle and the per-tick offside list. One layer up from the squad
+## so callers (AI, actions, HUD) inherit it without squad reads depending on
 ## geometry. Positions do not move inside a tick, so the offside cache reads
 ## once per tick.
 

@@ -2,9 +2,18 @@ extends "res://scripts/sim/match_engine_actions.gd"
 
 ## Movement, ball physics and duels.
 
+## How close a keeper has to be to a carrier to dive on the ball, and how close
+## to his own goal line the carrier has to be for it. A carrier who has rounded
+## the defence is challenged from here instead of walking the ball over the line
+## unopposed; the ball itself leads his feet, so the reach is measured to the
+## carrier. The line window keeps it to the walk-in: a keeper does not challenge
+## every touch inside his own box.
+const SMOTHER_RADIUS := 2.1
+const SMOTHER_BOX := 3.0
+
 func _move_players(dt: float) -> void:
-	# Flat position arrays for the separation pass (rebuilt per tick; see the
-	# squad layer). Same arithmetic, same order, fewer member lookups.
+	# Flat position arrays for the separation pass (rebuilt per tick; the arrays
+	# live on the core state). Same arithmetic, same order, fewer member lookups.
 	_sep_x.resize(players.size())
 	_sep_y.resize(players.size())
 	var idx := 0
@@ -159,7 +168,8 @@ func _ball_interactions(dt: float) -> void:
 	if ball.planned_goal:
 		return
 	# Owner keeps control only while the ball is at their feet.
-	if ball.owner_id >= 0:
+	var owned_at_entry: bool = ball.owner_id >= 0
+	if owned_at_entry:
 		var own = by_id.get(ball.owner_id, null)
 		if own == null or own.pos.distance_to(ball.pos) > 2.4:
 			ball.owner_id = -1
@@ -173,38 +183,39 @@ func _ball_interactions(dt: float) -> void:
 					_attempt_tackle(q, own)
 					if ball.owner_id < 0:
 						break
-			if ball.owner_id >= 0:
-				_after_owner_checks()
-				return
 	else:
 		ball.loose_t += dt
 	var in_flight: bool = ball.shot_team >= 0 and ball.vel.length() > 14.0
-	for p in players:
-		if p.sent_off or p.cooldown > 0.0 or in_flight:
-			continue
-		if p.is_gk:
-			continue
-		var dx = p.pos.x - ball.pos.x
-		if absf(dx) > 2.2:
-			continue
-		var d = p.pos.distance_to(ball.pos)
-		var cr = Attrs.control_radius(p)
-		if d <= cr and ball.z < 2.1:
-			if ball.owner_id >= 0:
+	if not owned_at_entry:
+		for p in players:
+			if p.sent_off or p.cooldown > 0.0 or in_flight:
 				continue
-			_try_control(p, d)
+			if p.is_gk:
+				continue
+			var dx = p.pos.x - ball.pos.x
+			if absf(dx) > 2.2:
+				continue
+			var d = p.pos.distance_to(ball.pos)
+			var cr = Attrs.control_radius(p)
+			if d <= cr and ball.z < 2.1:
+				if ball.owner_id >= 0:
+					continue
+				_try_control(p, d)
+	# A keeper dives on a carrier who is in his reach. This has to be read after
+	# every ownership change in the tick: a carrier who has rounded the defence
+	# is exactly the case, and the ball leads his feet by half a metre, so the
+	# goal line must not be the first thing to notice him.
+	if ball.owner_id >= 0:
+		_smother_carrier()
+		if ball.owner_id >= 0:
+			_after_owner_checks()
+			return
 	# Goalkeepers handle the ball with their hands.
 	var def_team := 0
 	for t in range(2):
 		if (teams[t]["dir"] == 1) == (ball.pos.x < L * 0.5):
 			def_team = t
 	var kgk = _gk_of(def_team)
-	if kgk != null and not kgk.sent_off and kgk.cooldown <= 0.0 and ball.owner_id >= 0:
-		# Smother a carrier who has broken through: keepers dive on the ball.
-		var carried = by_id.get(ball.owner_id, null)
-		if carried != null and carried.team != kgk.team and kgk.pos.distance_to(carried.pos) < 2.1:
-			_gk_claim(kgk, kgk.pos.distance_to(ball.pos))
-			return
 	if kgk != null and not kgk.sent_off and kgk.cooldown <= 0.0 and ball.owner_id < 0 and not in_flight:
 		var gdx = absf(kgk.pos.x - ball.pos.x)
 		if gdx < 2.4:
@@ -275,3 +286,22 @@ func _ball_interactions(dt: float) -> void:
 
 func _after_owner_checks() -> void:
 	pass
+
+## A keeper dives on a carrier who has broken through. A defender's poke is not
+## a keeper's claim, so this reads the carrier directly: the ball leads his feet
+## by half a metre, which is why the goal line cannot be the first thing to
+## notice him. Handling decides whether he holds it or parries it wide.
+func _smother_carrier() -> void:
+	var def_team := 0
+	for t in range(2):
+		if (teams[t]["dir"] == 1) == (ball.pos.x < L * 0.5):
+			def_team = t
+	var gk = _gk_of(def_team)
+	if gk == null or gk.sent_off or gk.cooldown > 0.0:
+		return
+	var own: Vector2 = own_goal_pos(gk.team)
+	if absf(ball.pos.x - own.x) > SMOTHER_BOX:
+		return
+	var carried = by_id.get(ball.owner_id, null)
+	if carried != null and carried.team != gk.team and gk.pos.distance_to(carried.pos) < SMOTHER_RADIUS:
+		_gk_claim(gk, gk.pos.distance_to(ball.pos))

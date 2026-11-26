@@ -52,6 +52,7 @@ static func _section(season: LeagueSeason, competition_id: String) -> Dictionary
 		"europe": europe,
 		"relegated": relegated,
 		"places": places,
+		"rules": comp_rules.duplicate(true),
 		"table": rows,
 		"top_scorers": season.record.report.top_scorers(5, competition_id),
 	}

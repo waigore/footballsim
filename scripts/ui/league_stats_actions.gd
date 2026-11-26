@@ -18,7 +18,7 @@ static func press(screen, id: String) -> bool:
 			var date := str(screen.season.state().get("date", "")) if screen.season != null else ""
 			base = date.substr(0, 7)
 		if base != "":
-			screen.stats_filter["month"] = LeagueBook.shift_month(base, int(id.substr(11)))
+			screen.stats_filter["month"] = LeagueMonth.shift(base, int(id.substr(11)))
 		screen.refresh()
 		return true
 	if id.begins_with("statsstat:"):
