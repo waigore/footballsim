@@ -80,18 +80,43 @@ static func ken_rect(vp: Vector2, index: int, t: float) -> Rect2:
 
 # ----------------------------------------------------------------- layout ---
 
-## Doors on the menu, in reading order: Start Sim is always primary; Resume only
-## exists while a match is waiting behind the menu; the two league doors open
-## the god-mode season surfaces.
+## Doors on the menu, in reading order: the gold primary door leads — Resume
+## while a match waits behind the menu, Start Sim otherwise (#277). Resume only
+## exists while a match is waiting; the two league doors open the god-mode
+## season surfaces.
 static func door_ids(has_match_now: bool) -> Array:
-	var ids: Array = ["start"]
+	var ids: Array = []
 	if has_match_now:
 		ids.append("resume")
+	ids.append("start")
 	ids.append("new_league")
 	ids.append("load_league")
 	ids.append("settings")
 	ids.append("quit")
 	return ids
+
+## The one gold door: a waiting match makes Resume the obvious way back into it,
+## and it takes the advertised confirm key. A cold start has no match to return
+## to, so Start Sim keeps the gold.
+static func primary_id(has_match_now: bool) -> String:
+	if has_match_now:
+		return "resume"
+	return "start"
+
+## The key printed on each door, desktop only. Every door keeps a keyboard path:
+## the confirm key returns to a waiting match, and Start Sim answers `T`, the
+## same key the broadcast uses to reach the fixture picker (#277).
+static func door_hints(has_match_now: bool) -> Dictionary:
+	if has_match_now:
+		return {"resume": "ENTER", "start": "T", "new_league": "N", "load_league": "L", "settings": "S", "quit": "ESC"}
+	return {"start": "ENTER", "resume": "", "new_league": "N", "load_league": "L", "settings": "S", "quit": "ESC"}
+
+## The footer's key line names the door the confirm key presses, so the sheet
+## never advertises a key that leaves the paused match (#277).
+static func footer_hint(has_match_now: bool, touch: bool) -> String:
+	if touch:
+		return "TAP A DOOR TO BEGIN"
+	return "ENTER  %s     ESC  QUIT" % door_label(primary_id(has_match_now))
 
 ## The one layout the paint pass, the hit-test pass and the tests read: a title
 ## block above, the door column below, and never the two crossing (#199).
@@ -181,39 +206,39 @@ func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, has_match_now: bool, vo
 			UiChrome.text(c, Vector2(mx + 2.0, ty + TAGLINE_DROP),
 				"PREMIER LEAGUE MATCH SIMULATOR", TAGLINE_SIZE, FOOT, med)
 			c.draw_rect(Rect2(mx + 2.0, ty + RULE_DROP, 88.0, 3.0), UiChrome.C_GOLD)
-	_draw_doors(c, fonts, touch, sheet["doors"])
+	_draw_doors(c, fonts, touch, sheet["doors"], has_match_now)
 	if not compact:
 		c.draw_rect(Rect2(mx, vp.y - 62.0, vp.x - 2.0 * mx, 1.0), Color(1, 1, 1, 0.07))
-		var hint := "TAP A DOOR TO BEGIN" if touch else "ENTER  START SIM     ESC  QUIT"
-		UiChrome.text(c, Vector2(mx, vp.y - 40.0), hint, 12, FOOT, med)
+		UiChrome.text(c, Vector2(mx, vp.y - 40.0), footer_hint(has_match_now, touch), 12, FOOT, med)
 		UiChrome.text_r(c, vp.x - mx, vp.y - 40.0, "MENU MUSIC  %d%%" % int(round(volume * 100.0)), 12, FOOT, bold)
 
-func _draw_doors(c: CanvasItem, fonts: Dictionary, touch: bool, doors: Array) -> void:
+func _draw_doors(c: CanvasItem, fonts: Dictionary, touch: bool, doors: Array, has_match_now: bool) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
-	var hints := {"start": "", "resume": "", "new_league": "", "load_league": "", "settings": "", "quit": ""}
-	if not touch:
-		hints = {"start": "ENTER", "resume": "", "new_league": "N", "load_league": "L", "settings": "S", "quit": "ESC"}
+	# A waiting match hands the gold and the confirm key to Resume (#277); the
+	# hints table and the paint pass read the same answer the input pass does.
+	var primary := primary_id(has_match_now)
+	var hints: Dictionary = {} if touch else door_hints(has_match_now)
 	for b in doors:
 		var r: Rect2 = b["rect"]
 		var id: String = str(b["id"])
 		var hovered: bool = r.has_point(mouse)
-		if id == "start":
+		if id == primary:
 			UiChrome.panel(c, _cache, r, UiChrome.C_GOLD.darkened(0.06 if hovered else 0.0), 8, Color(0.96, 0.78, 0.30, 0.85), 1)
-			UiChrome.text(c, Vector2(r.position.x + 22.0, r.position.y + r.size.y * 0.5 + 7.0), "START SIM", 20, Color(0.06, 0.06, 0.05), bold)
-			_hint(c, r, str(hints[id]), med, Color(0.20, 0.17, 0.08))
+			UiChrome.text(c, Vector2(r.position.x + 22.0, r.position.y + r.size.y * 0.5 + 7.0), door_label(id), 20, Color(0.06, 0.06, 0.05), bold)
+			_hint(c, r, str(hints.get(id, "")), med, Color(0.20, 0.17, 0.08))
 		else:
 			var fill: Color = UiChrome.C_PANEL_LIGHT if hovered else UiChrome.C_PANEL
 			UiChrome.panel(c, _cache, r, fill, 8, Color(1, 1, 1, 0.14 if hovered else 0.08), 1)
-			UiChrome.text(c, Vector2(r.position.x + 22.0, r.position.y + r.size.y * 0.5 + 7.0), _label(id), 20, UiChrome.C_TEXT, bold)
-			_hint(c, r, str(hints[id]), med, UiChrome.C_DIM)
+			UiChrome.text(c, Vector2(r.position.x + 22.0, r.position.y + r.size.y * 0.5 + 7.0), door_label(id), 20, UiChrome.C_TEXT, bold)
+			_hint(c, r, str(hints.get(id, "")), med, UiChrome.C_DIM)
 
 func _hint(c: CanvasItem, r: Rect2, s: String, font: Font, col: Color) -> void:
 	if s == "":
 		return
 	UiChrome.text_r(c, r.end.x - 20.0, r.position.y + r.size.y * 0.5 + 6.0, s, 10, col, font)
 
-func _label(id: String) -> String:
+static func door_label(id: String) -> String:
 	if id == "resume":
 		return "RESUME MATCH"
 	if id == "new_league":
