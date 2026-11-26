@@ -29,17 +29,3 @@ static func press(screen, id: String) -> bool:
 		screen.refresh()
 		return true
 	return false
-
-## A matchday opened from the Stats list: BACK returns there, not to the hub.
-static func open_day(screen, date: String) -> void:
-	if screen.season == null:
-		return
-	var rows: Array = []
-	for fx in screen.season.record.fixtures.on(date):
-		if str(fx["status"]) == "played":
-			rows.append(screen.season.report(str(fx["id"])))
-	LeagueDoors.go(screen, LeagueScreen.MODE_REPORT)
-	screen.roundup = rows
-	screen.report = {}
-	screen.report_back = LeagueScreen.MODE_STATS
-	screen.refresh()

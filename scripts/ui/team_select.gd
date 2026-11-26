@@ -102,7 +102,7 @@ func away_id() -> String:
 func cycle(side: int, dir: int) -> void:
 	if ids.size() < 2:
 		return
-	var index := home_idx if side == 0 else away_idx
+	var index: int = home_idx if side == 0 else away_idx
 	index = posmod(index + dir, ids.size())
 	if index == (away_idx if side == 0 else home_idx):
 		index = posmod(index + dir, ids.size())
@@ -239,7 +239,7 @@ func _draw_league_chips(vp: Vector2) -> void:
 	var gap := 8.0
 	var w: float = minf(150.0, (vp.x - 48.0 - gap * float(rows.size() - 1)) / float(rows.size()))
 	var x := 24.0
-	var y := vp.y * (0.155 if vp.y < 620.0 else 0.175)
+	var y: float = vp.y * (0.155 if vp.y < 620.0 else 0.175)
 	for row in rows:
 		var chip := Rect2(x, y, w, chip_h)
 		var on := str(row["id"]) == league_filter
@@ -265,7 +265,7 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	text_c(cx, r.position.y + r.size.y * 0.64, str(t["nickname"]).to_upper(), 11, C_DIM, f_med)
 	text_c(cx, r.position.y + r.size.y * 0.80, "%s  ·  %s" % [str(t["formation"]), str(t["manager"]).to_upper()], 10, C_GOLD, f_med)
 	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 10, C_DIM, f_bold)
-	var label := "HOME" if side == 0 else "AWAY"
+	var label: String = "HOME" if side == 0 else "AWAY"
 	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
 
 ## How many clubs the picker offers, and the competition it files them under —

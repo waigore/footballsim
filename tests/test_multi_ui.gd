@@ -149,6 +149,18 @@ func test_the_month_door_steps_from_the_clock() -> void:
 		"the month door did not step once from the clock")
 	season.close()
 
+func test_the_wizard_league_toggle_keeps_one_on() -> void:
+	var screen := FakeWizard.new()
+	LeagueWizardActions.toggle_league(screen, "PL")
+	assert_eq(screen.wizard["competitions"], ["PL"], "the wizard switched its only league off")
+	LeagueWizardActions.toggle_league(screen, "LL")
+	assert_eq(screen.wizard["competitions"], ["PL", "LL"], "La Liga did not join the wizard")
+	assert_eq(screen.refreshes, 1, "the wizard did not repaint after a pick")
+	LeagueWizardActions.toggle_league(screen, "PL")
+	assert_eq(screen.wizard["competitions"], ["LL"], "the Premier League did not come off")
+	LeagueWizardActions.toggle_league(screen, "")
+	assert_eq(screen.wizard["competitions"], ["LL"], "an empty id changed the set")
+
 func test_the_system_sheet_can_switch_the_advance_mode() -> void:
 	var season := LeagueSeason.create("Advance World", "generated", "fixture_days", 9102, ["PL", "LL"])
 	assert_not_null(season, "the advance season was not created")
@@ -165,6 +177,13 @@ func test_the_system_sheet_can_switch_the_advance_mode() -> void:
 class FakeStats:
 	var stats_filter := {}
 	var season = null
+	var refreshes := 0
+
+	func refresh() -> void:
+		refreshes += 1
+
+class FakeWizard:
+	var wizard := {"competitions": ["PL"]}
 	var refreshes := 0
 
 	func refresh() -> void:
