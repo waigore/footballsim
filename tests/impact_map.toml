@@ -457,6 +457,16 @@ domain = "league"
 match = "scripts/sim/match_manager.gd*"
 domain = "managers"
 
+# Lever maps / apply and bench picks: same dugout as MatchManager, pinned by
+# the managers suite so a split cannot drift from the decision engine.
+[[rules]]
+match = "scripts/sim/match_manager_tactics.gd*"
+domain = "managers"
+
+[[rules]]
+match = "scripts/sim/match_manager_subs.gd*"
+domain = "managers"
+
 # How long a dugout waits between tactical changes: the law's seven-minute floor
 # stretched by the manager's own `patience`. It is pinned by the managers suite
 # beside the decision engine it gates, so the domain is the same one.

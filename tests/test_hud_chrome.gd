@@ -122,7 +122,7 @@ func test_manager_card_holds_when_paused_and_expires() -> void:
 func test_manager_card_draws_a_tactics_change() -> void:
 	var eng := MatchEngine.new(28)
 	var hud := _hud(eng)
-	eng.manager._apply(0, {"mentality": "attacking", "line_delta": 0.06}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"mentality": "attacking", "line_delta": 0.06}, "test")
 	hud.manager_card.tick(0.1, eng, hud.game)
 	assert_true(hud.manager_card.visible(), "the tactics card did not show")
 	assert_eq(str(hud.manager_card.card.get("type", "")), "tactics", "tactics card not built")

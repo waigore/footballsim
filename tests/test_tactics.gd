@@ -33,7 +33,7 @@ func test_formation_change_reslots_the_engine() -> void:
 	for p in eng.players:
 		if p.team == 0:
 			before[p.role] = p.base
-	eng.manager._apply(0, {"formation": "4-4-2"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"formation": "4-4-2"}, "test")
 	var moved := 0
 	for p in eng.players:
 		if p.team == 0 and p.base.distance_to(before[p.role]) > 0.001:
@@ -44,7 +44,7 @@ func test_formation_change_reslots_the_engine() -> void:
 func test_mentality_moves_the_style() -> void:
 	var eng := MatchEngine.new(32)
 	var base: Dictionary = eng.style_of(0).duplicate(true)
-	eng.manager._apply(0, {"mentality": "attacking"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"mentality": "attacking"}, "test")
 	var live: Dictionary = eng.style_of(0)
 	assert_gt(float(live["line"]), float(base["line"]), "attacking mentality did not raise the line")
 	assert_gt(float(live["press"]), float(base["press"]), "attacking mentality did not raise the press")
@@ -60,7 +60,7 @@ func test_change_labels_read_like_football() -> void:
 
 func test_tactics_snapshot_round_trip() -> void:
 	var eng := MatchEngine.new(33)
-	eng.manager._apply(0, {"mentality": "positive", "formation": "4-3-3", "corner": "short", "roles": {"ST": "support"}}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"mentality": "positive", "formation": "4-3-3", "corner": "short", "roles": {"ST": "support"}}, "test")
 	var snap: Dictionary = eng.to_dict()
 	var other := MatchEngine.new(34)
 	other.from_dict(snap)
@@ -72,12 +72,12 @@ func test_tactics_snapshot_round_trip() -> void:
 
 func test_set_piece_routine_reaches_the_pitch() -> void:
 	var eng := MatchEngine.new(35)
-	eng.manager._apply(0, {"corner": "near_post"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"corner": "near_post"}, "test")
 	var near: float = eng._corner_aim(0)
-	eng.manager._apply(0, {"corner": "far_post"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"corner": "far_post"}, "test")
 	var far: float = eng._corner_aim(0)
 	assert_lt(near, far, "the corner routine does not change the aim")
-	eng.manager._apply(0, {"free_kick": "direct"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"free_kick": "direct"}, "test")
 	assert_eq(eng.manager.tactics_for(0).free_kick_routine(), "direct", "free-kick routine not stored")
 
 func test_every_lever_and_description() -> void:
@@ -120,7 +120,7 @@ func test_restart_patience_honours_time_wasting() -> void:
 			taker = p
 			break
 	var plain: float = MatchRestarts.patience(eng, taker, "throw_in", 0)
-	eng.manager._apply(0, {"time_wasting": 0.9}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"time_wasting": 0.9}, "test")
 	var managed: float = MatchRestarts.patience(eng, taker, "throw_in", 0)
 	assert_gt(managed, plain, "time-wasting did not buy the leader more patience")
 
@@ -128,20 +128,20 @@ func test_corner_and_free_kick_routines_execute() -> void:
 	var eng := MatchEngine.new(37)
 	eng.phase = "play"
 	eng.clock = 2000.0
-	eng.manager._apply(0, {"corner": "short"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"corner": "short"}, "test")
 	assert_eq(eng._corner_aim(0), eng.W * 0.5, "short corner routine not aimed short")
 	eng._start_restart("corner", 0, Vector2(eng.L - 0.5, 0.5))
 	eng._execute_restart()
 	assert_eq(eng.phase, "play", "a short corner did not put the ball back in play")
-	eng.manager._apply(0, {"corner": "far_post"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"corner": "far_post"}, "test")
 	eng._start_restart("corner", 0, Vector2(eng.L - 0.5, 0.5))
 	eng._execute_restart()
 	assert_eq(eng.phase, "play", "a far-post corner did not put the ball back in play")
-	eng.manager._apply(0, {"free_kick": "direct"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"free_kick": "direct"}, "test")
 	eng._start_restart("free_kick", 0, Vector2(eng.L - 24.0, eng.W * 0.5))
 	eng._execute_restart()
 	assert_eq(eng.phase, "play", "a direct free kick did not put the ball back in play")
-	eng.manager._apply(0, {"free_kick": "worked"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"free_kick": "worked"}, "test")
 	eng._start_restart("free_kick", 0, Vector2(eng.L - 40.0, 8.0))
 	eng._execute_restart()
 	assert_eq(eng.phase, "play", "a worked free kick did not put the ball back in play")
@@ -192,7 +192,7 @@ func test_formation_change_moves_targets() -> void:
 	for p in eng.players:
 		if p.team == 0:
 			before[p.id] = p.target
-	eng.manager._apply(0, {"formation": "3-5-2"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"formation": "3-5-2"}, "test")
 	eng.brain._update_shapes()
 	var moved := 0
 	for p in eng.players:
@@ -217,7 +217,7 @@ func test_role_duty_moves_the_push() -> void:
 func test_press_change_reaches_the_live_style() -> void:
 	var eng := _scene(54)
 	var before: float = float(eng.style_of(0)["press"])
-	eng.manager._apply(0, {"press_delta": 0.15}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"press_delta": 0.15}, "test")
 	assert_gt(float(eng.style_of(0)["press"]), before, "pressing change never reached MatchAI's style")
 
 func _outfield(eng, t: int):
