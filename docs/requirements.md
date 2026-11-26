@@ -34,9 +34,9 @@ Score with [`rubric.md`](rubric.md). **Rules SoT:** [wiki](https://github.com/wa
 ## P3 — Modular architecture (SOLID; `arch-lint`)
 
 - **REQ-P3-01** (**S**) — One domain/module; ≤400/≤25 (allowlist ≤5). Extend (**O**); honor (**L**).
-- **REQ-P3-02** (**I**) — Narrow APIs/signals; no undeclared autoloads.
-- **REQ-P3-03** (**D**) — Sim/rules without visual nodes; view reads state, emits intents.
-- **REQ-P3-04** — Changed `scripts/rules/**` (or sim core) ships `tests/`.
+- **REQ-P3-02** (**I**) — Narrow APIs/signals; autoloads declared + consumer-scoped.
+- **REQ-P3-03** (**D**) — Sim/data RefCounted-only; no load of ui/view/scenes; view reactive.
+- **REQ-P3-04** — Changed `scripts/sim/**` (or rules) ships `tests/`.
 - **REQ-P3-05** — Platform diffs only in `scripts/platform/**`.
 
 ## P4 — Performance & latency

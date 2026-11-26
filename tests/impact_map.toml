@@ -582,7 +582,7 @@ domain = "match_input"
 
 # Fixture-picker glue rides the router domain: the same suites drive the sheet.
 [[rules]]
-match = "scripts/view/fixture_sheet.gd*"
+match = "scripts/ui/fixture_sheet.gd*"
 domain = "match_input"
 
 [[rules]]

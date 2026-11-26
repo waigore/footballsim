@@ -1,0 +1,4 @@
+# Allowed consumers of each project.godot [autoload] name (RUB-P3-02).
+# One line: Name<path-prefix-or-exact.gd>
+# The autoload's own script and tests/** are always allowed.
+# Empty = no extra consumers (declaration allowlist still required).

@@ -6,9 +6,9 @@ extends RefCounted
 ## command-line override. The scene keeps the state; this module owns the
 ## branching. Split out of main.gd so the scene stays inside its P3 size budget.
 
-var game = null
+var game: Node = null
 
-func _init(host) -> void:
+func _init(host: Node) -> void:
 	game = host
 
 func build() -> void:
