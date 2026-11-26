@@ -1,0 +1,98 @@
+# UI screen catalogue for the UX VLM gate. Wiki SoT:
+# https://github.com/waigore/footballsim/wiki/ux-visual-rubrics
+# Baseline URLs are desktop wiki Evidence images (raw.githubusercontent.com).
+version: 1
+# Paths that affect every catalogue screen (fonts, shared chrome, root scene).
+shared_paths:
+  - fonts/**
+  - assets/ui/**
+  - scenes/**
+  - ui/**
+screens:
+  - id: main-menu
+    title: Main menu
+    scripts:
+      - scripts/ui/menu_screen.gd
+      - scripts/ui/menu_host.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-menu-1600.jpg
+  - id: settings
+    title: Settings
+    scripts:
+      - scripts/ui/settings_screen.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-settings-1600.jpg
+  - id: fixture-picker
+    title: Fixture picker
+    scripts:
+      - scripts/ui/team_select.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-picker-1600.jpg
+  - id: pre-match
+    title: Pre-match briefing
+    scripts:
+      - scripts/ui/pre_match.gd
+      - scripts/ui/pre_match_host.gd
+      - scripts/ui/pre_match_model.gd
+      - scripts/ui/pre_match_pitch.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-f10-prematch.png
+  - id: match-hud
+    title: Match HUD
+    scripts:
+      - scripts/ui/hud.gd
+      - scripts/ui/hud_chrome.gd
+      - scripts/ui/hud_layout.gd
+      - scripts/ui/hud_paint.gd
+      - scripts/ui/hud_top_band.gd
+      - scripts/ui/hud_controls_band.gd
+      - scripts/ui/hud_banners_band.gd
+      - scripts/ui/hud_roster_band.gd
+      - scripts/ui/hud_commentary.gd
+      - scripts/ui/hud_managers.gd
+      - scripts/ui/hud_player_card.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-f10-hud.png
+  - id: league-hub
+    title: League hub
+    scripts:
+      - scripts/ui/league_screen.gd
+      - scripts/ui/league_host.gd
+      - scripts/ui/league_body.gd
+      - scripts/ui/league_view.gd
+      - scripts/ui/league_chrome.gd
+      - scripts/ui/league_panel.gd
+      - scripts/ui/league_plan_sheet.gd
+      - scripts/ui/league_doors.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-hub-1600.jpg
+  - id: league-table
+    title: League table
+    scripts:
+      - scripts/ui/league_table_view.gd
+      - scripts/ui/league_table_chrome.gd
+      - scripts/ui/league_table_head.gd
+      - scripts/ui/league_table_sort.gd
+      - scripts/ui/league_side_table.gd
+      - scripts/ui/league_columns.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-table-1600.jpg
+  - id: league-calendar
+    title: League calendar
+    scripts:
+      - scripts/ui/league_calendar.gd
+      - scripts/ui/league_month.gd
+      - scripts/ui/league_plan_rows.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-calendar-1600.jpg
+  - id: encyclopedia
+    title: Encyclopedia
+    scripts:
+      - scripts/ui/wiki_screen.gd
+      - scripts/ui/wiki_host.gd
+      - scripts/ui/wiki_body.gd
+      - scripts/ui/wiki_chrome.gd
+      - scripts/ui/wiki_model.gd
+      - scripts/ui/wiki_ledger.gd
+      - scripts/ui/wiki_competitions.gd
+      - scripts/ui/wiki_interest.gd
+      - scripts/ui/league_clubs.gd
+      - scripts/ui/league_book.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/issue-81-after-encyclopedia.jpg
+  - id: quit-confirm
+    title: Quit confirm
+    scripts:
+      - scripts/ui/confirm_prompt.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/issue-123-quit-confirm.jpg

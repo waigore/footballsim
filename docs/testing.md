@@ -6,10 +6,10 @@ Unit/integration tests and headless e2e smoke; two tiers, hard budgets.
 
 | Tier | When | Command / gate | Budget |
 |------|------|----------------|--------|
-| **1 (PR)** | Code/test path PRs | Impacted suites + **80% patch** coverage; e2e smoke | tests **≤ 5 min**; smoke **≤ 4 min** |
-| **2 (trunk)** | Every **8 hours** on `main` (+ manual) | Full suite (sharded when large); overall **80%** coverage; Poisson census | shard **≤ 45 min**; gate **≤ 10 min** |
+| **1 (PR)** | Code/test path PRs | Impacted suites + **80% patch**; e2e smoke; UX VLM on UI paths | tests **≤5 min**; smoke **≤4 min**; ux-vlm **≤1 min**/10 |
+| **2 (trunk)** | Every **8 hours** on `main` (+ manual) | Full suite; **80%**; Poisson census; catalogue UX VLM | shard **≤45 min**; UX **≤10 min** |
 
-Tier 1 is the merge gate (`tests` / `e2e-smoke`). Tier 2 does not block PRs; failures open a sticky `ci-tier2` issue.
+Tier 1 merge gate: `tests` / `e2e-smoke` / `ux-vlm`. Tier 2 does not block PRs; failures sticky `ci-tier2`.
 
 ## Impact map
 

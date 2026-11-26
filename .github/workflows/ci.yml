@@ -377,3 +377,68 @@ jobs:
           steps.project.outputs.ready == 'true' &&
           (github.event_name == 'workflow_dispatch' || steps.filter.outputs.code == 'true')
         run: godot --headless --path . --script res://tools/e2e_smoke.gd
+
+  # UX visual VLM gate: no-op when no UI paths change; else require PR-body
+  # desktop wiki screenshot URLs and grade them (≤10 images / ~1 min).
+  ux-vlm:
+    name: ux-vlm
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect UI path changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            ui:
+              - 'scenes/**'
+              - 'ui/**'
+              - 'scripts/ui/**'
+              - 'assets/ui/**'
+              - 'fonts/**'
+
+      - name: Skip (no UI paths)
+        if: steps.filter.outputs.ui != 'true'
+        run: echo 'No UI path changes — ux-vlm no-op.'
+
+      - name: Setup Python
+        if: steps.filter.outputs.ui == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ux_vlm deps
+        if: steps.filter.outputs.ui == 'true'
+        run: pip install -r tools/ux_vlm/requirements.txt
+
+      - name: Catalogue unit checks
+        if: steps.filter.outputs.ui == 'true'
+        run: python tools/ux_vlm/test_catalogue.py
+
+      - name: Fetch PR body
+        if: steps.filter.outputs.ui == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          gh pr view "${{ github.event.pull_request.number }}" --json body \
+            --jq .body > /tmp/pr_body.md
+
+      - name: Run UX VLM PR gate
+        if: steps.filter.outputs.ui == 'true'
+        env:
+          CHEAPER_INFERENCE_API_KEY: ${{ secrets.CHEAPER_INFERENCE_API_KEY }}
+          CHEAPER_INFERENCE_BASE_URL: ${{ vars.CHEAPER_INFERENCE_BASE_URL }}
+          CHEAPER_INFERENCE_MODEL: ${{ vars.CHEAPER_INFERENCE_MODEL }}
+        run: |
+          set -euo pipefail
+          python tools/ux_vlm/pr_gate.py \
+            --base "origin/${{ github.base_ref }}" \
+            --pr-body @/tmp/pr_body.md

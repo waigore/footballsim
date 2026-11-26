@@ -7,6 +7,7 @@ Godot 4 football world simulation for **desktop** (Windows, macOS, Linux) and **
 | Doc | Use |
 |-----|-----|
 | [Simulation rules (wiki)](https://github.com/waigore/footballsim/wiki) | Rules source of truth (P2) |
+| [UX visual rubrics (wiki)](https://github.com/waigore/footballsim/wiki/ux-visual-rubrics) | UX VLM CI visual pass/fail |
 | [`docs/requirements.md`](docs/requirements.md) | Product pillars P1–P5 (`REQ-*`) |
 | [`docs/rubric.md`](docs/rubric.md) | Evaluation gate (`RUB-*`) |
 | [`docs/pull-requests.md`](docs/pull-requests.md) | PR base rules (`gh`, required checks) |
@@ -16,7 +17,7 @@ Godot 4 football world simulation for **desktop** (Windows, macOS, Linux) and **
 
 ## Docs policy
 
-Root and `docs/` Markdown must stay **≤ 500 words** (fenced code excluded). CI `docs-lint` fails over-limit files (`python tools/lint_docs_words.py`). Prefer tables and short bullets; long mechanics go in the wiki.
+Root and `docs/` Markdown **≤ 500 words** (fenced code excluded). CI `docs-lint` enforces (`python tools/lint_docs_words.py`). Prefer tables/bullets; long mechanics → wiki.
 
 ## Stack
 
