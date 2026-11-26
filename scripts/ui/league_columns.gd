@@ -132,3 +132,12 @@ static func fit_name(s: String, font: Font, size: int, max_w: float) -> String:
 		if font.get_string_size(probe, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= max_w:
 			return probe
 	return "…"
+
+## A caption for a narrow column: the string itself when `room` holds it, or the
+## shortened form when it does not — a venue name between two club cards must
+## never run over the cards it sits between (#200). No room means no caption,
+## never a word painted past the column's edge. Pure, so a suite can pin it.
+static func fit_caption(s: String, font: Font, size: int, room: float) -> String:
+	if s == "" or room <= 0.0:
+		return ""
+	return fit_name(s, font, ChromeDensity.read_size(size), room)
