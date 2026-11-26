@@ -57,7 +57,7 @@ static func candidate(m: MatchManager, t: int):
 	return best
 
 
-static func do_sub(m: MatchManager, t: int, off, at_half_time: bool, reason: String) -> bool:
+static func do_sub(m: MatchManager, t: int, off: Player, at_half_time: bool, reason: String) -> bool:
 	var meta := {"reason": reason, "manager": m.manager_name(t)}
 	var ok: bool = m.e._bring_on(t, off, false, at_half_time, meta)
 	if ok:
@@ -68,7 +68,7 @@ static func do_sub(m: MatchManager, t: int, off, at_half_time: bool, reason: Str
 
 ## A forced change: the injured player leaves and the manager picks his
 ## replacement. Returns false when the change cannot be made (play on short).
-static func replace_injured(m: MatchManager, p) -> bool:
+static func replace_injured(m: MatchManager, p: Player) -> bool:
 	if p == null or p.sent_off:
 		return false
 	var t: int = p.team
