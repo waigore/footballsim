@@ -122,6 +122,23 @@ func test_the_back_door_and_the_close_door() -> void:
 	assert_false(wiki.is_open(), "the close door did not close the sheet")
 	assert_eq(closed[0], 2, "the close door did not signal the host")
 
+func test_the_german_hubs_browse_on_desktop_and_phone() -> void:
+	for phone in [false, true]:
+		wiki.touch = phone
+		wiki.ui_scale = 1.0 if not phone else 2.2
+		for pair in [["BL", "BUNDESLIGA", 18], ["BL2", "2. BUNDESLIGA", 18]]:
+			wiki.open(WikiModel.LEAGUE, str(pair[0]))
+			await get_tree().process_frame
+			assert_eq(str(wiki.page_data["title"]), str(pair[1]),
+				"the German hub did not open (phone=%s)" % phone)
+			assert_true(str(wiki.page_data["subtitle"]).contains("18 CLUBS"),
+				"the German hub names the wrong club count (phone=%s)" % phone)
+			assert_gte(wiki.body.rows().size(), int(pair[2]),
+				"the German hub laid out no table (phone=%s)" % phone)
+	wiki.touch = false
+	wiki.ui_scale = 1.0
+	wiki.open(WikiModel.LEAGUE, "")
+
 func test_a_snapshot_date_reveals_its_weekday_on_hover() -> void:
 	wiki.open(WikiModel.LEAGUE, "")
 	await get_tree().process_frame

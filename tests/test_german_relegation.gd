@@ -187,6 +187,35 @@ func test_the_table_bands_mark_promotion_and_the_playoff() -> void:
 	assert_eq(LeagueRules.zone_label("promotion"), "UP", "the promotion band has no label")
 	assert_eq(LeagueRules.zone_label("playoff"), "PLO", "the playoff band has no label")
 
+func test_the_club_page_follows_the_swapped_membership() -> void:
+	var season := _finished(SEED)
+	var summary := season.summary()
+	var movers: Dictionary = summary["promotion"]
+	var up: Array = movers["to_top"]
+	var down: Array = movers["to_second"]
+	assert_gte(up.size(), 1, "the swap promoted nobody")
+	assert_gte(down.size(), 1, "the swap relegated nobody")
+	var promoted := WikiModel.page(WikiModel.TEAM, str(up[0]))
+	assert_true(_links_league(promoted, "BL"),
+		"the promoted club's page does not link the Bundesliga")
+	var relegated := WikiModel.page(WikiModel.TEAM, str(down[0]))
+	assert_true(_links_league(relegated, "BL2"),
+		"the relegated club's page does not link the 2. Bundesliga")
+	# The competitions still carry 18 clubs each: two out, two in.
+	assert_eq(int(PLCompetitions.clubs("BL")), 18, "the Bundesliga lost or gained a club")
+	assert_eq(int(PLCompetitions.clubs("BL2")), 18, "the 2. Bundesliga lost or gained a club")
+	season.close()
+
+func _links_league(page: Dictionary, competition_id: String) -> bool:
+	for block in page.get("blocks", []):
+		for item in block.get("items", []):
+			var target: Dictionary = item.get("target", {})
+			if str(target.get("page", "")) != WikiModel.LEAGUE:
+				continue
+			if str(target.get("id", "")) == competition_id:
+				return true
+	return false
+
 func test_a_tie_between_the_tiers_is_only_for_a_german_pair() -> void:
 	var alone := LeagueSeason.create("Only Bundesliga", "generated", "fixture_days", 1, ["BL"])
 	assert_not_null(alone, "the single-tier save was not created")
