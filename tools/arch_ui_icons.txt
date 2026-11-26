@@ -1,0 +1,9 @@
+# Required player-facing UI icons (REQ-P1-08 / RUB-P1-08).
+# One path per line relative to repo root. Grow when new entity icons ship;
+# do not drop entries that still have a panel/row destination.
+assets/ui/league/fixtures.png
+assets/ui/league/table.png
+assets/ui/league/calendar.png
+assets/ui/league/interest.png
+assets/ui/league/stats.png
+assets/ui/league/system.png
