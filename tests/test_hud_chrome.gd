@@ -72,6 +72,22 @@ func test_ticker_follows_events_then_live_play() -> void:
 	await get_tree().process_frame
 	hud.queue_free()
 
+func test_ticker_keeps_the_whistle_line_after_full_time() -> void:
+	# #276: the fallback "LIVE" tag and its narration belong to a match still
+	# being played. Once the whistle has gone the last line stays.
+	var eng := MatchEngine.new(277)
+	eng.events = [{"id": 901, "type": "full_time", "text": "Full time: MUN 2-1 MCI.", "minute": 90}]
+	eng.phase = "full_time"
+	var hud := _hud(eng)
+	hud.ticker.tick(0.1, eng, hud.game)
+	var line: String = hud.ticker.text
+	assert_eq(hud.ticker.label, "FULL TIME", "the whistle line did not take the ticker")
+	hud.ticker.hold = 0.0
+	hud.ticker.tick(0.0, eng, hud.game)
+	assert_eq(hud.ticker.label, "FULL TIME", "the ticker fell back to LIVE on a finished match")
+	assert_eq(hud.ticker.text, line, "the ticker replaced the whistle line on a finished match")
+	hud.queue_free()
+
 func test_manager_card_shows_without_blocking_the_match() -> void:
 	var eng := MatchEngine.new(26)
 	var hud := _hud(eng)

@@ -59,6 +59,10 @@ func tick(d: float, engine, game) -> void:
 		if game.mode != "full" and game.fast_mode:
 			hold *= 0.55
 	if hold <= 0.0 or text == "":
+		# A finished match has no live play left to narrate, so its last line —
+		# the whistle — stays on screen instead of falling back to LIVE (#276).
+		if str(engine.phase) == "full_time":
+			return
 		label = "LIVE"
 		text = Commentary.live(engine)
 		minute = int(engine.minute_of(engine.clock))
