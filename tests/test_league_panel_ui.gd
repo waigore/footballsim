@@ -285,6 +285,51 @@ func _roundup_day() -> String:
 		return ""
 	return str((screen().roundup[0].get("fixture", {}) as Dictionary).get("kickoff", ""))
 
+# ------------------------------------------------------------ pinned doors ---
+
+## #284: Godot clips a Control's own draw along with its children's, and every
+## door a sheet pins lies outside the band the body clips itself to (BACK and
+## CONTINUE in the header lane, the table's readings under the reserved bar).
+## The screen therefore paints them on its own unclipped layer above the body:
+## on top of the rows, and handed the fonts and style cache the paint needs.
+func test_the_pinned_doors_paint_on_a_layer_above_the_clipped_body() -> void:
+	new_season()
+	var body: LeagueBody = screen().body
+	var layer: LeaguePinned = screen().pinned
+	assert_not_null(layer, "the screen never built the pinned-door layer")
+	if layer == null:
+		return
+	assert_is(layer.body, body, "the pinned layer paints another body's doors")
+	assert_false(layer.clip_contents, "the pinned layer clips the doors it paints")
+	assert_gt(layer.get_index(), body.get_index(), "the pinned layer paints under the rows")
+	assert_false(layer.fonts.is_empty(), "the pinned layer was handed no font set")
+	assert_almost_eq(layer.size.x, vp().x, 0.5, "the pinned layer is not the sheet's width")
+	assert_almost_eq(layer.size.y, vp().y, 0.5, "the pinned layer is not the sheet's height")
+	# Every door the pose pins stands outside the body's band; inside it the body
+	# could paint the door itself and the layer would be redundant.
+	var band := Rect2(body.position, body.size)
+	var doors := 0
+	for item in screen().buttons:
+		if not bool(item.get("pinned", false)):
+			continue
+		doors += 1
+		var rect: Rect2 = item["rect"]
+		assert_false(band.encloses(rect), "%s sits inside the clipped band" % str(item["id"]))
+	assert_gte(doors, 2, "the hub pinned fewer doors than BACK and CONTINUE")
+	# The table's two readings sit under the reserved bar, outside the same band.
+	press_nav("nav:table")
+	var tband := Rect2(screen().body.position, screen().body.size)
+	var readings := 0
+	for item in screen().buttons:
+		var id := str(item["id"])
+		if id != "tbl:mode:full" and id != "tbl:mode:compact":
+			continue
+		readings += 1
+		assert_true(bool(item.get("pinned", false)), "%s scrolls away" % id)
+		assert_false(tband.encloses(item["rect"]), "%s sits inside the clipped band" % id)
+	assert_eq(readings, 2, "the table lost a reading door")
+	press_id("back")
+
 func _clean() -> void:
 	TestScratch.clear(SAVE_DIR)
 	TestScratch.clear(CACHE_DIR)
