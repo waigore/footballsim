@@ -33,6 +33,10 @@ if str(_HERE) not in sys.path:
 from catalogue import (  # noqa: E402
     DEFAULT_RUBRICS,
     DEFAULT_SCREENS,
+    cta_labels,
+    cta_requirement,
+    cta_side,
+    label_seen,
     load_catalogue,
     screen_by_id,
 )
@@ -177,10 +181,81 @@ def _parse_verdict(text: str) -> tuple[bool, str]:
     return False, f"unparseable verdict: {cleaned[:240]}"
 
 
+_CTA_REPORT = (
+    'For the cta rubric, also report "cta_label": the exact label text of the '
+    'primary action you can read (empty string if none), and "cta_side": '
+    '"left", "center", or "right" for where that control sits.'
+)
+
+
+def build_prompt(
+    rubrics: list[dict[str, Any]], screen: dict[str, Any] | None = None
+) -> str:
+    """Grader prompt: shared rubrics plus this screen's required primary CTA."""
+    rubric_block = "\n".join(f"- {r['id']}: {r['prompt']}" for r in rubrics)
+    parts = [
+        "You are a strict UI visual QA grader for a football simulation game.",
+        "Judge ONLY what is visible in the screenshot against each rubric.",
+        "Reply with ONE JSON object only, no markdown, shape:",
+        '{"results":[{"rubric_id":"...","pass":true,"reason":"..."}, ...]}',
+        "Include every rubric id below. Be conservative: fail on clear defects.",
+    ]
+    if screen is not None:
+        parts.append(f"Screen requirement:\n{cta_requirement(screen)}")
+        if cta_labels(screen):
+            parts.append(_CTA_REPORT)
+    parts.append(f"Rubrics:\n{rubric_block}")
+    return "\n\n".join(parts)
+
+
+def enforce_cta(
+    screen: dict[str, Any] | None, results: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Fail the cta rubric when the grader never read the screen's named door.
+
+    The prompt asks for the label; this makes the requirement hard rather than
+    trusting a model that is happy to call any door "the obvious primary".
+    """
+    labels = cta_labels(screen or {})
+    if not labels:
+        return results
+    side = cta_side(screen or {})
+    wanted = " or ".join(f"'{label}'" for label in labels)
+    out: list[dict[str, Any]] = []
+    for result in results:
+        if result.get("rubric_id") != "cta" or not result.get("pass"):
+            out.append(result)
+            continue
+        read = str(result.get("cta_label") or "").strip()
+        probe = read or str(result.get("reason") or "")
+        if not any(label_seen(label, probe) for label in labels):
+            failed = dict(result)
+            failed["pass"] = False
+            failed["reason"] = (
+                f"required primary CTA {wanted} is not readable "
+                f"(grader read: {read or 'nothing'})"
+            )
+            out.append(failed)
+            continue
+        seen_side = str(result.get("cta_side") or "").strip().lower()
+        if side and seen_side and seen_side != side:
+            failed = dict(result)
+            failed["pass"] = False
+            failed["reason"] = (
+                f"required primary CTA {wanted} must sit on the {side}; "
+                f"the grader placed it on the {seen_side}"
+            )
+            out.append(failed)
+            continue
+        out.append(result)
+    return out
+
+
 def grade_image(
     image_url: str,
     rubrics: list[dict[str, Any]],
     *,
+    screen: dict[str, Any] | None = None,
     dry_run: bool = False,
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
@@ -207,15 +282,7 @@ def grade_image(
             ".gif": "image/gif",
         }.get(suffix, "image/png")
         vision_url = _data_url(data, ctype)
-    rubric_block = "\n".join(f"- {r['id']}: {r['prompt']}" for r in rubrics)
-    prompt = (
-        "You are a strict UI visual QA grader for a football simulation game.\n"
-        "Judge ONLY what is visible in the screenshot against each rubric.\n"
-        "Reply with ONE JSON object only, no markdown, shape:\n"
-        '{"results":[{"rubric_id":"...","pass":true,"reason":"..."}, ...]}\n'
-        "Include every rubric id below. Be conservative: fail on clear defects.\n\n"
-        f"Rubrics:\n{rubric_block}"
-    )
+    prompt = build_prompt(rubrics, screen)
     content = _chat(
         [
             {
@@ -255,13 +322,18 @@ def grade_image(
                     "reason": str(row.get("reason") or "").strip() or "n/a",
                 }
             )
+            if rid == "cta":
+                if row.get("cta_label") is not None:
+                    results[-1]["cta_label"] = str(row.get("cta_label")).strip()
+                if row.get("cta_side") is not None:
+                    results[-1]["cta_side"] = str(row.get("cta_side")).strip().lower()
     except (json.JSONDecodeError, ValueError, TypeError):
         passed, reason = _parse_verdict(content)
         for rubric in rubrics:
             results.append(
                 {"rubric_id": rubric["id"], "pass": passed, "reason": reason}
             )
-    return results
+    return enforce_cta(screen, results)
 
 
 def _grade_one(
@@ -273,13 +345,13 @@ def _grade_one(
 ) -> dict[str, Any]:
     sid = item["screen_id"]
     url = item["image_url"]
-    screen = screen_by_id(screens, sid) or {"id": sid, "scripts": []}
+    screen = screen_by_id(screens, sid)
     try:
-        results = grade_image(url, rubrics, dry_run=dry_run)
+        results = grade_image(url, rubrics, screen=screen, dry_run=dry_run)
         return {
             "screen_id": sid,
             "image_url": url,
-            "scripts": list(screen.get("scripts") or []),
+            "scripts": list((screen or {}).get("scripts") or []),
             "results": results,
             "error": None,
         }
@@ -287,7 +359,7 @@ def _grade_one(
         return {
             "screen_id": sid,
             "image_url": url,
-            "scripts": list(screen.get("scripts") or []),
+            "scripts": list((screen or {}).get("scripts") or []),
             "results": [],
             "error": str(exc),
         }

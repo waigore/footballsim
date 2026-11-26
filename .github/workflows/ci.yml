@@ -402,23 +402,25 @@ jobs:
               - 'scripts/ui/**'
               - 'assets/ui/**'
               - 'fonts/**'
+            tool:
+              - 'tools/ux_vlm/**'
 
       - name: Skip (no UI paths)
-        if: steps.filter.outputs.ui != 'true'
+        if: steps.filter.outputs.ui != 'true' && steps.filter.outputs.tool != 'true'
         run: echo 'No UI path changes — ux-vlm no-op.'
 
       - name: Setup Python
-        if: steps.filter.outputs.ui == 'true'
+        if: steps.filter.outputs.ui == 'true' || steps.filter.outputs.tool == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install ux_vlm deps
-        if: steps.filter.outputs.ui == 'true'
+        if: steps.filter.outputs.ui == 'true' || steps.filter.outputs.tool == 'true'
         run: pip install -r tools/ux_vlm/requirements.txt
 
       - name: Catalogue unit checks
-        if: steps.filter.outputs.ui == 'true'
+        if: steps.filter.outputs.ui == 'true' || steps.filter.outputs.tool == 'true'
         run: python tools/ux_vlm/test_catalogue.py
 
       - name: Fetch PR body
