@@ -12,12 +12,17 @@ func before_all() -> void:
 	game = Node2D.new()
 	game.set_script(load("res://scripts/main.gd"))
 	add_child(game)
+	# The match HUD's show/hide choice lives in the player's prefs file (#158);
+	# a test run must not inherit whatever the developer's last launch chose.
+	game.menus.shell.prefs_path = TestScratch.file("test_touch_flow_prefs.cfg")
+	game.menus.restore_hud()
 	# Force the handheld overlay, landing the design height on a phone's, so the
 	# point-to-design conversion is exercised rather than the identity. The test
 	# viewport is square, so the scale comes from its height.
 	game.dev.ui_scale = game.get_viewport_rect().size.y / 411.0
 	game._sync_overlay_scale()
 	game._on_fixture_confirmed("MUN", "MCI")
+	TestBriefing.kick(game)
 	game.paused = true
 
 func after_all() -> void:
@@ -154,6 +159,8 @@ func test_key_bindings_cover_every_arm() -> void:
 	_key(KEY_4)
 	assert_almost_eq(game.speed, 8.0, 0.01, "8x not selected")
 	game.mode = "highlights"
+	_key(KEY_H)
+	assert_eq(game.mode, "goals", "H did not reach Goals only")
 	_key(KEY_H)
 	assert_eq(game.mode, "full", "H did not switch to the full match")
 	_key(KEY_H)

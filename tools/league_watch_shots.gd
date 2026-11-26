@@ -31,6 +31,7 @@ func _initialize() -> void:
 	await _shot("issue-100-hub-watch")
 	print("HUB pending=", held, " watch chip=", int(league.screen.current_view()["plan"][0]["watched"]))
 	league.screen.click("continue")
+	_kick_briefing()
 	await _frames(2)
 	print("CONTINUE viewer paused=", scene.paused, " home=", scene.home_id, " away=", scene.away_id,
 		" watching=", season.watching_fixture)
@@ -52,6 +53,12 @@ func _initialize() -> void:
 	await _shot("issue-100-report")
 	print("EXIT ok fixture=", held)
 	quit()
+
+## Every watched match now opens the pre-match briefing first (#157): kick it off
+## so the pose this tool captures is the match, not the briefing.
+func _kick_briefing() -> void:
+	if scene.prematch != null and scene.prematch.is_open():
+		scene.prematch.screen.click("kick")
 
 func _frames(count: int) -> void:
 	for i in range(count):

@@ -186,7 +186,7 @@ func test_load_unloads_the_previous_season_first() -> void:
 	assert_eq(LeagueSave.current.slug, second_slug, "the old save is still the live one")
 	assert_true((screen().report as Dictionary).is_empty(), "the old report survived the load")
 	assert_true((screen().roundup as Array).is_empty(), "the old roundup survived the load")
-	assert_eq(screen().book.table.sort, "", "the old table pose survived the load")
+	assert_eq(screen().book.table.order.key, "", "the old table pose survived the load")
 	assert_ne(str(LeagueSeason.active.state()["date"]), first_date,
 		"the freshly loaded save already played the old one's matchdays")
 	_leave()

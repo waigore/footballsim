@@ -22,7 +22,7 @@ static func repo() -> PLRepository:
 ## Every page the screen can show: used to reject a bad target before pushing.
 static func has_page(page: String, id: String) -> bool:
 	if page == LEAGUE:
-		return true
+		return id == "" or PLCompetitions.exists(id)
 	if page == TEAM:
 		return not repo().club(id).is_empty()
 	if page == PLAYER:
@@ -35,34 +35,46 @@ static func page(page: String, id: String) -> Dictionary:
 		return team_page(id)
 	if page == PLAYER:
 		return player_page(id)
-	return league_page()
+	return league_page(id)
 
 static func label(page: String, id: String) -> String:
 	if page == TEAM:
 		return str(repo().club(id).get("abbr", id))
 	if page == PLAYER:
 		return str(repo().player(id).get("name", id))
-	return "LEAGUE"
+	var comp := PLCompetitions.one(id if id != "" else PLCompetitions.default_id())
+	return str(comp.get("short_name", "LEAGUE")).to_upper()
 
 # ------------------------------------------------------------------- league --
 
-static func league_page() -> Dictionary:
+## One competition's hub. `competition_id` empty means the file's default
+## competition (the Premier League in the shipped seed), so every existing
+## caller keeps its page.
+static func league_page(competition_id: String = "") -> Dictionary:
+	var comp := PLCompetitions.one(
+		competition_id if competition_id != "" else PLCompetitions.default_id())
+	var comp_id := str(comp.get("id", ""))
 	var meta := repo().meta()
-	var season := str(meta.get("season_label", ""))
+	# A file with no competition row at all (an old cache) still reads: the
+	# metadata is the snapshot's own name for its league.
+	var season := str(comp.get("season_label", meta.get("season_label", "")))
+	var name := str(comp.get("name", meta.get("league_name", "Premier League")))
 	var out := {
 		"page": LEAGUE,
-		"title": str(meta.get("league_name", "Premier League")).to_upper(),
-		"eyebrow": "PREMIER LEAGUE  ·  %s" % season,
+		"id": comp_id,
+		"title": name.to_upper(),
+		"eyebrow": "%s  ·  %s" % [str(comp.get("short_name", name)).to_upper(), season],
 		# The snapshot date is drawn as its own date label (#99), so the sheet can
 		# give it the weekday hint without hunting for it in the subtitle.
-		"subtitle": "20 CLUBS  ·  SNAPSHOT ",
+		"subtitle": "%d CLUBS  ·  SNAPSHOT " % int(comp.get("clubs", 0)),
 		"snapshot": str(meta.get("snapshot_date", "")),
 		"accent": Color("#f7c948"),
 		"blocks": [],
 	}
+	out["blocks"].append(WikiCompetitions.index(comp_id))
 	out["blocks"].append({"k": "section", "text": "LEAGUE TABLE"})
 	var rows: Array = []
-	for row in repo().table():
+	for row in repo().table(comp_id):
 		rows.append({
 			"cells": [
 				str(int(row["position"])), str(row["club_abbr"]),
@@ -85,12 +97,12 @@ static func league_page() -> Dictionary:
 	out["blocks"].append({
 		"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"],
 		"widths": [0.36, 0.22, 0.20, 0.22], "text_cols": [0, 1],
-		"rows": _leader_rows(6, "goals"),
+		"rows": _leader_rows(6, "goals", comp_id),
 	})
 	out["blocks"].append({"k": "section", "text": "CLUB INDEX"})
-	out["blocks"].append({"k": "chips", "items": _club_chips()})
+	out["blocks"].append({"k": "chips", "items": _club_chips(comp_id)})
 	var results: Array = []
-	for fx in repo().fixtures("", 10):
+	for fx in repo().fixtures("", 10, comp_id):
 		results.append({
 			"cells": [
 				FixtureCalendar.day_label(str(fx["kickoff"])), str(fx["home_abbr"]),
@@ -108,13 +120,19 @@ static func league_page() -> Dictionary:
 			"widths": [0.16, 0.28, 0.22, 0.34], "text_cols": [0, 1, 3],
 			"rows": results,
 		})
-	out["blocks"].append_array(WikiLedger.league_blocks())
+	# A season's own block only belongs on the competition it is playing, and the
+	# single-match ledger (no season open) only on the file's own competition: an
+	# inactive competition reads the snapshot alone.
+	var claims_ledger := PLCompetitions.season_owns(comp_id) \
+		or (not LeagueLedger.bound() and comp_id == PLCompetitions.default_id())
+	if claims_ledger:
+		out["blocks"].append_array(WikiLedger.league_blocks())
 	out["blocks"].append({"k": "note", "text": "SELECTED BY CLUB OR PLAYER  ·  ESC OR BACK RETURNS  ·  REAL DATA: %s" % str(meta.get("source", ""))})
 	return out
 
-static func _leader_rows(limit: int, stat: String) -> Array:
+static func _leader_rows(limit: int, stat: String, competition_id: String = "") -> Array:
 	var rows: Array = []
-	for row in repo().leaders(limit, stat):
+	for row in repo().leaders(limit, stat, competition_id):
 		rows.append({
 			"cells": [
 				str(row["name"]), str(row["abbr"]), str(int(row["matches"])),
@@ -124,9 +142,9 @@ static func _leader_rows(limit: int, stat: String) -> Array:
 		})
 	return rows
 
-static func _club_chips() -> Array:
+static func _club_chips(competition_id: String = "") -> Array:
 	var items: Array = []
-	for id in repo().club_ids():
+	for id in repo().club_ids(competition_id):
 		var club := repo().club(id)
 		items.append({
 			"text": str(club.get("abbr", id)),
@@ -152,6 +170,7 @@ static func team_page(club_id: String) -> Dictionary:
 		"accent": club["color"],
 		"blocks": [],
 	}
+	out["blocks"].append(WikiCompetitions.link(str(club.get("competition", ""))))
 	out["blocks"].append({"k": "section", "text": WikiLedger.record_label(str(meta["season_label"]))})
 	out["blocks"].append({
 		"k": "kv",
@@ -331,6 +350,7 @@ static func player_page(player_id: String) -> Dictionary:
 		"target": {"page": TEAM, "id": str(p["club_id"])},
 		"accent": _hex(club.get("color", Color.WHITE)),
 	}]})
+	out["blocks"].append(WikiCompetitions.link(str(club.get("competition", ""))))
 	return out
 
 # ---------------------------------------------------------------- shared bit --

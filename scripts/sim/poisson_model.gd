@@ -15,15 +15,31 @@ extends RefCounted
 ## plain Poisson under-counts low-scoring draws.
 
 ## League baselines (goals per side in an average fixture, home advantage built in).
-const HOME_XG := 1.65
-const AWAY_XG := 1.45
-## Rating elasticity per 10 points of the derived 0-100 strength scale. Fitted to
-## the physics engine's census over mismatched fixtures: an 11-point OVR gap lands
-## near 3.9 : 0.5 expected goals.
-const ATTACK_ELASTICITY := 1.15
-const DEFENCE_ELASTICITY := 1.15
-## Dixon-Coles low-score dependence (negative = more 0-0 and 1-1 draws).
-const RHO := -0.10
+## Fitted to the last-10 Premier League scoring envelope (`data/pl_scoring_envelope.json`),
+## not to the physics census: an even fixture sits near 2.5 goals, and a top side
+## at home against the weakest club sits near 2.5 expected goals.
+const HOME_XG := 1.35
+const AWAY_XG := 1.16
+## Rating elasticity per 10 points of the derived 0-100 strength scale. It still
+## separates the sides, but flat enough that a big gap makes a football-sized
+## scoreline rather than a census-sized one.
+const ATTACK_ELASTICITY := 0.98
+const DEFENCE_ELASTICITY := 0.98
+## Dixon-Coles low-score dependence. Damping the scoring lifted 0-0 and 1-1 draws
+## about five points above the liked win–draw–loss mix, so the correction leans
+## the other way: it trims the two low-scoring draws slightly and lifts 1-0 / 0-1.
+## The owner's constraint is to keep the pre-tune 1X2 shape; see the calibration
+## report (`tools/poisson_calibrate.gd`) and the poisson-model wiki page.
+const RHO := 0.08
+## Every number λ and τ read, in one table: the constants above, with what-if
+## overrides when a calibration run sweeps candidates before landing one.
+const DEFAULT_CALIBRATION := {
+	"home_xg": HOME_XG,
+	"away_xg": AWAY_XG,
+	"attack_elasticity": ATTACK_ELASTICITY,
+	"defence_elasticity": DEFENCE_ELASTICITY,
+	"rho": RHO,
+}
 ## Score grid: values above this per side carry < 0.01% of the mass for λ ≤ 6.
 const MAX_GOALS := 9
 
@@ -35,6 +51,8 @@ var home_id := ""
 var away_id := ""
 var weather := "clear"
 var modifiers: Dictionary = {}
+## The calibration this model was built with (defaults unless overridden).
+var cal: Dictionary = DEFAULT_CALIBRATION
 var lambda_home := 0.0
 var lambda_away := 0.0
 var rng := RandomNumberGenerator.new()
@@ -43,13 +61,23 @@ static var _means_cache: Dictionary = {}
 
 var _table: Array = []
 
-func _init(seed: int, home: String, away: String, conditions: String = "clear", mods: Dictionary = {}) -> void:
+func _init(seed: int, home: String, away: String, conditions: String = "clear", mods: Dictionary = {},
+		cal_overrides: Dictionary = {}) -> void:
 	rng.seed = seed
 	home_id = home
 	away_id = away
 	weather = conditions
 	modifiers = mods
+	cal = calibration(cal_overrides)
 	_recompute()
+
+## The constants in force, with any what-if overrides applied. One table so the
+## calibration tool and the model read the same numbers.
+static func calibration(overrides: Dictionary = {}) -> Dictionary:
+	var c: Dictionary = DEFAULT_CALIBRATION.duplicate()
+	if not overrides.is_empty():
+		c.merge(overrides, true)
+	return c
 
 # ------------------------------------------------------------- strengths ----
 
@@ -144,23 +172,25 @@ static func defence_exponents(home: String, away: String) -> Vector2:
 ## Per-side λ exponents for a pairing: what the model adds to (or subtracts
 ## from) each side's goals relative to the league baselines, from the two
 ## squads' effective attack/defence.
-static func side_exponents(home: String, away: String) -> Vector2:
+static func side_exponents(home: String, away: String, cal: Dictionary = DEFAULT_CALIBRATION) -> Vector2:
 	var terms := exponent_terms(home, away)
 	var attack: Vector2 = terms["attack"]
 	var defence: Vector2 = terms["defence"]
+	var att_k := float(cal["attack_elasticity"])
+	var def_k := float(cal["defence_elasticity"])
 	return Vector2(
-		ATTACK_ELASTICITY * attack.x + DEFENCE_ELASTICITY * defence.x,
-		ATTACK_ELASTICITY * attack.y + DEFENCE_ELASTICITY * defence.y)
+		att_k * attack.x + def_k * defence.x,
+		att_k * attack.y + def_k * defence.y)
 
 func _recompute() -> void:
 	var m := league_means()
-	var ex := side_exponents(home_id, away_id)
+	var ex := side_exponents(home_id, away_id, cal)
 	var cond: float = float(WEATHER_MULT.get(weather, 1.0))
 	var home_mod: float = float(modifiers.get("home", 1.0))
 	var away_mod: float = float(modifiers.get("away", 1.0))
 	var total_mod: float = float(modifiers.get("total", 1.0))
-	lambda_home = HOME_XG * exp(ex.x) * cond * home_mod * total_mod
-	lambda_away = AWAY_XG * exp(ex.y) * cond * away_mod * total_mod
+	lambda_home = float(cal["home_xg"]) * exp(ex.x) * cond * home_mod * total_mod
+	lambda_away = float(cal["away_xg"]) * exp(ex.y) * cond * away_mod * total_mod
 	lambda_home = clampf(lambda_home, 0.05, 6.5)
 	lambda_away = clampf(lambda_away, 0.05, 6.5)
 	_table.clear()
@@ -179,14 +209,15 @@ func _poisson(k: int, lam: float) -> float:
 
 ## Dixon-Coles low-score dependence. τ > 1 lifts the outcome, τ < 1 trims it.
 func _tau(x: int, y: int) -> float:
+	var rho := float(cal["rho"])
 	if x == 0 and y == 0:
-		return maxf(0.0, 1.0 - lambda_home * lambda_away * RHO)
+		return maxf(0.0, 1.0 - lambda_home * lambda_away * rho)
 	if x == 0 and y == 1:
-		return maxf(0.0, 1.0 + lambda_home * RHO)
+		return maxf(0.0, 1.0 + lambda_home * rho)
 	if x == 1 and y == 0:
-		return maxf(0.0, 1.0 + lambda_away * RHO)
+		return maxf(0.0, 1.0 + lambda_away * rho)
 	if x == 1 and y == 1:
-		return maxf(0.0, 1.0 - RHO)
+		return maxf(0.0, 1.0 - rho)
 	return 1.0
 
 ## Joint score probability P(home = x, away = y), τ-corrected and normalised

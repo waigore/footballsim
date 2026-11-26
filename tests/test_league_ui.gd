@@ -65,10 +65,14 @@ func key(code: int) -> void:
 func screen():
 	return game.menus.league.screen
 
+## A press that hands a watched fixture to the viewer now opens the pre-match
+## briefing (#157): the flow kicks it off so the suite keeps driving the sim.
 func press_id(id: String) -> void:
 	for item in screen().buttons:
 		if str(item["id"]) == id:
 			press((item["rect"] as Rect2).get_center())
+			if TestBriefing.is_open(game):
+				assert_true(TestBriefing.kick(game), "the briefing's CONTINUE did not start the match")
 			return
 	if PANEL_DOORS.has(id):
 		_press_panel_row(str(PANEL_DOORS[id]))
@@ -418,8 +422,46 @@ func test_the_load_list_opens_and_deletes_a_save() -> void:
 	game.menus.open_menu()
 	press(door("load_league").get_center())
 	var count_before: int = screen().saves.size()
-	press_id("delete:" + str(screen().saves[0]["slug"]))
+	var victim := str(screen().saves[0]["slug"])
+	press_id("delete:" + victim)
+	assert_true(screen().delete.is_open(), "the delete door did not ask")
+	assert_eq(screen().saves.size(), count_before, "the save went before the answer")
+	press(ConfirmPrompt.confirm_rect(vp()).get_center())
 	assert_eq(screen().saves.size(), count_before - 1, "the delete door did not remove the save")
+	assert_eq(screen().mode, LeagueScreen.MODE_LOAD, "answering DELETE left the load list")
+
+## A library longer than the window is read by scrolling: a row past the fold
+## must not answer a press until the list brings it into view (REQ-P5-08).
+func test_every_save_on_a_long_load_list_is_reachable() -> void:
+	game.menus.open_menu()
+	press(door("load_league").get_center())
+	var many: Array = []
+	for i in range(30):
+		many.append({"slug": "lib%d" % i, "name": "Library %d" % i, "status": "in_progress",
+			"current_date": "2026-09-01", "matchday": i + 1, "path": "", "modified": i})
+	screen().saves = many
+	screen().body.scroll_to(0.0)
+	screen().refresh()
+	var tail := "open:lib29"
+	var row := Rect2()
+	var laid := false
+	for item in screen().buttons:
+		if str(item["id"]) == tail:
+			row = item["rect"]
+			laid = true
+	assert_true(laid, "the last save was laid out nowhere")
+	assert_gt(row.end.y, screen().design_vp().y, "the last save already fits; the case proves nothing")
+	assert_eq(screen().button_at(row.get_center()), "", "a row below the fold answered a press")
+	screen().scroll_by(4000.0)
+	screen().refresh()
+	assert_gt(screen().body.scroll, 0.0, "a load list longer than the window does not scroll")
+	for item in screen().buttons:
+		if str(item["id"]) == tail:
+			row = item["rect"]
+	assert_eq(screen().button_at(row.get_center()), tail, "the last save is stranded below the fold")
+	screen().saves = []
+	screen().body.scroll_to(0.0)
+	screen().refresh()
 
 func test_a_phone_viewport_still_hits_every_door() -> void:
 	var original: Vector2 = game.menus.league.screen.design_vp()
@@ -506,11 +548,16 @@ func test_keyboard_walks_the_league_and_respects_its_limits() -> void:
 	var before := int(LeagueSeason.active.record.fixtures.played())
 	assert_true(screen().key(KEY_ENTER), "Enter did not press Continue")
 	assert_gte(int(LeagueSeason.active.record.fixtures.played()), before, "Enter lost matches")
-	assert_true(screen().key(KEY_ESCAPE), "Esc did not leave the hub")
-	if game.menus.league_active():
-		screen().key(KEY_ESCAPE)
-	assert_false(game.menus.league_active(), "Esc left the league open")
-	assert_true(game.menus.active(), "Esc did not return to the main menu")
+	# #169: Esc walks the season's own history; at its root it does nothing, so
+	# the league is left through System → MAIN MENU.
+	assert_true(screen().key(KEY_ESCAPE), "Esc was not taken by the season")
+	assert_true(screen().key(KEY_ESCAPE), "Esc was not taken at the root")
+	assert_true(game.menus.league_active(), "Esc opened the main menu from the league")
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "Esc did not land on the hub")
+	press_id("system")
+	press_id("sys:menu")
+	assert_false(game.menus.league_active(), "MAIN MENU left the league open")
+	assert_true(game.menus.active(), "MAIN MENU did not return to the main menu")
 	game.menus.open_menu()
 	press(door("new_league").get_center())
 	for i in range(30):
@@ -679,6 +726,8 @@ func test_deleting_the_active_save_returns_to_the_list() -> void:
 	game.menus.open_menu()
 	press(door("load_league").get_center())
 	press_id("delete:" + slug)
+	assert_eq(screen().mode, LeagueScreen.MODE_LOAD, "the delete question left the list")
+	press(ConfirmPrompt.confirm_rect(vp()).get_center())
 	assert_null(LeagueSeason.active, "the deleted season stayed active")
 	assert_null(screen().season, "the screen kept a deleted season")
 	assert_eq(screen().mode, LeagueScreen.MODE_LOAD, "the delete did not stay on the list")
@@ -848,8 +897,8 @@ func test_a_table_header_sorts_and_keeps_the_official_place() -> void:
 	assert_eq(str(stored.get("table_dir", "")), "desc", "the direction was not written to the save")
 	press_id("back")
 	press_id("table")
-	assert_eq(screen().book.table.sort, "club", "the table forgot its sort")
-	assert_eq(screen().book.table.dir, -1, "the table forgot its direction")
+	assert_eq(screen().book.table.order.key, "club", "the table forgot its sort")
+	assert_eq(screen().book.table.order.dir, -1, "the table forgot its direction")
 	press_id("back")
 	_leave_season()
 

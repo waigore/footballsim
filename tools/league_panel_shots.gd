@@ -7,7 +7,10 @@ extends SceneTree
 ## menu, Stats and System, writing a PNG per pose into `res://shots/`. Run on a
 ## display — a headless run has no frame to read back.
 ##
-##   godot --path . --script res://tools/league_panel_shots.gd
+##   xvfb-run -a godot --path . --resolution 1600x900 \
+##     --script res://tools/league_panel_shots.gd
+
+const SEED := 2033
 
 var scene = null
 
@@ -16,17 +19,24 @@ func _initialize() -> void:
 	root.add_child(scene)
 	await _frames(3)
 	var league: LeagueHost = scene.menus.league
-	var season := LeagueSeason.create("Panel Evidence", "generated", "fixture_days", 2026)
+	var season := LeagueSeason.create("Panel Evidence", "generated", "fixture_days", SEED)
 	if season == null:
 		print("EXIT could not create a season")
 		quit()
 		return
 	var guard := 0
-	while season.record.completed_matchdays() < 8 and guard < 20:
+	while season.record.fixtures.completed_matchdays() < 8 and guard < 20:
 		season.advance()
 		guard += 1
 	league.show_season(season)
 	await _shot("league_panel_closed")
+	# Mid-slide and settled: the panel's own clock, not a jump cut (#110).
+	league.screen.panel.open()
+	_hold_mid_slide(league.screen)
+	# The panel clock only paints through the overlay's redraw, so ask for one
+	# and let the shot read the real frame (#103).
+	league.screen.overlay.queue_redraw()
+	await _shot("league_panel_sliding")
 	league.screen.panel.open()
 	league.screen.panel.settle()
 	league.screen.refresh()
@@ -42,35 +52,66 @@ func _initialize() -> void:
 	await _shot("league_interest_marked")
 	league.screen.click("back")
 	league.screen.panel.settle()
+	# A hold on a club name: the shortlist's own door, over the hub (#107).
+	var zone := _name(league.screen)
+	if not zone.is_empty():
+		var at: Vector2 = (zone["rect"] as Rect2).get_center()
+		league.screen.interest.press_at(at)
+		league.screen.interest.tick(InterestPress.HOLD + 0.01)
+		league.screen.refresh()
+		await _shot("league_interest_menu")
+		league.screen.interest.close()
+		league.screen.refresh()
 	var plan: Array = season.plan()
 	var home := str(plan[0]["home_club_id"])
-	season.interest.set_interest(home, true)
+	season.record.interest.set_interest(home, true)
 	league.screen.refresh()
 	await _shot("league_hub_marked")
-	var row := Rect2()
-	for item in league.screen.buttons:
-		if str(item["id"]) == "fixture:" + str(plan[0]["id"]):
-			row = item["rect"]
-	league.screen.open_interest_at(Vector2(row.position.x + 80.0, row.position.y + 13.0))
-	await _shot("league_interest_menu")
-	league.screen.click("interest:close")
 	league.screen.click("nav:stats")
 	league.screen.panel.settle()
 	await _shot("league_stats")
 	league.screen.click("nav:system")
 	league.screen.panel.settle()
 	await _shot("league_system")
-	league.screen.click("system:save")
+	league.screen.click("sys:save")
 	await _shot("league_save")
-	print("EXIT interest=", season.interest.all(), " slug=", season.save.slug)
+	# A finished season's Stats carries the Podium door (#108).
+	league.screen.click("sys:cancel")
+	season.save.set_status("complete")
+	season.save.reload()
+	league.screen.panel.open()
+	league.screen.panel.settle()
+	league.screen.click("nav:stats")
+	league.screen.panel.settle()
+	league.screen.refresh()
+	await _shot("league_stats_podium")
+	print("EXIT interest=", season.record.interest.interests(), " slug=", season.save.slug)
 	quit()
+
+## Advance the panel's own clock part of the way out and freeze it there, so a
+## screenshot catches a frame the slide really painted. A settled (0 or 1) value
+## would silently become a closed or open shot again.
+func _hold_mid_slide(screen: LeagueScreen) -> void:
+	screen.panel.update(LeaguePanel.SLIDE * 0.64)
+	screen.panel.target = screen.panel.slide
+	if screen.panel.slide <= 0.05 or screen.panel.slide >= 0.95:
+		print("WARN mid-slide hold landed at ", screen.panel.slide)
+	print("SLIDE held at ", screen.panel.slide)
+
+## The first club name the hub painted, in design space.
+func _name(screen: LeagueScreen) -> Dictionary:
+	if screen.rows_names == null:
+		return {}
+	for zone in screen.rows_names.zones:
+		return zone
+	return {}
 
 func _frames(count: int) -> void:
 	for i in range(count):
 		await process_frame
 
 func _shot(name: String) -> void:
-	await _frames(3)
+	await _frames(4)
 	var tex: ViewportTexture = scene.get_viewport().get_texture()
 	if tex == null:
 		print("SHOT %s skipped (no renderer)" % name)

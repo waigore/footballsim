@@ -1,0 +1,46 @@
+{
+  "source": {
+    "name": "football-data.co.uk Premier League full-time results (E0.csv)",
+    "url": "https://www.football-data.co.uk/englandm.php",
+    "seasons": ["2015-16", "2016-17", "2017-18", "2018-19", "2019-20", "2020-21", "2021-22", "2022-23", "2023-24", "2024-25"],
+    "matches": 3800,
+    "collected": "2026-11-25",
+    "notes": "Bands are the observed per-season extremes across the ten seasons; pooled figures are over all 3800 matches. Champion GF and best-15 GF are read from the champion's own season. Blowout = full-time margin of three goals or more."
+  },
+  "bands": {
+    "goals_per_game": {"pooled": 2.83, "min": 2.68, "max": 3.28},
+    "home_goal_share": {"pooled": 0.548, "min": 0.502, "max": 0.573},
+    "champion_gf": {"mean": 89.7, "min": 68, "max": 106},
+    "champion_best_15_gf": {"mean": 41.1, "min": 32, "max": 51},
+    "blowout_margin_3_rate": {"pooled": 0.181, "min": 0.158, "max": 0.205},
+    "result_mix": {"home": 0.445, "draw": 0.233, "away": 0.322}
+  },
+  "gate": {
+    "seasons": 20,
+    "seed": 7000,
+    "hda_drift_pp": 2.0
+  },
+  "pre_tune": {
+    "model": {"home_xg": 1.65, "away_xg": 1.45, "attack_elasticity": 1.15, "defence_elasticity": 1.15, "rho": -0.10},
+    "seasons": 20,
+    "seed": 7000,
+    "result_mix": {"home": 0.441, "draw": 0.189, "away": 0.371},
+    "goals_per_game": 3.54,
+    "home_goal_share": 0.532,
+    "champion_gf_mean": 140.0,
+    "champion_best_15_gf_mean": 63.0,
+    "blowout_margin_3_rate": 0.294
+  },
+  "seasons": [
+    {"season": "2015-16", "matches": 380, "goals_per_game": 2.70, "home_goal_share": 0.553, "champion_gf": 68, "champion_best_15_gf": 32, "blowout_margin_3_rate": 0.166},
+    {"season": "2016-17", "matches": 380, "goals_per_game": 2.80, "home_goal_share": 0.570, "champion_gf": 85, "champion_best_15_gf": 37, "blowout_margin_3_rate": 0.187},
+    {"season": "2017-18", "matches": 380, "goals_per_game": 2.68, "home_goal_share": 0.572, "champion_gf": 106, "champion_best_15_gf": 51, "blowout_margin_3_rate": 0.205},
+    {"season": "2018-19", "matches": 380, "goals_per_game": 2.82, "home_goal_share": 0.556, "champion_gf": 95, "champion_best_15_gf": 45, "blowout_margin_3_rate": 0.158},
+    {"season": "2019-20", "matches": 380, "goals_per_game": 2.72, "home_goal_share": 0.557, "champion_gf": 85, "champion_best_15_gf": 37, "blowout_margin_3_rate": 0.174},
+    {"season": "2020-21", "matches": 380, "goals_per_game": 2.69, "home_goal_share": 0.502, "champion_gf": 83, "champion_best_15_gf": 41, "blowout_margin_3_rate": 0.163},
+    {"season": "2021-22", "matches": 380, "goals_per_game": 2.82, "home_goal_share": 0.537, "champion_gf": 99, "champion_best_15_gf": 44, "blowout_margin_3_rate": 0.205},
+    {"season": "2022-23", "matches": 380, "goals_per_game": 2.85, "home_goal_share": 0.573, "champion_gf": 94, "champion_best_15_gf": 43, "blowout_margin_3_rate": 0.182},
+    {"season": "2023-24", "matches": 380, "goals_per_game": 3.28, "home_goal_share": 0.549, "champion_gf": 96, "champion_best_15_gf": 40, "blowout_margin_3_rate": 0.200},
+    {"season": "2024-25", "matches": 380, "goals_per_game": 2.93, "home_goal_share": 0.516, "champion_gf": 86, "champion_best_15_gf": 41, "blowout_margin_3_rate": 0.168}
+  ]
+}

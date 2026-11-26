@@ -1,10 +1,8 @@
 extends Node2D
 
-## Playback controller + scene assembly.
-## Owns the engine, the snapshot ring buffer that makes highlight replays possible,
-## the camera and every input binding. Screen/design-space arithmetic (overlay
-## doors, token picking, tick budget) lives in MatchView so the scene stays
-## inside its P3 size budget.
+## Playback controller + scene assembly: the engine, the snapshot ring, the
+## camera and the input bindings. Design-space arithmetic and the sheet routing
+## live in MatchView / MatchInput so the scene stays inside its P3 size budget.
 
 const W := 68.0
 const L := 105.0
@@ -35,7 +33,7 @@ var half_time_timer := -1.0
 var focus_id := -1
 var hover_id := -1
 var names_visible := true
-var camera_follow := false
+var camera_follow: bool = MatchView.default_follow()  # follow on phones (#158)
 var zoom_scale := 1.0
 var base_zoom := 11.0
 var mouse := Vector2.ZERO
@@ -74,8 +72,16 @@ var select_from_menu := false
 var match_started := false
 ## Encyclopedia sheet: league / club / player pages over the paused broadcast.
 var wiki_host: WikiHost = null
+## The pre-match briefing (#157): the last screen before a watched or single
+## match starts. League watches and the fixture picker both ask it first.
+var prematch: PreMatchHost = null
 ## A finished match is written to the cached seed exactly once.
 var result_recorded := false
+## The competition this match is being played in (#209): the briefing, the
+## broadcast's fixture card and the opening team sheet all read it, so one match
+## can never be named two ways. A league watch rebinds it; the picker leaves it a
+## friendly.
+var billing: MatchBilling = MatchBilling.new()
 ## A league watch keeps its FULL TIME card until the player taps it away (#124);
 ## LeagueHost owns the flag, the broadcast only reads it.
 var result_hold := false
@@ -84,12 +90,14 @@ func _ready() -> void:
 	build_scene()
 	setup_audio()
 	highlights = HighlightDirector.new(self)
-	_parse_fixture_args()
+	fixture_arg_given = fixture.parse_args()
 	new_match(seeded)
 	dev = DevCapture.new()
 	dev.parse(self)
-	_build_wiki()
-	_build_selector()
+	wiki_host = WikiHost.new(self)
+	wiki_host.build()
+	fixture.build()
+	prematch = PreMatchHost.mount(self)
 	menus = MenuHost.new()
 	menus.attach(self)
 	_sync_overlay_scale()
@@ -152,8 +160,12 @@ func _sync_overlay_scale() -> void:
 		selector.ui_scale = chrome_scale
 	if wiki_host != null:
 		wiki_host.sync_scale()
+	if prematch != null:
+		prematch.sync(frame, chrome_scale, touch)
 	if menus != null:
 		menus.sync(frame, chrome_scale, touch)
+	if camera != null:
+		camera.fit()
 
 func new_match(seed: int) -> void:
 	if replay != null:
@@ -188,15 +200,6 @@ func new_match(seed: int) -> void:
 
 # --------------------------------------------------------------- fixture ----
 
-func _build_selector() -> void:
-	fixture.build()
-
-# -------------------------------------------------------------- encyclopedia --
-
-func _build_wiki() -> void:
-	wiki_host = WikiHost.new(self)
-	wiki_host.build()
-
 func open_select(from_menu: bool = false) -> void:
 	fixture.open(from_menu)
 
@@ -206,14 +209,9 @@ func _close_select() -> void:
 func _on_fixture_confirmed(h: String, a: String) -> void:
 	fixture.confirm(h, a)
 
-func _parse_fixture_args() -> void:
-	fixture_arg_given = fixture.parse_args()
-
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		_sync_overlay_scale()
-		if camera != null:
-			camera.fit()
 
 # ------------------------------------------------------------------ input ----
 
@@ -265,18 +263,14 @@ func _cycle_speed() -> void:
 	speed = opts[(idx + 1) % opts.size()]
 
 func _toggle_mode() -> void:
-	mode = "full" if mode == "highlights" else "highlights"
-	if mode == "full":
-		fast_mode = false
-		in_highlight = false
-		highlight_until = -1.0
-		paused = false
-		speed = 1.0
-	else:
-		fast_mode = not in_highlight
-		if not in_highlight:
-			in_highlight = false
-			highlight_until = -1.0
+	set_mode(Prefs.next_mode(mode))
+
+## Every door into the match view — `H`, the bar's mode door, the Settings sheet
+## — lands here, and the prefs file remembers the choice (#164).
+func set_mode(next: String) -> void:
+	view.set_mode(next)
+	if menus != null:
+		menus.save_mode(mode)
 
 func _skip() -> void:
 	if replay != null:
@@ -284,7 +278,7 @@ func _skip() -> void:
 		replay.finish(true)
 		replay = null
 		return
-	if mode == "highlights":
+	if mode != "full":
 		if in_highlight:
 			_end_highlight()
 		elif fast_mode:
@@ -298,6 +292,8 @@ func _process(delta: float) -> void:
 	elapsed_real += delta
 	match_time += delta
 	dev.tick(self, delta)
+	if prematch != null and prematch.is_open():
+		return
 	if wiki_host != null and wiki_host.is_open():
 		return
 	if menus != null and menus.active():
@@ -353,7 +349,7 @@ func _post_tick() -> void:
 	if in_highlight:
 		if engine.clock > highlight_until:
 			_end_highlight()
-	elif mode == "highlights":
+	elif mode != "full":
 		fast_mode = true
 	if camera != null:
 		camera.update_target()
@@ -362,7 +358,7 @@ func _post_tick() -> void:
 func _end_highlight() -> void:
 	in_highlight = false
 	highlight_until = -1.0
-	if mode == "highlights":
+	if mode != "full":
 		fast_mode = true
 
 func _snapshot() -> void:

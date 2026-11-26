@@ -47,11 +47,23 @@ const SCHEMA := [
 	"CREATE TABLE IF NOT EXISTS match_event (id INTEGER PRIMARY KEY AUTOINCREMENT, "
 	+ "fixture_id TEXT NOT NULL, minute INTEGER NOT NULL, kind TEXT NOT NULL, "
 	+ "player_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL DEFAULT '', "
-	+ "detail TEXT NOT NULL DEFAULT '');",
+	+ "detail TEXT NOT NULL DEFAULT '', penalty INTEGER NOT NULL DEFAULT 0);",
 	"CREATE TABLE IF NOT EXISTS league_player_stat (player_id TEXT PRIMARY KEY, "
 	+ "club_id TEXT NOT NULL, apps INTEGER NOT NULL DEFAULT 0, "
 	+ "goals INTEGER NOT NULL DEFAULT 0, assists INTEGER NOT NULL DEFAULT 0, "
 	+ "yellow INTEGER NOT NULL DEFAULT 0, red INTEGER NOT NULL DEFAULT 0);",
+	# Season availability (#155, #156): the injuries and suspensions a club
+	# carries between fixtures. `days_left` and `due_on` are the hidden injury
+	# clock — the screens only ever read weeks or months.
+	"CREATE TABLE IF NOT EXISTS league_absence (player_id TEXT PRIMARY KEY, "
+	+ "club_id TEXT NOT NULL, kind TEXT NOT NULL, grade TEXT NOT NULL DEFAULT '', "
+	+ "days_left INTEGER NOT NULL DEFAULT 0, matches_left INTEGER NOT NULL DEFAULT 0, "
+	+ "started_on TEXT NOT NULL DEFAULT '', due_on TEXT NOT NULL DEFAULT '', "
+	+ "rate REAL NOT NULL DEFAULT 1.0);",
+	# How far up the yellow table a player has already been punished: the mark
+	# that stops ten cards paying twice for five (#156).
+	"CREATE TABLE IF NOT EXISTS league_discipline (player_id TEXT PRIMARY KEY, "
+	+ "club_id TEXT NOT NULL, yellow_mark INTEGER NOT NULL DEFAULT 0);",
 	"CREATE TABLE IF NOT EXISTS goal_highlight (id INTEGER PRIMARY KEY AUTOINCREMENT, "
 	+ "fixture_id TEXT NOT NULL, goal_index INTEGER NOT NULL, "
 	+ "match_event_id INTEGER NOT NULL DEFAULT 0, minute INTEGER NOT NULL DEFAULT 0, "
@@ -61,6 +73,7 @@ const SCHEMA := [
 	+ "source TEXT NOT NULL DEFAULT 'auto', codec TEXT NOT NULL DEFAULT '', "
 	+ "version INTEGER NOT NULL DEFAULT 0, home_club_id TEXT NOT NULL DEFAULT '', "
 	+ "away_club_id TEXT NOT NULL DEFAULT '', bytes BLOB, "
+	+ "penalty INTEGER NOT NULL DEFAULT 0, "
 	+ "UNIQUE(fixture_id, goal_index));",
 	"CREATE INDEX IF NOT EXISTS league_fixture_kickoff_idx ON league_fixture (kickoff);",
 	"CREATE INDEX IF NOT EXISTS match_event_fixture_idx ON match_event (fixture_id);",
@@ -290,19 +303,29 @@ func read_meta() -> Dictionary:
 		out[str(row["key"])] = str(row["value"])
 	return out
 
-## Bring a save written before the home/away columns up to the current table.
-## Adding a column leaves every existing row on zero; the season rebuilds the
-## aggregates from its played fixtures when it opens.
+## Bring a save written before a later column up to the current schema. Adding a
+## column leaves every existing row on the default: the home/away aggregates are
+## rebuilt from played fixtures when the season opens, and a report written
+## before penalties were tagged simply has no spot kicks to mark.
 func ensure_schema() -> void:
 	if not ensure_open():
 		return
-	var have := {}
-	for row in PLDatabase.rows("PRAGMA table_info(league_table);"):
-		have[str(row["name"])] = true
 	for column in SIDE_COLUMNS:
-		if not have.has(column):
-			PLDatabase.execute(
-				"ALTER TABLE league_table ADD COLUMN %s INTEGER NOT NULL DEFAULT 0;" % column)
+		_add_column("league_table", column)
+	# #171: a synthetic report tags its converted penalties, and the flag has to
+	# survive the save so a reopened report still reads (PEN).
+	_add_column("match_event", "penalty")
+	_add_column("goal_highlight", "penalty")
+
+## Add one integer column if the table does not have it yet.
+func _add_column(table: String, column: String) -> void:
+	var have := {}
+	for row in PLDatabase.rows("PRAGMA table_info(%s);" % table):
+		have[str(row["name"])] = true
+	if have.has(column):
+		return
+	PLDatabase.execute(
+		"ALTER TABLE %s ADD COLUMN %s INTEGER NOT NULL DEFAULT 0;" % [table, column])
 
 func put_meta(key: String, value: String) -> bool:
 	if not ensure_open():

@@ -12,6 +12,10 @@ extends RefCounted
 var save: LeagueSave = null
 ## The goal clips stored beside the ledger's reports (see `LeagueClips`).
 var clips: LeagueClips = null
+## Event rows per fixture, read once while the ledger stays put: a hub repaint
+## asks for the same day again and again (a resize, a toggle), and a played
+## report never changes until the fixture is settled again.
+var memo := {}
 
 func _init(owner: LeagueSave) -> void:
 	save = owner
@@ -47,28 +51,35 @@ func add_events(rows: Array) -> void:
 	save.ensure_open()
 	if rows.is_empty():
 		return
+	memo.clear()
 	var values: Array = []
 	var bindings: Array = []
 	for e in rows:
-		values.append("(?, ?, ?, ?, ?, ?)")
+		values.append("(?, ?, ?, ?, ?, ?, ?)")
 		bindings.append_array([
 			str(e.get("fixture_id", "")), int(e.get("minute", 0)), str(e.get("kind", "")),
 			str(e.get("player_id", "")), str(e.get("club_id", "")), str(e.get("detail", "")),
+			1 if bool(e.get("penalty", false)) else 0,
 		])
 	PLDatabase.execute(
-		"INSERT INTO match_event (fixture_id, minute, kind, player_id, club_id, detail) "
+		"INSERT INTO match_event (fixture_id, minute, kind, player_id, club_id, detail, penalty) "
 		+ "VALUES " + ", ".join(values) + ";",
 		bindings,
 	)
 
 func events(fixture_id: String) -> Array:
 	save.ensure_open()
-	return PLDatabase.rows(
+	if memo.has(fixture_id):
+		return memo[fixture_id]
+	var rows := PLDatabase.rows(
 		"SELECT e.*, p.name AS player_name FROM match_event e "
 		+ "LEFT JOIN player p ON p.id = e.player_id WHERE e.fixture_id = ? "
 		+ "ORDER BY e.minute, e.id;",
 		[fixture_id],
 	)
+	# The rows are a reading, not a copy: every painter treats them as read-only.
+	memo[fixture_id] = rows
+	return rows
 
 ## Add one player's match line to the season totals (apps, goals, assists,
 ## cards). Called for the XI of an auto-simmed side and for every player a

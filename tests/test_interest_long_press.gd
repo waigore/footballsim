@@ -390,6 +390,7 @@ func _match() -> Node2D:
 	game.set_script(load("res://scripts/main.gd"))
 	add_child(game)
 	game._on_fixture_confirmed("MUN", "MCI")
+	TestBriefing.kick(game)
 	game.paused = true
 	game.hud.queue_redraw()
 	await get_tree().process_frame

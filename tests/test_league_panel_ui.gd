@@ -110,13 +110,24 @@ func test_the_hub_has_no_bottom_door_bar_and_keeps_back_and_continue() -> void:
 	assert_true(ids.has("back"), "the hub lost BACK")
 	assert_almost_eq(back.position.x, 24.0, 0.5, "BACK is not top-left")
 	assert_almost_eq(cont.end.x, vp().x - 24.0, 0.5, "CONTINUE is not top-right")
-	assert_lte(back.end.y, LeagueSheet.HEADER, "BACK left the header")
-	assert_lte(cont.end.y, LeagueSheet.HEADER, "CONTINUE left the header")
+	assert_lte(back.end.y, LeagueChrome.HEADER, "BACK left the header")
+	assert_lte(cont.end.y, LeagueChrome.HEADER, "CONTINUE left the header")
 	# The body now runs to the window's bottom edge: no bar is reserved.
 	assert_almost_eq(screen().body.size.y, vp().y - LeagueBody.TOP, 0.5,
 		"the hub still reserves a bottom bar")
+	# #169: the hub is the root of the season's history, so BACK is visible but
+	# disabled — it never leaves the season. The System dialog is the way out.
+	var back_item := {}
+	for item in screen().buttons:
+		if str(item["id"]) == "back":
+			back_item = item
+	assert_true(bool(back_item.get("disabled", false)), "the root BACK door is not disabled")
 	press_id("back")
-	assert_false(game.menus.league_active(), "BACK on the hub did not leave the league")
+	assert_true(game.menus.league_active(), "BACK at the root left the league")
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "BACK at the root moved the sheet")
+	press_nav("nav:system")
+	press_id("sys:menu")
+	assert_false(game.menus.league_active(), "MAIN MENU did not leave the league")
 
 # ------------------------------------------------------------------- panel ---
 
@@ -241,6 +252,38 @@ func test_stats_lists_reports_and_the_podium_when_available() -> void:
 	assert_true(podium_door, "a complete season's Stats has no Podium door")
 	press_id("stats:podium")
 	assert_eq(screen().mode, "podium", "the Stats Podium door did not open")
+
+# ----------------------------------------------------------------- results ---
+
+## #180: RESULTS carries the hub's CONTINUE in the hub's corner, BACK stays the
+## leave control, and the press runs the hub door's season action — settle the
+## next day and show it.
+func test_results_keeps_the_hubs_continue_and_it_settles_the_next_day() -> void:
+	new_season()
+	press_id("continue")
+	assert_eq(screen().mode, "report", "CONTINUE did not land on the day's results")
+	assert_false(screen().roundup.is_empty(), "the results sheet has nothing to read")
+	var cont := Rect2()
+	var back := Rect2()
+	for item in screen().buttons:
+		if str(item["id"]) == "continue":
+			cont = item["rect"]
+		elif str(item["id"]) == "back":
+			back = item["rect"]
+	assert_true(cont.size.x > 0.0, "RESULTS lost the hub's CONTINUE")
+	assert_almost_eq(cont.end.x, vp().x - 24.0, 0.5, "RESULTS CONTINUE is not top-right")
+	assert_eq(back, LeagueExtra.back_rect(), "RESULTS BACK left the header lane")
+	assert_gt(cont.position.x, back.end.x, "the two header doors sit on each other")
+	var first := _roundup_day()
+	press_id("continue")
+	assert_eq(screen().mode, "report", "CONTINUE on RESULTS left the results reading")
+	assert_false(screen().roundup.is_empty(), "CONTINUE on RESULTS settled no next day")
+	assert_ne(_roundup_day(), first, "CONTINUE on RESULTS showed the same day again")
+
+func _roundup_day() -> String:
+	if screen().roundup.is_empty():
+		return ""
+	return str((screen().roundup[0].get("fixture", {}) as Dictionary).get("kickoff", ""))
 
 func _clean() -> void:
 	TestScratch.clear(SAVE_DIR)

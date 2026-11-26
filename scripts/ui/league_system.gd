@@ -6,11 +6,10 @@ extends RefCounted
 ## copy under a typed name, Load swaps saves (the caller unloads the old one),
 ## Main Menu leaves the season and Quit asks the shell to close the game.
 ##
-## It sits beside `LeagueSheet` and `LeagueBook` because both are at their method
-## budget, and it is its own pose: geometry and paint only, no save calls.
+## It is its own pose beside the hub, the readings and the front door: geometry
+## and paint only, no save calls.
 
 const HEADER := 58.0
-const BAR_H := 52.0
 const ROW_H := 46.0
 const ROW_GAP := 8.0
 
@@ -26,8 +25,6 @@ const ACTIONS := [
 var cache := {}
 ## Dates the chrome painted, with the strip each one occupies (#99).
 var hints := DateHints.new()
-## The shared button paint lives on the hub sheet; one instance is enough.
-var chrome := LeagueSheet.new()
 
 func layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
@@ -48,7 +45,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 			"hint": str(action["hint"]), "rect": Rect2(x, y, w, ROW_H)})
 		y += ROW_H + ROW_GAP
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 110.0, BAR_H - 14.0)})
+		"rect": LeagueExtra.back_rect()})
 	return items
 
 # gd-tools: no cover start
@@ -56,8 +53,6 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
 	var bold: Font = fonts["bold"]
-	UiChrome.wordmark(c, Vector2(24.0, 30.0), 18, bold)
-	UiChrome.text(c, Vector2(24.0, 48.0), "SYSTEM", 12, UiChrome.C_GOLD, bold)
 	var date := str(view.get("date", ""))
 	var label := FixtureCalendar.day_label(date)
 	var parts: Array = []
@@ -65,10 +60,9 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 		parts.append(str(view.get("name", "")))
 	if label != "":
 		parts.append(label)
-	UiChrome.text_r(c, vp.x - 24.0, 30.0, " · ".join(PackedStringArray(parts)), 10,
-		UiChrome.C_DIM, bold)
+	LeagueExtra.header(c, vp, fonts, "SYSTEM", " · ".join(PackedStringArray(parts)))
 	if date != "":
-		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 30.0, 10), date)
+		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 34.0, 10), date)
 	# The acknowledgement is painted, never modal: a save lands without an extra
 	# press and never hides the next action.
 	var status := str(view.get("status", ""))
@@ -78,9 +72,10 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 	elif status != "":
 		UiChrome.text(c, Vector2(24.0, HEADER + 14.0), status, 11, UiChrome.C_LIVE, bold)
 
-func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array, _view: Dictionary) -> void:
+func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
+	var live := str(view.get("focus", "")) == LeagueFieldFocus.SYSTEM
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		match str(item["kind"]):
@@ -96,8 +91,9 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array, _vi
 				UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_GOLD, 1)
 				UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
 					str(item["value"]), 15, UiChrome.C_TEXT, bold)
+				LeagueFieldFocus.caret(c, rect, str(item["value"]), bold, 15, live)
 			"button":
-				UiChrome.button(c, chrome.cache, rect, str(item["label"]), bold,
+				UiChrome.button(c, cache, rect, str(item["label"]), bold,
 					bool(item.get("primary", false)))
 
 # gd-tools: no cover end

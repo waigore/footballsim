@@ -60,6 +60,19 @@ const BREAK_COMPACT_SUB_Y := 116.0
 const BREAK_COMPACT_PER_ROW := 2
 const BREAK_COMPACT_MAX_ROWS := 4
 
+## HUD show/hide (#158): the chrome slides off over this many seconds, the top
+## row lifting and the bottom strip dropping by enough to clear the tallest band
+## in each (the stats card above, the commentary ticker below). The one door that
+## never moves is `hud_toggle_rect`.
+const HUD_SLIDE_SECONDS := 0.22
+const HUD_SLIDE_TOP := 168.0
+const HUD_SLIDE_BOTTOM := 148.0
+const HUD_TOGGLE_W := 132.0
+## Desktop pill: discreet, clear of the ticker and the bar.
+const HUD_TOGGLE_H := 30.0
+## A finger needs the full 44 design units, which the overlay scales up again.
+const HUD_TOGGLE_TAP := 44.0
+
 
 ## Touch builds get one extra door (teams) because the fixture panel that
 ## carries it on desktop is not drawn in compact. The league door rides the bar
@@ -118,6 +131,14 @@ static func controls_rect(vp: Vector2, touch := false) -> Rect2:
 
 static func commentary_rect(vp: Vector2) -> Rect2:
 	return Rect2(PANEL_MARGIN, vp.y - 126.0, minf(620.0, vp.x - 2.0 * PANEL_MARGIN), 52.0)
+
+## The discreet HUD door (#158): bottom-left, above the ticker, clear of the bar
+## that wraps onto extra rows on a narrow design space. It is drawn whatever the
+## chrome is doing, so turning the bands back on is always one tap away.
+static func hud_toggle_rect(vp: Vector2, touch := false) -> Rect2:
+	var h: float = HUD_TOGGLE_TAP if (touch or is_compact(vp)) else HUD_TOGGLE_H
+	var top: float = commentary_rect(vp).position.y - 8.0 - h
+	return Rect2(PANEL_MARGIN, maxf(top, scoreboard_rect(vp).end.y + 4.0), HUD_TOGGLE_W, h)
 
 ## The band a whistle card may occupy: under the scoreboard, above the ticker.
 static func break_band(vp: Vector2) -> Rect2:

@@ -38,8 +38,10 @@ const HINT_DROP := 14.0
 ## primary reads the same on a season sheet, the System dialog, the fixture
 ## picker and the encyclopedia. `size > 0` overrides the door's type size;
 ## `hint` adds the keyboard line under the caption (a desktop-only affordance).
+## `enabled = false` keeps the door where it is and dims it, so BACK at the root
+## of a season's history is visible but not something to press (#169).
 static func button(c: CanvasItem, cache: Dictionary, r: Rect2, label: String, font: Font,
-		primary: bool, size: int = -1, hint: String = "") -> void:
+		primary: bool, size: int = -1, hint: String = "", enabled: bool = true) -> void:
 	var px: int = size if size > 0 else (15 if primary else 12)
 	var cx: float = r.get_center().x
 	var middle: float = r.position.y + r.size.y * 0.5
@@ -47,6 +49,10 @@ static func button(c: CanvasItem, cache: Dictionary, r: Rect2, label: String, fo
 	# and the key sits under it, so neither line lands on the other.
 	var mid: float = middle - RISE if hint != "" else middle + RISE
 	var ink: Color = Color(0.06, 0.06, 0.05) if primary else C_TEXT
+	if not enabled:
+		panel(c, cache, r, C_PANEL, 7, C_BORDER, 1)
+		text_c(c, cx, mid, label, px, Color(C_DIM.r, C_DIM.g, C_DIM.b, 0.55), font)
+		return
 	if primary:
 		panel(c, cache, r, C_GOLD, 7, Color(0.96, 0.78, 0.30, 0.85), 1)
 	else:
@@ -142,12 +148,13 @@ static func wordmark_c(c: CanvasItem, center_x: float, y: float, size: int, font
 static func rule(c: CanvasItem, center_x: float, y: float, w: float = 64.0, col: Color = C_GOLD) -> void:
 	c.draw_rect(Rect2(center_x - w * 0.5, y, w, 3.0), col)
 
-## Sheet header used by settings and the fixture picker: product bar top-left,
-## a centred kicker + title, and an optional right-hand caption.
-static func sheet_header(c: CanvasItem, vp: Vector2, fonts: Dictionary, kicker: String, title: String, caption: String = "") -> void:
+## Sheet header used by settings and the fixture picker: a centred title and an
+## optional right-hand caption. BACK owns the top-left corner itself.
+static func sheet_header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
+		caption: String = "") -> void:
 	var bold: Font = fonts["bold"]
-	wordmark(c, Vector2(24.0, 40.0), 20, bold)
-	text(c, Vector2(24.0, 58.0), kicker, 10, C_DIM, fonts["med"])
+	# BACK owns the top-left corner on every sheet (#163), so the wordmark and
+	# kicker that used to sit there are gone; a caption can ride the right.
 	if caption != "":
 		text_r(c, vp.x - 24.0, 40.0, caption, 11, C_DIM, bold)
 	if vp.y < 620.0:

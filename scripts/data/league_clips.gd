@@ -26,8 +26,8 @@ func add(rows: Array) -> void:
 		PLDatabase.execute(
 			"INSERT INTO goal_highlight (fixture_id, goal_index, match_event_id, minute, "
 			+ "club_id, scorer_id, scorer_name, assist_id, assist_name, commentary, source, "
-			+ "codec, version, home_club_id, away_club_id, bytes) "
-			+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+			+ "codec, version, home_club_id, away_club_id, bytes, penalty) "
+			+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
 			+ "ON CONFLICT(fixture_id, goal_index) DO UPDATE SET "
 			+ "match_event_id = excluded.match_event_id, minute = excluded.minute, "
 			+ "club_id = excluded.club_id, scorer_id = excluded.scorer_id, "
@@ -35,7 +35,7 @@ func add(rows: Array) -> void:
 			+ "assist_name = excluded.assist_name, commentary = excluded.commentary, "
 			+ "source = excluded.source, codec = excluded.codec, version = excluded.version, "
 			+ "home_club_id = excluded.home_club_id, away_club_id = excluded.away_club_id, "
-			+ "bytes = excluded.bytes;",
+			+ "bytes = excluded.bytes, penalty = excluded.penalty;",
 			[
 				fixture_id, int(row.get("goal_index", 0)), int(row.get("match_event_id", 0)),
 				int(row.get("minute", 0)), str(row.get("club_id", "")),
@@ -45,6 +45,7 @@ func add(rows: Array) -> void:
 				str(row.get("codec", "")), int(row.get("version", 0)),
 				str(row.get("home_club_id", "")), str(row.get("away_club_id", "")),
 				row.get("bytes", PackedByteArray()),
+				1 if bool(row.get("penalty", false)) else 0,
 			],
 		)
 
@@ -54,7 +55,7 @@ func list(fixture_id: String) -> Array:
 	save.ensure_open()
 	return PLDatabase.rows(
 		"SELECT fixture_id, goal_index, match_event_id, minute, club_id, scorer_id, "
-		+ "scorer_name, assist_id, assist_name, commentary, source, codec, version "
+		+ "scorer_name, assist_id, assist_name, commentary, source, codec, version, penalty "
 		+ "FROM goal_highlight WHERE fixture_id = ? ORDER BY goal_index;",
 		[fixture_id],
 	)
@@ -108,6 +109,7 @@ func _draw(row: Dictionary) -> PackedByteArray:
 		"score_after": _score_after(fixture_id, index, home, club),
 		"source": str(row.get("source", "auto")),
 		"commentary": str(row.get("commentary", "")),
+		"penalty": int(row.get("penalty", 0)) == 1,
 	}
 	var sides := {
 		"home": StrongestXI.pick(TeamData.get_team(home)),

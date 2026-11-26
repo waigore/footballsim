@@ -52,9 +52,11 @@ suites = [
 [domains.hud_chrome]
 suites = [
   "test_hud_chrome.gd",
+  "test_hud_toggle.gd",
   "test_touch_flow.gd",
   "test_wiki_entry.gd",
   "test_chrome_density.gd",
+  "test_match_mode.gd",
 ]
 
 [domains.tactics]
@@ -77,6 +79,18 @@ suites = [
   "test_touch_flow.gd",
   "test_menu_nav.gd",
   "test_league_ui.gd",
+  "test_pre_match.gd",
+]
+
+# The pre-match briefing: its model, its pitch and doors, and the availability
+# it reads (#155–#157). A change in either layer can move the other. The one
+# competition a match is billed in (#209) rides here too: the briefing's caption
+# is its first reader, and this suite pins every other surface's answer.
+[domains.pre_match]
+suites = [
+  "test_pre_match.gd",
+  "test_season_availability.gd",
+  "test_league_season.gd",
 ]
 
 [domains.shell]
@@ -84,10 +98,13 @@ suites = [
   "test_menu_nav.gd",
   "test_prefs.gd",
   "test_hud_layout.gd",
+  "test_hud_toggle.gd",
   "test_touch_flow.gd",
   "test_chrome_density.gd",
   # Paint grammar of every door painted on a sheet (season, System, picker).
   "test_ui_chrome_doors.gd",
+  # The match view preference: the settings sheet and the broadcast's door.
+  "test_match_mode.gd",
 ]
 
 # Shared engine spine: laws + finishing + restart + managers when a core file moves.
@@ -137,6 +154,9 @@ suites = [
   "test_kits.gd",
   "test_tactics.gd",
   "test_managers.gd",
+  # The competitions one database carries (#190): data reads and the pages
+  # that draw them, so it rides with the seed it proves.
+  "test_pl_competitions.gd",
 ]
 
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
@@ -150,13 +170,22 @@ suites = [
   "test_fixture_calendar.gd",
   "test_strongest_xi.gd",
   "test_league_season.gd",
+  "test_season_availability.gd",
+  "test_pre_match.gd",
   "test_league_sheets.gd",
+  "test_league_table_order.gd",
+  "test_league_table_chrome.gd",
   "test_league_panel_ui.gd",
   "test_league_ui.gd",
   "test_league_doors.gd",
+  "test_league_nav_stack.gd",
   "test_league_system.gd",
   "test_league_interest.gd",
   "test_league_sheets.gd",  "test_goal_highlights.gd",
+  # The long press reads the club strips these sheets paint (#107).
+  "test_interest_long_press.gd",
+  # The painted name fields and the keyboard they hand to the platform (#201).
+  "test_league_text_fields.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -170,6 +199,8 @@ suites = [
   "test_wiki_season.gd",
   # The club page reads the season ahead: results and the fixtures still to come.
   "test_wiki_upcoming.gd",
+  # The league index and the per-competition hubs (#190).
+  "test_pl_competitions.gd",
   "test_hud_layout.gd",
   "test_hud_chrome.gd",
   "test_touch_flow.gd",
@@ -253,6 +284,10 @@ match = "scripts/sim/match_engine_core.gd*"
 domain = "match_engine"
 
 [[rules]]
+match = "scripts/sim/match_engine_squad.gd*"
+domain = "match_engine"
+
+[[rules]]
 match = "scripts/sim/match_engine_pitch.gd*"
 domain = "match_engine"
 
@@ -289,6 +324,27 @@ domain = "league"
 match = "scripts/sim/league_*.gd*"
 domain = "league"
 
+# Season availability and the pre-match briefing (#155–#157): the absence model,
+# its copy pack, the model/screen/host and the pitch all ride one domain.
+[[rules]]
+match = "scripts/sim/season_availability.gd*"
+domain = "pre_match"
+
+[[rules]]
+match = "scripts/ui/pre_match*.gd*"
+domain = "pre_match"
+
+[[rules]]
+match = "scripts/data/pre_match_copy.gd*"
+domain = "pre_match"
+
+# One competition per match (#209): the module the briefing, the broadcast's
+# fixture card, the opening team sheet and the picker all read. Its consumers
+# ride one domain, so the answer cannot drift between surfaces.
+[[rules]]
+match = "scripts/data/match_billing.gd*"
+domain = "pre_match"
+
 [[rules]]
 match = "scripts/sim/fixture_calendar.gd*"
 domain = "league"
@@ -305,6 +361,15 @@ domain = "league"
 # plays one back. They all belong to the season theme.
 [[rules]]
 match = "scripts/sim/goal_highlight.gd*"
+domain = "league"
+
+# The AUTO clip's physics vignette: the same season theme as the pack it feeds.
+[[rules]]
+match = "scripts/sim/goal_vignette.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/goal_vignette_penalty.gd*"
 domain = "league"
 
 [[rules]]
@@ -338,6 +403,13 @@ domain = "pitch_queries"
 [[rules]]
 match = "scripts/data/league_*.gd*"
 domain = "league"
+
+# The competitions a database carries (#190): the list, the default and which
+# one the open season owns. Read by the encyclopedia's hubs and by the
+# repository's per-competition reads.
+[[rules]]
+match = "scripts/data/pl_competitions.gd*"
+domain = "pl_data"
 
 # Every other data module (clubs, squads, snapshot storage, in-sim ledger)
 # shares the same suites; the old per-shard rules are gone because the shards

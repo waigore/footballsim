@@ -9,12 +9,15 @@ extends RefCounted
 ## the screen and its tests keep reading the same state they always did.
 
 ## Open the dialog on a season. A season that is gone has nothing to save, so the
-## door falls through to leaving the sheet.
+## door falls through to leaving the sheet. In a season the dialog is a page of
+## its own: the sheet it covers is left behind it, so BACK returns there (#169).
 static func open(screen) -> void:
 	if screen.season == null:
 		screen.close()
 		return
 	reset(screen)
+	if screen.mode != LeagueScreen.MODE_SYSTEM:
+		screen.push_page()
 	screen.mode = LeagueScreen.MODE_SYSTEM
 	screen.refresh()
 
@@ -29,6 +32,8 @@ static func view(screen) -> Dictionary:
 		"status": str(screen.sys["status"]), "error": str(screen.sys["error"]),
 		"naming": bool(screen.sys["naming"]), "save_name": str(screen.sys["name"]),
 		"name": str(state.get("name", "")), "date": str(state.get("date", "")),
+		# Where the on-screen keyboard is (#201), so the field can paint a caret.
+		"focus": str(screen.focus.kind),
 	}
 
 static func act(screen, id: String) -> void:
@@ -44,6 +49,9 @@ static func act(screen, id: String) -> void:
 				screen.sys["status"] = ""
 				screen.sys["error"] = ""
 				screen.refresh()
+				# SAVE AS opens a field to type into: on a touch build the
+				# keyboard comes up on it at once (#201).
+				LeagueFieldFocus.press(screen, LeagueFieldFocus.SYSTEM)
 		"sys:commit":
 			save_as(screen)
 		"sys:cancel":
@@ -51,6 +59,7 @@ static func act(screen, id: String) -> void:
 			screen.refresh()
 		"sys:load":
 			screen.load_from = "system"
+			screen.push_page()
 			screen.mode = LeagueScreen.MODE_LOAD
 			screen.saves = LeagueSave.list()
 			screen.refresh()
@@ -61,27 +70,17 @@ static func act(screen, id: String) -> void:
 		_:
 			refuse(screen, "Unknown action.")
 
-## BACK out of the pose this helper owns: the dialog itself, or the load list it
-## opened over the season. False means the screen's own BACK rules apply.
-static func back(screen) -> bool:
-	if screen.mode == LeagueScreen.MODE_SYSTEM:
-		screen.mode = LeagueScreen.MODE_HUB
-		screen.refresh()
-		return true
-	if screen.mode == LeagueScreen.MODE_LOAD and screen.load_from == "system":
-		screen.mode = LeagueScreen.MODE_SYSTEM
-		screen.refresh()
-		return true
-	return false
-
-## Keyboard for the Save As field, mirroring the setup wizard's name entry.
-static func type_name(screen, code: int) -> bool:
+## Keyboard for the Save As field, mirroring the setup wizard's name entry. A
+## soft keyboard sends the character rather than a keycode (#201), so `ch`
+## carries it when there is one.
+static func type_name(screen, code: int, ch: String = "") -> bool:
 	if not bool(screen.sys["naming"]):
 		return false
 	if code == KEY_ENTER or code == KEY_KP_ENTER:
 		save_as(screen)
 		return true
-	var typed: Array = LeagueSheet.type_name(str(screen.sys["name"]), code)
+	var typed: Array = LeagueTextField.type_char(str(screen.sys["name"]), ch) if ch != "" \
+		else LeagueTextField.type_name(str(screen.sys["name"]), code)
 	if bool(typed[0]):
 		screen.sys["name"] = str(typed[1])
 		screen.refresh()
@@ -140,6 +139,7 @@ static func leave(screen) -> void:
 ## still read the save: the next season rebuilds from whichever file is bound.
 static func unload(screen) -> void:
 	screen.book.table.attach(null)
+	screen.nav.clear()
 	screen.report = {}
 	screen.roundup = []
 	screen.day = ""

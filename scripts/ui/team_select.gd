@@ -219,14 +219,28 @@ func _card(r: Rect2, t: Dictionary, side: int) -> void:
 	var label := "HOME" if side == 0 else "AWAY"
 	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
 
+## How many clubs the picker offers, and the competition it files them under —
+## read from the file, not hard-coded (#209): a multi-competition seed names its
+## own league here. Pure, so a suite can pin it.
+static func clubs_line(count: int, competition_name: String) -> String:
+	if competition_name == "":
+		return "%d CLUBS" % count
+	return "%d %s CLUBS" % [count, competition_name.to_upper()]
+
+## The clubs line under the doors: the count and the league, from the file (#209).
+func _clubs_line() -> String:
+	var name := str(TeamData.get_team(str(home_id())).get("competition_name", ""))
+	return clubs_line(ids.size(), name)
+
 ## Design space this sheet draws in (the layer is scaled up by main.gd).
 func design_vp() -> Vector2:
 	return get_viewport().get_visible_rect().size / maxf(ui_scale, 0.001)
 
 ## A touch build has no Escape key, so the sheet needs a door that a tap can
-## reach; the layout test reads this rect instead of a screenshot.
+## reach; the layout test reads this rect instead of a screenshot. It sits in the
+## top-left corner every sheet puts BACK in (#163).
 func back_rect(vp: Vector2) -> Rect2:
-	return Rect2(vp.x - 24.0 - 116.0, 18.0, 116.0, 44.0)
+	return Rect2(24.0, 12.0, 116.0, 44.0)
 
 func _draw() -> void:
 	var vp := design_vp()
@@ -234,9 +248,9 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.015, 0.025, 0.032, 0.94))
 	draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
 	draw_rect(Rect2(0, vp.y - 3, vp.x, 3), Color(0, 0, 0, 0.5))
-	UiChrome.sheet_header(self, vp, {"bold": f_bold, "med": f_med, "body": f_body}, "PREMIER LEAGUE · 20 CLUBS", "SELECT FIXTURE")
-	# The top corners belong to the league and menu doors, so the wordmark rides
-	# the centre of the header where nothing covers it.
+	UiChrome.sheet_header(self, vp, {"bold": f_bold, "med": f_med, "body": f_body}, "SELECT FIXTURE")
+	# BACK owns the top-left corner on every sheet (#163); the league door takes
+	# the other one, so the wordmark rides the centre of the header.
 	UiChrome.wordmark_c(self, vp.x * 0.5, vp.y * (0.075 if vp.y < 620.0 else 0.105), 12, f_bold)
 
 	var card_w := minf(vp.x * 0.30, 460.0)
@@ -301,11 +315,11 @@ func _draw() -> void:
 
 	if touch:
 		text_c(vp.x * 0.5, vp.y - 44, "TAP THE ARROWS TO CHANGE CLUBS  ·  TAP KICK OFF", 11, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
+		text_c(vp.x * 0.5, vp.y - 24, _clubs_line(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
 	else:
 		text_c(vp.x * 0.5, vp.y - 64, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, C_DIM, f_med)
 		text_c(vp.x * 0.5, vp.y - 44, "ENTER  KICK OFF   ·   TAB  RANDOM   ·   ESC  %s" % ("MENU" if back_to_menu else "BACK"), 10, C_DIM, f_med)
-		text_c(vp.x * 0.5, vp.y - 24, "20 PREMIER LEAGUE CLUBS", 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
+		text_c(vp.x * 0.5, vp.y - 24, _clubs_line(), 10, Color(0.96, 0.78, 0.30, 0.55), f_med)
 
 	# A touch build has no Escape key: the sheet needs a visible way out.
 	var back := back_rect(vp)
@@ -314,8 +328,9 @@ func _draw() -> void:
 	text_c(back.position.x + back.size.x * 0.5, back.position.y + back.size.y * 0.66, "‹  MENU" if back_to_menu else "‹  BACK", 13, C_TEXT if back_hover else C_DIM, f_bold)
 	_add_button("back", back)
 
-	# Encyclopedia door: the whole league is one tap from the fixture sheet.
-	var league_btn := Rect2(24.0, 18.0, 138.0, 44.0)
+	# Encyclopedia door: the whole league is one tap from the fixture sheet, in
+	# the corner opposite BACK (#163).
+	var league_btn := Rect2(vp.x - 24.0 - 138.0, 12.0, 138.0, 44.0)
 	var league_hover := league_btn.has_point(mouse)
 	rect(C_PANEL_LIGHT if league_hover else C_PANEL, league_btn, 8, Color(1, 1, 1, 0.14 if league_hover else 0.07))
 	text_c(league_btn.position.x + league_btn.size.x * 0.5, league_btn.position.y + league_btn.size.y * 0.66, "◈  LEAGUE", 13, C_TEXT if league_hover else C_DIM, f_bold)

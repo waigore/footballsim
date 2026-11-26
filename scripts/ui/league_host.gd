@@ -19,6 +19,8 @@ var watch: LeagueWatch = null
 ## The watched fixture's whistle (#124): the held FULL TIME card between the
 ## viewer and the hub. See LeagueResult.
 var result: LeagueResult = null
+## The fixture the briefing is showing, while it is up (#157).
+var briefing: Dictionary = {}
 var was_paused := false
 
 func attach(host) -> void:
@@ -141,6 +143,10 @@ func cover_for_wiki(hidden: bool) -> void:
 	if layer == null:
 		return
 	if hidden:
+		# The encyclopedia covers the season: no field of it is on screen, so no
+		# keyboard may stay up above the page (#201).
+		if screen != null:
+			screen.focus.blur()
 		layer.visible = false
 		return
 	if screen == null:
@@ -173,11 +179,44 @@ func _on_season_opened(opened: LeagueSeason) -> void:
 	if season != null and not season.match_recorded.is_connected(_on_recorded):
 		season.match_recorded.connect(_on_recorded)
 
-## Hand the fixture to the viewer: the season already remembers it is waiting,
-## so the result finds its way back through PLSimStats.
-func _on_match_requested(home: String, away: String, _fixture_id: String) -> void:
+## Hand the fixture to the viewer — but only after the pre-match briefing (#157).
+## The season already remembers it is waiting, so the result finds its way back
+## through PLSimStats once the match starts.
+func _on_match_requested(home: String, away: String, fixture_id: String) -> void:
+	briefing = {"home": home, "away": away, "fixture": fixture_id}
+	var fx: Dictionary = season.record.fixtures.one(fixture_id) if season != null else {}
+	# One competition for the match, bound before the briefing paints (#209).
+	MatchBilling.bind_scene(game, home, fx)
+	if game.prematch != null:
+		var req := PreMatchModel.build(home, away, fx, season)
+		game.prematch.ask(req, Callable(self, "_kick_briefing"), Callable(self, "_back_from_briefing"))
+		return
+	_start_watch(home, away)
+
+## CONTINUE on the briefing: the season's watch is already held, so the broadcast
+## starts exactly as it did before the briefing existed.
+func _kick_briefing() -> void:
+	_start_watch(str(briefing.get("home", "")), str(briefing.get("away", "")))
+
+## BACK on the briefing: the fixture never kicked off, so the season stops
+## waiting and the hub comes back on the same day.
+func _back_from_briefing() -> void:
+	if season != null:
+		season.cancel_watch()
+	briefing = {}
+	if layer != null:
+		layer.visible = true
+	if screen != null:
+		screen.refresh()
+	game.paused = true
+
+func _start_watch(home: String, away: String) -> void:
+	briefing = {}
 	if layer != null:
 		layer.visible = false
+	# A keyboard belongs to a field on screen: the broadcast never inherits one.
+	if screen != null:
+		screen.focus.blur()
 	if result != null:
 		result.clear()
 	game.home_id = home

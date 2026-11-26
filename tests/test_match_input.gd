@@ -17,7 +17,15 @@ func before_all() -> void:
 	game = Node2D.new()
 	game.set_script(load("res://scripts/main.gd"))
 	add_child(game)
+	# The HUD's show/hide choice is a player preference (#158): keep the suite on
+	# its own file so the developer's last choice cannot hide the bands it drives.
+	var prefs := TestScratch.file("test_match_input_prefs.cfg")
+	for g in [game, game2]:
+		g.menus.shell.prefs_path = prefs
+		g.menus.restore_hud()
 	game._on_fixture_confirmed("MUN", "MCI")
+	# Every match opens the pre-match briefing first (#157): kick it off.
+	TestBriefing.kick(game)
 	game.paused = true
 	game.hud.queue_redraw()
 	await get_tree().process_frame
@@ -173,6 +181,8 @@ func test_the_overlay_doors_reach_the_sheets_and_settings() -> void:
 	game.wiki_host.close()
 	_tap(_door("speed"))
 	assert_almost_eq(game.speed, 2.0, 0.0001, "the speed door did not cycle the pace")
+	_tap(_door("mode"))
+	assert_eq(game.mode, "goals", "the mode door did not reach Goals only")
 	_tap(_door("mode"))
 	assert_eq(game.mode, "full", "the mode door did not switch to the full match")
 	_tap(_door("mode"))
