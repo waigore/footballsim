@@ -40,6 +40,42 @@ func test_the_picker_filters_by_league_and_mixes_sides() -> void:
 	assert_eq(str(seen[0][0]), "ARS", "the confirmed home side changed")
 	assert_eq(str(seen[0][1]), "LL-BAR", "the confirmed away side changed")
 
+func test_the_picker_offers_the_german_tiers() -> void:
+	var picker = load("res://scripts/ui/team_select.gd").new()
+	for pair in [["BL", 18, "BL-"], ["BL2", 18, "BL2-"]]:
+		picker.set_league(str(pair[0]))
+		assert_eq(picker.ids.size(), int(pair[1]), "%s filter is not one league" % pair[0])
+		for id in picker.ids:
+			assert_true(str(id).begins_with(str(pair[2])), "%s is not a %s club" % [id, pair[0]])
+	# The chips keep their full names where they fit and fall back to codes on a
+	# phone, where four competitions no longer fit as words (#242).
+	assert_eq(LeagueChrome.competition_chip_label({"id": "BL", "short_name": "BUNDESLIGA"}, 150.0),
+		"BUNDESLIGA", "a wide chip lost its name")
+	assert_eq(LeagueChrome.competition_chip_label({"id": "BL", "short_name": "BUNDESLIGA"}, 66.0),
+		"BL", "a narrow chip did not fall back to its code")
+	assert_eq(LeagueChrome.competition_chip_label({"id": "BL2", "short_name": "2. BUNDESLIGA"}, 66.0),
+		"2.BL", "the second tier's narrow chip is not its code")
+	assert_eq(LeagueChrome.competition_chip_label({"id": "", "short_name": "ALL"}, 66.0), "ALL",
+		"the ALL chip was shortened")
+	assert_eq(LeagueChrome.competition_chip_label({"id": "PL", "short_name": "PREMIER LEAGUE"}, 66.0),
+		"PL", "the Premier League chip is not its code")
+	assert_eq(LeagueChrome.competition_chip_label({"id": "LL", "short_name": "LA LIGA"}, 66.0),
+		"LL", "the La Liga chip is not its code")
+	assert_eq(LeagueChrome.competition_chip_label({"id": "XX", "short_name": "SOMEWHERE"}, 66.0),
+		"SOMEW", "an unknown competition chip was not clipped")
+	picker.set_league("")
+
+func test_a_cross_league_german_friendly_names_both_tiers() -> void:
+	var mixed := PreMatchModel.build("BL-FCB", "ARS", {}, null)
+	assert_eq(str(mixed["caption"]), "FRIENDLY · BUNDESLIGA v PREMIER LEAGUE",
+		"a Bundesliga v Premier League friendly has no mixed caption")
+	var tiers := PreMatchModel.build("BL-DOR", "BL2-BSC", {}, null)
+	assert_eq(str(tiers["caption"]), "FRIENDLY · BUNDESLIGA v 2. BUNDESLIGA",
+		"a cross-tier German friendly has no mixed caption")
+	var same := PreMatchModel.build("BL-FCB", "BL-DOR", {}, null)
+	assert_eq(str(same["caption"]), MatchBilling.FRIENDLY_CAPTION,
+		"a same-league German friendly borrowed a league's round")
+
 func test_a_cross_league_friendly_says_so() -> void:
 	var mixed := PreMatchModel.build("ARS", "LL-BAR", {}, null)
 	assert_eq(str(mixed["caption"]), "FRIENDLY · PREMIER LEAGUE v LA LIGA",
