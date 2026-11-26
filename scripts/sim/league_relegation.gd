@@ -1,0 +1,157 @@
+class_name LeagueRelegation
+extends RefCounted
+
+## The Relegation playoff between the two German tiers (#240).
+##
+## The Bundesliga's 16th and the 2. Bundesliga's 3rd play two legs: the first at
+## the top-flight club's ground, the second at the second tier's. There are no
+## away goals, so a level aggregate is settled by extra time and penalties — the
+## decider lane the match engine grew for this tie (DR-20261126-12). The winner
+## belongs to the Bundesliga, the loser to the 2. Bundesliga.
+##
+## Both legs are settled by the season's own Poisson model with the season's own
+## seed, so a save settles the same tie the same way every time. The swap itself
+## is `LeaguePromotion`, which reads this result and rewrites the save's
+## membership.
+
+## The two German tiers, as shipped.
+const TOP := "BL"
+const SECOND := "BL2"
+
+## Whether this save runs a pair that can produce a Relegation: both tiers
+## active, which is what makes the 16th and 3rd mean something.
+static func runs(actives: Array) -> bool:
+	return actives.has(TOP) and actives.has(SECOND)
+
+## The tie for a finished season, or {} when there is nothing to settle.
+## `top_position` and `second_position` are the places the regulations name, so
+## a save that moved 16th or 3rd around still plays the right clubs.
+static func build(season: LeagueSeason) -> Dictionary:
+	if season == null or season.save == null or season.record == null:
+		return {}
+	if not runs(season.save.actives):
+		return {}
+	if season.record.fixtures.unplayed() > 0:
+		return {}
+	var top_rules := season.save.rules_for(TOP)
+	var second_rules := season.save.rules_for(SECOND)
+	var top_table: Array = season.record.standings.table(TOP)
+	var second_table: Array = season.record.standings.table(SECOND)
+	var top_place := int(top_rules.get("clubs", 18)) - int(top_rules.get("relegation_places", 2))
+	var second_place := int(second_rules.get("promotion_places", 2)) + 1
+	if top_table.size() < top_place or second_table.size() < second_place:
+		return {}
+	var top_club := str((top_table[top_place - 1] as Dictionary)["club_id"])
+	var second_club := str((second_table[second_place - 1] as Dictionary)["club_id"])
+	var seed := int(season.rng.seed)
+	var legs := _legs(season, seed, top_club, second_club)
+	var aggregate := _aggregate(legs, top_club)
+	var winner := ""
+	var decided_by := "aggregate"
+	if int(aggregate["top"]) == int(aggregate["second"]):
+		decided_by = "penalties"
+		var pens := _shootout(seed, top_club, second_club)
+		aggregate["pens_top"] = int(pens[0])
+		aggregate["pens_second"] = int(pens[1])
+		winner = top_club if int(pens[0]) > int(pens[1]) else second_club
+	else:
+		winner = top_club if int(aggregate["top"]) > int(aggregate["second"]) else second_club
+	var comp := PLRepository.shared().competition(TOP)
+	return {
+		"id": "relegation",
+		"competition": TOP,
+		"name": "%s — RELEGATION" % str(comp.get("short_name", "BUNDESLIGA")),
+		"top_club_id": top_club,
+		"top_club": _club_name(top_club),
+		"top_position": top_place,
+		"second_club_id": second_club,
+		"second_club": _club_name(second_club),
+		"second_position": second_place,
+		"legs": legs,
+		"top_goals": int(aggregate["top"]),
+		"second_goals": int(aggregate["second"]),
+		"pens_top": int(aggregate.get("pens_top", -1)),
+		"pens_second": int(aggregate.get("pens_second", -1)),
+		"winner_club_id": winner,
+		"winner_club": _club_name(winner),
+		"loser_club_id": second_club if winner == top_club else top_club,
+		"decided_by": decided_by,
+		"text": _text(aggregate, decided_by, winner, top_club, second_club),
+	}
+
+## The two legs, in order: the top-flight club at home first.
+static func _legs(season: LeagueSeason, seed: int, top_club: String, second_club: String) -> Array:
+	var out: Array = []
+	var pairings := [[top_club, second_club], [second_club, top_club]]
+	for i in range(pairings.size()):
+		var home := str(pairings[i][0])
+		var away := str(pairings[i][1])
+		var model := PoissonModel.new(seed + 1301 + i * 977, home, away)
+		var score := model.sample()
+		out.append({
+			"leg": i + 1, "home": home, "away": away,
+			"home_name": _club_name(home), "away_name": _club_name(away),
+			"home_goals": int(score.x), "away_goals": int(score.y),
+		})
+	return out
+
+static func _aggregate(legs: Array, top_club: String) -> Dictionary:
+	var top := 0
+	var second := 0
+	for leg in legs:
+		if str(leg["home"]) == top_club:
+			top += int(leg["home_goals"])
+			second += int(leg["away_goals"])
+		else:
+			top += int(leg["away_goals"])
+			second += int(leg["home_goals"])
+	return {"top": top, "second": second}
+
+## A level aggregate is settled on penalties. The lane reuses the match engine's
+## shootout shape: five kicks each, then sudden death, from the same seed.
+static func _shootout(seed: int, top_club: String, second_club: String) -> Vector2i:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed + 7717
+	var score := [0, 0]
+	var taken := [0, 0]
+	var round_no := 0
+	while true:
+		var side: int = round_no % 2
+		var conversion := _conversion(side, top_club, second_club)
+		if rng.randf() <= conversion:
+			score[side] = int(score[side]) + 1
+		taken[side] = int(taken[side]) + 1
+		round_no += 1
+		if taken[0] < 5 or taken[1] < 5:
+			if int(score[0]) > int(score[1]) + (5 - int(taken[1])):
+				break
+			if int(score[1]) > int(score[0]) + (5 - int(taken[0])):
+				break
+		elif taken[0] == taken[1] and int(score[0]) != int(score[1]):
+			break
+	return Vector2i(int(score[0]), int(score[1]))
+
+## A club's best takers, read the same way the match engine reads them.
+static func _conversion(side: int, top_club: String, second_club: String) -> float:
+	var club := top_club if side == 0 else second_club
+	var team := TeamData.get_team(club)
+	var best := 0.0
+	for p in team.get("starters", []):
+		var attrs: Dictionary = p.get("attr", {})
+		best = maxf(best, float(attrs.get("sho", 50)) * 1.4 + float(attrs.get("ovr", 50)))
+	return clampf(0.60 + best / 260.0 * 0.30, 0.55, 0.92)
+
+static func _club_name(club_id: String) -> String:
+	var club := PLRepository.shared().club(club_id)
+	return str(club.get("name", club_id))
+
+static func _text(aggregate: Dictionary, decided_by: String, winner: String,
+		top_club: String, second_club: String) -> String:
+	var win_name := _club_name(winner)
+	var outcome := "stay up" if winner == top_club else "go up"
+	var line := "%s %d – %d %s" % [_club_name(top_club), int(aggregate["top"]),
+		int(aggregate["second"]), _club_name(second_club)]
+	if decided_by == "penalties":
+		line += " (%d–%d pens)" % [int(aggregate.get("pens_top", 0)),
+			int(aggregate.get("pens_second", 0))]
+	return "%s — %s %s" % [line, win_name, outcome]

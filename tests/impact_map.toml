@@ -165,6 +165,9 @@ suites = [
   "test_pl_competitions.gd",
   # The German pair's own season (#239): 18-club calendars start and advance.
   "test_german_season.gd",
+  # The Relegation and the membership swap (#240): the tie, the bands and the
+  # save's new tiers.
+  "test_german_relegation.gd",
 ]
 
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
@@ -203,6 +206,8 @@ suites = [
   "test_ux_parity.gd",
   # The German pair starts and runs a season from the shipped seed (#239).
   "test_german_season.gd",
+  # The Relegation, the bands and the membership swap (#240).
+  "test_german_relegation.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.

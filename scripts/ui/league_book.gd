@@ -113,12 +113,19 @@ func frame_height(view: Dictionary) -> float:
 		return 0.0
 	var h := 0.0
 	for section in _podium_sections(summary):
+		var section_rules: Dictionary = section.get("rules", view.get("rules", {}))
 		h += 30.0
 		h += 18.0 + 44.0 + 24.0 + 16.0
 		h += 16.0 * float(mini((section["europe"] as Array).size(), 6))
 		h += 6.0 + 16.0
 		h += 16.0 * float((section["relegated"] as Array).size())
+		# A promoting tier paints its PROMOTED block under the drop.
+		var up := int(section_rules.get("promotion_places", 0))
+		if up > 0:
+			h += 6.0 + 16.0 + 16.0 * float(up)
 		h += 12.0
+	if not (summary.get("relegation", {}) as Dictionary).is_empty():
+		h += 8.0 + 16.0
 	return h + 8.0
 
 ## The podium's blocks: every active league when the summary carries them, or
@@ -289,18 +296,24 @@ func _draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dict
 		UiChrome.text(c, Vector2(24.0, y), "RUNNER-UP  %s · %d PTS" % [str(section["runner_up"]["club"]),
 			int(section["runner_up"]["points"])], 12, UiChrome.C_SOFT, bold)
 		y += 24.0
-		UiChrome.text(c, Vector2(24.0, y), "EUROPEAN PLACES", 10, UiChrome.C_DIM, bold)
-		y += 16.0
-		var zone_rows: Array = section["europe"]
-		for i in range(mini(zone_rows.size(), 6)):
-			var row: Dictionary = zone_rows[i]
-			var club := _club_row(section, str(row["zone"]))
-			var band := LeagueRules.zone(int(row["position"]), section_rules)
-			c.draw_rect(Rect2(24.0, y + 2.0, 3.0, 12.0), LeagueChrome.zone_color(band))
-			UiChrome.text(c, Vector2(32.0, y + 12.0), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
-			UiChrome.text(c, Vector2(54.0, y + 12.0), str(row["club"]), 11, UiChrome.C_TEXT, med)
-			UiChrome.text_r(c, vp.x - 24.0, y + 12.0, str(club.get("points", "")), 10, UiChrome.C_SOFT, bold)
+		# A second tier has no European places; its band is promotion (#240).
+		var section_up := int(section_rules.get("promotion_places", 0))
+		if (section["europe"] as Array).is_empty() and section_up > 0:
+			_paint_promoted(c, vp, section, section_up, y, bold, med)
+			y += 16.0 + 16.0 * float(section_up)
+		else:
+			UiChrome.text(c, Vector2(24.0, y), "EUROPEAN PLACES", 10, UiChrome.C_DIM, bold)
 			y += 16.0
+			var zone_rows: Array = section["europe"]
+			for i in range(mini(zone_rows.size(), 6)):
+				var row: Dictionary = zone_rows[i]
+				var club := _club_row(section, str(row["zone"]))
+				var band := LeagueRules.zone(int(row["position"]), section_rules)
+				c.draw_rect(Rect2(24.0, y + 2.0, 3.0, 12.0), LeagueChrome.zone_color(band))
+				UiChrome.text(c, Vector2(32.0, y + 12.0), "%d" % int(row["position"]), 10, UiChrome.C_DIM, med)
+				UiChrome.text(c, Vector2(54.0, y + 12.0), str(row["club"]), 11, UiChrome.C_TEXT, med)
+				UiChrome.text_r(c, vp.x - 24.0, y + 12.0, str(club.get("points", "")), 10, UiChrome.C_SOFT, bold)
+				y += 16.0
 		y += 6.0
 		UiChrome.text(c, Vector2(24.0, y), "RELEGATED", 10, UiChrome.C_DIM, bold)
 		y += 16.0
@@ -313,6 +326,29 @@ func _draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dict
 			UiChrome.text_r(c, vp.x - 24.0, y + 12.0, "TOP SCORER  %s (%d)" % [str(scorers[0]["name"]),
 				int(scorers[0]["goals"])], 11, UiChrome.C_SOFT, bold)
 		y += 12.0
+	# One Relegation block under both tiers: the tie is one match, not a row of
+	# either league's podium.
+	var tie: Dictionary = summary.get("relegation", {})
+	if not tie.is_empty():
+		UiChrome.text(c, Vector2(24.0, y + 8.0), "RELEGATION  %s" % str(tie.get("text", "")),
+			10, UiChrome.C_GOLD, bold)
+		y += 16.0
+
+## The promoting side of the graph: a second tier's top places, with the
+## Relegation third marked as the playoff rather than a European band.
+func _paint_promoted(c: CanvasItem, vp: Vector2, section: Dictionary, up: int,
+		y: float, bold: Font, med: Font) -> void:
+	UiChrome.text(c, Vector2(24.0, y), "PROMOTION", 10, UiChrome.C_DIM, bold)
+	var rows: Array = section.get("table", [])
+	for i in range(mini(up + int((section.get("rules", {}) as Dictionary)
+			.get("promotion_playoff_places", 0)), rows.size())):
+		var row: Dictionary = rows[i]
+		var band := "promotion" if i < up else "playoff"
+		var cy := y + 16.0 + 16.0 * float(i)
+		c.draw_rect(Rect2(24.0, cy + 2.0, 3.0, 12.0), LeagueChrome.zone_color(band))
+		UiChrome.text(c, Vector2(32.0, cy + 12.0), "%d" % (i + 1), 10, UiChrome.C_DIM, med)
+		UiChrome.text(c, Vector2(54.0, cy + 12.0), str(row.get("club_name", "")), 11, UiChrome.C_TEXT, med)
+		UiChrome.text_r(c, vp.x - 24.0, cy + 12.0, str(row.get("points", "")), 10, UiChrome.C_SOFT, bold)
 
 func _club_row(section: Dictionary, club_id: String) -> Dictionary:
 	for row in section.get("table", []):

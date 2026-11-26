@@ -9,6 +9,10 @@ extends RefCounted
 ## The whole podium, or {} until every active competition has played out its
 ## calendar. The primary league's reading is mirrored at the top so a
 ## single-league caller reads the keys it always did.
+##
+## The German Relegation rides here too (#240): when both tiers are active and
+## finished, its tie and the membership movers are resolved and applied to the
+## save once, so the podium and the club pages read the new tiers.
 static func build(season: LeagueSeason) -> Dictionary:
 	if season == null or season.save == null or season.record == null:
 		return {}
@@ -24,6 +28,13 @@ static func build(season: LeagueSeason) -> Dictionary:
 	var out: Dictionary = (sections[0] as Dictionary).duplicate(true)
 	out["competitions"] = sections
 	out["one_podium"] = true
+	var tie := LeagueRelegation.build(season)
+	if not tie.is_empty():
+		out["relegation"] = tie
+		var movers := LeaguePromotion.movers(season, tie)
+		if not movers.is_empty():
+			LeaguePromotion.apply(season, movers)
+			out["promotion"] = movers
 	return out
 
 static func _section(season: LeagueSeason, competition_id: String) -> Dictionary:
