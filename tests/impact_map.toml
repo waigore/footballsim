@@ -208,6 +208,9 @@ suites = [
   "test_german_season.gd",
   # The Relegation, the bands and the membership swap (#240).
   "test_german_relegation.gd",
+  # The English pyramid (#258/#259/#260): five linked tiers, the 2026/27
+  # play-offs and the membership swap that follows them.
+  "test_english_pyramid.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.

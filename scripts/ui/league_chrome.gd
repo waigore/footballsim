@@ -54,6 +54,14 @@ static func competition_chip_label(row: Dictionary, width: float) -> String:
 			return "PL"
 		"LL":
 			return "LL"
+		"CH":
+			return "CHAMP"
+		"L1":
+			return "L1"
+		"L2":
+			return "L2"
+		"NL":
+			return "NL"
 	return name.substr(0, 5)
 
 ## The picker's winner control (#249): a friendly is level at full time unless

@@ -23,32 +23,45 @@ var hints := DateHints.new()
 
 # ---------------------------------------------------------------- wizard ---
 
-## The wizard's league choices: one per competition, except the German pair,
-## which is one control that turns both tiers on together (#241) — a save that
-## runs one German tier cannot settle a Relegation.
+## The wizard's league choices, grouped by country (#261): every league its own
+## toggle, listed under the country it plays in, the graph's country order first
+## and each country's tiers top flight first. A competition the graph does not
+## know still appears under the seed's own country, so a new league never
+## vanishes from the wizard.
 static func _league_groups(comps: Array) -> Array:
-	var ids: Array = []
+	var by_country := {}
+	var seen: Array = []
 	for c in comps:
-		ids.append(str((c as Dictionary)["id"]))
-	var groups: Array = []
-	for c in comps:
-		var cid := str((c as Dictionary)["id"])
-		if cid == "BL2" and ids.has("BL"):
-			continue
-		if cid == "BL" and ids.has("BL2"):
-			groups.append({"id": "DE", "label": "GERMAN FOOTBALL",
-				"members": ["BL", "BL2"]})
-			continue
-		groups.append({"id": cid, "label": str((c as Dictionary).get("short_name",
-			(c as Dictionary).get("name", cid))), "members": [cid]})
-	return groups
-
-## A league control is lit when every competition it carries is chosen.
-static func _group_on(group: Dictionary, chosen: Array) -> bool:
-	for cid in group["members"]:
-		if not chosen.has(cid):
-			return false
-	return true
+		var row: Dictionary = c
+		var country := LeagueTiers.country_of(str(row["id"]))
+		if country == "":
+			country = str(row.get("country", ""))
+		if country == "":
+			country = "OTHER"
+		if not by_country.has(country):
+			by_country[country] = []
+			seen.append(country)
+		(by_country[country] as Array).append(row)
+	var countries: Array = []
+	for country in LeagueTiers.countries():
+		if by_country.has(country):
+			countries.append(country)
+	for country in seen:
+		if not countries.has(country):
+			countries.append(country)
+	var out: Array = []
+	for country in countries:
+		var rows: Array = by_country[country]
+		var sorted: Array = []
+		for cid in LeagueTiers.chain(str(country)):
+			for row in rows:
+				if str((row as Dictionary)["id"]) == str(cid):
+					sorted.append(row)
+		for row in rows:
+			if not sorted.has(row):
+				sorted.append(row)
+		out.append({"id": str(country), "label": str(country).to_upper(), "leagues": sorted})
+	return out
 
 func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
@@ -57,23 +70,29 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append({"id": "name", "kind": "field", "label": "NAME",
 		"rect": Rect2(24.0, y, w, 38.0), "value": str(view.get("name", ""))})
 	y += 66.0
-	# Leagues: at least one, every other one a toggle (#185/#189). The calendar
-	# and the clock choices below are shared by whatever set is picked.
+	# Leagues: at least one, every other one a toggle (#185/#189). Each country
+	# is a headed group and every tier under it is its own toggle, so a lower
+	# tier can be asked for without hiding the tiers above it (#261). The
+	# calendar and the clock choices below are shared by whatever set is picked.
 	items.append({"id": "", "kind": "caption", "label": "LEAGUES",
 		"rect": Rect2(24.0, y - 8.0, w, 10.0)})
 	var chosen: Array = view.get("competitions", ["PL"])
-	var comps: Array = PLRepository.shared().competitions()
-	var groups := _league_groups(comps)
-	for i in range(groups.size()):
-		var group: Dictionary = groups[i]
-		var col := i % 2
-		var row := i / 2
-		items.append({"id": "wleague:" + str(group["id"]), "kind": "choice",
-			"label": str(group["label"]),
-			"rect": Rect2(24.0 + float(col) * w * 0.52, y + float(row) * 52.0, w * 0.48, 40.0),
-			"selected": _group_on(group, chosen)})
-	if not groups.is_empty():
-		y += 52.0 * float(ceili(float(groups.size()) / 2.0))
+	var groups := _league_groups(PLRepository.shared().competitions())
+	for group in groups:
+		items.append({"id": "", "kind": "country", "label": str(group["label"]),
+			"rect": Rect2(24.0, y, w, 16.0)})
+		y += 22.0
+		var leagues: Array = group["leagues"]
+		for i in range(leagues.size()):
+			var row: Dictionary = leagues[i]
+			var cid := str(row["id"])
+			var col := i % 2
+			var line := i / 2
+			items.append({"id": "wleague:" + cid, "kind": "choice",
+				"label": str(row.get("short_name", row.get("name", cid))),
+				"rect": Rect2(24.0 + float(col) * w * 0.52, y + float(line) * 46.0, w * 0.48, 40.0),
+				"selected": chosen.has(cid)})
+		y += 46.0 * float(ceili(float(leagues.size()) / 2.0)) + 6.0
 	items.append({"id": "mode:real", "kind": "choice", "label": "REAL FIXTURES",
 		"rect": Rect2(24.0, y, w * 0.48, 40.0), "selected": str(view.get("calendar_mode", "")) == "real"})
 	items.append({"id": "mode:generated", "kind": "choice", "label": "GENERATED",
@@ -133,6 +152,13 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
 		var id := str(item["id"])
+		if kind == "country":
+			# A country header: its name over a hairline, the tiers below it.
+			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 10.0), str(item["label"]),
+				10, UiChrome.C_GOLD, bold)
+			c.draw_rect(Rect2(rect.position.x, rect.position.y + 14.0, rect.size.x, 1.0),
+				Color(1, 1, 1, 0.10))
+			continue
 		if kind == "caption":
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 8.0), str(item["label"]),
 				10, UiChrome.C_DIM, bold)
