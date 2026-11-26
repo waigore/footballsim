@@ -27,12 +27,18 @@ screens:
     scripts:
       - scripts/ui/menu_screen.gd
       - scripts/ui/menu_host.gd
+      - scripts/ui/app_shell.gd
+      - scripts/ui/app_shell_input.gd
+      - scripts/ui/app_shell_paint.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-menu-1600.jpg
   - id: settings
     title: Settings
     kind: browse
     scripts:
       - scripts/ui/settings_screen.gd
+      - scripts/ui/app_shell.gd
+      - scripts/ui/app_shell_input.gd
+      - scripts/ui/app_shell_paint.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-settings-1600.jpg
   - id: fixture-picker
     title: Fixture picker
@@ -136,4 +142,7 @@ screens:
       labels: [QUIT, YES]
     scripts:
       - scripts/ui/confirm_prompt.gd
+      - scripts/ui/app_shell.gd
+      - scripts/ui/app_shell_input.gd
+      - scripts/ui/app_shell_paint.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/issue-123-quit-confirm.jpg
