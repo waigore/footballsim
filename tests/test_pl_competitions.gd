@@ -1,9 +1,8 @@
 extends GdToolsTest
 
-## Competitions in one database: the shipped seed carries two, and each gets its
-## own hub, table, club index and fixtures — with no page hard-coded to "the"
-## league (#190, parent #185). The second competition used to be built here; the
-## shipped La Liga snapshot (#186) now proves the shape for real.
+## Competitions in one database: the shipped seed carries the Premier League,
+## La Liga and the German pair, and each gets its own hub, table, club index and
+## fixtures — with no page hard-coded to "the" league (#190, parent #185, #239).
 
 var CACHE_DIR := TestScratch.dir("cache_test_competitions")
 
@@ -17,16 +16,20 @@ func after_all() -> void:
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
 
-func test_the_seed_carries_two_competitions() -> void:
+func test_the_seed_carries_every_competition() -> void:
 	var all := PLCompetitions.all()
-	assert_eq(all.size(), 2, "the shipped seed should carry two competitions")
+	assert_eq(all.size(), 4, "the shipped seed should carry four competitions")
 	var ids: Array = []
 	for comp in all:
 		ids.append(str(comp["id"]))
 	assert_has(ids, "PL", "the seed's Premier League is missing")
 	assert_has(ids, "LL", "the seed's La Liga is missing")
+	assert_has(ids, "BL", "the seed's Bundesliga is missing")
+	assert_has(ids, "BL2", "the seed's 2. Bundesliga is missing")
 	assert_eq(int(PLCompetitions.clubs("PL")), 20, "the Premier League club count is wrong")
 	assert_eq(int(PLCompetitions.clubs("LL")), 20, "the La Liga club count is wrong")
+	assert_eq(int(PLCompetitions.clubs("BL")), 18, "the Bundesliga club count is wrong")
+	assert_eq(int(PLCompetitions.clubs("BL2")), 18, "the 2. Bundesliga club count is wrong")
 	assert_eq(PLCompetitions.default_id(), "PL", "the default competition is not the seed's")
 	assert_eq(str(PLCompetitions.one("PL").get("season_label", "")), "2026-27", "season label drifted")
 	assert_true(PLCompetitions.one("NOPE").is_empty(), "an unknown competition resolved")
@@ -37,9 +40,11 @@ func test_the_shipped_hub_names_its_competition() -> void:
 	assert_eq(str(page["title"]), "PREMIER LEAGUE", "the hub title is not the competition's")
 	assert_true(str(page["subtitle"]).contains("20 CLUBS"), "the hub's club count is hard-coded")
 	var index := _chips(page)
-	assert_eq(index.size(), 2, "the competition index should hold both leagues")
+	assert_eq(index.size(), 4, "the competition index should hold every league")
 	assert_true(_chip_target(index, "LA LIGA", "LL"),
 		"the Premier League hub does not offer La Liga")
+	assert_true(_chip_target(index, "BUNDESLIGA", "BL"),
+		"the Premier League hub does not offer the Bundesliga")
 	var badge := 0
 	for item in index:
 		if str(item.get("text", "")) == "PREMIER LEAGUE":
@@ -57,9 +62,9 @@ func test_a_club_and_its_players_point_at_their_competition() -> void:
 	assert_true(_has_target(player_targets, WikiModel.LEAGUE, "PL"),
 		"a player page does not link its league")
 
-func test_two_competitions_get_two_hubs() -> void:
+func test_every_competition_gets_its_own_hub() -> void:
 	var all := PLCompetitions.all()
-	assert_eq(all.size(), 2, "the second competition was not read")
+	assert_eq(all.size(), 4, "the competitions were not all read")
 	assert_eq(PLCompetitions.default_id(), "PL", "the default competition moved")
 	assert_eq(PLCompetitions.clubs("LL"), 20, "La Liga's club count is wrong")
 
@@ -69,14 +74,25 @@ func test_two_competitions_get_two_hubs() -> void:
 		"the second hub kept the first's club count")
 	assert_eq(_rows_in(theirs, "LEAGUE TABLE"), 20, "the second hub shows the wrong table")
 	var index := _chips(theirs)
-	assert_eq(index.size(), 2, "the index does not list both competitions")
+	assert_eq(index.size(), 4, "the index does not list every competition")
 	assert_true(_chip_target(index, "PREMIER LEAGUE", "PL"),
 		"the second hub does not offer the Premier League")
 
+	var german := WikiModel.page(WikiModel.LEAGUE, "BL")
+	assert_eq(str(german["title"]), "BUNDESLIGA", "the German hub is not its own competition")
+	assert_true(str(german["subtitle"]).contains("18 CLUBS"),
+		"the German hub reads the wrong club count")
+	assert_eq(_rows_in(german, "LEAGUE TABLE"), 18, "the German hub shows the wrong table")
+	var lower := WikiModel.page(WikiModel.LEAGUE, "BL2")
+	assert_eq(str(lower["title"]), "2. BUNDESLIGA", "the second German hub is missing")
+	assert_eq(_rows_in(lower, "LEAGUE TABLE"), 18, "the second German hub shows the wrong table")
+
 	var ours := WikiModel.page(WikiModel.LEAGUE, "PL")
-	assert_eq(_rows_in(ours, "LEAGUE TABLE"), 20, "the Premier League hub picked up the second league")
+	assert_eq(_rows_in(ours, "LEAGUE TABLE"), 20, "the Premier League hub picked up another league")
 	assert_true(_chip_target(_chips(ours), "LA LIGA", "LL"),
 		"the Premier League hub does not offer the second league")
+	assert_true(_chip_target(_chips(ours), "2. BUNDESLIGA", "BL2"),
+		"the Premier League hub does not offer the second German tier")
 
 	var club := WikiModel.page(WikiModel.TEAM, "LL-RMA")
 	assert_eq(str(club["title"]), "REAL MADRID", "the second league's club page is missing")

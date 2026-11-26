@@ -163,6 +163,8 @@ suites = [
   # The competitions one database carries (#190): data reads and the pages
   # that draw them, so it rides with the seed it proves.
   "test_pl_competitions.gd",
+  # The German pair's own season (#239): 18-club calendars start and advance.
+  "test_german_season.gd",
 ]
 
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
@@ -199,6 +201,8 @@ suites = [
   "test_league_text_fields.gd",
   # Phone↔desktop league-panel intent parity (REQ-P5-07).
   "test_ux_parity.gd",
+  # The German pair starts and runs a season from the shipped seed (#239).
+  "test_german_season.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.

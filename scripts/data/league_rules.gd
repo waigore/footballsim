@@ -33,6 +33,30 @@ const TEMPLATES := {
 		"weekend_bias": 0.88, "midweek_matchdays": 4,
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
 	},
+	"BL": {
+		# The Bundesliga's 18-club, 34-matchday shape. Without a domestic cup
+		# in the save, 1-4 go to the Champions League, 5th to the Europa League
+		# and 6th to the Conference League; 17th and 18th go down directly and
+		# 16th plays the Relegation (the graph itself lands with #240).
+		"win_points": 3, "draw_points": 1, "clubs": 18,
+		"relegation_places": 2, "relegation_playoff_places": 1,
+		"ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 34,
+		"season_start": "2026-08-28", "season_end": "2027-05-22",
+		"weekend_bias": 0.88, "midweek_matchdays": 4,
+		"advance_mode": "fixture_days", "calendar_mode": "generated",
+	},
+	"BL2": {
+		# 18 clubs, 34 matchdays. 1st and 2nd go up and 3rd plays the Relegation;
+		# 17th and 18th go down. No European bands: the 2.BL podium reads
+		# promotion or RELEGATED only (the graph itself lands with #240).
+		"win_points": 3, "draw_points": 1, "clubs": 18,
+		"promotion_places": 2, "promotion_playoff_places": 1,
+		"relegation_places": 2, "relegation_playoff_places": 1,
+		"ucl_places": 0, "uel_places": 0, "uecl_places": 0, "matchdays": 34,
+		"season_start": "2026-08-07", "season_end": "2027-05-23",
+		"weekend_bias": 0.88, "midweek_matchdays": 4,
+		"advance_mode": "fixture_days", "calendar_mode": "generated",
+	},
 }
 
 ## The v1 Premier League template, kept as the default for a caller that names

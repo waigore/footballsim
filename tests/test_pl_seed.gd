@@ -52,19 +52,28 @@ func test_repository_serves_the_engine_shape() -> void:
 		assert_has(team["style"], "possession", "%s has no style profile" % id)
 		assert_true(TeamData.FORMATIONS.has(str(team["formation"])), "%s prefers an unknown formation" % id)
 
-## The seed carries more than one competition, and a La Liga club's ids never
-## collide with an English one's.
-func test_the_seed_ships_two_competitions() -> void:
+## The seed carries more than one competition, and a German club's ids never
+## collide with an English, Spanish or second-tier one.
+func test_the_seed_ships_the_multi_competition_set() -> void:
 	var comps := PLCompetitions.active_ids()
 	assert_true(comps.has("PL"), "the seed has no Premier League")
 	assert_true(comps.has("LL"), "the seed has no La Liga")
+	assert_true(comps.has("BL"), "the seed has no Bundesliga")
+	assert_true(comps.has("BL2"), "the seed has no 2. Bundesliga")
 	var ll := TeamData.team_ids("LL")
 	assert_eq(ll.size(), 20, "La Liga should ship twenty clubs")
+	for cid in ["BL", "BL2"]:
+		var german := TeamData.team_ids(cid)
+		assert_eq(german.size(), 18, "%s should ship eighteen clubs" % cid)
+		for id in german:
+			assert_true(str(id).begins_with(cid + "-"),
+				"%s does not carry its competition namespace" % id)
 	var all_ids := TeamData.team_ids()
-	assert_eq(all_ids.size(), 40, "the seed should ship forty clubs")
-	for id in ll:
-		assert_true(str(id).begins_with("LL-"), "%s does not carry its competition namespace" % id)
-		assert_false(all_ids.has(str(id).trim_prefix("LL-")), "%s collides across competitions" % id)
+	assert_eq(all_ids.size(), 76, "the seed should ship seventy-six clubs")
+	var unique := {}
+	for id in all_ids:
+		unique[str(id)] = true
+	assert_eq(unique.size(), all_ids.size(), "club ids collide across competitions")
 
 ## The snapshot is one date in a season, not the season's end: every club has
 ## played the same number of games and the table is ordered by points.
