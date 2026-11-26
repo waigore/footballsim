@@ -153,6 +153,37 @@ func test_stats_filters_reports_and_leaders() -> void:
 				"the assists chart printed another stat")
 	assert_eq(leaders, 1, "the leader chart row is missing")
 
+## #279: the picker's footer legend is derived from the chips it draws: key 1
+## names ALL and every league takes the key its own chip sits at, so the legend
+## can never advertise fewer keys than the sheet answers (or call key 1 a league).
+func test_the_picker_legend_names_every_league_key() -> void:
+	var rows := LeagueChrome.competition_rows()
+	assert_eq(rows.size(), 1 + PLCompetitions.active().size(), "the chip list lost a league")
+	assert_eq(str(rows[0]["short_name"]), "ALL", "the first chip is not ALL")
+	var legend := LeagueChrome.picker_league_keys(rows)
+	assert_true(legend.begins_with("1  ALL"), "key 1 is not named as ALL: %s" % legend)
+	for i in range(rows.size()):
+		assert_true(legend.contains("%d  %s" % [i + 1, str(rows[i]["short_name"])]),
+			"key %d is not advertised: %s" % [i + 1, legend])
+	assert_false(legend.contains("/"), "the legend still prints a bare key range: %s" % legend)
+	assert_eq(LeagueChrome.picker_league_keys([{"id": "", "short_name": "ALL"}]), "",
+		"a sheet with no league chips advertised keys")
+	assert_false(LeagueChrome.league_key_row(KEY_1, rows).is_empty(),
+		"key 1 names no chip")
+	assert_eq(str(LeagueChrome.league_key_row(KEY_1, rows)["id"]), "", "key 1 is not ALL")
+	assert_true(LeagueChrome.league_key_row(KEY_1, []).is_empty(),
+		"a key with no chips still named one")
+	assert_true(LeagueChrome.league_key_row(KEY_1 + 2, rows.slice(0, 2)).is_empty(),
+		"a key past the last chip named one")
+	assert_true(LeagueChrome.league_key_row(KEY_0, rows).is_empty(), "key 0 named a chip")
+	var picker = load("res://scripts/ui/team_select.gd").new()
+	assert_true(picker.key(KEY_1), "key 1 is not taken")
+	assert_eq(picker.league_filter, "", "key 1 did not select ALL")
+	for i in range(1, rows.size()):
+		assert_true(picker.key(KEY_1 + i), "key %d is not taken" % (i + 1))
+		assert_eq(picker.league_filter, str(rows[i]["id"]), "key %d selects the wrong chip" % (i + 1))
+	picker.free()
+
 func test_the_podium_frames_one_block_per_league() -> void:
 	var book := LeagueBook.new()
 	var one := {"champion": {"club": "A", "points": 1}, "runner_up": {"club": "B", "points": 0},

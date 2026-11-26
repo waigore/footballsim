@@ -389,6 +389,50 @@ func _item_rect(items: Array, id: String) -> Rect2:
 			return item["rect"]
 	return Rect2()
 
+## #278: the hub's plan hint names the pointer the player is holding.
+func test_the_hub_hint_names_the_pointer() -> void:
+	assert_eq(LeagueSheet.plan_hint(true), " · TAP A GAME TO SWITCH AUTO / WATCH",
+		"a touch hub stopped naming the tap")
+	assert_eq(LeagueSheet.plan_hint(false), " · CLICK A GAME TO SWITCH AUTO / WATCH",
+		"a desktop hub tells a mouse user to tap")
+
+## #280: the load row reads as player copy, never as the save's stored token.
+func test_the_load_row_status_reads_as_player_copy() -> void:
+	assert_eq(LeagueStartSheet.status_label("in_progress"), "IN PROGRESS",
+		"an unfinished save still prints its stored token")
+	assert_eq(LeagueStartSheet.status_label("complete"), "COMPLETE",
+		"a complete save prints its stored token")
+	assert_eq(LeagueStartSheet.status_label(""), "", "an empty status grew words")
+	assert_eq(LeagueStartSheet.status_label("paused_by_user"), "PAUSED BY USER",
+		"an unknown token is not read as words")
+	for token in ["in_progress", "complete", "paused_by_user"]:
+		assert_false(LeagueStartSheet.status_label(token).contains("_"),
+			"a raw token reached the load row: %s" % token)
+
+## #281: the month label and both chevrons bound one control at every window
+## size: the readout sits between them with matching gaps, they share a height,
+## and the stat chips keep clear of the group.
+func test_the_month_stepper_binds_its_label_and_chevrons() -> void:
+	for vp in [Vector2(1280, 720), Vector2(1600, 900), Vector2(913, 411), Vector2(360, 780)]:
+		var items: Array = LeagueExtra.new().stats_layout(vp, {"name": "S", "reports": [],
+			"filters": {"league": "", "month": "2026-09", "team": "", "stat": "goals"}})
+		var prev := _item_rect(items, "statsmonth:-1")
+		var next := _item_rect(items, "statsmonth:1")
+		var read := _item_rect(items, "")
+		var goals := _item_rect(items, "statsstat:goals")
+		assert_true(read.size.x >= 72.0, "the readout has no width at %s" % vp)
+		assert_almost_eq(read.position.x, prev.end.x + LeagueExtra.STEP_GAP, 0.01,
+			"the readout does not follow its back arrow at %s" % vp)
+		assert_almost_eq(next.position.x, read.end.x + LeagueExtra.STEP_GAP, 0.01,
+			"the forward arrow does not hug its readout at %s" % vp)
+		assert_almost_eq(prev.position.y, next.position.y, 0.01,
+			"the stepper cells do not share a row at %s" % vp)
+		assert_almost_eq(prev.size.y, read.size.y, 0.01,
+			"the readout left the arrows' height at %s" % vp)
+		assert_gte(goals.position.x - next.end.x, LeagueExtra.STEP_AFTER,
+			"the stat chips crowd the stepper at %s" % vp)
+		assert_lte(next.end.x, vp.x - 24.0, "the stepper runs off the sheet at %s" % vp)
+
 ## The body clips the scrolling rows to the band between the header and the
 ## bottom bar, and Godot clips a Control's own draw along with its children's.
 ## The doors a sheet pins stand outside that band — BACK and CONTINUE in the
