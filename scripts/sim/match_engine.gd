@@ -289,9 +289,24 @@ func _best_short_outlet(team: int, taker):
 			best = p
 	return best
 
+## A keeper's long ball: his own boot carries it. The punt travels as far as his
+## KICKING rating allows and lands as truly as it, so a weak kicker's ball is
+## short and honest instead of identical to the league's best (`MatchKicking`,
+## wiki Open play: "GK distribution"). At the league's mean boot this is exactly
+## the ball the engine always struck, and the draws are skipped so the RNG
+## stream does not move for a keeper who has no scatter.
+func keeper_clear(p: Player, aim: Vector2) -> void:
+	var s: float = MatchKicking.scatter(p.gk)
+	var landing: Vector2 = aim
+	if s > 0.0:
+		landing = MatchKicking.landing(p.gk, p.pos, aim, rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0))
+	else:
+		landing = MatchKicking.aim_point(p.gk, p.pos, aim)
+	clear_ball(p, landing)
+
 func _clear_long(taker, team: int) -> void:
 	var aim = Vector2(L * 0.5 + teams[team]["dir"] * 12.0, W * 0.5 + rng.randf_range(-16.0, 16.0))
-	clear_ball(taker, aim)
+	keeper_clear(taker, aim)
 
 ## Where the corner is aimed: the live set-piece routine decides near or far.
 func _corner_aim(team: int) -> float:

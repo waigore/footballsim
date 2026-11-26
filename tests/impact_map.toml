@@ -141,6 +141,7 @@ suites = [
   "test_engine_rules.gd",
   "test_extra_time.gd",
   "test_match_contact.gd",
+  "test_kicking.gd",
 ]
 
 [domains.teams]
@@ -292,6 +293,16 @@ domain = "match_engine"
 
 [[rules]]
 match = "tests/test_match_contact.gd*"
+domain = "match_engine"
+
+# The keeper's own boot (KICKING): read into the long ball he strikes, so the
+# goal-kick lane and the on-ball keeper distribution both mount it.
+[[rules]]
+match = "scripts/sim/match_kicking.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "tests/test_kicking.gd*"
 domain = "match_engine"
 
 [[rules]]

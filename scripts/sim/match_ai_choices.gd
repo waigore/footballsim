@@ -67,7 +67,7 @@ func _gk_distribute(gk) -> void:
 			e.pass_ball(gk, mate.pos + Vector2(e.teams[gk.team]["dir"] * 2.0, 0.0), false, mate)
 			gk.state = "gk"
 			return
-	e.clear_ball(gk, Vector2(e.L * 0.5 + e.teams[gk.team]["dir"] * 10.0, 34.0 + e.rng.randf_range(-18.0, 18.0)))
+	e.keeper_clear(gk, Vector2(e.L * 0.5 + e.teams[gk.team]["dir"] * 10.0, 34.0 + e.rng.randf_range(-18.0, 18.0)))
 
 func decide(p) -> void:
 	if not _due(p):
