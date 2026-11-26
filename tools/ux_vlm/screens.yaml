@@ -41,6 +41,7 @@ screens:
       labels: [KICK OFF]
     scripts:
       - scripts/ui/team_select.gd
+      - scripts/ui/team_select_paint.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-picker-1600.jpg
   - id: pre-match
     title: Pre-match briefing
