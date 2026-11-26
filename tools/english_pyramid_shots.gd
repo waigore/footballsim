@@ -13,6 +13,10 @@ extends SceneTree
 
 var scene = null
 
+## The handset the phone shot is taken in: the same 913x411 design space the
+## touch suite uses, at 2 device pixels per unit.
+const PHONE := Vector2i(913, 411)
+
 func _initialize() -> void:
 	scene = load("res://scenes/main.tscn").instantiate()
 	root.add_child(scene)
@@ -20,13 +24,13 @@ func _initialize() -> void:
 	var league: LeagueHost = scene.menus.league
 	league.open_wizard()
 	await _shot("issue261_wizard_desktop")
-	scene.dev.ui_scale = maxf(1.0, scene.get_viewport().get_visible_rect().size.y / 620.0)
-	scene._sync_overlay_scale()
-	league.screen.ui_scale = scene.dev.ui_scale
+	_phone_window()
+	league.sync(Transform2D.IDENTITY.scaled(Vector2(scene.chrome_scale, scene.chrome_scale)),
+		scene.chrome_scale, true)
 	league.screen.refresh()
 	await _shot("issue261_wizard_phone")
 	league.close()
-	scene.dev.ui_scale = 1.0
+	_desktop_window()
 	scene._sync_overlay_scale()
 	var season := _finished("Pyramid Evidence", 7301,
 		["PL", "CH", "L1", "L2", "NL"])
@@ -66,6 +70,19 @@ func _finished(name: String, seed: int, comps: Array) -> LeagueSeason:
 func _frames(count: int) -> void:
 	for i in range(count):
 		await process_frame
+
+## Put the window in the handset's own design space, the way the touch suite
+## does, so the sheet is read at the density a phone actually gets.
+func _phone_window() -> void:
+	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
+	root.size = PHONE * 2
+	DisplayServer.window_set_size(PHONE * 2)
+	scene._sync_overlay_scale()
+
+## Back to the desktop sheet's own window for the table and the podium.
+func _desktop_window() -> void:
+	root.size = Vector2i(1600, 900)
+	DisplayServer.window_set_size(Vector2i(1600, 900))
 
 func _shot(name: String) -> void:
 	await _frames(3)
