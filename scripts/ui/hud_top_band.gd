@@ -68,8 +68,8 @@ func _possession(p: HudPaint, c: CanvasItem, engine, bar_r: Rect2, panel_bottom:
 ## A replay mode fast-forwarding between the moments it replays: the pulsing
 ## chip says which moment the director is waiting for (#164), and the replay flag
 ## reads while a goal clip runs.
-func flags(p: HudPaint, c: CanvasItem, game, touch: bool, f_bold: Font) -> void:
-	if game.mode != "full" and game.fast_mode and not game.paused and game.match_time > 9.0:
+func flags(p: HudPaint, c: CanvasItem, game, touch: bool, f_bold: Font, phase: String = "") -> void:
+	if chip_shown(game.mode, game.fast_mode, game.paused, game.match_time, phase):
 		var band := HudLayout.pitch_band(p.vp, touch)
 		var chip_y: float = band.position.y + 6.0 if p.compact() else p.vp.y - 156.0
 		var sw := 226.0
@@ -88,6 +88,13 @@ func flags(p: HudPaint, c: CanvasItem, game, touch: bool, f_bold: Font) -> void:
 ## Goals only.
 static func sim_chip_label(mode: String) -> String:
 	return "SIMULATING  ·  NEXT GOAL" if mode == "goals" else "SIMULATING  ·  NEXT CHANCE"
+
+## Whether the chip belongs on screen: only a replay mode that is actually
+## fast-forwarding, and never over a finished match (#276).
+static func chip_shown(mode: String, fast: bool, paused: bool, match_time: float, phase: String) -> bool:
+	if phase == "full_time" or paused or match_time <= 9.0:
+		return false
+	return mode != "full" and fast
 
 func _badge(p: HudPaint, c: CanvasItem, engine, r: Rect2, t: int, f_bold: Font) -> void:
 	var d: Dictionary = engine.teams[t]["data"]
