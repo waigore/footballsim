@@ -265,6 +265,28 @@ func test_the_picker_asks_for_a_decided_match_only_when_chosen() -> void:
 		assert_lte(last.end.x, vp.x - 8.0, "the winner control runs off the sheet")
 		assert_lte(last.end.y, vp.y - 128.0, "the winner control reaches into the doors")
 
+## The KICK OFF and RANDOM doors are placed against the winner control, never
+## over it. At 640x360 and 640x300 the fixed door position covered both chips,
+## so a short handset could not reach the choice it was being offered.
+func test_the_picker_doors_never_cover_the_winner_control() -> void:
+	for vp in [Vector2(1600, 900), Vector2(1280, 800), Vector2(1024, 600),
+			Vector2(913, 411), Vector2(800, 480), Vector2(640, 360), Vector2(640, 300),
+			Vector2(411, 914), Vector2(375, 812)]:
+		var card_bottom: float = vp.y * 0.42
+		var chips: Array = LeagueChrome.winner_rects(vp, card_bottom)
+		var doors: Array = LeagueChrome.picker_doors(vp, card_bottom)
+		assert_eq(doors.size(), 2, "the picker lost a door at %s" % vp)
+		for chip in chips:
+			for door in doors:
+				assert_false((chip["rect"] as Rect2).intersects(door["rect"] as Rect2),
+					"%s sits under the %s door at %s" % [chip["id"], door["id"], vp])
+		for door in doors:
+			var r: Rect2 = door["rect"]
+			assert_gte(r.size.y, 50.0, "a picker door shrank to fit at %s" % vp)
+			assert_gte(r.position.y, LeagueChrome.winner_bottom(card_bottom),
+				"a picker door rose into the control at %s" % vp)
+			assert_lte(r.end.x, vp.x, "a picker door runs off the sheet at %s" % vp)
+
 func test_the_picker_hands_a_decided_match_to_the_engine() -> void:
 	var game := StubGame.new()
 	game.selector = StubSelector.new()

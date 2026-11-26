@@ -346,32 +346,26 @@ func _draw() -> void:
 	if venue != "":
 		text_c(vp.x * 0.5, ay + arrow + 22.0, venue, 10, C_DIM, f_med)
 
-	var bw := 190.0
-	var bh := 50.0
 	LeagueChrome.winner_control(self, vp, card_y + card_h, winner_mode, f_bold)
-	var by: float = minf(card_y + card_h + 54.0, vp.y - bh - 78.0)
-	var confirm_rect := Rect2(vp.x * 0.5 - bw - 8.0, by, bw, bh)
-	var random_rect := Rect2(vp.x * 0.5 + 8.0, by, bw, bh)
-	# Doors take the shared grammar's radius so KICK OFF reads like every other
-	# primary; its ENTER hint is a keyboard-only affordance under the caption.
-	for spec in [["confirm", confirm_rect, "KICK OFF", "ENTER"],
-			["random", random_rect, "RANDOM", "TAB"]]:
-		var r: Rect2 = spec[1]
+	# The doors sit under the winner control, never over it (#249): on a short
+	# handset they rise against it instead of covering the chips.
+	for door in LeagueChrome.picker_doors(vp, card_y + card_h):
+		var r: Rect2 = door["rect"]
 		var hovered := r.has_point(mouse)
-		if spec[0] == "confirm":
-			UiChrome.button(self, style_cache, r, str(spec[2]), f_bold, true, 16,
-				"" if touch else str(spec[3]))
+		if str(door["id"]) == "confirm":
+			UiChrome.button(self, style_cache, r, "KICK OFF", f_bold, true, 16,
+				"" if touch else "ENTER")
 		else:
 			# RANDOM stays the picker's quiet door: it keeps its hover fill.
 			rect(C_PANEL_LIGHT if hovered else C_PANEL, r, 10,
 				Color(1, 1, 1, 0.10 if hovered else 0.06))
 			var middle: float = r.position.y + r.size.y * 0.5
 			var cap_y: float = middle + (UiChrome.RISE if touch else -UiChrome.RISE)
-			text_c(r.get_center().x, cap_y, str(spec[2]), 16, C_TEXT, f_bold)
+			text_c(r.get_center().x, cap_y, "RANDOM", 16, C_TEXT, f_bold)
 			if not touch:
-				text_c(r.get_center().x, middle + UiChrome.HINT_DROP, str(spec[3]), 10,
+				text_c(r.get_center().x, middle + UiChrome.HINT_DROP, "TAB", 10,
 					C_DIM, f_med)
-		_add_button(spec[0], r)
+		_add_button(str(door["id"]), r)
 
 	# Footer: the same words on both shells, owned by the chrome module so this
 	# script stays inside its size budget.

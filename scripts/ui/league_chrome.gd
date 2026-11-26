@@ -61,6 +61,9 @@ static func competition_chip_label(row: Dictionary, width: float) -> String:
 ## shootout path (#238). Two chips, the draw as the default, drawn under the
 ## cards so they never grow the sheet's fixed doors.
 const WINNER_MODES: Array = [["draw", "ALLOW DRAW"], ["extra", "EXTRA TIME & PENS"]]
+## The chip row's own height, and the air between it and the club cards.
+const WINNER_H := 24.0
+const WINNER_GAP := 14.0
 
 static func winner_rects(vp: Vector2, card_bottom: float) -> Array:
 	var w: float = minf(150.0, (vp.x - 48.0) * 0.5)
@@ -68,8 +71,30 @@ static func winner_rects(vp: Vector2, card_bottom: float) -> Array:
 	for i in range(WINNER_MODES.size()):
 		out.append({"id": str(WINNER_MODES[i][0]), "label": str(WINNER_MODES[i][1]),
 			"rect": Rect2(vp.x * 0.5 - w - 4.0 + float(i) * (w + 8.0),
-				card_bottom + 14.0, w, 24.0)})
+				card_bottom + WINNER_GAP, w, WINNER_H)})
 	return out
+
+## The lowest pixel the chip row reaches. The picker's fixed doors sit below it,
+## so a short sheet places them against the control rather than over it: at
+## 640x360 and 640x300 the doors used to cover both chips.
+static func winner_bottom(card_bottom: float) -> float:
+	return card_bottom + WINNER_GAP + WINNER_H
+
+## The picker's KICK OFF and RANDOM doors, always below the winner control. They
+## keep their own height and their air under them; what a short design space
+## takes away is how far they rise, never the control they would cover.
+static func picker_doors(vp: Vector2, card_bottom: float) -> Array:
+	# A portrait handset is narrower than two 190-unit doors and the air between
+	# them, so the pair is clamped to the sheet instead of running off it.
+	var bw: float = minf(190.0, (vp.x - 32.0) * 0.5 - 4.0)
+	var bh := 50.0
+	var lowest: float = winner_bottom(card_bottom) + 10.0
+	var highest: float = maxf(vp.y - bh - 8.0, lowest)
+	var by: float = clampf(card_bottom + 54.0, lowest, highest)
+	return [
+		{"id": "confirm", "rect": Rect2(vp.x * 0.5 - bw - 8.0, by, bw, bh)},
+		{"id": "random", "rect": Rect2(vp.x * 0.5 + 8.0, by, bw, bh)},
+	]
 
 static func winner_control(c: CanvasItem, vp: Vector2, card_bottom: float, mode: String,
 		bold: Font) -> void:
