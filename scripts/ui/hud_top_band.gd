@@ -34,11 +34,22 @@ func scoreboard(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: F
 	p.text_c(c, cxm, y + 52, "%d  –  %d" % [engine.score[0], engine.score[1]], 40, UiChrome.C_TEXT, f_bold)
 	# clock
 	p.text_c(c, cxm, y + 22, engine.display_clock(), 17, UiChrome.C_GOLD, f_bold)
-	var half_txt := "1ST HALF" if engine.half == 1 else "2ND HALF"
+	var half_txt := "1ST HALF"
+	match engine.half:
+		2:
+			half_txt = "2ND HALF"
+		3:
+			half_txt = "EXTRA TIME"
+		4:
+			half_txt = "EXTRA TIME 2"
 	if engine.phase == "half_time":
 		half_txt = "HALF TIME"
 	elif engine.phase == "full_time":
 		half_txt = "FULL TIME"
+	elif engine.phase == "et_break":
+		half_txt = "EXTRA TIME"
+	elif engine.phase == "shootout":
+		half_txt = "PENALTIES"
 	p.text_c(c, cxm, y + 77, half_txt, 10, UiChrome.C_DIM, f_med)
 	_possession(p, c, engine, Rect2(x + 18, y + h + 8, w - 36, 5), y + h, f_bold)
 
