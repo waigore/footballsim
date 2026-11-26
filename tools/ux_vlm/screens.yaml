@@ -91,6 +91,8 @@ screens:
       # League / Load) and the drawer's own readings (Stats, Interest).
       - scripts/ui/league_start_sheet.gd
       - scripts/ui/league_extra.gd
+      # Season-complete podium paint rides the same surface (#240/#260).
+      - scripts/ui/league_podium_sheet.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-l-hub-1600.jpg
   - id: league-table
     title: League table
@@ -108,6 +110,7 @@ screens:
     kind: browse
     scripts:
       - scripts/ui/league_calendar.gd
+      - scripts/ui/league_calendar_view.gd
       - scripts/ui/league_month.gd
       - scripts/ui/league_plan_rows.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-calendar-1600.jpg

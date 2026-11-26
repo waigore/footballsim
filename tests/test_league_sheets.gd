@@ -964,7 +964,7 @@ func test_the_plan_rows_and_side_table_carry_the_shortlist_mark() -> void:
 	assert_eq((side[0]["places"] as Dictionary), rail, "the rows disagree about the rail")
 
 ## The paint path is one frame re-entering the `_draw` call it arrived from
-## (see `LeagueBook._draw_calendar_body`); headless it is a straight call.
+## (see `LeagueCalendarView._draw_body`); headless it is a straight call.
 func test_the_calendar_paint_band_reuses_the_draw_call() -> void:
 	var book := LeagueBook.new()
 	var band := _PaintProbe.new()
