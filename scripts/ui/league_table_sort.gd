@@ -76,14 +76,6 @@ static func cell(row: Dictionary, column: String) -> int:
 		return int(row.get("gf", 0)) - int(row.get("ga", 0))
 	return int(row.get(column, 0))
 
-## How many number boxes a column set carries (geometry for the full sheet).
-static func numeric(cols: Array) -> int:
-	var count := 0
-	for col in cols:
-		if bool(col["num"]):
-			count += 1
-	return count
-
 ## Rows in the player's chosen order, each keeping its official position. Ties
 ## fall back to the official place so a re-sort is never arbitrary. A sort on a
 ## column the current reading does not show is left for the reading that does:
