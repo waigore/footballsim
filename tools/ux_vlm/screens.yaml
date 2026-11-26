@@ -1,6 +1,16 @@
 # UI screen catalogue for the UX VLM gate. Wiki SoT:
 # https://github.com/waigore/footballsim/wiki/ux-visual-rubrics
 # Baseline URLs are desktop wiki Evidence images (raw.githubusercontent.com).
+#
+# kind: flow    — a screen on the path to a match/season. Must declare
+#                 primary_cta; the gate hard-fails when that label is not
+#                 readable in the shot.
+#       browse  — a reading surface. BACK (or an equally clear leave door) is
+#                 an acceptable primary action; no hard label requirement.
+#       overlay — chrome drawn over live play. No CTA mandate.
+# primary_cta:
+#   labels: exact door labels the grader must find (any one counts)
+#   side:   optional left | center | right — where that door belongs
 version: 1
 # Paths that affect every catalogue screen (fonts, shared chrome, root scene).
 shared_paths:
@@ -11,22 +21,32 @@ shared_paths:
 screens:
   - id: main-menu
     title: Main menu
+    kind: flow
+    primary_cta:
+      labels: [START SIM]
     scripts:
       - scripts/ui/menu_screen.gd
       - scripts/ui/menu_host.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-menu-1600.jpg
   - id: settings
     title: Settings
+    kind: browse
     scripts:
       - scripts/ui/settings_screen.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-settings-1600.jpg
   - id: fixture-picker
     title: Fixture picker
+    kind: flow
+    primary_cta:
+      labels: [KICK OFF]
     scripts:
       - scripts/ui/team_select.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-picker-1600.jpg
   - id: pre-match
     title: Pre-match briefing
+    kind: flow
+    primary_cta:
+      labels: [KICK OFF, CONTINUE]
     scripts:
       - scripts/ui/pre_match.gd
       - scripts/ui/pre_match_host.gd
@@ -35,6 +55,7 @@ screens:
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-f10-prematch.png
   - id: match-hud
     title: Match HUD
+    kind: overlay
     scripts:
       - scripts/ui/hud.gd
       - scripts/ui/hud_chrome.gd
@@ -50,6 +71,10 @@ screens:
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-f10-hud.png
   - id: league-hub
     title: League hub
+    kind: flow
+    primary_cta:
+      labels: [CONTINUE]
+      side: right
     scripts:
       - scripts/ui/league_screen.gd
       - scripts/ui/league_host.gd
@@ -57,11 +82,13 @@ screens:
       - scripts/ui/league_view.gd
       - scripts/ui/league_chrome.gd
       - scripts/ui/league_panel.gd
+      - scripts/ui/league_sheet.gd
       - scripts/ui/league_plan_sheet.gd
       - scripts/ui/league_doors.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-hub-1600.jpg
   - id: league-table
     title: League table
+    kind: browse
     scripts:
       - scripts/ui/league_table_view.gd
       - scripts/ui/league_table_chrome.gd
@@ -72,6 +99,7 @@ screens:
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-table-1600.jpg
   - id: league-calendar
     title: League calendar
+    kind: browse
     scripts:
       - scripts/ui/league_calendar.gd
       - scripts/ui/league_month.gd
@@ -79,6 +107,7 @@ screens:
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-calendar-1600.jpg
   - id: encyclopedia
     title: Encyclopedia
+    kind: browse
     scripts:
       - scripts/ui/wiki_screen.gd
       - scripts/ui/wiki_host.gd
@@ -93,6 +122,9 @@ screens:
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/issue-81-after-encyclopedia.jpg
   - id: quit-confirm
     title: Quit confirm
+    kind: flow
+    primary_cta:
+      labels: [QUIT, YES]
     scripts:
       - scripts/ui/confirm_prompt.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/issue-123-quit-confirm.jpg
