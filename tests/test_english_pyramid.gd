@@ -165,6 +165,40 @@ func test_a_five_tier_save_builds_every_calendar() -> void:
 			"%s table is the wrong size" % cid)
 	full.close()
 
+## Every contiguous English stack a player can pick — the Premier League alone up
+## to all five — builds its own calendars, nothing more.
+func test_any_contiguous_english_stack_builds() -> void:
+	for depth in range(1, ENGLISH.size() + 1):
+		var stack: Array = ENGLISH.slice(0, depth)
+		var built := LeagueSeason.create("Stack %d" % depth, "generated", "fixture_days",
+			11 + depth, stack)
+		assert_not_null(built, "the %d-tier stack did not build" % depth)
+		assert_eq(built.save.competition_ids(), stack, "the %d-tier stack lost a tier" % depth)
+		for cid in stack:
+			var expected := 380 if cid == "PL" else 552
+			assert_eq(built.record.fixtures.unplayed(str(cid)), expected,
+				"%s did not build in the %d-tier stack" % [cid, depth])
+		built.close()
+
+## The English pyramid beside La Liga and the German pair: one save runs both
+## chains, and neither country's end-of-season reading takes the other's.
+func test_the_pyramid_runs_beside_the_other_countries() -> void:
+	var mixed := _finished("Two Countries", 6060, ["PL", "CH", "L1", "LL", "BL", "BL2"])
+	assert_not_null(mixed, "the mixed save did not build")
+	var brackets := LeaguePlayoffs.build_all(mixed)
+	assert_true(brackets.has("CH"), "the Championship bracket did not settle beside Germany")
+	assert_true(brackets.has("L1"), "League One's bracket did not settle beside Germany")
+	assert_false(brackets.has("LL"), "La Liga played an English bracket")
+	assert_false(brackets.has("BL"), "the Bundesliga played an English bracket")
+	assert_false(brackets.has("BL2"), "2. Bundesliga played an English bracket")
+	var pyramid := LeaguePyramid.movers(mixed, brackets)
+	assert_true(bool(pyramid.get("applied", false)) or not pyramid.is_empty(),
+		"the English swap did not read beside Germany")
+	for link in (pyramid.get("links", []) as Array):
+		assert_eq(LeagueTiers.country_of(str(link["top"])), "England",
+			"the pyramid swapped a club out of England")
+	mixed.close()
+
 # --------------------------------------------------------------- brackets ---
 
 func test_the_bracket_draws_the_places_under_promotion() -> void:
