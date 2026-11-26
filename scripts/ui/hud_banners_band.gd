@@ -92,9 +92,10 @@ static func pens_line(engine) -> String:
 	return "PENS %d – %d" % [int(tally[0]), int(tally[1])]
 
 ## What the card says under the score. Every hint names a control the player can
-## reach in this state: with the chrome hidden the bar's RESTART door and its
-## key hint are gone, so a phone's card offers its own press instead (#202). The
-## season's own SPACE stays live either way, because a key never leaves.
+## reach in this state: with the chrome shown the bar's PLAY AGAIN door; with it
+## hidden that door and its key hint are gone, so a phone's card offers its own
+## press instead (#202). The season's own SPACE stays live either way, because a
+## key never leaves.
 static func break_hint(phase: String, touch: bool, hidden: bool, held: bool) -> String:
 	if phase == "half_time":
 		return "SECOND HALF STARTS SHORTLY"
@@ -110,7 +111,7 @@ static func break_hint(phase: String, touch: bool, hidden: bool, held: bool) -> 
 		return "PRESS R TO PLAY AGAIN"
 	if hidden:
 		return "TAP THE CARD TO PLAY AGAIN"
-	return "TAP RESTART TO PLAY AGAIN"
+	return "TAP PLAY AGAIN"
 
 ## Whether the full-time card is its own restart door: only on a phone, only
 ## while the chrome is hidden, and never over a league result the season holds.

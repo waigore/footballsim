@@ -55,6 +55,10 @@ var buttons: Array:
 	get:
 		return body.button_rects() if body != null else []
 var body: LeagueBody = null
+## The doors each sheet pins in screen space: BACK, CONTINUE, the table's
+## readings. It is a sibling above the body, because the body clips its own
+## paint away outside the scrolling band (#284).
+var pinned: LeaguePinned = null
 var hub: LeagueSheet = LeagueSheet.new()
 ## The menu-level front door: New League and Load are their own pose sheet.
 var start := LeagueStartSheet.new()
@@ -104,6 +108,12 @@ func _ready() -> void:
 	body = LeagueBody.new()
 	body.name = "Body"
 	add_child(body)
+	# The pinned doors are laid out in screen space, outside the band the body
+	# clips itself to, so they get their own unclipped layer above it (#284).
+	pinned = LeaguePinned.new()
+	pinned.name = "Pinned"
+	pinned.body = body
+	add_child(pinned)
 	tooltip = DateOverlay.attach(self, body, false)
 	overlay = LeagueOverlay.new()
 	overlay.name = "Overlay"
@@ -247,11 +257,13 @@ func refresh() -> void:
 	var content := body.set_sheet(items, vp, mode != _last_mode, _bottom_bar())
 	var fonts := UiChrome.fonts()
 	body.painter = Callable(sheet, str(pose[2])).bind(vp, fonts, content, view)
-	# The body paints its own pinned doors with the sheet's paint grammar, so it
-	# needs the font set and the hub's style cache, and it goes quiet while the
-	# delete question owns the press.
-	body.fonts = fonts
-	body.cache = hub.cache
+	# The pinned layer paints the doors the sheet pins outside the body's band,
+	# with the sheet's paint grammar and the hub's style cache. The body keeps
+	# its own pause: a frozen body answers no row and no pinned door.
+	pinned.fonts = fonts
+	pinned.cache = hub.cache
+	pinned.size = vp
+	pinned.queue_redraw()
 	body.frozen = delete_confirm_open()
 	panel.active = LeagueView.panel_reading(mode)
 	# The drawer door is the season's only way to its other readings, so it is
@@ -369,5 +381,5 @@ func _draw() -> void:
 	var fonts := UiChrome.fonts()
 	hints.clear()
 	Callable(sheet, str(pose[3])).call(self, vp, fonts, current_view(), hints)
-	# The sheet's pinned doors are the body's paint: it clips the scrolling rows
-	# around them, so it draws them itself (LeagueChrome.pinned_door).
+	# The sheet's pinned doors are not this node's paint either: the body clips
+	# its own draw away outside its band, so `pinned` above it draws them (#284).

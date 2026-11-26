@@ -124,13 +124,16 @@ func momentum(p: HudPaint, c: CanvasItem, engine, f_bold: Font, f_med: Font) -> 
 
 ## Play-state line: paused, a replay mode simming or live, or the full-match
 ## speed. The mode's own name is on the line, so Goals only never reads as
-## Highlights (#164).
-func status(p: HudPaint, c: CanvasItem, game, speed_label: String, f_bold: Font, f_med: Font) -> void:
+## Highlights (#164). A match whose whistle has gone describes itself as finished
+## rather than claiming to be live (#276): `phase` is the engine's own.
+func status(p: HudPaint, c: CanvasItem, game, speed_label: String, f_bold: Font, f_med: Font, phase: String = "") -> void:
 	var y := p.vp.y - 72.0
-	var label := state_label(game, speed_label)
+	var label := state_label(game, speed_label, phase)
 	var col := UiChrome.C_DIM
 	if game.paused:
 		col = UiChrome.C_GOLD
+	elif is_over(phase):
+		col = UiChrome.C_DIM
 	elif game.mode != "full" and game.fast_mode:
 		col = Color(0.55, 0.82, 0.86)
 	elif game.mode != "full":
@@ -143,11 +146,17 @@ func status(p: HudPaint, c: CanvasItem, game, speed_label: String, f_bold: Font,
 	p.text_r(c, p.vp.x - 24.0, y + 16, label, 11, col, f_bold)
 	p.text_r(c, p.vp.x - 24.0, y + 32, "HOVER A PLAYER  ·  CLICK TO TRACK THEIR MATCH", 9, UiChrome.C_DIM, f_med)
 
-## The play-state line's words: paused first, then the mode. Exposed so the copy
-## is read by a test instead of a screenshot.
-func state_label(game, speed_label: String) -> String:
+## The match has been played out and settled.
+static func is_over(phase: String) -> bool:
+	return phase == "full_time"
+
+## The play-state line's words: paused first, then the whistle, then the mode.
+## Exposed so the copy is read by a test instead of a screenshot.
+func state_label(game, speed_label: String, phase: String = "") -> String:
 	if game.paused:
 		return "PAUSED"
+	if is_over(phase):
+		return "FULL TIME  ·  MATCH OVER"
 	if game.mode != "full" and game.fast_mode:
 		return "%s  ·  SIMMING 24x" % Prefs.mode_label(game.mode)
 	if game.mode != "full":
