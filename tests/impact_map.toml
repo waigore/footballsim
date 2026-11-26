@@ -525,7 +525,7 @@ match = "scripts/ui/hud_managers.gd*"
 domain = "hud_chrome"
 
 [[rules]]
-match = "scripts/ui/team_select.gd*"
+match = "scripts/ui/team_select*.gd*"
 domain = "league"
 
 [[rules]]
