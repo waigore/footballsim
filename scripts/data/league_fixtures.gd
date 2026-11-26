@@ -4,10 +4,15 @@ extends RefCounted
 ## The calendar side of the season ledger: which fixtures are due, which are
 ## played, and the watch and suggestion flags the planner writes on them.
 ##
-## One fixture table per save, read by the season clock, the calendar screen and
-## the planner. Split out of `LeagueRecord` so the calendar and the standings
-## keep one concern each; every reader talks to the same bound save, so a fixture
+## One fixture table per save, shared by every active competition and keyed by
+## `competition_id`. Read by the season clock, the calendar screen and the
+## planner. Split out of `LeagueRecord` so the calendar and the standings keep
+## one concern each; every reader talks to the same bound save, so a fixture
 ## moved here is still the one a result lands on.
+##
+## Every league-wide read takes an optional competition id: no argument means
+## every active league (the hub's shared clock), an id means one league's
+## calendar. A club id is always unambiguous, so a per-club read needs neither.
 
 const SELECT := (
 	"SELECT f.*, h.name AS home_name, h.abbr AS home_abbr, h.color AS home_color, "
@@ -21,56 +26,106 @@ var save: LeagueSave = null
 func _init(owner: LeagueSave) -> void:
 	save = owner
 
-## Fill an empty save: every fixture pending, every club on zero, the clock on
-## the first fixture date.
-func install(fixtures: Array) -> bool:
-	if save == null or fixtures.is_empty():
+## Fill one competition's empty share of a save: every fixture pending and every
+## club of that competition on zero. `set_clock` moves the shared clock to the
+## competition's first fixture date — the first league installed owns day one.
+func install(fixtures: Array, competition_id: String, set_clock: bool = true) -> bool:
+	if save == null or fixtures.is_empty() or competition_id == "":
 		return false
 	if not save.ensure_open():
 		return false
 	PLDatabase.transaction("BEGIN TRANSACTION;")
-	PLDatabase.execute("DELETE FROM league_fixture;")
-	PLDatabase.execute("DELETE FROM league_table;")
-	PLDatabase.execute("DELETE FROM match_event;")
-	PLDatabase.execute("DELETE FROM league_player_stat;")
-	PLDatabase.execute("DELETE FROM league_absence;")
-	PLDatabase.execute("DELETE FROM league_discipline;")
-	PLDatabase.execute("DELETE FROM goal_highlight;")
+	PLDatabase.execute("DELETE FROM league_fixture WHERE competition_id = ?;", [competition_id])
+	PLDatabase.execute("DELETE FROM league_table WHERE competition_id = ?;", [competition_id])
 	var values: Array = []
 	var bindings: Array = []
 	for fx in fixtures:
-		values.append("(?, ?, ?, ?, ?, ?, 'pending')")
+		values.append("(?, ?, ?, ?, ?, ?, ?, 'pending')")
 		bindings.append_array([
-			str(fx["id"]), int(fx["matchday"]), str(fx["kickoff"]),
+			str(fx["id"]), competition_id, int(fx["matchday"]), str(fx["kickoff"]),
 			str(fx.get("kickoff_time", "")), str(fx["home"]), str(fx["away"]),
 		])
 	PLDatabase.execute(
-		"INSERT INTO league_fixture (id, matchday, kickoff, kickoff_time, home_club_id, "
-		+ "away_club_id, status) VALUES " + ", ".join(values) + ";",
+		"INSERT INTO league_fixture (id, competition_id, matchday, kickoff, kickoff_time, "
+		+ "home_club_id, away_club_id, status) VALUES " + ", ".join(values) + ";",
 		bindings,
 	)
-	PLDatabase.execute("INSERT INTO league_table (club_id) SELECT id FROM club;")
-	save.set_date(str(fixtures[0]["kickoff"]))
-	save.set_matchday(int(fixtures[0]["matchday"]))
-	save.set_status("in_progress")
+	PLDatabase.execute(
+		"INSERT INTO league_table (club_id, competition_id) SELECT id, competition_id "
+		+ "FROM club WHERE competition_id = ?;", [competition_id])
+	if set_clock:
+		save.set_date(str(fixtures[0]["kickoff"]))
+		save.set_matchday(int(fixtures[0]["matchday"]))
+		save.set_status("in_progress")
 	PLDatabase.transaction("COMMIT;")
 	return true
 
+## Wipe every league's ledger: the create path's first step before each
+## competition installs its own calendar.
+func clear() -> void:
+	if save == null or not save.ensure_open():
+		return
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	for table in ["league_fixture", "league_table", "match_event", "league_player_stat",
+			"league_absence", "league_discipline", "goal_highlight"]:
+		PLDatabase.execute("DELETE FROM %s;" % table)
+	PLDatabase.transaction("COMMIT;")
+
 ## Fixture rows with club labels. `matchday` < 1 returns the whole calendar.
-func all(matchday: int = -1) -> Array:
+func all(matchday: int = -1, competition_id: String = "") -> Array:
 	save.ensure_open()
-	if matchday < 1:
-		return PLDatabase.rows(SELECT + "ORDER BY f.kickoff, f.kickoff_time, f.id;")
-	return PLDatabase.rows(SELECT + "WHERE f.matchday = ? ORDER BY f.kickoff_time, f.id;", [matchday])
+	var sql := SELECT
+	var bindings: Array = []
+	var where: Array = []
+	if competition_id != "":
+		where.append("f.competition_id = ?")
+		bindings.append(competition_id)
+	if matchday >= 1:
+		where.append("f.matchday = ?")
+		bindings.append(matchday)
+	if not where.is_empty():
+		sql += "WHERE " + " AND ".join(where) + " "
+	return PLDatabase.rows(
+		sql + "ORDER BY f.competition_id, f.kickoff, f.kickoff_time, f.id;", bindings)
 
 func one(fixture_id: String) -> Dictionary:
 	save.ensure_open()
 	var rows := PLDatabase.rows(SELECT + "WHERE f.id = ?;", [fixture_id])
 	return rows[0] if not rows.is_empty() else {}
 
-func on(date: String) -> Array:
+## The fixtures on one date, grouped in the save's competition order: what the
+## hub and the calendar read. An empty competition id reads every active league.
+func on(date: String, competition_id: String = "") -> Array:
 	save.ensure_open()
-	return PLDatabase.rows(SELECT + "WHERE f.kickoff = ? ORDER BY f.kickoff_time, f.id;", [date])
+	var sql := SELECT + "WHERE f.kickoff = ?"
+	var bindings: Array = [date]
+	if competition_id != "":
+		sql += " AND f.competition_id = ?"
+		bindings.append(competition_id)
+	sql += " ORDER BY f.competition_id, f.kickoff_time, f.id;"
+	var rows := PLDatabase.rows(sql, bindings)
+	return _in_save_order(rows)
+
+## A save's active leagues in the order the player chose them, so the hub reads
+## PL before La Liga on a mixed day whatever the ids sort like.
+func _in_save_order(rows: Array) -> Array:
+	if save == null or save.actives.is_empty():
+		return rows
+	var order := {}
+	for i in range(save.actives.size()):
+		order[str(save.actives[i])] = i
+	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var ca := int(order.get(str(a.get("competition_id", "")), 99))
+		var cb := int(order.get(str(b.get("competition_id", "")), 99))
+		if ca != cb:
+			return ca < cb
+		var ta := str(a.get("kickoff_time", ""))
+		var tb := str(b.get("kickoff_time", ""))
+		if ta != tb:
+			return ta < tb
+		return str(a.get("id", "")) < str(b.get("id", ""))
+	)
+	return rows
 
 ## A club's last `limit` played fixtures, newest first: the pre-match form line
 ## and anything else that reads recent results (#157).
@@ -84,35 +139,58 @@ func recent(club_id: String, limit: int = 5) -> Array:
 
 ## Unplayed fixtures due on or before `date`: the season clock never runs past
 ## a watched fixture waiting for its match.
-func pending_upto(date: String) -> Array:
+func pending_upto(date: String, competition_id: String = "") -> Array:
 	save.ensure_open()
-	return PLDatabase.rows(
-		SELECT + "WHERE f.status <> 'played' AND f.kickoff <= ? "
-		+ "ORDER BY f.kickoff, f.kickoff_time, f.id;", [date])
+	var sql := SELECT + "WHERE f.status <> 'played' AND f.kickoff <= ?"
+	var bindings: Array = [date]
+	if competition_id != "":
+		sql += " AND f.competition_id = ?"
+		bindings.append(competition_id)
+	sql += " ORDER BY f.competition_id, f.kickoff, f.kickoff_time, f.id;"
+	return _in_save_order(PLDatabase.rows(sql, bindings))
 
-func dates() -> Array:
+func dates(competition_id: String = "") -> Array:
 	save.ensure_open()
 	var out: Array = []
-	for row in PLDatabase.rows("SELECT DISTINCT kickoff FROM league_fixture ORDER BY kickoff;"):
+	var sql := "SELECT DISTINCT kickoff FROM league_fixture"
+	if competition_id != "":
+		sql += " WHERE competition_id = ?"
+		sql += " ORDER BY kickoff;"
+		for row in PLDatabase.rows(sql, [competition_id]):
+			out.append(str(row["kickoff"]))
+		return out
+	for row in PLDatabase.rows(sql + " ORDER BY kickoff;"):
 		out.append(str(row["kickoff"]))
 	return out
 
-func unplayed() -> int:
-	save.ensure_open()
-	var row := PLDatabase.row("SELECT COUNT(*) AS n FROM league_fixture WHERE status <> 'played';")
-	return int(row.get("n", 0))
-
-func played() -> int:
-	save.ensure_open()
-	var row := PLDatabase.row("SELECT COUNT(*) AS n FROM league_fixture WHERE status = 'played';")
-	return int(row.get("n", 0))
-
-## The next date with a pending fixture, strictly after `after`.
-func next_date(after: String) -> String:
+func unplayed(competition_id: String = "") -> int:
 	save.ensure_open()
 	var row := PLDatabase.row(
-		"SELECT MIN(kickoff) AS d FROM league_fixture WHERE status <> 'played' AND kickoff > ?;",
-		[after],
+		"SELECT COUNT(*) AS n FROM league_fixture WHERE status <> 'played'"
+		+ _comp_suffix(competition_id) + ";", _comp_bindings(competition_id))
+	return int(row.get("n", 0))
+
+func played(competition_id: String = "") -> int:
+	save.ensure_open()
+	var row := PLDatabase.row(
+		"SELECT COUNT(*) AS n FROM league_fixture WHERE status = 'played'"
+		+ _comp_suffix(competition_id) + ";", _comp_bindings(competition_id))
+	return int(row.get("n", 0))
+
+static func _comp_suffix(competition_id: String) -> String:
+	return "" if competition_id == "" else " AND competition_id = ?"
+
+static func _comp_bindings(competition_id: String) -> Array:
+	return [] if competition_id == "" else [competition_id]
+
+## The next date with a pending fixture, strictly after `after`. Across every
+## active league when no competition is named: one shared clock.
+func next_date(after: String, competition_id: String = "") -> String:
+	save.ensure_open()
+	var row := PLDatabase.row(
+		"SELECT MIN(kickoff) AS d FROM league_fixture WHERE status <> 'played' AND kickoff > ?"
+		+ _comp_suffix(competition_id) + ";",
+		[after] + _comp_bindings(competition_id),
 	)
 	if row.get("d", null) == null:
 		return ""
@@ -134,14 +212,30 @@ func suggest(fixture_ids: Array) -> void:
 	for id in fixture_ids:
 		PLDatabase.execute("UPDATE league_fixture SET suggested = 1 WHERE id = ?;", [str(id)])
 
+## The competitions this save's calendar holds, in the save's own order.
+func competition_ids() -> Array:
+	save.ensure_open()
+	var out: Array = []
+	for row in PLDatabase.rows("SELECT DISTINCT competition_id FROM league_fixture;"):
+		out.append(str(row["competition_id"]))
+	out.sort_custom(func(a, b):
+		return save.actives.find(a) < save.actives.find(b)
+	)
+	return out
+
 ## How many gameweeks are fully played: the "after five rounds" trigger for
 ## suggested watches. Rounds never complete out of order, so the first round
-## with a pending fixture ends the streak.
-func completed_matchdays() -> int:
+## with a pending fixture ends the streak. Per competition: each league's own
+## table one to six is what its suggestions read.
+func completed_matchdays(competition_id: String = "") -> int:
 	save.ensure_open()
 	var row := PLDatabase.row(
-		"SELECT MIN(matchday) AS r FROM league_fixture WHERE status <> 'played';")
+		"SELECT MIN(matchday) AS r FROM league_fixture WHERE status <> 'played'"
+		+ _comp_suffix(competition_id) + ";", _comp_bindings(competition_id))
 	if row.get("r", null) == null:
-		var total := PLDatabase.row("SELECT MAX(matchday) AS r FROM league_fixture;")
+		var total := PLDatabase.row(
+			"SELECT MAX(matchday) AS r FROM league_fixture"
+			+ (" WHERE competition_id = ?" if competition_id != "" else "") + ";",
+			_comp_bindings(competition_id))
 		return int(total.get("r", 0))
 	return maxi(int(row["r"]) - 1, 0)

@@ -1,23 +1,32 @@
 #!/usr/bin/env python3
-"""Build, refresh and ship the Premier League seed snapshot.
+"""Build, refresh and ship the multi-competition football seed snapshot.
 
 The snapshot is `data/pl_snapshot.json` (readable source of truth) and the game
 loads the SQLite copy `data/pl_seed.sqlite` it produces. Rebuild the database
 after every snapshot edit; bump `db_version` so the game replaces its cache.
 
+The seed holds more than one competition: the Premier League and La Liga share
+one database, one season window and one set of stable ids. Club ids carry the
+competition's namespace (`LL-` for La Liga) so a refresh can never collide a
+Spanish club with an English one.
+
 Usage:
-    python tools/pl_snapshot.py fetch --source espn --season 2025
+    python tools/pl_snapshot.py seed --competition LL --season 2026
+    python tools/pl_snapshot.py fetch --source espn --season 2026 --competition all
     python tools/pl_snapshot.py build
     python tools/pl_snapshot.py verify
 
-`fetch` refreshes only league data (table, fixtures, player season/career
-figures) from one source. Player ratings are the game's own dataset and are
-never overwritten by a league refresh: ESPN does not publish them.
+`seed` creates a competition's clubs and squads from ESPN rosters the first
+time a league ships: real clubs, real squads, and the game's own role-based
+ratings (ESPN publishes no ratings). `fetch` refreshes only league data (table,
+fixtures, player identity and season/career figures) from one source; ratings
+are never overwritten by a league refresh.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sqlite3
 import ssl
@@ -33,32 +42,107 @@ ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "data" / "pl_snapshot.json"
 SEED_DB = ROOT / "data" / "pl_seed.sqlite"
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SOURCE_ESPN = "espn"
 ESPN_SITE = "https://site.api.espn.com/apis/site/v2/sports"
 ESPN_CORE = "https://sports.core.api.espn.com/v2"
-LEAGUE = "eng.1"
+
+## One row per shipped competition. `prefix` namespaces every id the league
+## owns; the Premier League keeps the bare ids the first seed shipped with.
+COMPETITIONS = {
+    "PL": {
+        "espn": "eng.1",
+        "name": "Premier League",
+        "short_name": "PREMIER LEAGUE",
+        "country": "England",
+        "prefix": "",
+        "rules": {
+            "win_points": 3, "draw_points": 1, "relegation_places": 3,
+            "ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38,
+            "season_start": "2026-08-15", "season_end": "2027-05-23",
+            "weekend_bias": 0.85, "midweek_matchdays": 5,
+        },
+    },
+    "LL": {
+        "espn": "esp.1",
+        "name": "La Liga",
+        "short_name": "LA LIGA",
+        "country": "Spain",
+        "prefix": "LL-",
+        "rules": {
+            # Spain runs the same 20-club, 38-matchday shape as England. The
+            # band counts are La Liga's own: 1-4 UCL, 5th UEL and 6th UECL (the
+            # Copa del Rey winner takes a UEL place into the same band), three
+            # relegated. Fewer midweek rounds than England: Spain plays more
+            # weekend-only rounds, so four rounds move midweek.
+            "win_points": 3, "draw_points": 1, "relegation_places": 3,
+            "ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38,
+            "season_start": "2026-08-15", "season_end": "2027-05-23",
+            "weekend_bias": 0.88, "midweek_matchdays": 4,
+        },
+    },
+}
 
 PLAYER_ATTRS = ("ovr", "pac", "sho", "pas", "dri", "def", "phy")
 GK_ATTRS = ("div", "han", "kic", "ref", "spd")
 ## ESPN abbreviates the Manchester clubs differently from the shipped seed.
 ESPN_ALIASES = {"MAN": "MUN", "MNC": "MCI"}
 STYLE_KEYS = (
-    "possession",
-    "tempo",
-    "press",
-    "line",
-    "width",
-    "directness",
-    "crossing",
+    "possession", "tempo", "press", "line", "width", "directness", "crossing",
     "aggression",
 )
+## The eleven roles every shipped squad fields, in formation order.
+ROLE_ORDER = ("GK", "RB", "RCB", "LCB", "LB", "RDM", "LDM", "RW", "CAM", "LW", "ST")
+## ESPN's coarse roster positions (G/D/M/F) map into the slot they fill.
+GROUP_ROLES = {
+    "G": ["GK"],
+    "D": ["RB", "RCB", "LCB", "LB"],
+    "M": ["RDM", "LDM", "RW", "CAM", "LW"],
+    "F": ["ST", "RW", "LW"],
+}
+## La Liga's touchline names for the shipped window, in the seed's
+## initial-and-surname style. ESPN publishes squads but no coach, and the
+## briefing prints a manager line, so the snapshot carries the game's own set.
+MANAGERS = {
+    "BAR": "H. Flick", "RMA": "X. Alonso", "ATM": "D. Simeone",
+    "BET": "M. Pellegrini", "RSO": "S. Francisco", "SEV": "M. Almeyda",
+    "RAC": "J. Alberto", "ATH": "E. Valverde", "ALA": "E. Coudet",
+    "VIL": "Marcelino", "ESP": "M. González", "DEP": "I. Idiakez",
+    "OSA": "J. Arrasate", "CEL": "C. Giráldez", "LEV": "J. Calleja",
+    "RAY": "I. Pérez", "VAL": "C. Corberán", "GET": "J. Bordalás",
+    "ELC": "E. Sarabia", "MCF": "S. Pellicer",
+}
+## Real La Liga grounds, so a seeded club reads like its own stadium rather than
+## a placeholder. Unknown clubs fall back to "<city> Stadium".
+VENUES = {
+    "BAR": ("Spotify Camp Nou", "Barcelona", 99354),
+    "RMA": ("Santiago Bernabéu", "Madrid", 83186),
+    "ATM": ("Riyadh Air Metropolitano", "Madrid", 70460),
+    "BET": ("Benito Villamarín", "Seville", 60721),
+    "RSO": ("Reale Arena", "San Sebastián", 39500),
+    "SEV": ("Ramón Sánchez-Pizjuán", "Seville", 43883),
+    "RAC": ("El Sardinero", "Santander", 22222),
+    "ATH": ("San Mamés", "Bilbao", 53289),
+    "ALA": ("Mendizorroza", "Vitoria-Gasteiz", 19840),
+    "VIL": ("Estadio de la Cerámica", "Villarreal", 23500),
+    "ESP": ("RCDE Stadium", "Barcelona", 40000),
+    "DEP": ("Riazor", "A Coruña", 32660),
+    "OSA": ("El Sadar", "Pamplona", 23576),
+    "CEL": ("Balaídos", "Vigo", 29000),
+    "LEV": ("Ciutat de València", "Valencia", 26354),
+    "RAY": ("Estadio de Vallecas", "Madrid", 14708),
+    "VAL": ("Mestalla", "Valencia", 49430),
+    "GET": ("Coliseum", "Getafe", 16972),
+    "ELC": ("Martínez Valero", "Elche", 31388),
+    "MCF": ("La Rosaleda", "Málaga", 30044),
+}
 
 SCHEMA = """
 CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE competition (
     id TEXT PRIMARY KEY, name TEXT NOT NULL, short_name TEXT NOT NULL,
-    season_label TEXT NOT NULL
+    season_label TEXT NOT NULL, country TEXT NOT NULL DEFAULT '',
+    rules TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE club (
     id TEXT PRIMARY KEY, competition_id TEXT NOT NULL, name TEXT NOT NULL,
@@ -71,6 +155,11 @@ CREATE TABLE club (
     style_width REAL, style_directness REAL, style_crossing REAL,
     style_aggression REAL
 );
+CREATE TABLE competition_member (
+    competition_id TEXT NOT NULL, member_kind TEXT NOT NULL,
+    member_id TEXT NOT NULL, role TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (competition_id, member_kind, member_id)
+);
 CREATE TABLE player (
     id TEXT PRIMARY KEY, club_id TEXT NOT NULL, name TEXT NOT NULL,
     number INTEGER NOT NULL, role TEXT NOT NULL, pos TEXT NOT NULL,
@@ -82,7 +171,8 @@ CREATE TABLE player (
     nationality TEXT, date_of_birth TEXT
 );
 CREATE TABLE table_row (
-    club_id TEXT PRIMARY KEY, position INTEGER NOT NULL, played INTEGER NOT NULL,
+    club_id TEXT PRIMARY KEY, competition_id TEXT NOT NULL,
+    position INTEGER NOT NULL, played INTEGER NOT NULL,
     won INTEGER NOT NULL, drawn INTEGER NOT NULL, lost INTEGER NOT NULL,
     gf INTEGER NOT NULL, ga INTEGER NOT NULL, points INTEGER NOT NULL
 );
@@ -120,6 +210,9 @@ CREATE TABLE sim_club_stat (
 CREATE INDEX player_club_idx ON player (club_id);
 CREATE INDEX fixture_home_idx ON fixture (home_club_id);
 CREATE INDEX fixture_away_idx ON fixture (away_club_id);
+CREATE INDEX fixture_comp_idx ON fixture (competition_id);
+CREATE INDEX table_comp_idx ON table_row (competition_id);
+CREATE INDEX member_comp_idx ON competition_member (competition_id);
 """
 
 # ------------------------------------------------------------------ helpers --
@@ -144,11 +237,57 @@ def initial_key(name: str) -> str:
 
 
 def load(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return upgrade(data)
 
 
 def save(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def upgrade(data: dict) -> dict:
+    """Lift a single-competition snapshot into the multi-competition shape."""
+    if isinstance(data.get("competitions"), list):
+        for club in data.get("clubs", []):
+            club.setdefault("competition_id", "PL")
+        for row in data.get("table", []):
+            row.setdefault("competition_id", "PL")
+        for fx in data.get("fixtures", []):
+            fx.setdefault("competition_id", "PL")
+        return data
+    primary = data.get("competition") or {
+        "id": "PL", "name": "Premier League", "short_name": "PREMIER LEAGUE",
+    }
+    cid = str(primary.get("id", "PL"))
+    spec = COMPETITIONS.get(cid, COMPETITIONS["PL"])
+    data["competitions"] = [{
+        "id": cid, "name": primary.get("name", spec["name"]),
+        "short_name": primary.get("short_name", spec["short_name"]),
+        "country": spec["country"], "espn": spec["espn"], "rules": spec["rules"],
+    }]
+    data.pop("competition", None)
+    for club in data.get("clubs", []):
+        club.setdefault("competition_id", cid)
+    for row in data.get("table", []):
+        row.setdefault("competition_id", cid)
+    for fx in data.get("fixtures", []):
+        fx.setdefault("competition_id", cid)
+    data["schema_version"] = SCHEMA_VERSION
+    return data
+
+
+def spec_for(competition_id: str) -> dict:
+    if competition_id not in COMPETITIONS:
+        raise SystemExit(f"unknown competition {competition_id}; known: {', '.join(COMPETITIONS)}")
+    return COMPETITIONS[competition_id]
+
+
+def club_id_for(competition_id: str, abbr: str) -> str:
+    return spec_for(competition_id)["prefix"] + abbr.upper()
+
+
+def comp_clubs(snapshot: dict, competition_id: str) -> list[dict]:
+    return [c for c in snapshot.get("clubs", []) if str(c.get("competition_id", "PL")) == competition_id]
 
 
 def get_json(url: str, tries: int = 4, missing_ok: bool = False) -> dict:
@@ -185,12 +324,14 @@ def get_json(url: str, tries: int = 4, missing_ok: bool = False) -> dict:
 # -------------------------------------------------------------------- fetch --
 
 
-def fetch_table(season: int, snapshot: dict) -> dict[str, str]:
+def fetch_table(competition_id: str, season: int, snapshot: dict) -> dict[str, str]:
     """Fill table rows; return ESPN team id -> club id."""
-    data = get_json(f"https://site.api.espn.com/apis/v2/sports/soccer/{LEAGUE}/standings?season={season}")
+    league = spec_for(competition_id)["espn"]
+    data = get_json(f"https://site.api.espn.com/apis/v2/sports/soccer/{league}/standings?season={season}")
     entries = data["children"][0]["standings"]["entries"]
-    by_abbr = {c["abbr"].upper(): c["id"] for c in snapshot["clubs"]}
-    by_name = {slug(c["name"]): c["id"] for c in snapshot["clubs"]}
+    clubs = comp_clubs(snapshot, competition_id)
+    by_abbr = {c["abbr"].upper(): c["id"] for c in clubs}
+    by_name = {slug(c["name"]): c["id"] for c in clubs}
     rows: dict[str, dict] = {}
     espn_ids: dict[str, str] = {}
     for entry in entries:
@@ -203,7 +344,7 @@ def fetch_table(season: int, snapshot: dict) -> dict[str, str]:
         espn_ids[str(entry["team"]["id"])] = club_id
         stats = {s["name"]: s.get("value") for s in entry["stats"] if s.get("value") is not None}
         rows[club_id] = {
-            "club_id": club_id,
+            "club_id": club_id, "competition_id": competition_id,
             "position": int(stats.get("rank", 0)),
             "played": int(stats.get("gamesPlayed", 0)),
             "won": int(stats.get("wins", 0)),
@@ -213,15 +354,17 @@ def fetch_table(season: int, snapshot: dict) -> dict[str, str]:
             "ga": int(stats.get("pointsAgainst", 0)),
             "points": int(stats.get("points", 0)),
         }
-    snapshot["table"] = sorted(rows.values(), key=lambda r: r["position"])
+    others = [r for r in snapshot.get("table", []) if str(r.get("competition_id", "PL")) != competition_id]
+    snapshot["table"] = others + sorted(rows.values(), key=lambda r: r["position"])
     return espn_ids
 
 
-def fetch_fixtures(season: int, espn_ids: dict[str, str]) -> list[dict]:
-    by_espn = espn_ids
+def fetch_fixtures(competition_id: str, season: int, espn_ids: dict[str, str]) -> list[dict]:
+    league = spec_for(competition_id)["espn"]
+    prefix = slug(competition_id)
     events: dict[str, dict] = {}
     for year in (season, season + 1):
-        data = get_json(f"{ESPN_SITE}/soccer/{LEAGUE}/scoreboard?dates={year}&limit=1000")
+        data = get_json(f"{ESPN_SITE}/soccer/{league}/scoreboard?dates={year}&limit=1000")
         for event in data.get("events", []):
             if int(event.get("season", {}).get("year", 0)) != season:
                 continue
@@ -230,8 +373,8 @@ def fetch_fixtures(season: int, espn_ids: dict[str, str]) -> list[dict]:
     for event in sorted(events.values(), key=lambda e: e["date"]):
         comp = event["competitions"][0]
         sides = {c["homeAway"]: c for c in comp["competitors"]}
-        home = by_espn.get(str(sides["home"]["team"]["id"]))
-        away = by_espn.get(str(sides["away"]["team"]["id"]))
+        home = espn_ids.get(str(sides["home"]["team"]["id"]))
+        away = espn_ids.get(str(sides["away"]["team"]["id"]))
         if home is None or away is None:
             continue
         played = bool(comp["status"]["type"].get("completed")) or comp["status"]["type"]["name"] in (
@@ -240,7 +383,8 @@ def fetch_fixtures(season: int, espn_ids: dict[str, str]) -> list[dict]:
         )
         fixtures.append(
             {
-                "id": f"espn-{event['id']}",
+                "id": f"{prefix}-espn-{event['id']}",
+                "competition_id": competition_id,
                 "matchday": int(event.get("week", {}).get("number", 0) or 0),
                 "kickoff": str(event["date"])[:10],
                 "home": home,
@@ -251,19 +395,6 @@ def fetch_fixtures(season: int, espn_ids: dict[str, str]) -> list[dict]:
             }
         )
     return fixtures
-
-
-def _leader_ids(season: int) -> dict[str, str]:
-    """ESPN athlete id -> club abbreviation for the goals/assists leaders."""
-    data = get_json(f"{ESPN_CORE}/sports/soccer/leagues/{LEAGUE}/seasons/{season}/types/1/leaders")
-    out: dict[str, str] = {}
-    for cat in data.get("categories", []):
-        if cat["name"] not in ("goalsLeaders", "assistsLeaders"):
-            continue
-        for leader in cat.get("leaders", []):
-            ref = leader["athlete"]["$ref"].split("/athletes/")[-1].split("?")[0]
-            out[ref] = ""
-    return out
 
 
 def _stat_map(payload: dict) -> dict[str, float]:
@@ -277,16 +408,17 @@ def _stat_map(payload: dict) -> dict[str, float]:
     return out
 
 
-def _player_stats(athlete_id: str, season: int) -> dict:
+def _player_stats(competition_id: str, athlete_id: str, season: int) -> dict:
+    league = spec_for(competition_id)["espn"]
     season_stats = _stat_map(
         get_json(
-            f"{ESPN_CORE}/sports/soccer/leagues/{LEAGUE}/seasons/{season}/types/1/athletes/{athlete_id}/statistics/0",
+            f"{ESPN_CORE}/sports/soccer/leagues/{league}/seasons/{season}/types/1/athletes/{athlete_id}/statistics/0",
             missing_ok=True,
         )
     )
     career = _stat_map(
         get_json(
-            f"{ESPN_CORE}/sports/soccer/leagues/{LEAGUE}/athletes/{athlete_id}/statistics/0",
+            f"{ESPN_CORE}/sports/soccer/leagues/{league}/athletes/{athlete_id}/statistics/0",
             missing_ok=True,
         )
     )
@@ -310,11 +442,12 @@ def _player_stats(athlete_id: str, season: int) -> dict:
     }
 
 
-def fetch_players(season: int, snapshot: dict, espn_ids: dict[str, str]) -> None:
+def fetch_players(competition_id: str, season: int, snapshot: dict, espn_ids: dict[str, str]) -> None:
     """Match shard players to ESPN rosters, then pull identity and figures."""
+    league = spec_for(competition_id)["espn"]
 
     def roster(club_id: str, espn_team: str) -> tuple[str, list]:
-        data = get_json(f"{ESPN_SITE}/soccer/{LEAGUE}/teams/{espn_team}/roster?season={season}")
+        data = get_json(f"{ESPN_SITE}/soccer/{league}/teams/{espn_team}/roster?season={season}")
         return club_id, data.get("athletes", [])
 
     rosters: dict[str, list] = {}
@@ -327,7 +460,7 @@ def fetch_players(season: int, snapshot: dict, espn_ids: dict[str, str]) -> None
     season_stats: list[dict] = []
     career_stats: list[dict] = []
     matched: list[tuple[dict, str]] = []
-    for club in snapshot["clubs"]:
+    for club in comp_clubs(snapshot, competition_id):
         athletes = rosters.get(club["id"], [])
         for player in club["players"]:
             key = (surname_key(player["name"]), initial_key(player["name"]))
@@ -343,34 +476,249 @@ def fetch_players(season: int, snapshot: dict, espn_ids: dict[str, str]) -> None
 
     def pull(item: tuple[dict, str]) -> tuple[dict, dict]:
         player, athlete_id = item
-        return player, _player_stats(athlete_id, season)
+        return player, _player_stats(competition_id, athlete_id, season)
 
     with ThreadPoolExecutor(max_workers=6) as pool:
         for player, stats in pool.map(pull, matched):
             s = stats["season"]
             if s["matches"] > 0:
-                season_stats.append({"player_id": player["id"], "season_label": snapshot["season_label"], **s})
+                season_stats.append({
+                    "player_id": player["id"], "competition_id": competition_id,
+                    "season_label": snapshot["season_label"], **s,
+                })
             c = stats["career"]
             if c["matches"] > 0:
                 career_stats.append({"player_id": player["id"], **c})
 
-    snapshot["season_stats"] = sorted(season_stats, key=lambda r: (-r["goals"], -r["assists"], r["player_id"]))
-    snapshot["career"] = career_stats
+    others = [r for r in snapshot.get("season_stats", [])
+              if str(r.get("competition_id", "PL")) != competition_id]
+    snapshot["season_stats"] = others + sorted(
+        season_stats, key=lambda r: (-r["goals"], -r["assists"], r["player_id"]))
+    kept = {str(c["player_id"]) for c in career_stats}
+    snapshot["career"] = [c for c in snapshot.get("career", []) if str(c["player_id"]) not in kept] + career_stats
+
+
+# --------------------------------------------------------------------- seed --
+
+
+def _rgb(hex_text: str) -> tuple[int, int, int]:
+    text = (hex_text or "888888").strip().lstrip("#")
+    if len(text) != 6:
+        text = "888888"
+    return int(text[0:2], 16), int(text[2:4], 16), int(text[4:6], 16)
+
+
+def _hex(rgb: tuple[float, float, float]) -> str:
+    return "#%02x%02x%02x" % tuple(max(0, min(255, int(v))) for v in rgb)
+
+
+def _shade(hex_text: str, factor: float) -> str:
+    r, g, b = _rgb(hex_text)
+    return _hex((r * factor, g * factor, b * factor))
+
+
+def _ink(hex_text: str) -> str:
+    r, g, b = _rgb(hex_text)
+    return "#121212" if (0.299 * r + 0.587 * g + 0.114 * b) > 150 else "#ffffff"
+
+
+def _jitter(text: str, span: int) -> int:
+    digest = hashlib.sha1(text.encode("utf-8")).digest()
+    return int(digest[0]) % (span * 2 + 1) - span
+
+
+def _clamp(value: float, low: int = 35, high: int = 93) -> int:
+    return max(low, min(high, int(round(value))))
+
+
+def _attributes(club_base: float, role: str, name: str) -> dict:
+    wobble = _jitter(name, 3)
+    base = club_base + wobble
+    if role == "GK":
+        return {
+            "ovr": _clamp(base + 1), "pac": _clamp(base - 24), "sho": _clamp(base - 50),
+            "pas": _clamp(base - 20), "dri": _clamp(base - 24), "def": _clamp(base - 48),
+            "phy": _clamp(base - 4),
+            "gk": {
+                "div": _clamp(base + 2), "han": _clamp(base + 1), "kic": _clamp(base - 8),
+                "ref": _clamp(base + 2), "spd": _clamp(base - 22),
+            },
+        }
+    line = "D" if role in ("RB", "RCB", "LCB", "LB") else (
+        "F" if role in ("ST", "RW", "LW") else "M")
+    if line == "D":
+        attrs = {"pac": base - 2, "sho": base - 26, "pas": base - 7,
+                 "dri": base - 10, "def": base + 4, "phy": base + 3}
+    elif line == "F":
+        attrs = {"pac": base + 2, "sho": base + 5, "pas": base - 2,
+                 "dri": base + 4, "def": base - 21, "phy": base - 3}
+    else:
+        attrs = {"pac": base - 1, "sho": base - 8, "pas": base + 3,
+                 "dri": base + 2, "def": base - 4, "phy": base - 2}
+    attrs = {k: _clamp(v) for k, v in attrs.items()}
+    attrs["ovr"] = _clamp(club_base + wobble / 2.0)
+    return attrs
+
+
+def _role_for(group: str, counts: dict[str, int]) -> str:
+    """The role in this player's line that the squad has fewest of."""
+    options = GROUP_ROLES.get(group, ["CAM"])
+    return min(options, key=lambda role: (counts.get(role, 0), ROLE_ORDER.index(role)))
+
+
+def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
+    """Create a competition's clubs and squads from ESPN rosters."""
+    spec = spec_for(competition_id)
+    league = spec["espn"]
+    data = get_json(f"https://site.api.espn.com/apis/v2/sports/soccer/{league}/standings?season={season}")
+    entries = data["children"][0]["standings"]["entries"]
+    rank_of = {}
+    for entry in entries:
+        stats = {s["name"]: s.get("value") for s in entry["stats"] if s.get("value") is not None}
+        rank_of[str(entry["team"]["id"])] = int(stats.get("rank", 20))
+
+    def build(entry: dict) -> dict:
+        team = entry["team"]
+        abbr = team["abbreviation"].upper()
+        club_id = club_id_for(competition_id, abbr)
+        meta = get_json(f"{ESPN_SITE}/soccer/{league}/teams/{team['id']}").get("team", {})
+        roster = get_json(
+            f"{ESPN_SITE}/soccer/{league}/teams/{team['id']}/roster?season={season}"
+        ).get("athletes", [])
+        color = _hex(_rgb(meta.get("color", team.get("color", "888888"))))
+        rank = rank_of.get(str(team["id"]), 20)
+        # Club strength runs 84 at the top down to 71 at the bottom: the same
+        # band the hand-authored Premier League squads occupy.
+        club_base = 84.0 - float(rank - 1) * 0.7
+        ground, city, capacity = VENUES.get(
+            abbr, (f"{team.get('location', team['displayName'])} Stadium",
+                   team.get("location", ""), 25000))
+        players: list[dict] = []
+        seen_ids: set[str] = set()
+        role_counts: dict[str, int] = {}
+        for athlete in roster:
+            name = str(athlete.get("shortName") or athlete.get("displayName") or "")
+            if name == "":
+                continue
+            group = str((athlete.get("position") or {}).get("abbreviation", "M"))
+            role = _role_for(group, role_counts)
+            role_counts[role] = role_counts.get(role, 0) + 1
+            suffix = f"{slug(initial_key(name))}-{slug(name.split()[-1])}" if initial_key(name) else slug(name)
+            player_id = f"{club_id}-{suffix}"
+            n = 2
+            while player_id in seen_ids:
+                player_id = f"{club_id}-{suffix}-{n}"
+                n += 1
+            seen_ids.add(player_id)
+            attrs = _attributes(club_base, role, name + club_id)
+            height = athlete.get("height")
+            cm = int(round(float(height) * 2.54)) if height else 180
+            player = {
+                "id": player_id, "name": name,
+                "number": int(str(athlete.get("jersey") or 0).replace("'", "") or 0) or len(players) + 1,
+                "role": role, "pos": role,
+                **{k: attrs[k] for k in PLAYER_ATTRS},
+                "height": max(160, min(210, cm)),
+                "squad": "starter" if len(players) < 11 else "bench",
+                "espn_id": str(athlete.get("id", "")),
+                "age": int(athlete.get("age", 0) or 0),
+                "nationality": str(athlete.get("citizenship") or ""),
+                "date_of_birth": str(athlete.get("dateOfBirth", ""))[:10],
+            }
+            if role == "GK":
+                player["gk"] = attrs["gk"]
+            players.append(player)
+        # ESPN lists keepers first; pick one body per formation slot so the XI
+        # really covers all eleven roles, then order the sheet by line.
+        rank_role = {role: i for i, role in enumerate(ROLE_ORDER)}
+        used: set[str] = set()
+        for role in ROLE_ORDER:
+            pool = [p for p in players if p["role"] == role and p["id"] not in used]
+            if pool:
+                best = max(pool, key=lambda p: p["ovr"])
+                used.add(best["id"])
+            elif len(used) < 11:
+                rest = [p for p in players if p["id"] not in used]
+                if rest:
+                    used.add(max(rest, key=lambda p: p["ovr"])["id"])
+        for player in players:
+            player["squad"] = "starter" if player["id"] in used else "bench"
+        players.sort(key=lambda p: (
+            0 if p["squad"] == "starter" else 1,
+            rank_role.get(p["role"], 99), -p["ovr"]))
+        # A shirt list, not the whole roster: the XI plus fifteen cover every
+        # line, and an ESPN roster of 34 leaves room for the bench.
+        players = players[:26]
+        strength = float(rank)
+        profile = 1.0 - (strength - 1.0) / 19.0
+        style = {
+            "possession": round(0.44 + 0.24 * profile, 2),
+            "tempo": round(0.48 + 0.12 * profile, 2),
+            "press": round(0.46 + 0.24 * profile, 2),
+            "line": round(0.50 + 0.14 * profile, 2),
+            "width": 0.58, "directness": round(0.62 - 0.16 * profile, 2),
+            "crossing": 0.52, "aggression": round(0.48 + 0.10 * (1.0 - profile), 2),
+        }
+        return {
+            "id": club_id, "competition_id": competition_id,
+            "name": team["displayName"], "short": team.get("shortDisplayName", team["displayName"]),
+            "abbr": abbr, "nickname": meta.get("nickname", ""),
+            "manager": MANAGERS.get(abbr, "") if competition_id == "LL" else "", "stadium": ground, "city": city, "capacity": int(capacity),
+            "formation": "4-2-3-1", "color": color,
+            "color_dark": _shade(color, 0.65), "color_light": _shade(color, 1.35),
+            "shorts": "#ffffff", "gk_color": "#1a1a1a", "text": _ink(color),
+            "style": style, "players": players,
+        }
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        seeded = list(pool.map(build, entries))
+    kept = [c for c in snapshot.get("clubs", [])
+            if str(c.get("competition_id", "PL")) != competition_id]
+    snapshot["clubs"] = kept + seeded
+
+
+def cmd_seed(args: argparse.Namespace) -> int:
+    snapshot = load(args.snapshot)
+    targets = list(COMPETITIONS) if args.competition == "all" else [args.competition]
+    snapshot["season_label"] = f"{args.season}-{str(args.season + 1)[2:]}"
+    for cid in targets:
+        spec = spec_for(cid)
+        snapshot = upgrade(snapshot)
+        if not any(str(c.get("id")) == cid for c in snapshot["competitions"]):
+            snapshot["competitions"].append({
+                "id": cid, "name": spec["name"], "short_name": spec["short_name"],
+                "country": spec["country"], "espn": spec["espn"], "rules": spec["rules"],
+            })
+        seed_competition(cid, args.season, snapshot)
+        print(f"seeded {cid}: {len(comp_clubs(snapshot, cid))} clubs")
+    snapshot["db_version"] = int(snapshot.get("db_version", 1)) + (1 if args.bump_version else 0)
+    snapshot["schema_version"] = SCHEMA_VERSION
+    save(args.snapshot, snapshot)
+    return 0
 
 
 def cmd_fetch(args: argparse.Namespace) -> int:
     if args.source != SOURCE_ESPN:
         raise SystemExit("only --source espn is implemented; do not mix sources in one run")
     snapshot = load(args.snapshot)
+    targets = list(COMPETITIONS) if args.competition == "all" else [args.competition]
     snapshot["source"] = "ESPN"
     snapshot["snapshot_date"] = args.date or time.strftime("%Y-%m-%d", time.gmtime())
     snapshot["season_label"] = f"{args.season}-{str(args.season + 1)[2:]}"
-    espn_ids = fetch_table(args.season, snapshot)
-    if len(espn_ids) < 20:
-        raise SystemExit(f"ESPN standings covered {len(espn_ids)} clubs; expected 20")
-    snapshot["fixtures"] = fetch_fixtures(args.season, espn_ids)
-    fetch_players(args.season, snapshot, espn_ids)
+    for cid in targets:
+        if len(comp_clubs(snapshot, cid)) < 20:
+            raise SystemExit(f"{cid} has no seeded clubs; run seed --competition {cid} first")
+        espn_ids = fetch_table(cid, args.season, snapshot)
+        if len(espn_ids) < 20:
+            raise SystemExit(f"ESPN standings covered {len(espn_ids)} {cid} clubs; expected 20")
+        fixtures = fetch_fixtures(cid, args.season, espn_ids)
+        others = [fx for fx in snapshot.get("fixtures", [])
+                  if str(fx.get("competition_id", "PL")) != cid]
+        snapshot["fixtures"] = others + fixtures
+        fetch_players(cid, args.season, snapshot, espn_ids)
+        print(f"fetched {cid}: {len(fixtures)} fixtures")
     snapshot["db_version"] = int(snapshot.get("db_version", 1)) + (1 if args.bump_version else 0)
+    snapshot["schema_version"] = SCHEMA_VERSION
     save(args.snapshot, snapshot)
     print(
         f"snapshot {snapshot['season_label']}: {len(snapshot['table'])} table rows, "
@@ -384,6 +732,8 @@ def cmd_fetch(args: argparse.Namespace) -> int:
 
 
 def build_db(snapshot: dict) -> dict:
+    competitions = snapshot["competitions"]
+    primary = competitions[0]
     meta = {
         "schema_version": str(SCHEMA_VERSION),
         "db_version": str(snapshot["db_version"]),
@@ -391,24 +741,28 @@ def build_db(snapshot: dict) -> dict:
         "snapshot_date": snapshot["snapshot_date"],
         "source": snapshot["source"],
         "ratings_source": snapshot.get("ratings_source", ""),
-        "league_name": snapshot["competition"]["name"],
+        "league_name": primary["name"],
+        "competition_ids": ",".join(str(c["id"]) for c in competitions),
         "referee": snapshot.get("referee", ""),
     }
     SEED_DB.unlink(missing_ok=True)
     con = sqlite3.connect(SEED_DB)
     con.executescript(SCHEMA)
     con.executemany("INSERT INTO metadata VALUES (?, ?)", meta.items())
-    comp = snapshot["competition"]
-    con.execute(
-        "INSERT INTO competition VALUES (?, ?, ?, ?)",
-        (comp["id"], comp["name"], comp["short_name"], snapshot["season_label"]),
-    )
+    for comp in competitions:
+        con.execute(
+            "INSERT INTO competition (id, name, short_name, season_label, country, rules) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (comp["id"], comp["name"], comp["short_name"], snapshot["season_label"],
+             comp.get("country", ""), json.dumps(comp.get("rules", {}), sort_keys=True)),
+        )
     for club in snapshot["clubs"]:
+        comp_id = str(club.get("competition_id", primary["id"]))
         style = club.get("style", {})
         con.execute(
             "INSERT INTO club VALUES (" + ",".join("?" * 25) + ")",
             (
-                club["id"], comp["id"], club["name"], club["short"], club["abbr"],
+                club["id"], comp_id, club["name"], club["short"], club["abbr"],
                 club.get("nickname", ""), club.get("manager", ""), club["stadium"],
                 club["city"], int(club["capacity"]), club["formation"],
                 club["color"], club["color_dark"], club["color_light"],
@@ -416,6 +770,9 @@ def build_db(snapshot: dict) -> dict:
                 *[float(style.get(k, 0.5)) for k in STYLE_KEYS],
             ),
         )
+        con.execute(
+            "INSERT INTO competition_member (competition_id, member_kind, member_id, role) "
+            "VALUES (?, 'club', ?, 'member');", (comp_id, club["id"]))
         for ord, p in enumerate(club["players"]):
             gk = p.get("gk") or {}
             con.execute(
@@ -428,16 +785,21 @@ def build_db(snapshot: dict) -> dict:
                     p.get("nationality", ""), p.get("date_of_birth", ""),
                 ),
             )
+            con.execute(
+                "INSERT OR IGNORE INTO competition_member (competition_id, member_kind, member_id, role) "
+                "VALUES (?, 'player', ?, 'player');", (comp_id, p["id"]))
     for row in snapshot.get("table", []):
+        comp_id = str(row.get("competition_id", primary["id"]))
         con.execute(
-            "INSERT INTO table_row VALUES (?,?,?,?,?,?,?,?,?)",
-            (row["club_id"], row["position"], row["played"], row["won"], row["drawn"],
-             row["lost"], row["gf"], row["ga"], row["points"]),
+            "INSERT INTO table_row VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (row["club_id"], comp_id, row["position"], row["played"], row["won"],
+             row["drawn"], row["lost"], row["gf"], row["ga"], row["points"]),
         )
     for fx in snapshot.get("fixtures", []):
+        comp_id = str(fx.get("competition_id", primary["id"]))
         con.execute(
             "INSERT INTO fixture VALUES (?,?,?,?,?,?,?,?,?)",
-            (fx["id"], comp["id"], fx["matchday"], fx["kickoff"], fx["home"], fx["away"],
+            (fx["id"], comp_id, fx["matchday"], fx["kickoff"], fx["home"], fx["away"],
              fx["home_goals"], fx["away_goals"], fx["played"]),
         )
     for s in snapshot.get("season_stats", []):
@@ -454,45 +816,84 @@ def build_db(snapshot: dict) -> dict:
     con.commit()
     clubs = con.execute("SELECT COUNT(*) FROM club").fetchone()[0]
     players = con.execute("SELECT COUNT(*) FROM player").fetchone()[0]
+    comps = con.execute("SELECT COUNT(*) FROM competition").fetchone()[0]
     con.close()
-    return {"clubs": clubs, "players": players, "bytes": SEED_DB.stat().st_size}
+    return {"clubs": clubs, "players": players, "competitions": comps, "bytes": SEED_DB.stat().st_size}
 
 
 def cmd_build(args: argparse.Namespace) -> int:
     snapshot = load(args.snapshot)
     summary = build_db(snapshot)
     print(
-        f"seed {SEED_DB.relative_to(ROOT)}: {summary['clubs']} clubs, "
-        f"{summary['players']} players, {summary['bytes']} bytes, db_version {snapshot['db_version']}"
+        f"seed {SEED_DB.relative_to(ROOT)}: {summary['competitions']} competitions, "
+        f"{summary['clubs']} clubs, {summary['players']} players, {summary['bytes']} bytes, "
+        f"db_version {snapshot['db_version']}"
     )
     return 0
+
+
+def _audit_ids(snapshot: dict) -> list[str]:
+    problems: list[str] = []
+    club_ids = [str(c["id"]) for c in snapshot["clubs"]]
+    if len(club_ids) != len(set(club_ids)):
+        problems.append("club ids collide across competitions")
+    player_ids = [str(p["id"]) for c in snapshot["clubs"] for p in c["players"]]
+    if len(player_ids) != len(set(player_ids)):
+        problems.append("player ids collide across competitions")
+    fixture_ids = [str(fx["id"]) for fx in snapshot.get("fixtures", [])]
+    if len(fixture_ids) != len(set(fixture_ids)):
+        problems.append("fixture ids collide across competitions")
+    return problems
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
     snapshot = load(args.snapshot)
     problems: list[str] = []
+    comps = [str(c["id"]) for c in snapshot["competitions"]]
     if SEED_DB.exists():
         con = sqlite3.connect(SEED_DB)
         meta = dict(con.execute("SELECT key, value FROM metadata").fetchall())
         clubs = con.execute("SELECT COUNT(*) FROM club").fetchone()[0]
         players = con.execute("SELECT COUNT(*) FROM player").fetchone()[0]
         starters = con.execute("SELECT COUNT(*) FROM player WHERE squad='starter'").fetchone()[0]
+        comp_rows = [r[0] for r in con.execute("SELECT id FROM competition ORDER BY id;").fetchall()]
+        memberships = con.execute("SELECT COUNT(*) FROM competition_member;").fetchone()[0]
         con.close()
         if meta.get("db_version") != str(snapshot["db_version"]):
             problems.append("seed db_version does not match the snapshot; run build")
+        if meta.get("schema_version") != str(SCHEMA_VERSION):
+            problems.append("seed schema_version does not match the tool; run build")
         if clubs != len(snapshot["clubs"]):
             problems.append("club count differs from the snapshot")
+        if sorted(comp_rows) != sorted(comps):
+            problems.append("competition rows differ from the snapshot")
+        if memberships < clubs + players // 2:
+            problems.append("competition membership rows are missing")
         if starters != 11 * len(snapshot["clubs"]):
             problems.append("every club must ship eleven starters")
-        print(f"seed: {clubs} clubs, {players} players, starters {starters}, metadata {meta}")
+        print(f"seed: {len(comp_rows)} competitions, {clubs} clubs, {players} players, "
+              f"starters {starters}, metadata {meta}")
     else:
         problems.append(f"missing {SEED_DB.relative_to(ROOT)}; run build")
+    for cid in comps:
+        clubs = comp_clubs(snapshot, cid)
+        if len(clubs) != 20:
+            problems.append(f"{cid}: {len(clubs)} clubs, expected 20")
+        table_rows = [r for r in snapshot.get("table", [])
+                      if str(r.get("competition_id", "PL")) == cid]
+        if len(table_rows) != 20:
+            problems.append(f"{cid}: {len(table_rows)} table rows, expected 20")
+        fixtures = [fx for fx in snapshot.get("fixtures", [])
+                    if str(fx.get("competition_id", "PL")) == cid]
+        if len(fixtures) != 380:
+            problems.append(f"{cid}: {len(fixtures)} fixtures, expected 380")
     for club in snapshot["clubs"]:
         ids = [p["id"] for p in club["players"]]
         if len(ids) != len(set(ids)):
             problems.append(f"{club['id']}: duplicate player ids")
         if sum(1 for p in club["players"] if p["squad"] == "starter") != 11:
             problems.append(f"{club['id']}: needs eleven starters")
+    problems.extend(_audit_ids(snapshot))
     if problems:
         print("\n".join(f"FAIL {p}" for p in problems), file=sys.stderr)
         return 1
@@ -504,9 +905,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--snapshot", type=Path, default=SNAPSHOT)
     sub = parser.add_subparsers(dest="cmd", required=True)
+    seed = sub.add_parser("seed", help="create a competition's clubs and squads from ESPN")
+    seed.add_argument("--competition", default="LL", choices=list(COMPETITIONS) + ["all"])
+    seed.add_argument("--season", type=int, default=2026)
+    seed.add_argument("--bump-version", action="store_true")
+    seed.set_defaults(func=cmd_seed)
     fetch = sub.add_parser("fetch", help="refresh league data from one source")
     fetch.add_argument("--source", default=SOURCE_ESPN)
-    fetch.add_argument("--season", type=int, default=2025)
+    fetch.add_argument("--season", type=int, default=2026)
+    fetch.add_argument("--competition", default="all", choices=list(COMPETITIONS) + ["all"])
     fetch.add_argument("--date", default="")
     fetch.add_argument("--bump-version", action="store_true")
     fetch.set_defaults(func=cmd_fetch)

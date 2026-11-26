@@ -154,11 +154,17 @@ func _draw() -> void:
 	chrome.buttons.clear()
 	var vp := design_vp()
 	var p := HudPaint.new(chrome, vp)
+	# The pill never hides (#158), so its press is read before any band's: a card
+	# that grows into its corner can never take the door back (#202).
+	chrome.add_button("hud", HudLayout.hud_toggle_rect(vp, touch), toggle_label(), "U")
 	p.followed = followed
 	roster_band.ui_scale = ui_scale
 	roster_band.touch = touch
 	roster_band.mouse = mouse
 	banners_band.touch = touch
+	# The chrome is gone only once it has finished sliding: until then its doors
+	# still answer, and a card promising its own press would be a second door.
+	banners_band.chrome_hidden = not hud_visible and slide <= 0.0
 	var lift: float = 1.0 - slide
 	# The token numbers belong to the players, not to a band: they fade with the
 	# chrome instead of sliding off with it.
@@ -199,11 +205,15 @@ func _draw() -> void:
 	_draw_toggle(p, vp)
 
 ## The one door that never hides: a discreet pill above the ticker, labelled with
-## what the press does, and the key that does the same on a keyboard (#158).
+## what the press does, and the key that does the same on a keyboard (#158). Its
+## press is registered before the bands paint, so the paint here only draws it.
+func toggle_label() -> String:
+	return "HIDE HUD" if hud_visible else "SHOW HUD"
+
 func _draw_toggle(p: HudPaint, vp: Vector2) -> void:
 	var r: Rect2 = HudLayout.hud_toggle_rect(vp, touch)
 	var hovered := r.has_point(mouse)
-	var label := "HIDE HUD" if hud_visible else "SHOW HUD"
+	var label := toggle_label()
 	p.panel(self, Color(0.02, 0.03, 0.04, 0.92 if hovered else 0.62), r, 8,
 		Color(1, 1, 1, 0.18 if hovered else 0.10))
 	var size := 11
@@ -212,7 +222,6 @@ func _draw_toggle(p: HudPaint, vp: Vector2) -> void:
 		UiChrome.C_TEXT if hovered or not hud_visible else UiChrome.C_DIM, f_bold)
 	if not touch:
 		p.text_r(self, r.end.x - 12.0, r.position.y + r.size.y * 0.5 + 4.0, "U", 10, UiChrome.C_DIM, f_med)
-	p.add_button("hud", r, label, "U")
 
 ## The manager card is a whole-card dismiss target and sits in front of the bar.
 func button_at(p: Vector2) -> String:

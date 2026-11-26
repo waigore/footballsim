@@ -107,8 +107,8 @@ const FORMATIONS := {
 	},
 }
 
-static func team_ids() -> Array:
-	return PLRepository.shared().club_ids()
+static func team_ids(competition_id: String = "") -> Array:
+	return PLRepository.shared().club_ids(competition_id)
 
 static func get_team(id: String) -> Dictionary:
 	return PLRepository.shared().team(id)

@@ -6,8 +6,9 @@ extends RefCounted
 ##
 ## It was half of `LeagueSheet`'s body — three row grammars sharing one paint
 ## method behind a kind switch, and the live file in the league UI. Split out,
-## this sheet owns the plan and its rows, `LeagueSideTable` the hub's side
-## standings, and the hub keeps the pose: the chrome, the chips and the doors.
+## this sheet owns the plan and its rows, and the hub keeps the pose: the chrome,
+## the chips and the doors. On a mixed day the rows group under a league heading
+## (#189), so two leagues never read as one interleaved list.
 ##
 ## Same contract as the other sheets: `layout()` turns the plan into rows with
 ## rects, `draw()` paints exactly those rects. Geometry is the hub's payload, so
@@ -26,7 +27,18 @@ static func layout(plan: Array, interest: Dictionary, left: float, right: float,
 		top: float) -> Array:
 	var items: Array = []
 	var y := top
+	var last_comp := ""
+	var multi := _leagues(plan) > 1
 	for fx in plan:
+		# A new league on a mixed day opens its own group: the hub reads one
+		# league's fixtures, then the other's, never one interleaved list.
+		var comp := str(fx.get("competition_id", ""))
+		if multi and comp != last_comp:
+			last_comp = comp
+			items.append({"id": "", "kind": "league_head",
+				"rect": Rect2(left, y, right - left, 18.0),
+				"competition": comp, "matchday": int(fx.get("matchday", 1))})
+			y += 18.0 + LeagueChrome.ROW_GAP
 		# A played row is a result block: the score line, both full names and
 		# each side's events under its own name (#168). A pending row keeps the
 		# planner's one line.
@@ -49,6 +61,14 @@ static func layout(plan: Array, interest: Dictionary, left: float, right: float,
 		y += h + LeagueChrome.ROW_GAP
 	return items
 
+## How many competitions a day's plan spans: a heading is only worth its line
+## when the list really holds two leagues.
+static func _leagues(plan: Array) -> int:
+	var ids := {}
+	for fx in plan:
+		ids[str((fx as Dictionary).get("competition_id", ""))] = true
+	return ids.size()
+
 # gd-tools: no cover start
 
 ## Paint the plan rows this sheet laid out.
@@ -58,7 +78,10 @@ func draw(c: CanvasItem, items: Array, fonts: Dictionary) -> void:
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
-		if kind == "row":
+		if kind == "league_head":
+			LeagueExtra.draw_league_head(c, rect, str(item.get("competition", "")),
+				int(item.get("matchday", 1)), fonts)
+		elif kind == "row":
 			LeaguePlanRows.paint_fixture(c, rect, item["fixture"], fonts, cache, names,
 				item["home_ink"], item["away_ink"])
 		elif kind == "chip" and item.get("fixture") is Dictionary:

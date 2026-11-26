@@ -131,19 +131,33 @@ static func effective(s: Dictionary) -> Vector2:
 		float(s["defence"]) * 0.75 + float(s["midfield"]) * 0.25)
 
 ## League means over every club in the data set (cached for the session).
-static func league_means() -> Dictionary:
-	if not _means_cache.is_empty():
-		return _means_cache
+## The rating means the model measures a side against. One competition's own
+## league, so a La Liga club is not read against an English average (or the
+## reverse): the two top flights ship different squad strengths.
+static func league_means(competition_id: String = "PL") -> Dictionary:
+	# The cache is per bound file, not just per competition: a session opens the
+	# seed probe, the cached seed and a save, and a mean read before the clubs
+	# were there must never stick to the next file.
+	var key := PLDatabase.current_path() + "|" + competition_id
+	if _means_cache.has(key):
+		return _means_cache[key]
 	var att := 0.0
 	var dfn := 0.0
 	var n := 0
-	for id in TeamData.team_ids():
+	for id in TeamData.team_ids(competition_id):
 		var eff := effective(team_strength(TeamData.get_team(id)))
 		att += eff.x
 		dfn += eff.y
 		n += 1
-	_means_cache = {"attack": att / maxf(float(n), 1.0), "defence": dfn / maxf(float(n), 1.0), "clubs": n}
-	return _means_cache
+	var out := {"attack": att / maxf(float(n), 1.0), "defence": dfn / maxf(float(n), 1.0), "clubs": n}
+	_means_cache[key] = out
+	return out
+
+## The competition a fixture belongs to, read from the home club's own row: a
+## cross-league friendly is measured against the home side's league.
+static func competition_of(club_id: String) -> String:
+	var comp := str(TeamData.get_team(club_id).get("competition_id", ""))
+	return comp if comp != "" else "PL"
 
 # ---------------------------------------------------------------- lambdas ---
 
@@ -153,7 +167,7 @@ static func league_means() -> Dictionary:
 ## One exponent source: the model's λ and the engine's shot-contest calibration
 ## both read these numbers instead of deriving rating gaps of their own.
 static func exponent_terms(home: String, away: String) -> Dictionary:
-	var m := league_means()
+	var m := league_means(competition_of(home))
 	var h := effective(team_strength(TeamData.get_team(home)))
 	var a := effective(team_strength(TeamData.get_team(away)))
 	return {
@@ -183,7 +197,6 @@ static func side_exponents(home: String, away: String, cal: Dictionary = DEFAULT
 		att_k * attack.y + def_k * defence.y)
 
 func _recompute() -> void:
-	var m := league_means()
 	var ex := side_exponents(home_id, away_id, cal)
 	var cond: float = float(WEATHER_MULT.get(weather, 1.0))
 	var home_mod: float = float(modifiers.get("home", 1.0))
