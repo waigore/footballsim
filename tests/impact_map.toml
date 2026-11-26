@@ -367,6 +367,12 @@ domain = "match_engine"
 match = "scripts/sim/match_ai.gd*"
 domain = "match_engine"
 
+# The marking band is read by the shape (MatchAI) and pinned by the tactics
+# suite: same theme, one boot.
+[[rules]]
+match = "scripts/sim/match_marking.gd*"
+domain = "tactics"
+
 # The on-ball half of the brain shares MatchAI's suite: off it no carrier
 # decision has a test.
 [[rules]]
