@@ -500,6 +500,14 @@ match = "scripts/ui/app_shell.gd*"
 domain = "shell"
 
 [[rules]]
+match = "scripts/ui/app_shell_input.gd*"
+domain = "shell"
+
+[[rules]]
+match = "scripts/ui/app_shell_paint.gd*"
+domain = "shell"
+
+[[rules]]
 match = "scripts/ui/menu_host.gd*"
 domain = "shell"
 
