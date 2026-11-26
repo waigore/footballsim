@@ -181,10 +181,10 @@ func _draw() -> void:
 		if manager_card != null:
 			manager_card.draw(self, vp, f_bold, f_med, engine)
 		draw_set_transform(Vector2(0.0, HudLayout.HUD_SLIDE_BOTTOM * lift))
-		controls_band.controls(p, self, game, touch, mouse, f_bold, f_med)
+		controls_band.controls(p, self, game, touch, mouse, f_bold, f_med, str(engine.phase))
 		if ticker != null:
 			ticker.draw(self, vp, f_bold, f_med, game)
-		roster_band.status(p, self, game, controls_band.speed_label(game), f_bold, f_med)
+		roster_band.status(p, self, game, controls_band.speed_label(game), f_bold, f_med, str(engine.phase))
 		# The dossier and the hover card are the player's own picks, not bands:
 		# they leave at once rather than half-off the screen.
 		if hud_visible and card != null:
@@ -197,7 +197,7 @@ func _draw() -> void:
 	# The match's own events stay painted whatever the chrome does: the score,
 	# the goal and whistle cards, the intro and the paused banner.
 	top_band.scoreboard(p, self, engine, game, f_bold, f_med)
-	top_band.flags(p, self, game, touch, f_bold)
+	top_band.flags(p, self, game, touch, f_bold, str(engine.phase))
 	banners_band.events(p, self, engine, game, f_bold, f_med)
 	banners_band.intro(p, self, engine, game, f_bold, f_med)
 	banners_band.paused(p, self, engine, game, f_bold, f_med)

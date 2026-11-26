@@ -423,3 +423,42 @@ func test_the_paused_banner_resumes_when_the_chrome_is_hidden() -> void:
 	assert_eq(hud.button_at(banner.get_center()), "pause",
 		"a hidden chrome's PAUSED banner pointed at a RESUME door that is not on screen")
 	hud.queue_free()
+
+func test_a_finished_match_offers_no_play_doors() -> void:
+	# #276: the whistle ends the play controls. PAUSE, speed and SKIP keep their
+	# boxes (the strip never jumps) but answer nothing, and the state line says
+	# the match is over instead of claiming to be live.
+	var eng := MatchEngine.new(276)
+	var hud := _hud(eng)
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 900.0
+	var vp: Vector2 = hud.design_vp()
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var bar: Rect2 = HudLayout.controls_rect(vp, hud.touch)
+	var bw: float = HudLayout.control_width(vp, hud.touch)
+	var gap: float = HudLayout.CONTROL_GAP
+	var ids: Array = []
+	for b in hud.buttons:
+		ids.append(str(b["id"]))
+	assert_true(ids.has("pause") and ids.has("speed") and ids.has("skip"),
+		"a live match lost its play doors: %s" % str(ids))
+	eng.phase = "full_time"
+	hud.queue_redraw()
+	await get_tree().process_frame
+	ids = []
+	for b in hud.buttons:
+		ids.append(str(b["id"]))
+	for id in ["pause", "speed", "skip"]:
+		assert_false(ids.has(id), "%s answered on a finished match: %s" % [id, str(ids)])
+	for id in ["mode", "camera", "league", "restart", "menu"]:
+		assert_true(ids.has(id), "%s left with the whistle: %s" % [id, str(ids)])
+	# The doors' boxes are still there, in the strip's own order: PAUSE is the
+	# first cell and SKIP the fourth, and neither is a press anymore.
+	for i in [0, 3]:
+		var cell := Rect2(bar.position.x + float(i) * (bw + gap), bar.position.y, bw, HudLayout.CONTROL_H)
+		assert_eq(hud.button_at(cell.get_center()), "", "dead door %d still answered a press" % i)
+	assert_eq(hud.button_at(Rect2(bar.position.x + 6.0 * (bw + gap), bar.position.y, bw, HudLayout.CONTROL_H).get_center()), "restart",
+		"a finished match lost its way to play again")
+	assert_eq(hud.roster_band.state_label(hud.game, "SIM", "full_time"), "FULL TIME  ·  MATCH OVER",
+		"the state line still calls a finished match live")
+	hud.queue_free()

@@ -115,6 +115,11 @@ func _release(screen_point: Vector2) -> void:
 # if/elif rather than match: the coverage injector cannot instrument a match
 # statement, and an uninstrumentable main.gd fails the patch gate.
 func _key(k: int) -> void:
+	# The whistle has gone: nothing is left to pause, pace or skip, so the keys
+	# behind those doors answer exactly as the dead doors do (#276).
+	var over: bool = game.engine != null and str(game.engine.phase) == "full_time"
+	if over and k in [KEY_SPACE, KEY_1, KEY_2, KEY_3, KEY_4, KEY_S]:
+		return
 	if k == KEY_SPACE:
 		game.paused = not game.paused
 	elif k == KEY_1:
