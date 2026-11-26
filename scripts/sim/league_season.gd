@@ -20,6 +20,10 @@ signal state_changed
 
 static var active: LeagueSeason = null
 
+## The order a save keeps its competitions in, whatever order the wizard picked:
+## fixtures, hub groups and the podium all read it (#241).
+const COMPETITION_ORDER: Array = ["PL", "LL", "BL", "BL2"]
+
 var save: LeagueSave = null
 var record: LeagueRecord = null
 ## The primary competition's regulations (the first active one), kept flat for a
@@ -98,12 +102,16 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	active = season
 	return season
 
-## Only competitions the seed carries, in the order asked, never none.
+## Only competitions the seed carries, in the canonical order — the wizard's
+## pick order is not the fixture order — and never none (#241).
 static func _known_competitions(wanted: Array) -> Array:
 	var known: Array = []
 	for row in PLDatabase.rows("SELECT id FROM competition ORDER BY rowid;"):
 		known.append(str(row["id"]))
 	var out: Array = []
+	for cid in COMPETITION_ORDER:
+		if wanted.has(cid) and known.has(cid):
+			out.append(cid)
 	for cid in wanted:
 		if known.has(str(cid)) and not out.has(str(cid)):
 			out.append(str(cid))

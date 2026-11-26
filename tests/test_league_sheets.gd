@@ -114,9 +114,44 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 				if str(item["kind"]) == "choice" and bool(item["selected"]):
 					chosen += 1
 			assert_eq(chosen, 3, "one choice per group should be selected")
-			# NAME + LEAGUES caption + four league toggles + two calendar + two
-			# advance + CREATE + BACK.
-			assert_eq(items.size(), 12, "the wizard is missing a control")
+			# NAME + LEAGUES caption + three league controls (PL, La Liga, the
+			# linked German pair) + two calendar + two advance + CREATE + BACK.
+			assert_eq(items.size(), 11, "the wizard is missing a control")
+
+func test_the_wizard_turns_the_german_pair_on_together() -> void:
+	var sheet := LeagueStartSheet.new()
+	var items: Array = sheet.wizard_layout(Vector2(1280, 720),
+		{"name": "Save", "calendar_mode": "real", "advance_mode": "fixture_days",
+		"competitions": ["PL"]})
+	var ids: Array = []
+	for item in items:
+		if str(item["id"]).begins_with("wleague:"):
+			ids.append(str(item["id"]))
+	assert_eq(ids, ["wleague:PL", "wleague:LL", "wleague:DE"],
+		"the wizard did not fold the German tiers into one control")
+	var screen := FakeWizard.new()
+	screen.wizard = {"competitions": ["PL"]}
+	LeagueWizardActions.toggle_league(screen, "DE")
+	assert_eq(screen.wizard["competitions"], ["PL", "BL", "BL2"],
+		"the German control did not pick both tiers")
+	LeagueWizardActions.toggle_league(screen, "DE")
+	assert_eq(screen.wizard["competitions"], ["PL"], "the German control did not drop both tiers")
+	# The pair alone cannot be turned off: a save needs one competition.
+	screen.wizard = {"competitions": ["BL", "BL2"]}
+	LeagueWizardActions.toggle_league(screen, "DE")
+	assert_eq(screen.wizard["competitions"], ["BL", "BL2"], "the wizard emptied itself")
+
+func test_the_save_keeps_the_leagues_in_the_published_order() -> void:
+	var season := LeagueSeason.create("Order", "real", "every_day", 240, ["BL2", "LL", "BL", "PL"])
+	assert_not_null(season, "the four-league save did not build")
+	assert_eq(season.save.competition_ids(), ["PL", "LL", "BL", "BL2"],
+		"the save kept the wizard's pick order instead of the fixture order")
+	season.close()
+
+class FakeWizard extends RefCounted:
+	var wizard: Dictionary = {}
+	func refresh() -> void:
+		pass
 
 func test_the_load_list_lays_out_zero_and_many_saves() -> void:
 	var sheet := LeagueStartSheet.new()

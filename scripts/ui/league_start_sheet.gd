@@ -23,6 +23,33 @@ var hints := DateHints.new()
 
 # ---------------------------------------------------------------- wizard ---
 
+## The wizard's league choices: one per competition, except the German pair,
+## which is one control that turns both tiers on together (#241) — a save that
+## runs one German tier cannot settle a Relegation.
+static func _league_groups(comps: Array) -> Array:
+	var ids: Array = []
+	for c in comps:
+		ids.append(str((c as Dictionary)["id"]))
+	var groups: Array = []
+	for c in comps:
+		var cid := str((c as Dictionary)["id"])
+		if cid == "BL2" and ids.has("BL"):
+			continue
+		if cid == "BL" and ids.has("BL2"):
+			groups.append({"id": "DE", "label": "GERMAN FOOTBALL",
+				"members": ["BL", "BL2"]})
+			continue
+		groups.append({"id": cid, "label": str((c as Dictionary).get("short_name",
+			(c as Dictionary).get("name", cid))), "members": [cid]})
+	return groups
+
+## A league control is lit when every competition it carries is chosen.
+static func _group_on(group: Dictionary, chosen: Array) -> bool:
+	for cid in group["members"]:
+		if not chosen.has(cid):
+			return false
+	return true
+
 func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 	var w := minf(520.0, vp.x - 48.0)
@@ -36,17 +63,17 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 		"rect": Rect2(24.0, y - 8.0, w, 10.0)})
 	var chosen: Array = view.get("competitions", ["PL"])
 	var comps: Array = PLRepository.shared().competitions()
-	for i in range(comps.size()):
-		var cid := str((comps[i] as Dictionary)["id"])
+	var groups := _league_groups(comps)
+	for i in range(groups.size()):
+		var group: Dictionary = groups[i]
 		var col := i % 2
 		var row := i / 2
-		items.append({"id": "wleague:" + cid, "kind": "choice",
-			"label": str((comps[i] as Dictionary).get("short_name",
-				(comps[i] as Dictionary).get("name", cid))),
+		items.append({"id": "wleague:" + str(group["id"]), "kind": "choice",
+			"label": str(group["label"]),
 			"rect": Rect2(24.0 + float(col) * w * 0.52, y + float(row) * 52.0, w * 0.48, 40.0),
-			"selected": chosen.has(cid)})
-	if not comps.is_empty():
-		y += 52.0 * float(ceili(float(comps.size()) / 2.0))
+			"selected": _group_on(group, chosen)})
+	if not groups.is_empty():
+		y += 52.0 * float(ceili(float(groups.size()) / 2.0))
 	items.append({"id": "mode:real", "kind": "choice", "label": "REAL FIXTURES",
 		"rect": Rect2(24.0, y, w * 0.48, 40.0), "selected": str(view.get("calendar_mode", "")) == "real"})
 	items.append({"id": "mode:generated", "kind": "choice", "label": "GENERATED",
