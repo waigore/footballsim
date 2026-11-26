@@ -201,3 +201,28 @@ func test_a_phone_opens_in_follow_and_the_desktop_stays_wide() -> void:
 	assert_eq(MatchView.default_follow(), OS.has_feature("mobile"),
 		"the opening camera is not the platform rule")
 	assert_false(game.camera_follow, "a desktop match opened tracking the ball instead of wide")
+
+# ------------------------------------------------- hidden HUD's cards (#202) ---
+
+func test_the_match_hud_row_says_what_on_means() -> void:
+	# The switch's ON is chrome shown (#158), so its caption names that state
+	# (#202); a line about hiding belongs under an OFF switch.
+	var hint: String = SettingsScreen.HUD_ROW_HINT
+	assert_true(hint.begins_with("ON "), "the caption does not name the ON state: %s" % hint)
+	assert_true(hint.contains("SHOWS"), "the caption does not say the bars show: %s" % hint)
+	assert_false(hint.contains("HIDES"), "the caption still reads as the OFF state: %s" % hint)
+
+func test_a_hidden_hud_plays_again_from_the_full_time_card() -> void:
+	game.touch = true
+	game.hud.touch = true
+	var vp: Vector2 = game.hud.design_vp()
+	game.engine.phase = "full_time"
+	game.result_hold = false
+	game.hud.set_hud_visible(false, true)
+	await _draw()
+	var card: Rect2 = HudLayout.break_metrics(vp, 0, 0)["rect"]
+	assert_eq(_door("restart"), card, "a hidden chrome left the full-time card undoorable")
+	var before = game.engine
+	_tap(card.get_center())
+	assert_ne(game.engine, before, "tapping the full-time card did not play again")
+	game.hud.set_hud_visible(true, true)
