@@ -244,6 +244,25 @@ func test_the_simulating_chip_waits_for_a_goal_in_goals_only() -> void:
 	assert_true(HudTopBand.sim_chip_label("goals").contains("NEXT GOAL"), "Goals only still waits on the next chance")
 	assert_true(HudTopBand.sim_chip_label("highlights").contains("NEXT CHANCE"), "Highlights stopped waiting on chances")
 
+func test_the_state_line_and_chip_leave_with_the_whistle() -> void:
+	# #276: a finished match describes itself as over, and the replay chip waits
+	# for a moment that can no longer come.
+	var band: HudRosterBand = game.hud.roster_band
+	game.view.set_mode("highlights")
+	game.paused = false
+	game.fast_mode = true
+	game.match_time = 30.0
+	assert_true(HudTopBand.chip_shown(game.mode, game.fast_mode, game.paused, game.match_time, "play"),
+		"the chip left a simming Highlights match")
+	assert_eq(band.state_label(game, "SIM", "play"), "HIGHLIGHTS  ·  SIMMING 24x",
+		"a live Highlights match lost its simming line")
+	assert_false(HudTopBand.chip_shown(game.mode, game.fast_mode, game.paused, game.match_time, "full_time"),
+		"the chip stayed over a finished match")
+	assert_eq(band.state_label(game, "SIM", "full_time"), "FULL TIME  ·  MATCH OVER",
+		"a finished match still claimed to be live")
+	assert_eq(band.state_label(game, "2", "full_time"), "FULL TIME  ·  MATCH OVER",
+		"the full-match speed outlived the whistle")
+
 # --------------------------------------------------------------- settings ---
 
 func test_settings_shows_and_sets_the_same_view() -> void:

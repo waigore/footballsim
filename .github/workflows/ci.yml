@@ -378,6 +378,15 @@ jobs:
           (github.event_name == 'workflow_dispatch' || steps.filter.outputs.code == 'true')
         run: godot --headless --path . --script res://tools/e2e_smoke.gd
 
+      # Second leg: the all-league season, auto-simmed for 21+ calendar days.
+      # Sequential, not a matrix, so the required `e2e-smoke` check keeps its
+      # name; both legs together stay far inside the 4-minute job budget.
+      - name: Run all-league 21-day season smoke
+        if: >-
+          steps.project.outputs.ready == 'true' &&
+          (github.event_name == 'workflow_dispatch' || steps.filter.outputs.code == 'true')
+        run: godot --headless --path . --script res://tools/smoke/all_leagues.gd
+
   # UX visual VLM gate: no-op when no UI paths change; else require PR-body
   # desktop wiki screenshot URLs and grade them (≤10 images / ~1 min).
   ux-vlm:
@@ -402,23 +411,25 @@ jobs:
               - 'scripts/ui/**'
               - 'assets/ui/**'
               - 'fonts/**'
+            tool:
+              - 'tools/ux_vlm/**'
 
       - name: Skip (no UI paths)
-        if: steps.filter.outputs.ui != 'true'
+        if: steps.filter.outputs.ui != 'true' && steps.filter.outputs.tool != 'true'
         run: echo 'No UI path changes — ux-vlm no-op.'
 
       - name: Setup Python
-        if: steps.filter.outputs.ui == 'true'
+        if: steps.filter.outputs.ui == 'true' || steps.filter.outputs.tool == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install ux_vlm deps
-        if: steps.filter.outputs.ui == 'true'
+        if: steps.filter.outputs.ui == 'true' || steps.filter.outputs.tool == 'true'
         run: pip install -r tools/ux_vlm/requirements.txt
 
       - name: Catalogue unit checks
-        if: steps.filter.outputs.ui == 'true'
+        if: steps.filter.outputs.ui == 'true' || steps.filter.outputs.tool == 'true'
         run: python tools/ux_vlm/test_catalogue.py
 
       - name: Fetch PR body

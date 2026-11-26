@@ -11,13 +11,15 @@ rubrics:
   - id: cta
     title: Primary CTA
     prompt: >-
-      Fail if the main call-to-action is missing, too weak to spot, or
-      competing with equally loud secondary actions. Pass if one clear
-      primary action stands out. On flow screens that is CONTINUE, KICK OFF,
-      Start Sim, or the screen's obvious primary door. On browse or settings
-      screens (settings, league-table, league-calendar, encyclopedia), BACK
-      (or an equally clear leave/dismiss door) is an acceptable primary action
-      when it is the screen's main way out.
+      The screen being graded may name a required primary call-to-action. When
+      it does, pass only if you can read that exact label on one clear, legible
+      control, placed where the screen says it belongs — another door, a softer
+      copy of the same word, or a buried action does not count. When the screen
+      names no required label (browse, settings, overlay), pass if one clear
+      primary action stands out; BACK (or an equally clear leave/dismiss door)
+      is an acceptable primary action when it is the screen's main way out.
+      Fail if the primary action is missing, cut off, too weak to spot, or
+      competing with equally loud secondary actions.
   - id: contrast
     title: Contrast
     prompt: >-
