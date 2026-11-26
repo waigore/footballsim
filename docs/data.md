@@ -22,7 +22,7 @@ stats (accepted: the sim ledger belongs to one snapshot).
 The seed carries the Premier League (`PL`), La Liga (`LL`) and Germany's pair
 (`BL`, `BL2`). Each owns an id namespace (`LL-BAR`, `BL-FCB`), so a refresh
 cannot collide two clubs. The German tiers play 18 clubs over 34 matchdays;
-auto-sim reuses the PL scoring envelope.
+auto-sim reuses the PL envelope.
 
 ## Tool
 
