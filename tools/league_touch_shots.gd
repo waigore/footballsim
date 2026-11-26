@@ -3,8 +3,8 @@ extends SceneTree
 ## Evidence capture for the league's touch targets (#204).
 ##
 ## Boots the real game scene, builds a generated season, then presents the table
-## as a phone would see it — the touch pose on and a 913x411 landscape design
-## space — and shoots:
+## as a handset would see it — the touch pose on and a 913x411 design space — and
+## shoots:
 ##
 ##   * the compact table with finger-sized rows and sortable headers,
 ##   * the same table after a header press, so the sorted rule is visible in a
@@ -13,18 +13,40 @@ extends SceneTree
 ##     gesture strip,
 ##   * the panel that door opens.
 ##
+## With `--touch=0` it shoots the desktop reading instead: the same season, no
+## touch pose, so the frame shows the dense pitch the desktop keeps.
+##
 ## It also prints the geometry it shot, so the numbers are checkable without the
 ## pictures. Run it on a display; a headless run has no frame to read back.
 ##
-## Run it at double the phone's design space so the 2x pixels show the type:
+## The window is sized to the design space times the scale, with the stretch mode
+## switched off, **before** the scene boots: a plain `--resolution` is mapped onto
+## the project's base viewport, so a "phone" capture came out at 999.5x450 design
+## units instead of the handset's 913x411. The chrome layer is then set to that
+## same factor, so one design unit is exactly `scale` device pixels — without it
+## the window says 913x411 while the shell keeps drawing at its own 1.25 density.
 ##
-##   godot --path . --resolution 1826x822 --script res://tools/league_touch_shots.gd
+##   xvfb-run -a godot --path . --script res://tools/league_touch_shots.gd -- \
+##     --design=913x411 --scale=2 --touch=1
+##   xvfb-run -a godot --path . --script res://tools/league_touch_shots.gd -- \
+##     --design=1600x900 --scale=1 --touch=0
 
 const SEED := 2041
+## The handset the targets are sized for, in design units.
+const DESIGN := Vector2i(913, 411)
+## Device pixels per design unit: 2x keeps the 48-unit rows' type readable.
+const SCALE := 2
 
 var scene = null
+var design: Vector2i = DESIGN
+var scale: int = SCALE
+var touch := true
 
 func _initialize() -> void:
+	_parse_args()
+	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
+	root.size = design * scale
+	DisplayServer.window_set_size(design * scale)
 	scene = load("res://scenes/main.tscn").instantiate()
 	root.add_child(scene)
 	await _frames(3)
@@ -39,17 +61,16 @@ func _initialize() -> void:
 		season.advance()
 		guard += 1
 	league.show_season(season)
-	# The handheld pose: this is the device the targets are sized for.
-	league.screen.touch = true
-	# Two device pixels per design unit: the design space stays the phone's
-	# 913x411, and the shot is large enough to read the rows it is proving.
-	league.screen.ui_scale = 2.0
-	league.screen.refresh()
+	_pose(league)
 	league.screen.click("nav:table")
 	league.screen.refresh()
 	await _frames(2)
-	_report(league.screen, "compact")
-	await _shot("league_touch_table")
+	_report(league.screen, "table")
+	await _shot("league_touch_table" if touch else "league_table_desktop")
+	if not touch:
+		print("EXIT ok")
+		quit()
+		return
 
 	league.screen.click("tbl:mode:full")
 	league.screen.refresh()
@@ -74,6 +95,30 @@ func _initialize() -> void:
 	await _shot("league_touch_panel")
 	print("EXIT ok")
 	quit()
+
+func _parse_args() -> void:
+	for raw: String in OS.get_cmdline_user_args():
+		if raw.begins_with("--design="):
+			var parts := raw.substr("--design=".length()).split("x")
+			if parts.size() == 2:
+				design = Vector2i(int(parts[0]), int(parts[1]))
+		elif raw.begins_with("--scale="):
+			scale = maxi(int(raw.substr("--scale=".length())), 1)
+		elif raw.begins_with("--touch="):
+			touch = int(raw.substr("--touch=".length())) != 0
+
+## One coherent reading: the chrome layer, the sheet and the window all carry the
+## same factor, so one design unit is exactly `scale` device pixels. The shell
+## computes its own density from the display, which would leave a "913x411 at 2x"
+## frame drawn at 1.25 pixels per unit — the pose would name one space and the
+## picture another.
+func _pose(league: LeagueHost) -> void:
+	var factor := float(scale)
+	scene.chrome_scale = factor
+	league.layer.transform = Transform2D.IDENTITY.scaled(Vector2(factor, factor))
+	league.screen.ui_scale = factor
+	league.screen.touch = touch
+	league.screen.refresh()
 
 ## Print what the pose actually laid, so the shot and the numbers agree.
 func _report(screen, pose: String) -> void:
