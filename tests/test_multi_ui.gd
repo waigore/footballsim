@@ -4,13 +4,27 @@ extends GdToolsTest
 ## league and allows a cross-league friendly, the hub groups a mixed day, the
 ## TABLES sheet tabs per league, STATS filters reports and leaders, and the
 ## podium frames one block per competition.
+##
+## One PL+LL season covers the month-step and advance-mode chrome so coverage
+## does not rebuild two calendars for the same filters.
+
+var SAVE_DIR := TestScratch.dir("saves_test_multi_ui")
+var season: LeagueSeason = null
 
 func before_all() -> void:
 	PLDatabase.cache_dir = TestScratch.dir("cache_test_multi_ui")
+	LeagueSave.dir = SAVE_DIR
+	TestScratch.clear(SAVE_DIR)
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
+	season = LeagueSeason.create("Shared World", "generated", "fixture_days", 9101, ["PL", "LL"])
 
 func after_all() -> void:
+	if season != null:
+		season.close()
+		season = null
+	TestScratch.clear(SAVE_DIR)
+	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
@@ -226,8 +240,7 @@ func test_the_stats_doors_write_their_filter() -> void:
 	assert_eq(str(screen.stats_filter["month"]), "", "a month was invented with no season")
 
 func test_the_month_door_steps_from_the_clock() -> void:
-	var season := LeagueSeason.create("Month World", "generated", "fixture_days", 9101, ["PL"])
-	assert_not_null(season, "the month season was not created")
+	assert_not_null(season, "the shared season was not created")
 	var screen := FakeStats.new()
 	screen.season = season
 	screen.stats_filter = {"league": "", "month": "", "team": "", "stat": "goals"}
@@ -236,7 +249,6 @@ func test_the_month_door_steps_from_the_clock() -> void:
 	var base := date.substr(0, 7)
 	assert_eq(str(screen.stats_filter["month"]), LeagueMonth.shift(base, 1),
 		"the month door did not step once from the clock")
-	season.close()
 
 func test_the_wizard_league_toggle_keeps_one_on() -> void:
 	var screen := FakeWizard.new()
@@ -251,8 +263,10 @@ func test_the_wizard_league_toggle_keeps_one_on() -> void:
 	assert_eq(screen.wizard["competitions"], ["LL"], "an empty id changed the set")
 
 func test_the_system_sheet_can_switch_the_advance_mode() -> void:
-	var season := LeagueSeason.create("Advance World", "generated", "fixture_days", 9102, ["PL", "LL"])
-	assert_not_null(season, "the advance season was not created")
+	assert_not_null(season, "the shared season was not created")
+	# Leave the shared save on fixture_days so later suites (or a re-run) start clean.
+	if season.save.advance_mode() != "fixture_days":
+		season.set_advance_mode("fixture_days")
 	var screen := FakeSys.new()
 	screen.season = season
 	screen.sys = {"status": "", "error": ""}
@@ -261,7 +275,6 @@ func test_the_system_sheet_can_switch_the_advance_mode() -> void:
 	assert_true(str(screen.sys["status"]).begins_with("ADVANCE:"), "the switch was silent")
 	LeagueSystemActions.toggle_advance(screen)
 	assert_eq(season.save.advance_mode(), "fixture_days", "the clock policy did not switch back")
-	season.close()
 
 class FakeStats:
 	var stats_filter := {}
