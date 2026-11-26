@@ -227,6 +227,28 @@ func test_a_long_club_name_is_shortened_instead_of_overlapping() -> void:
 	assert_eq(LeagueColumns.fit_name(longest, null, 12, 60.0), longest,
 		"a missing font must not drop the name")
 
+## The fixture picker's venue caption (#200): it sits in the centre column
+## between the two club cards, so on a handset's narrowest gap a ground name
+## must be shortened to the column instead of painted over both cards.
+func test_a_venue_caption_is_fitted_to_its_centre_column() -> void:
+	var font: Font = load("res://fonts/BarlowCondensed-Medium.ttf")
+	# The gap on a handset is 130 design units, less 12 of air either side.
+	var room := 130.0 - 24.0
+	assert_gt(font.get_string_size("COVENTRY BUILDING SOCIETY ARENA", HORIZONTAL_ALIGNMENT_LEFT,
+		-1, 10).x, room, "the probe font measured every venue as zero width")
+	assert_eq(LeagueColumns.fit_caption("OLD TRAFFORD", font, 10, room), "OLD TRAFFORD",
+		"a venue that fits its column was altered")
+	var shown := LeagueColumns.fit_caption("COVENTRY BUILDING SOCIETY ARENA", font, 10, room)
+	assert_true(shown.ends_with("…"), "a venue wider than its column was not shortened")
+	assert_lte(font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x, room,
+		"the shortened venue still runs out of the centre column")
+	assert_eq(LeagueColumns.fit_caption("COVENTRY BUILDING SOCIETY ARENA", font, 10, 196.0),
+		"COVENTRY BUILDING SOCIETY ARENA", "a wide column shortened a venue that fits it")
+	assert_eq(LeagueColumns.fit_caption("OLD TRAFFORD", font, 10, 0.0), "",
+		"a column with no room still painted a venue")
+	assert_eq(LeagueColumns.fit_caption("", font, 10, room), "",
+		"a club with no ground name painted one anyway")
+
 func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 	var book := LeagueBook.new()
 	for vp in [Vector2(1600, 900), Vector2(913, 411)]:

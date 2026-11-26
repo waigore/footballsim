@@ -298,6 +298,7 @@ func design_vp() -> Vector2:
 func back_rect(vp: Vector2) -> Rect2:
 	return Rect2(24.0, 12.0, 116.0, 44.0)
 
+# gd-tools: no cover start
 func _draw() -> void:
 	var vp := design_vp()
 	buttons.clear()
@@ -340,9 +341,12 @@ func _draw() -> void:
 	_arrow(Rect2(away_rect.position.x + away_rect.size.x + 12.0, ay, arrow, arrow), "›", "away_next")
 
 	text_c(vp.x * 0.5, card_y + card_h * 0.50, "v", 22, C_DIM, f_med)
-	var venue := str(home.get("stadium", "")).to_upper()
+	# The venue clears the inner arrows and is fitted to the column it sits in,
+	# with 12 units of air either side (#200).
+	var venue := LeagueColumns.fit_caption(str(home.get("stadium", "")).to_upper(), f_med,
+		10, gap - 24.0)
 	if venue != "":
-		text_c(vp.x * 0.5, card_y + card_h * 0.64, venue, 10, C_DIM, f_med)
+		text_c(vp.x * 0.5, ay + arrow + 22.0, venue, 10, C_DIM, f_med)
 
 	var bw := 190.0
 	var bh := 50.0
@@ -392,3 +396,4 @@ func _draw() -> void:
 	rect(C_PANEL_LIGHT if league_hover else C_PANEL, league_btn, 8, Color(1, 1, 1, 0.14 if league_hover else 0.07))
 	text_c(league_btn.position.x + league_btn.size.x * 0.5, league_btn.position.y + league_btn.size.y * 0.66, "◈  LEAGUE", 13, C_TEXT if league_hover else C_DIM, f_bold)
 	_add_button("league", league_btn)
+# gd-tools: no cover end
