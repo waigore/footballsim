@@ -10,6 +10,9 @@ extends GdToolsTest
 ## (`tools/aggression_sweep.gd`).
 
 ## The same staged challenge, repeated, so only the bar can move the outcome.
+## Staged 25 m from the carrier's own goal — outside the box, where a foul is a
+## free kick — because that is where the law prices a missed challenge highest
+## and the foul half can be read at this n.
 func _duel(level: float, trials: int, seed_in: int = 4242) -> Dictionary:
 	var eng := MatchEngine.new(seed_in, "MUN", "MCI")
 	eng.phase = "play"
@@ -27,18 +30,23 @@ func _duel(level: float, trials: int, seed_in: int = 4242) -> Dictionary:
 	var style: Dictionary = eng.style_of(1).duplicate()
 	style["aggression"] = level
 	eng.live_style[1] = style
+	var dir := float(eng.teams[0]["dir"])
+	var spot: Vector2 = eng.own_goal_pos(0) + Vector2(dir * 25.0, 0.0)
 	var won := 0
 	var fouls := 0
 	for i in range(trials):
-		carrier.pos = Vector2(eng.L * 0.55, eng.W * 0.5)
+		carrier.pos = spot
 		carrier.vel = Vector2.ZERO
 		carrier.has_ball = true
 		carrier.cooldown = 0.0
-		def.pos = carrier.pos + Vector2(-1.2, 0.0)
+		carrier.sent_off = false
+		def.pos = spot - Vector2(dir * 1.2, 0.0)
 		def.vel = Vector2.ZERO
-		def.facing = Vector2.RIGHT
+		def.facing = Vector2(dir, 0.0)
 		def.cooldown = 0.0
-		eng.ball.pos = carrier.pos
+		def.sent_off = false
+		def.yellow = 0
+		eng.ball.pos = spot
 		eng.ball.owner_id = carrier.id
 		eng.ball.vel = Vector2.ZERO
 		eng.ball.shot_team = -1
@@ -101,14 +109,14 @@ func test_the_shipped_spread_is_worth_something() -> void:
 	assert_gt(high_foul - low_foul, 0.05,
 		"the shipped aggression spread does not move the foul risk")
 
-## The whole range is a real lean, not a rounding error — but it must stay a
-## lean, not a second home advantage (the venue's own nudge is ±0.02).
+## The whole range is a real lean, not a rounding error — but it stays a lean
+## on a challenge the laws already price at 0.04–0.60.
 func test_the_whole_range_moves_a_challenge_plainly() -> void:
 	var high: float = MatchContact.tackle_bonus({"aggression": 1.0})
 	var low: float = MatchContact.tackle_bonus({"aggression": 0.0})
 	var span: float = high - low
 	assert_gt(span, 0.10, "the whole aggression range barely moves the tackle chance (%0.2f)" % span)
-	assert_lt(span, 0.25, "the whole aggression range swamps a challenge (%0.2f)" % span)
+	assert_lt(span, 0.20, "the whole aggression range swamps a challenge (%0.2f)" % span)
 
 ## The rule reaches the duel: the same staged challenge is won more often by the
 ## aggressive side and given away more often too.

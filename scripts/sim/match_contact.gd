@@ -15,17 +15,18 @@ extends RefCounted
 ## in, so the rule is pinned directly and the duel loop keeps no branch per bar.
 
 ## The league's neutral value: the shipped clubs' own mean aggression (0.5346
-## across the 172-club seed), so the league's aggregate tackle and foul rates are
-## unchanged and only the spread *within* the league is what this bar now buys.
-## Every shipped club's own bar still leans the duel by its distance from the
-## mean.
+## across the 172-club seed). At the mean both reads below are exactly the flat
+## numbers the tackle always carried, so no club is systematically asked to
+## change how it plays — the sides above the mean lean in and the sides below
+## lean off, and each club leans by its distance from the mean.
 const NEUTRAL := 0.535
 
 ## Spread of the two halves across the bar. Fitted on the staged duel sweep
 ## (`tools/aggression_sweep.gd`), not to a seed: at these slopes the shipped
-## 0.48–0.62 band is worth ~2.5 points of challenge wins and ~18% more fouls on
-## the ones it misses — enough to tell the league's own sides apart, and short of
-## turning the bar into a second home advantage (the venue's own nudge is ±0.02).
+## 0.48–0.62 band is worth ~2.8 points of challenge wins (41.8% → 44.6% on the
+## staging) and a foul chance ~18% higher when it misses. That band's 0.022 of
+## tackle chance is about the venue's own ±0.02 nudge — enough to tell the
+## league's own sides apart, not enough to stand in for the home side's edge.
 const TACKLE_SPAN := 0.16
 const FOUL_SPAN := 1.20
 
