@@ -62,8 +62,9 @@ func test_the_neutral_boot_lands_the_engines_own_ball() -> void:
 	# A ball aimed at the keeper's own feet is not a long ball: the target is
 	# taken as given rather than divided by nothing.
 	var at_feet: Vector2 = gk.pos + Vector2(0.1, 0.0)
-	assert_almost_eq(MatchKicking.aim_point(staged["bars"], gk.pos, at_feet), at_feet,
-		"a zero-length long ball moved its own target")
+	var kept: Vector2 = MatchKicking.aim_point(staged["bars"], gk.pos, at_feet)
+	assert_almost_eq(kept.x, at_feet.x, 1e-6, "a zero-length long ball moved its own target in x")
+	assert_almost_eq(kept.y, at_feet.y, 1e-6, "a zero-length long ball moved its own target in y")
 
 ## Reach is monotone: a better boot puts the same ball further down its own line,
 ## and the shipped band has to be worth a visible amount of ground.
