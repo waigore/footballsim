@@ -262,6 +262,18 @@ match = "scripts/sim/commentary.gd*"
 domain = "commentary"
 
 [[rules]]
+match = "scripts/sim/commentary_live.gd*"
+domain = "commentary"
+
+[[rules]]
+match = "scripts/sim/commentary_restarts.gd*"
+domain = "commentary"
+
+[[rules]]
+match = "scripts/sim/commentary_bench.gd*"
+domain = "commentary"
+
+[[rules]]
 match = "scripts/sim/kits.gd*"
 domain = "kits"
 

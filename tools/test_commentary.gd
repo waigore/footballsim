@@ -92,7 +92,7 @@ func _check_block(rng) -> int:
 	return 1 if _too_long(line) else 0
 
 func _check_restart(rng) -> int:
-	var wait: String = Commentary.restart(rng, "corner", "NFO", "", true)
+	var wait: String = CommentaryRestarts.restart(rng, "corner", "NFO", "", true)
 	if not wait.contains("NFO"):
 		print("FAIL: restart wait line lost the team: ", wait)
 		return 1
@@ -107,7 +107,7 @@ func _check_live() -> int:
 		if eng.phase == "half_time":
 			eng.begin_second_half()
 		eng.tick()
-		var line: String = Commentary.live(eng)
+		var line: String = CommentaryLive.live(eng)
 		if line == "":
 			empty += 1
 		if line.length() > MAX_LEN:
@@ -116,7 +116,7 @@ func _check_live() -> int:
 	if empty > 0:
 		print("FAIL: %d empty live lines" % empty)
 		return 1
-	print("live sample: ", Commentary.live(eng))
+	print("live sample: ", CommentaryLive.live(eng))
 	return 0
 
 func _check_match_feed() -> int:

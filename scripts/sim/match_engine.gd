@@ -105,7 +105,7 @@ func _arrange_penalty(team: int, taker, pos: Vector2) -> void:
 
 func _restart_text(kind: String, team: int, taker) -> String:
 	var who: String = taker.name if taker != null else ""
-	return Commentary.restart(rng, kind, teams[team]["data"]["short"], who, false)
+	return CommentaryRestarts.restart(rng, kind, teams[team]["data"]["short"], who, false)
 
 func _best_penalty_taker(t: int):
 	var best = null
@@ -148,7 +148,7 @@ func _update_restart(dt: float) -> void:
 			if not bool(restart.get("called_wait", false)):
 				restart["called_wait"] = true
 				_emit("restart_wait",
-					Commentary.restart(rng, str(restart["type"]), teams[restart["team"]]["data"]["short"],
+					CommentaryRestarts.restart(rng, str(restart["type"]), teams[restart["team"]]["data"]["short"],
 						taker.name if taker != null else "", true), int(restart["team"]), taker)
 			if verbose:
 				_vlog("RESTART WAIT %s ready=%.2f/%.2f waited=%.1f/%.1f" % [restart["type"], ready,
@@ -255,7 +255,7 @@ func _take_penalty(taker, team: int) -> void:
 	stats[team]["on_target"] += 1
 	ball.pos = restart["pos"]
 	phase = "play"
-	_emit("penalty_taken", Commentary.penalty_taken(rng, taker.name), team, taker)
+	_emit("penalty_taken", CommentaryRestarts.penalty_taken(rng, taker.name), team, taker)
 
 func _best_throw_target(team: int, taker):
 	var best = null
