@@ -72,6 +72,22 @@ func test_ticker_follows_events_then_live_play() -> void:
 	await get_tree().process_frame
 	hud.queue_free()
 
+func test_ticker_keeps_the_whistle_line_after_full_time() -> void:
+	# #276: the fallback "LIVE" tag and its narration belong to a match still
+	# being played. Once the whistle has gone the last line stays.
+	var eng := MatchEngine.new(277)
+	eng.events = [{"id": 901, "type": "full_time", "text": "Full time: MUN 2-1 MCI.", "minute": 90}]
+	eng.phase = "full_time"
+	var hud := _hud(eng)
+	hud.ticker.tick(0.1, eng, hud.game)
+	var line: String = hud.ticker.text
+	assert_eq(hud.ticker.label, "FULL TIME", "the whistle line did not take the ticker")
+	hud.ticker.hold = 0.0
+	hud.ticker.tick(0.0, eng, hud.game)
+	assert_eq(hud.ticker.label, "FULL TIME", "the ticker fell back to LIVE on a finished match")
+	assert_eq(hud.ticker.text, line, "the ticker replaced the whistle line on a finished match")
+	hud.queue_free()
+
 func test_manager_card_shows_without_blocking_the_match() -> void:
 	var eng := MatchEngine.new(26)
 	var hud := _hud(eng)
@@ -372,8 +388,8 @@ func test_every_whistle_hint_names_a_door_the_player_can_reach() -> void:
 	# hidden HUD's full-time card names its own press instead (#202).
 	assert_eq(HudBannersBand.break_hint("half_time", true, false, false), "SECOND HALF STARTS SHORTLY",
 		"the half-time card offered a door")
-	assert_eq(HudBannersBand.break_hint("full_time", true, false, false), "TAP RESTART TO PLAY AGAIN",
-		"the shown chrome's card stopped naming the bar's RESTART")
+	assert_eq(HudBannersBand.break_hint("full_time", true, false, false), "TAP PLAY AGAIN",
+		"the shown chrome's card stopped naming the bar's PLAY AGAIN door")
 	assert_eq(HudBannersBand.break_hint("full_time", true, true, false), "TAP THE CARD TO PLAY AGAIN",
 		"a hidden chrome's card named a door that is not on screen")
 	assert_eq(HudBannersBand.break_hint("full_time", false, true, false), "PRESS R TO PLAY AGAIN",
@@ -422,4 +438,51 @@ func test_the_paused_banner_resumes_when_the_chrome_is_hidden() -> void:
 	var banner := Rect2(vp.x * 0.5 - 130.0, vp.y * 0.5 - 27.0, 260.0, 54.0)
 	assert_eq(hud.button_at(banner.get_center()), "pause",
 		"a hidden chrome's PAUSED banner pointed at a RESUME door that is not on screen")
+	hud.queue_free()
+
+func test_a_finished_match_offers_no_play_doors() -> void:
+	# #276: the whistle ends the play controls. PAUSE, speed and SKIP keep their
+	# boxes (the strip never jumps) but answer nothing, and the state line says
+	# the match is over instead of claiming to be live.
+	var eng := MatchEngine.new(276)
+	var hud := _hud(eng)
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 900.0
+	var vp: Vector2 = hud.design_vp()
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var bar: Rect2 = HudLayout.controls_rect(vp, hud.touch)
+	var bw: float = HudLayout.control_width(vp, hud.touch)
+	var gap: float = HudLayout.CONTROL_GAP
+	var ids: Array = []
+	for b in hud.buttons:
+		ids.append(str(b["id"]))
+	assert_true(ids.has("pause") and ids.has("speed") and ids.has("skip"),
+		"a live match lost its play doors: %s" % str(ids))
+	eng.phase = "full_time"
+	hud.queue_redraw()
+	await get_tree().process_frame
+	ids = []
+	for b in hud.buttons:
+		ids.append(str(b["id"]))
+	for id in ["pause", "speed", "skip"]:
+		assert_false(ids.has(id), "%s answered on a finished match: %s" % [id, str(ids)])
+	for id in ["mode", "camera", "league", "restart", "menu"]:
+		assert_true(ids.has(id), "%s left with the whistle: %s" % [id, str(ids)])
+	# The doors' boxes are still there, in the strip's own order: PAUSE is the
+	# first cell and SKIP the fourth, and neither is a press anymore.
+	for i in [0, 3]:
+		var cell := Rect2(bar.position.x + float(i) * (bw + gap), bar.position.y, bw, HudLayout.CONTROL_H)
+		assert_eq(hud.button_at(cell.get_center()), "", "dead door %d still answered a press" % i)
+	assert_eq(hud.button_at(Rect2(bar.position.x + 6.0 * (bw + gap), bar.position.y, bw, HudLayout.CONTROL_H).get_center()), "restart",
+		"a finished match lost its way to play again")
+	var paint := HudPaint.new(hud.chrome, hud.design_vp())
+	var restart_spec: Array = []
+	for spec in hud.controls_band.control_specs(paint, hud.game, hud.touch, "full_time"):
+		if str(spec[0]) == "restart":
+			restart_spec = spec
+			break
+	assert_eq(str(restart_spec[1]), "PLAY AGAIN",
+		"a finished match kept the live RESTART caption instead of PLAY AGAIN")
+	assert_eq(hud.roster_band.state_label(hud.game, "SIM", "full_time"), "FULL TIME  ·  MATCH OVER",
+		"the state line still calls a finished match live")
 	hud.queue_free()

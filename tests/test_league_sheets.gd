@@ -390,11 +390,13 @@ func _item_rect(items: Array, id: String) -> Rect2:
 	return Rect2()
 
 ## The body clips the scrolling rows to the band between the header and the
-## bottom bar, so it paints the doors a sheet pins itself: BACK and CONTINUE in
-## the header, the table's readings in the bottom bar. Those doors stand outside
-## the clipped window and are laid out in screen space, so the body must keep
-## them out of its rows and out of its scroll — a door that rode the clip or the
-## scroll would drift off the corner the layout put it in.
+## bottom bar, and Godot clips a Control's own draw along with its children's.
+## The doors a sheet pins stand outside that band — BACK and CONTINUE in the
+## header lane, the table's readings in the bottom bar — so they are laid out in
+## screen space and the body must keep them out of its rows and out of its
+## scroll: a door that rode the clip or the scroll would drift off the corner the
+## layout put it in, and a door painted under the clip is a door the player never
+## sees (#284). `LeaguePinned` paints them on the unclipped layer above.
 func test_the_body_keeps_the_pinned_doors_outside_the_clipped_window() -> void:
 	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
 		var hub: Array = LeagueSheet.new().hub_layout(vp, _state([_fixture(1)], _table()))
@@ -405,7 +407,7 @@ func test_the_body_keeps_the_pinned_doors_outside_the_clipped_window() -> void:
 		var body := _body(vp)
 		body.set_sheet(hub, vp, true, 0.0)
 		assert_lte(cont.end.y, LeagueChrome.HEADER, "CONTINUE left the header at %s" % vp)
-		assert_true(cont.end.y <= body.position.y, "the clip covers CONTINUE at %s" % vp)
+		assert_true(cont.end.y <= body.position.y, "CONTINUE sits inside the body's band at %s" % vp)
 		assert_eq(body.content.size(), hub.size() - body.pinned.size(),
 			"a pinned door rode the scrolling rows at %s" % vp)
 		body.set_sheet(table, vp, true, LeagueChrome.BAR_H)
