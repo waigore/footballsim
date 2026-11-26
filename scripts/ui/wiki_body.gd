@@ -142,6 +142,21 @@ func rows() -> Array:
 func content_height() -> float:
 	return _height
 
+## Whether a table row that opens another page is on screen right now (#203).
+## The footer only advertises a tap while a link is under the player's eye: the
+## top of a club page lists values, so nothing there opens.
+func has_open_row_in_view() -> bool:
+	for row in _rows:
+		if str(row.get("k", "")) != "trow":
+			continue
+		if (row.get("target", {}) as Dictionary).is_empty():
+			continue
+		var rect: Rect2 = row["rect"]
+		var top: float = rect.position.y - scroll
+		if top + rect.size.y > 0.0 and top < size.y:
+			return true
+	return false
+
 ## First row whose target sits under a body-local point (hover/tap).
 func hit(p: Vector2) -> Dictionary:
 	var local := _content_point(p)
