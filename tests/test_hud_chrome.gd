@@ -337,3 +337,62 @@ func test_the_fixture_card_and_team_sheet_follow_the_scene_billing() -> void:
 ## home club's league rather than crash on the read.
 class BareScene extends RefCounted:
 	pass
+
+# ------------------------------------------------ hidden HUD's cards (#202) ---
+
+func test_every_whistle_hint_names_a_door_the_player_can_reach() -> void:
+	# The bar's RESTART door and its key line leave with the chrome (#158), so a
+	# hidden HUD's full-time card names its own press instead (#202).
+	assert_eq(HudBannersBand.break_hint("half_time", true, false, false), "SECOND HALF STARTS SHORTLY",
+		"the half-time card offered a door")
+	assert_eq(HudBannersBand.break_hint("full_time", true, false, false), "TAP RESTART TO PLAY AGAIN",
+		"the shown chrome's card stopped naming the bar's RESTART")
+	assert_eq(HudBannersBand.break_hint("full_time", true, true, false), "TAP THE CARD TO PLAY AGAIN",
+		"a hidden chrome's card named a door that is not on screen")
+	assert_eq(HudBannersBand.break_hint("full_time", false, true, false), "PRESS R TO PLAY AGAIN",
+		"a keyboard lost its key hint with the chrome")
+	assert_eq(HudBannersBand.break_hint("full_time", true, false, true), "TAP TO RETURN TO THE SEASON",
+		"a held league result stopped pointing at the season")
+	assert_eq(HudBannersBand.break_hint("full_time", false, true, true), "PRESS SPACE TO RETURN TO THE SEASON",
+		"a held desktop result lost its SPACE hint")
+
+func test_the_full_time_card_is_the_restart_door_only_with_the_chrome_hidden() -> void:
+	var eng := MatchEngine.new(202)
+	eng.phase = "full_time"
+	var hud := _hud(eng)
+	hud.touch = true
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 411.0
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var vp: Vector2 = hud.design_vp()
+	var card: Rect2 = HudLayout.break_metrics(vp, 0, 0)["rect"]
+	assert_eq(hud.button_at(card.get_center()), "", "the shown chrome's card answered a press")
+	hud.set_hud_visible(false, true)
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_eq(hud.button_at(card.get_center()), "restart",
+		"a hidden chrome left no way to play again from the card")
+	# The pill stays the one door back (#158): no card takes its corner.
+	assert_eq(hud.button_at(HudLayout.hud_toggle_rect(vp, true).get_center()), "hud",
+		"the whistle card stole the HUD pill's press")
+	# A league result the season holds is dismissed by its own tap (#124).
+	hud.game.result_hold = true
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_eq(hud.button_at(card.get_center()), "", "a held league result restarted the match")
+	hud.queue_free()
+
+func test_the_paused_banner_resumes_when_the_chrome_is_hidden() -> void:
+	var eng := MatchEngine.new(203)
+	var hud := _hud(eng)
+	hud.touch = true
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 411.0
+	hud.game.paused = true
+	hud.set_hud_visible(false, true)
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var vp: Vector2 = hud.design_vp()
+	var banner := Rect2(vp.x * 0.5 - 130.0, vp.y * 0.5 - 27.0, 260.0, 54.0)
+	assert_eq(hud.button_at(banner.get_center()), "pause",
+		"a hidden chrome's PAUSED banner pointed at a RESUME door that is not on screen")
+	hud.queue_free()

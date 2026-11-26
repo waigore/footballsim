@@ -5,6 +5,9 @@ extends RefCounted
 ## opening team sheet that fades out, the paused card and the broadcast vignette.
 
 var touch := false
+## The chrome has slid away (#158). A card's hint then cannot name a door that
+## left with it, so the card becomes the door itself (#202).
+var chrome_hidden := false
 
 func events(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:
 	if engine.phase == "goal":
@@ -52,13 +55,38 @@ func _break(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 	if not compact and r.size.y >= HudLayout.BREAK_BASE_H:
 		p.text_c(c, cx, r.position.y + float(m["abbr_y"]), "%s  ·  %s" % [engine.teams[0]["data"]["abbr"], engine.teams[1]["data"]["abbr"]], int(m["abbr_size"]), UiChrome.C_DIM, f_med)
 	_goals(p, c, engine, r, m, f_med)
-	var sub := "SECOND HALF STARTS SHORTLY" if engine.phase == "half_time" else ("TAP RESTART TO PLAY AGAIN" if touch else "PRESS R TO PLAY AGAIN")
 	# A league watch keeps this card until the player reads it (#124): the result
 	# is in the save, and the season sheet is one tap behind the whistle.
-	if engine.phase == "full_time" and game != null and bool(game.result_hold):
-		sub = "TAP TO RETURN TO THE SEASON" if touch else "PRESS SPACE TO RETURN TO THE SEASON"
+	var held: bool = engine.phase == "full_time" and game != null and bool(game.result_hold)
+	var sub := break_hint(str(engine.phase), touch, chrome_hidden, held)
 	if float(m["sub_y"]) <= r.size.y - 4.0:
 		p.text_c(c, cx, r.position.y + float(m["sub_y"]), sub, int(m["sub_size"]), UiChrome.C_DIM, f_med)
+		if break_restarts(str(engine.phase), touch, chrome_hidden, held):
+			# Nothing on screen carries RESTART while the chrome is hidden, so
+			# the card the hint names is the door (#202).
+			p.add_button("restart", r, sub, "")
+
+## What the card says under the score. Every hint names a control the player can
+## reach in this state: with the chrome hidden the bar's RESTART door and its
+## key hint are gone, so a phone's card offers its own press instead (#202). The
+## season's own SPACE stays live either way, because a key never leaves.
+static func break_hint(phase: String, touch: bool, hidden: bool, held: bool) -> String:
+	if phase == "half_time":
+		return "SECOND HALF STARTS SHORTLY"
+	if held:
+		if touch:
+			return "TAP TO RETURN TO THE SEASON"
+		return "PRESS SPACE TO RETURN TO THE SEASON"
+	if not touch:
+		return "PRESS R TO PLAY AGAIN"
+	if hidden:
+		return "TAP THE CARD TO PLAY AGAIN"
+	return "TAP RESTART TO PLAY AGAIN"
+
+## Whether the full-time card is its own restart door: only on a phone, only
+## while the chrome is hidden, and never over a league result the season holds.
+static func break_restarts(phase: String, touch: bool, hidden: bool, held: bool) -> bool:
+	return phase == "full_time" and touch and hidden and not held
 
 ## The goals that made the score, in the card's own space: two columns on a
 ## desktop scorecard (home left, visitors right) and two short entries per row on
@@ -151,9 +179,15 @@ func paused(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 	var y := p.vp.y * 0.5 - h * 0.5
 	if engine.phase in ["goal", "half_time"]:
 		y = 116.0
-	p.panel(c, Color(0.02, 0.03, 0.04, 0.88), Rect2(x, y, w, h), 12, Color(0.96, 0.78, 0.30, 0.55))
+	var r := Rect2(x, y, w, h)
+	p.panel(c, Color(0.02, 0.03, 0.04, 0.88), r, 12, Color(0.96, 0.78, 0.30, 0.55))
 	p.text_c(c, p.vp.x * 0.5, y + 25, "PAUSED", 20, UiChrome.C_GOLD, f_bold)
 	p.text_c(c, p.vp.x * 0.5, y + 42, "TAP RESUME TO CARRY ON" if touch else "PRESS SPACE TO RESUME", 9, UiChrome.C_DIM, f_med)
+	# RESUME rides the control bar, so a hidden chrome leaves the banner's own
+	# copy pointing at a door nobody can see: the banner answers the tap instead
+	# (#202). A whistle card keeps the press, because restart is the way on.
+	if touch and chrome_hidden and engine.phase not in ["half_time", "full_time", "goal"]:
+		p.add_button("pause", r, "RESUME", "")
 
 func vignette(p: HudPaint, c: CanvasItem) -> void:
 	# subtle broadcast frame
