@@ -18,7 +18,8 @@ extends RefCounted
 const TEMPLATES := {
 	"PL": {
 		"win_points": 3, "draw_points": 1, "relegation_places": 3,
-		"ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38,
+		"ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38, "clubs": 20,
+		"promotion_places": 0, "promotion_playoff_places": 0, "relegation_playoff_places": 0,
 		"season_start": "2026-08-15", "season_end": "2027-05-23",
 		"weekend_bias": 0.85, "midweek_matchdays": 5,
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
@@ -28,7 +29,8 @@ const TEMPLATES := {
 		# same 4 / 1 / 1 and three relegated. Spain plays more weekend rounds, so
 		# four rounds move midweek rather than England's five.
 		"win_points": 3, "draw_points": 1, "relegation_places": 3,
-		"ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38,
+		"ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38, "clubs": 20,
+		"promotion_places": 0, "promotion_playoff_places": 0, "relegation_playoff_places": 0,
 		"season_start": "2026-08-15", "season_end": "2027-05-23",
 		"weekend_bias": 0.88, "midweek_matchdays": 4,
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
@@ -73,27 +75,41 @@ const CREATE_SQL := (
 	+ "uel_places INTEGER NOT NULL, uecl_places INTEGER NOT NULL, "
 	+ "matchdays INTEGER NOT NULL, season_start TEXT NOT NULL, season_end TEXT NOT NULL, "
 	+ "weekend_bias REAL NOT NULL, midweek_matchdays INTEGER NOT NULL, "
-	+ "advance_mode TEXT NOT NULL, calendar_mode TEXT NOT NULL);"
+	+ "advance_mode TEXT NOT NULL, calendar_mode TEXT NOT NULL, "
+	+ "clubs INTEGER NOT NULL DEFAULT 20, promotion_places INTEGER NOT NULL DEFAULT 0, "
+	+ "promotion_playoff_places INTEGER NOT NULL DEFAULT 0, "
+	+ "relegation_playoff_places INTEGER NOT NULL DEFAULT 0);"
 )
 
 const UPSERT_SQL := (
 	"INSERT INTO league_rules (competition_id, win_points, draw_points, relegation_places, "
 	+ "ucl_places, uel_places, uecl_places, matchdays, season_start, season_end, weekend_bias, "
-	+ "midweek_matchdays, advance_mode, calendar_mode) "
-	+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+	+ "midweek_matchdays, advance_mode, calendar_mode, clubs, promotion_places, "
+	+ "promotion_playoff_places, relegation_playoff_places) "
+	+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
 	+ "ON CONFLICT(competition_id) DO UPDATE SET win_points = excluded.win_points, "
 	+ "draw_points = excluded.draw_points, relegation_places = excluded.relegation_places, "
 	+ "ucl_places = excluded.ucl_places, uel_places = excluded.uel_places, "
 	+ "uecl_places = excluded.uecl_places, matchdays = excluded.matchdays, "
 	+ "season_start = excluded.season_start, season_end = excluded.season_end, "
 	+ "weekend_bias = excluded.weekend_bias, midweek_matchdays = excluded.midweek_matchdays, "
-	+ "advance_mode = excluded.advance_mode, calendar_mode = excluded.calendar_mode;"
+	+ "advance_mode = excluded.advance_mode, calendar_mode = excluded.calendar_mode, "
+	+ "clubs = excluded.clubs, promotion_places = excluded.promotion_places, "
+	+ "promotion_playoff_places = excluded.promotion_playoff_places, "
+	+ "relegation_playoff_places = excluded.relegation_playoff_places;"
 )
+
+## The linked-tier columns (#240): a competition's own size, its promotion
+## places and the Relegation place on either side of the graph.
+const LINK_COLUMNS := [
+	"clubs", "promotion_places", "promotion_playoff_places", "relegation_playoff_places",
+]
 
 const COLUMNS := [
 	"win_points", "draw_points", "relegation_places", "ucl_places", "uel_places",
 	"uecl_places", "matchdays", "season_start", "season_end", "weekend_bias",
-	"midweek_matchdays", "advance_mode", "calendar_mode",
+	"midweek_matchdays", "advance_mode", "calendar_mode", "clubs", "promotion_places",
+	"promotion_playoff_places", "relegation_playoff_places",
 ]
 
 ## The template with both setup choices filled in.
@@ -142,7 +158,8 @@ static func read_all() -> Dictionary:
 static func normalize(raw: Dictionary) -> Dictionary:
 	var out: Dictionary = DEFAULTS.duplicate(true)
 	for key in ["win_points", "draw_points", "relegation_places", "ucl_places",
-			"uel_places", "uecl_places", "matchdays", "midweek_matchdays"]:
+			"uel_places", "uecl_places", "matchdays", "midweek_matchdays", "clubs",
+			"promotion_places", "promotion_playoff_places", "relegation_playoff_places"]:
 		if raw.has(key):
 			out[key] = int(raw[key])
 	for key in ["season_start", "season_end", "advance_mode", "calendar_mode"]:
@@ -181,6 +198,13 @@ static func migrate(default_competition: String = "") -> void:
 			write(owner, normalize(old))
 		return
 	PLDatabase.execute(CREATE_SQL)
+	# A save written before the German pair has no size/promotion columns; the
+	# table's own defaults then stand until the competition is written again.
+	var have := _columns("league_rules")
+	for column in LINK_COLUMNS:
+		if not have.has(column):
+			PLDatabase.execute("ALTER TABLE league_rules ADD COLUMN %s INTEGER NOT NULL DEFAULT 0;"
+				% column)
 
 static func _columns(table: String) -> Dictionary:
 	var out := {}
@@ -197,13 +221,23 @@ static func points(goals_for: int, goals_against: int, rules: Dictionary) -> int
 		return int(rules.get("draw_points", 1))
 	return 0
 
-## Which table band a position sits in: "ucl", "uel", "uecl", "relegation" or "".
+## Which table band a position sits in: "ucl", "uel", "uecl", "promotion",
+## "playoff", "relegation" or "". The German pair uses the two extra bands: the
+## 2. Bundesliga's top places go up, and each tier's last safe place plays the
+## Relegation (#240).
 static func zone(position: int, rules: Dictionary) -> String:
 	var ucl := int(rules.get("ucl_places", 4))
 	var uel := int(rules.get("uel_places", 1))
 	var uecl := int(rules.get("uecl_places", 1))
+	var up := int(rules.get("promotion_places", 0))
+	var up_playoff := int(rules.get("promotion_playoff_places", 0))
 	var down := int(rules.get("relegation_places", 3))
+	var playoff := int(rules.get("relegation_playoff_places", 0))
 	var size := int(rules.get("clubs", 20))
+	if up > 0 and position <= up:
+		return "promotion"
+	if up > 0 and position <= up + up_playoff:
+		return "playoff"
 	if position <= ucl:
 		return "ucl"
 	if position <= ucl + uel:
@@ -212,6 +246,8 @@ static func zone(position: int, rules: Dictionary) -> String:
 		return "uecl"
 	if position > size - down:
 		return "relegation"
+	if playoff > 0 and position > size - down - playoff:
+		return "playoff"
 	return ""
 
 static func zone_label(band: String) -> String:
@@ -221,6 +257,10 @@ static func zone_label(band: String) -> String:
 		return "UEL"
 	if band == "uecl":
 		return "UECL"
+	if band == "promotion":
+		return "UP"
+	if band == "playoff":
+		return "PLO"
 	if band == "relegation":
 		return "REL"
 	return ""
@@ -234,6 +274,8 @@ static func places(rules: Dictionary) -> Dictionary:
 		"ucl": ucl,
 		"uel": uel,
 		"uecl": uecl,
+		"promotion": int(rules.get("promotion_places", 0)),
+		"playoff": int(rules.get("relegation_playoff_places", 0)),
 		"relegation": int(rules.get("relegation_places", 3)),
 		"europe": ucl + uel + uecl,
 	}

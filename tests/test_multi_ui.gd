@@ -128,6 +128,21 @@ func test_the_podium_frames_one_block_per_league() -> void:
 	assert_gt(two_h, one_h * 1.8, "the podium did not make room for a second league")
 	assert_eq(LeagueBook._podium_sections(summary).size(), 2, "the podium lost a league block")
 
+func test_the_podium_makes_room_for_the_promoting_tier_and_the_tie() -> void:
+	var book := LeagueBook.new()
+	var second := {"champion": {"club": "A", "points": 1}, "runner_up": {"club": "B", "points": 0},
+		"europe": [], "relegated": [{"club": "C"}], "table": [],
+		"rules": {"promotion_places": 2, "promotion_playoff_places": 1}}
+	var plain := {"champion": {"club": "A", "points": 1}, "runner_up": {"club": "B", "points": 0},
+		"europe": [], "relegated": [{"club": "C"}], "table": [], "rules": {}}
+	var with_up: float = book.frame_height({"summary": second})
+	var without: float = book.frame_height({"summary": plain})
+	assert_gt(with_up, without, "a promoting tier painted without room")
+	var tied := {"competitions": [plain, second], "relegation": {"text": "A 2 – 1 B"}}
+	var untied := {"competitions": [plain, second]}
+	assert_gt(book.frame_height({"summary": tied}), book.frame_height({"summary": untied}),
+		"the Relegation block painted without room")
+
 func test_the_stats_doors_write_their_filter() -> void:
 	var screen := FakeStats.new()
 	screen.stats_filter = {"league": "", "month": "", "team": "", "stat": "goals"}

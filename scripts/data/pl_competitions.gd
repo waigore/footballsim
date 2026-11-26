@@ -80,7 +80,9 @@ static func default_id() -> String:
 ## True while the open season's ledger holds clubs of this competition, i.e. it
 ## is one of the competitions the save is playing. An inactive competition in
 ## the same file (or any competition when no season is open) reads the snapshot.
-## An empty id asks about the file's default competition.
+## An empty id asks about the file's default competition. The table row answers,
+## not the club: after a season's membership swap the finished table still
+## belongs to the competition it was played in.
 static func season_owns(competition_id: String) -> bool:
 	if not LeagueLedger.bound():
 		return false
@@ -88,7 +90,7 @@ static func season_owns(competition_id: String) -> bool:
 	if id == "":
 		return false
 	return not PLDatabase.row(
-		"SELECT t.club_id FROM league_table t JOIN club c ON c.id = t.club_id "
-		+ "WHERE c.competition_id = ? LIMIT 1;",
+		"SELECT t.club_id FROM league_table t "
+		+ "WHERE t.competition_id = ? LIMIT 1;",
 		[id],
 	).is_empty()

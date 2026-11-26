@@ -30,6 +30,10 @@ static func zone_color(band: String) -> Color:
 		return UiChrome.C_LIVE
 	if band == "uecl":
 		return Color(0.55, 0.72, 0.92)
+	if band == "promotion":
+		return Color(0.45, 0.85, 0.55)
+	if band == "playoff":
+		return Color(0.93, 0.68, 0.34)
 	if band == "relegation":
 		return UiChrome.C_DANGER
 	return UiChrome.C_DIM

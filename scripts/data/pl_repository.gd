@@ -236,7 +236,7 @@ func _live_table(competition_id: String = "") -> Array:
 	)
 	var bindings: Array = []
 	if competition_id != "":
-		sql += "WHERE c.competition_id = ? "
+		sql += "WHERE t.competition_id = ? "
 		bindings.append(competition_id)
 	return _placed(PLDatabase.rows(
 		sql + "ORDER BY t.competition_id, t.points DESC, (t.gf - t.ga) DESC, t.gf DESC, c.name ASC;",
