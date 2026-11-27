@@ -22,6 +22,7 @@ Base rules for opening and landing PRs (humans and agents).
 | `build` | [CI](../.github/workflows/ci.yml) | Headless import/compile; else no-op |
 | `e2e-smoke` | [CI](../.github/workflows/ci.yml) | Needs `build`; smoke when present; else no-op |
 | `docs-lint` | [CI](../.github/workflows/ci.yml) | Docs ≤ 500 words — always |
+| `no-comments-lint` | [CI](../.github/workflows/ci.yml) | Ban `#`/`##`/`//`/`/* */` in scripts/tests/playtests `.gd` |
 | `arch-lint` | [CI](../.github/workflows/ci.yml) | P3 + static P1 (2D/icons/hover) — always |
 | `skills-isolation` | [CI](../.github/workflows/ci.yml) | PR-only: fail if code **and** skills both change |
 | `ai-bench-report` | [CI](../.github/workflows/ci.yml) | PR AI paths: hills report ≥ baseline; else no-op |
@@ -48,8 +49,7 @@ Budgets ([testing.md](testing.md)): `tests` ≤5 min; smoke ≤4 min; `ux-vlm` �
 
 - Confirm with `gh pr checks` / `gh pr view --json statusCheckRollup,mergeStateStatus`.
 - Do not merge while required checks fail, pend, or skip incompletely.
-- Do not use `--admin`, overrides, or rule disablement for a red PR.
-- Fix forward on the PR branch; don’t close/reopen to clear failures.
+- No `--admin` / overrides / rule disablement. Fix forward; don’t close/reopen to clear red.
 - Keep the branch current with `main` under strict status policy.
 
 ## Workflow with `gh`

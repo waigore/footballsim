@@ -1,18 +1,13 @@
 class_name MatchPlayback
 extends RefCounted
 
-## The live match clock loop: sheet gates, half-time waits, highlight windows,
-## the per-frame tick budget and engine-event juice. Split out of main.gd so the
-## scene stays inside its P3 size budget; the host keeps the flags this class
-## drives.
 
 var game = null
 
 func _init(host: Node) -> void:
 	game = host
 
-## One frame of the broadcast: camera and hover always run; the engine only
-## ticks when no sheet is covering the pitch and the match is still live.
+
 func tick(delta: float) -> void:
 	game.elapsed_real += delta
 	game.match_time += delta
@@ -35,8 +30,8 @@ func tick(delta: float) -> void:
 		game.view.hover(game.mouse)
 
 	if game.replay != null:
-		# A stored clip owns the broadcast until it ends: the pack drives the
-		# bodies, so nothing here may tick the engine.
+
+
 		if game.replay.step(delta):
 			game.replay = null
 		return
@@ -88,7 +83,7 @@ func end_highlight() -> void:
 	if game.mode != "full":
 		game.fast_mode = true
 
-## Skip inside a stored clip ends it; otherwise jump ten minutes of match time.
+
 func skip() -> void:
 	if game.replay != null:
 		game.replay.finish(true)
@@ -102,7 +97,7 @@ func skip() -> void:
 	else:
 		advance_ticks(60 * 10)
 
-## Crowd/whistle juice for one engine event, then the highlight director.
+
 func on_engine_event(e: Dictionary) -> void:
 	var kind: String = e.get("type", "")
 	if kind == "goal":

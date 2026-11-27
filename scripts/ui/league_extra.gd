@@ -1,62 +1,48 @@
 class_name LeagueExtra
 extends RefCounted
 
-## The league sheets that hang off the left panel rather than a season reading:
-## Stats (reports and the podium) and Teams of Interest (list + search). The
-## season's save/exit dialog is `LeagueSystemSheet`, its own module (#109).
-##
-## Same contract as the other sheets: `layout()` turns state into rows with
-## rects, `draw_*` paints them, and no geometry is invented at paint time.
 
 const HEADER := 58.0
 const ROW_H := 34.0
 const GAP := 6.0
 const FIELD_H := 38.0
-## The month stepper's cell widths (#281): one arrow, the readout it holds and
-## the air between the cells and between the group and the stat chips.
+
+
 const STEP_W := 34.0
 const STEP_H := 28.0
 const STEP_GAP := 4.0
 const STEP_AFTER := 24.0
-## The stat chips beside the stepper: GOALS and ASSISTS, and the air between.
+
 const STAT_W := [72.0, 78.0]
 const STAT_GAP := 8.0
 
 var cache := {}
-## Dates this sheet painted, read by the screen's weekday overlay (#99).
+
 var hints := DateHints.new()
 
-# ------------------------------------------------------------------ header ---
 
 static func back_rect() -> Rect2:
 	return Rect2(24.0, 12.0, 96.0, 32.0)
 
-## The one BACK door in the header lane: every league sheet builds the same row.
+
 static func back_item() -> Dictionary:
 	return {"id": "back", "kind": "button", "label": "BACK", "pinned": true,
 		"rect": back_rect()}
 
-## The primary door's corner: CONTINUE on the hub, KICK OFF on the pre-match
-## briefing. The same header band as BACK, on the other side of it (#163).
+
 static func primary_rect(vp: Vector2, width: float = 140.0) -> Rect2:
 	return Rect2(vp.x - 24.0 - width, 12.0, width, 32.0)
 
-## Where a header's title starts: clear of BACK's right edge, so the two never
-## share a pixel however long the season's name is.
+
 const TITLE_X := 136.0
 const TITLE_SIZE := 16
-## The smallest caption the header still paints after the title: a date or kicker
-## shortened to less than a line is dropped, not clipped to a stub.
+
+
 const CAPTION_MIN := 160.0
 
 static var header_cache := {}
 
-## The header band as geometry, so a sheet's title and caption are fitted to the
-## lane between BACK and whatever door owns the right corner (#180). A title too
-## long for the lane is shortened with an ellipsis; the caption only rides what
-## the title leaves, and is dropped when that is too narrow to read.
-## `caps` is the kicker's own convention: every sheet's title is upper case
-## except the hub's, which names the pose in title case (#323).
+
 static func header_band(vp: Vector2, bold: Font, title: String, caption: String = "",
 		right: float = 0.0, caps: bool = true) -> Dictionary:
 	var lane_end: float = vp.x - 24.0 - right
@@ -68,8 +54,8 @@ static func header_band(vp: Vector2, bold: Font, title: String, caption: String 
 		"caption": "", "caption_rect": Rect2()}
 	if caption == "":
 		return out
-	# The caption starts only where the title ends, with one gutter between, so
-	# neither can be painted through the other.
+
+
 	var space: float = lane_end - (TITLE_X + title_w + 12.0)
 	if space < CAPTION_MIN:
 		return out
@@ -79,14 +65,7 @@ static func header_band(vp: Vector2, bold: Font, title: String, caption: String 
 	out["caption_rect"] = Rect2(lane_end - caption_w, 24.0, caption_w, 14.0)
 	return out
 
-## One header for every league season sheet: BACK top-left, the sheet's title
-## in the gold kicker position, and an optional right-hand caption. Continue is
-## the only control that ever shares the row, and the hub adds it itself.
-## `right` reserves room for a door in the corner; the title and caption are
-## fitted inside what it leaves (#180). `caps` keeps the kicker's upper case,
-## which every sheet uses except the hub's own title case (#323). Returns the
-## band it painted, so a date caption can register its hint on the strip it
-## really occupies.
+
 static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
 		caption: String = "", right: float = 0.0, caps: bool = true) -> Dictionary:
 	var bold: Font = fonts["bold"]
@@ -100,14 +79,13 @@ static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
 	c.draw_rect(Rect2(24.0, HEADER - 8.0, vp.x - 48.0, 1.0), Color(1, 1, 1, 0.08))
 	return band
 
-# ------------------------------------------------------------------- stats ---
 
 func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 	items.append(back_item())
 	var filters: Dictionary = view.get("filters", {})
 	var y := HEADER + 10.0
-	# Competition filter: ALL, then every active league.
+
 	var chips: Array = [{"id": "", "short": "ALL"}]
 	for comp in view.get("competitions", []):
 		chips.append({"id": str(comp["id"]), "short": str(comp.get("short", comp["id"]))})
@@ -120,16 +98,13 @@ func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(x, y, cw, 30.0)})
 		x += cw + gap
 	y += 40.0
-	# Month filter: the report list narrows to one month, or reads them all. The
-	# two chevrons and the month they change are laid as one stepper (#281): the
-	# readout is measured on the font it paints with, so the forward arrow always
-	# hugs the words it changes, and the group is visibly apart from the stat
-	# chips beside it.
+
+
 	var month_label: String = _month_label(str(filters.get("month", "")))
 	var step := month_stepper(vp, y, month_label, UiChrome.fonts()["bold"])
 	items.append_array(step)
 	var stat_x: float = (step[2]["rect"] as Rect2).end.x + STEP_AFTER
-	# Leader stat door: goals or assists, default all actives.
+
 	items.append({"id": "statsstat:goals", "kind": "chip", "label": "GOALS",
 		"selected": str(filters.get("stat", "goals")) == "goals",
 		"rect": Rect2(stat_x, y, float(STAT_W[0]), STEP_H)})
@@ -151,8 +126,8 @@ func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 	y += 26.0
 	var reports: Array = view.get("reports", [])
 	if reports.is_empty():
-		# The note says why the list is empty: a season with nothing played yet
-		# has nothing to blame the filters for (#312).
+
+
 		var note: String = "No matchdays match these filters."
 		if int(view.get("played", 0)) == 0:
 			note = "No matchday has been played yet."
@@ -164,8 +139,8 @@ func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(24.0, y + float(i) * (ROW_H + GAP), vp.x - 48.0, ROW_H)})
 	y += float(reports.size()) * (ROW_H + GAP) + 10.0
 	var leaders: Array = view.get("leaders", [])
-	# A chart with no rows is not a section: with nothing to rank the caption is
-	# left off rather than printed over empty space (#312).
+
+
 	if leaders.is_empty():
 		return items
 	items.append({"id": "", "kind": "caption",
@@ -177,10 +152,7 @@ func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(24.0, y + float(i) * 24.0, vp.x - 48.0, 23.0)})
 	return items
 
-## The month label and both chevrons as one control (#281): `[<] [AUGUST 2026]
-## [>]`, the readout measured on the bold font at the size it paints, so the
-## forward arrow always sits just past the words it changes instead of floating
-## toward the GOALS chip. Every pos/stat id keeps its own rect for the press.
+
 static func month_stepper(vp: Vector2, y: float, label: String, bold: Font) -> Array:
 	var stat_w: float = float(STAT_W[0]) + STAT_GAP + float(STAT_W[1])
 	var room: float = vp.x - 48.0 - STEP_W * 2.0 - STEP_GAP * 2.0 - STEP_AFTER - stat_w
@@ -194,8 +166,7 @@ static func month_stepper(vp: Vector2, y: float, label: String, bold: Font) -> A
 		{"id": "statsmonth:1", "kind": "chip", "label": ">", "rect": next},
 	]
 
-## A league group's heading on a mixed day: the competition name, its gameweek,
-## and a rule line so two groups never blur into one list (#189).
+
 static func draw_league_head(c: CanvasItem, rect: Rect2, competition_id: String,
 		matchday: int, fonts: Dictionary) -> void:
 	var name: String = PLRepository.shared().competition_name(competition_id)
@@ -206,8 +177,7 @@ static func draw_league_head(c: CanvasItem, rect: Rect2, competition_id: String,
 	c.draw_rect(Rect2(rect.position.x + width + 10.0, rect.position.y + 8.0,
 		maxf(rect.size.x - width - 10.0, 0.0), 1.0), Color(1, 1, 1, 0.10))
 
-## How many competitions a day's fixtures span: a head is only worth its line
-## when the list really holds two leagues.
+
 static func distinct_competitions(fixtures: Array) -> int:
 	var ids := {}
 	for fx in fixtures:
@@ -219,7 +189,6 @@ static func _month_label(month: String) -> String:
 		return "ALL MONTHS"
 	return LeagueMonth.label(month)
 
-# gd-tools: no cover start
 
 func draw_stats_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
@@ -242,8 +211,8 @@ func draw_stats_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 19.0,
 				str(item["label"]), 10, Color(0.06, 0.06, 0.05) if on else UiChrome.C_SOFT, bold)
 		elif kind == "stepper":
-			# The month readout, painted on its own cell between the two arrows so
-			# the three read as one control (#281).
+
+
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_BORDER, 1)
 			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 19.0,
 				str(item["label"]), 10, UiChrome.C_SOFT, bold)
@@ -295,9 +264,6 @@ static func _comp_short(competition_id: String) -> String:
 	var row := PLRepository.shared().competition(competition_id)
 	return str(row.get("short_name", competition_id))
 
-# gd-tools: no cover end
-
-# ---------------------------------------------------------------- interest ---
 
 func interest_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
@@ -329,7 +295,6 @@ func interest_layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(row.end.x - 96.0, row.position.y + 4.0, 88.0, ROW_H - 8.0)})
 	return items
 
-# gd-tools: no cover start
 
 func draw_interest_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
@@ -349,8 +314,8 @@ func draw_interest_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Ar
 			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 25.0),
 				typed if typed != "" else "SEARCH CLUBS", 14,
 				UiChrome.C_TEXT if typed != "" else UiChrome.C_DIM, bold)
-			# The caret is the keyboard's own mark: it shows while the field
-			# owns the IME and not a moment longer (#201).
+
+
 			LeagueFieldFocus.caret(c, rect, typed, bold, 14, live)
 		elif kind == "caption":
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), str(item["label"]), 10,
@@ -382,4 +347,4 @@ func _draw_swatch(c: CanvasItem, rect: Rect2, club: Dictionary) -> void:
 	var colour = club.get("color", UiChrome.C_GOLD)
 	c.draw_rect(Rect2(rect.position.x, rect.position.y + 4.0, 3.0, rect.size.y - 8.0), colour)
 
-# gd-tools: no cover end
+

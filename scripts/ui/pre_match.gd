@@ -1,14 +1,6 @@
 class_name PreMatchScreen
 extends Control
 
-## The pre-match briefing (#157): both expected elevens on their own pitches,
-## who is out and for how long, one manager line each, and a short desk blurb —
-## then CONTINUE (league Watch) or KICK OFF (single match), SKIP, or the ten
-## second auto-advance.
-##
-## A read-only screen: it never edits a lineup, never touches the sim, and hands
-## every press back to its host as a signal. `layout()` is pure geometry so a
-## headless suite can press the doors without a rendered frame.
 
 signal kick_off
 signal cancelled
@@ -23,9 +15,9 @@ var view: Dictionary = {}
 var ui_scale := 1.0
 var touch := false
 var mouse := Vector2(-1000, -1000)
-## Seconds left before the briefing advances into the sim; 0 when held.
+
 var auto_left := 0.0
-## SKIP was pressed: the auto-advance is cancelled and the briefing waits.
+
 var held := false
 var buttons: Array = []
 var rects: Dictionary = {}
@@ -33,14 +25,13 @@ var cache := {}
 var f_bold: Font
 var f_med: Font
 
-# gd-tools: no cover start
+
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
 	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
 	resized.connect(queue_redraw)
 
-# gd-tools: no cover end
 
 func setup(v: Dictionary) -> void:
 	view = v
@@ -51,16 +42,14 @@ func setup(v: Dictionary) -> void:
 func is_open() -> bool:
 	return visible and not view.is_empty()
 
-# gd-tools: no cover start
+
 func design_vp() -> Vector2:
 	var vp: Vector2 = size / maxf(ui_scale, 0.001)
 	if (vp.x <= 0.0 or vp.y <= 0.0) and is_inside_tree():
 		vp = get_viewport().get_visible_rect().size / maxf(ui_scale, 0.001)
 	return vp
 
-# gd-tools: no cover end
 
-## Auto-advance into the sim. SKIP stops this clock; it never stops the player.
 func _process(delta: float) -> void:
 	if not is_open() or held or auto_left <= 0.0:
 		return
@@ -69,17 +58,15 @@ func _process(delta: float) -> void:
 	if auto_left <= 0.0:
 		kick_off.emit()
 
-# ------------------------------------------------------------------ layout ---
 
-## Every rect on the screen, in design units. Pure: no sim calls, no paint.
 func layout(vp: Vector2) -> Dictionary:
 	var compact := vp.y < 620.0 or vp.x < 860.0
 	var top := HEADER + 8.0
 	var col_w := (vp.x - 72.0) * 0.5
 	var news_y := vp.y - 12.0 - BAR - NEWS_H - 8.0
 	var rows := 3 if compact else 4
-	# The pitch gets what is left after the club strip, the OUT list and the
-	# quote card, so nothing ever runs under the news strip or the doors.
+
+
 	var room: float = news_y - top - 26.0 - 16.0 - rows * ROW - 10.0 - QUOTE_H - 4.0
 	var pitch_h := clampf(minf(col_w * 0.56, room), 76.0, 268.0)
 	var pitch_y := top + 26.0
@@ -106,21 +93,17 @@ func layout(vp: Vector2) -> Dictionary:
 	]
 	return out
 
-## The kick door in the header's top-right corner (#163). It narrows with the
-## window so it never runs into BACK and the title on the other side.
+
 static func kick_width(vp: Vector2) -> float:
 	return clampf(vp.x * 0.28, 132.0, 210.0)
 
-## The door under a design point. Read from the layout, not from the painted
-## list: a headless suite (and a press that lands before the first frame) must
-## answer the same geometry the painter uses.
+
 func button_at(p: Vector2) -> String:
 	for b in layout(design_vp())["buttons"]:
 		if (b["rect"] as Rect2).has_point(p):
 			return str(b["id"])
 	return ""
 
-# ------------------------------------------------------------------- input ---
 
 func click(id: String) -> void:
 	if id == "kick":
@@ -130,7 +113,7 @@ func click(id: String) -> void:
 	elif id == "back":
 		cancelled.emit()
 
-## SKIP cancels the auto-advance: the briefing stays until the player is ready.
+
 func hold() -> void:
 	held = true
 	auto_left = 0.0
@@ -147,9 +130,6 @@ func key(code: int) -> bool:
 		return false
 	return true
 
-# ------------------------------------------------------------------- paint ---
-
-# gd-tools: no cover start
 
 func _draw() -> void:
 	var vp := design_vp()
@@ -174,8 +154,7 @@ func _draw() -> void:
 func _view_text(key: String) -> String:
 	return str(view.get(key, ""))
 
-## BACK top-left and the kick door top-right (#163); the caption takes what the
-## middle of the header can spare, never the door's corner.
+
 func _draw_header(vp: Vector2, fonts: Dictionary) -> void:
 	var bold: Font = fonts["bold"]
 	var caption := str(view.get("caption", ""))
@@ -191,10 +170,7 @@ func _draw_header(vp: Vector2, fonts: Dictionary) -> void:
 		line = LeagueColumns.fit_name(kicker, bold, 10, room)
 	LeagueExtra.header(self, vp, fonts, "PRE-MATCH", line, right)
 
-## The line under a club strip: the shape on the pitch, the table place and the
-## last five results (`4-2-3-1 · 7TH · W D L W W`). The strip is chrome, so a
-## place reads in caps; the desk blurb says the same number in a sentence
-## (`7th`). Pure, so a suite pins the ordinal without a rendered frame.
+
 static func strip_line(team: Dictionary, position: int, form: String) -> String:
 	var parts: Array = []
 	var shape := str(team.get("formation", ""))
@@ -206,7 +182,7 @@ static func strip_line(team: Dictionary, position: int, form: String) -> String:
 		parts.append(form)
 	return " · ".join(PackedStringArray(parts))
 
-## One side: the club strip, its pitch, the OUT list and the manager's line.
+
 func _draw_side(pitch: Rect2, out_rect: Rect2, quote: Rect2, team: Dictionary,
 		xi: Array, captain: String, absences: Array, quote_data: Dictionary,
 		form: String, position: int, fonts: Dictionary, mirror: bool) -> void:
@@ -219,12 +195,12 @@ func _draw_side(pitch: Rect2, out_rect: Rect2, quote: Rect2, team: Dictionary,
 	var name_x := pitch.position.x + 10.0 + UiChrome.text_width(bold, str(team.get("abbr", "")), 20) + 10.0
 	UiChrome.text(self, Vector2(name_x, pitch.position.y - 7.0),
 		str(team.get("name", "")).to_upper(), 11, UiChrome.C_DIM, med)
-	# The shape the pitch is showing, then the table place and the form run.
+
 	var right := strip_line(team, position, form)
 	if right != "":
 		UiChrome.text_r(self, pitch.end.x, pitch.position.y - 7.0, right, 10, UiChrome.C_GOLD, bold)
 	PreMatchPitch.draw(self, pitch, team, xi, captain, fonts, mirror)
-	# Who is out, in public wording only.
+
 	UiChrome.text(self, Vector2(out_rect.position.x, out_rect.position.y + 2.0),
 		"OUT · %d" % absences.size(), 10, UiChrome.C_DIM, bold)
 	var shown := mini(absences.size(), int(rects.get("rows", 4)))
@@ -242,7 +218,7 @@ func _draw_side(pitch: Rect2, out_rect: Rect2, quote: Rect2, team: Dictionary,
 	if absences.is_empty():
 		UiChrome.text(self, Vector2(out_rect.position.x, out_rect.position.y + ROW + 6.0),
 			"NO ABSENCES", 10, UiChrome.C_DIM, med)
-	# The manager's line.
+
 	UiChrome.panel(self, cache, quote, UiChrome.C_PANEL, 6, Color(0.96, 0.78, 0.30, 0.22), 1)
 	UiChrome.text(self, Vector2(quote.position.x + 10.0, quote.position.y + 16.0),
 		str(quote_data.get("by", "")), 10, UiChrome.C_GOLD, bold)
@@ -271,8 +247,8 @@ func _draw_doors(vp: Vector2, fonts: Dictionary) -> void:
 		var rect: Rect2 = b["rect"]
 		var id := str(b["id"])
 		if id == "kick":
-			# The header band is 32 units: the door names the key in the line
-			# under the briefing instead of a second caption inside it.
+
+
 			UiChrome.button(self, cache, rect, kick_label, bold, true, 16)
 		elif id == "skip":
 			UiChrome.button(self, cache, rect, "SKIP", bold, false)
@@ -294,7 +270,7 @@ func _draw_doors(vp: Vector2, fonts: Dictionary) -> void:
 		UiChrome.text(self, Vector2(24.0, bar_y + 38.0),
 			"ENTER  %s   ·   ESC  BACK" % kick_label, 10, UiChrome.C_DIM, med)
 
-## Greedy wrap into at most `max_lines` lines of `width` design units.
+
 func _wrap(text: String, width: float, max_lines: int) -> Array:
 	var out: Array = []
 	var line := ""
@@ -311,4 +287,4 @@ func _wrap(text: String, width: float, max_lines: int) -> Array:
 		out.append(line)
 	return out
 
-# gd-tools: no cover end
+

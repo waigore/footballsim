@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Per-goal report clips: the generated pack, the stored rows, the live capture
-## path and the codec — driven through a real save so the report and the clip are
-## always read from the same ledger.
 
 var SAVE_DIR := TestScratch.dir("saves_test_clips_issue89")
 var CACHE_DIR := TestScratch.dir("cache_test_clips_issue89")
@@ -46,7 +43,6 @@ func _goal(minute: int = 34, club: String = "MUN", index: int = 1) -> Dictionary
 func _sides() -> Dictionary:
 	return {"home": home_xi, "away": away_xi}
 
-# ------------------------------------------------------------------ codec ---
 
 func test_a_pack_round_trips_through_its_blob() -> void:
 	var seed := GoalHighlight.seed_for(SEED, "gw01-MUN-MCI", 1)
@@ -77,9 +73,7 @@ func test_the_same_save_seed_reproduces_the_same_clip() -> void:
 	assert_true(a == b, "the same goal produced two different clips")
 	assert_true(a != c, "a new seed reproduced the old clip")
 
-## #171: a tagged penalty keeps its scorer and minute but reads and plays as a
-## spot kick — no assist, a line from the spot, and a different picture from the
-## open-play chance the same seed would have drawn.
+
 func test_a_penalty_clip_reads_and_plays_as_a_spot_kick() -> void:
 	var goal := _goal()
 	goal["penalty"] = true
@@ -108,7 +102,6 @@ func test_the_seed_follows_the_goal_index() -> void:
 	assert_ne(a, b, "two goals of one fixture share a seed")
 	assert_ne(a, c, "two fixtures share a seed")
 
-# ------------------------------------------------------------------ frames ---
 
 func test_the_clip_ends_with_the_reported_goal() -> void:
 	var clip := GoalHighlight.build(_goal(63), _sides(), 99)
@@ -145,10 +138,7 @@ func test_an_away_goal_is_mirrored() -> void:
 	var end := GoalHighlight.ball_at(frames[frames.size() - 1])
 	assert_lt(end.x, 5.0, "an away goal was played toward the home net")
 
-# ------------------------------------------------------------- simulation ---
 
-## #162: an AUTO clip is simulated, not posed. Bodies move at football speeds
-## under acceleration, the ball obeys gravity, and the keeper dives late.
 func test_the_auto_clip_is_a_physics_vignette() -> void:
 	var clip := GoalHighlight.build(_goal(), _sides(), 21)
 	var frames: Array = clip["frames"]
@@ -161,7 +151,7 @@ func test_the_auto_clip_is_a_physics_vignette() -> void:
 			var step := GoalHighlight.player_at(a, p).distance_to(GoalHighlight.player_at(b, p))
 			fastest = maxf(fastest, step / span)
 	assert_lt(fastest, 11.5, "a body outran the pitch: the clip is posed, not simulated")
-	# Gravity: the ball leaves the turf, peaks and comes back down into the net.
+
 	var peak := 0.0
 	var at := 0
 	for i in range(frames.size()):
@@ -174,7 +164,7 @@ func test_the_auto_clip_is_a_physics_vignette() -> void:
 	assert_lt(GoalHighlight.ball_at(frames[frames.size() - 1]).z, 0.4,
 		"the ball never came back down")
 	assert_gt(at, 0, "the ball was already airborne at kick-off")
-	# The keeper is beaten by the dive, not by standing still.
+
 	var keeper := 0
 	for i in range(away_xi.size()):
 		if str(away_xi[i].get("role", "")) == "GK":
@@ -184,7 +174,7 @@ func test_the_auto_clip_is_a_physics_vignette() -> void:
 	var to := GoalHighlight.player_at(frames[frames.size() - 1], keeper)
 	assert_gt(from.distance_to(to), 0.3, "the keeper never dived")
 
-## The seed decides the chance: two goals from one report do not share a shape.
+
 func test_the_seed_shapes_the_chance() -> void:
 	var a: Array = GoalHighlight.build(_goal(), _sides(), 31)["frames"]
 	var b: Array = GoalHighlight.build(_goal(), _sides(), 77)["frames"]
@@ -199,9 +189,7 @@ func test_the_seed_shapes_the_chance() -> void:
 	assert_gt(apart, 1.0, "two seeds played the same ball")
 	assert_gt(path, 1.0, "two seeds put the same bodies in the same place")
 
-## Every seeded chance is constrained to score: the ball crosses inside the
-## frame and the report's own scoreline lands with it. Four seeds cover the
-## constraint without redrawing eight vignettes under coverage.
+
 func test_every_seeded_chance_finishes_inside_the_frame() -> void:
 	for seed in range(1, 5):
 		var clip := GoalHighlight.build(_goal(34), _sides(), seed)
@@ -219,8 +207,7 @@ func test_every_seeded_chance_finishes_inside_the_frame() -> void:
 		assert_eq(int(frames[first]["s"][0]), 2, "seed %d lost its scoreline" % seed)
 		assert_eq(int(frames[first]["s"][1]), 1, "seed %d lost its scoreline" % seed)
 
-## The report's men play their parts: the recorded assist carries the ball and
-## the recorded scorer strikes it.
+
 func test_the_reported_men_play_their_parts() -> void:
 	var goal := _goal(34)
 	var clip := GoalHighlight.build(goal, _sides(), 42)
@@ -234,7 +221,7 @@ func test_the_reported_men_play_their_parts() -> void:
 	var at0 := GoalHighlight.ball_at(frames[0])
 	assert_lt(carried.distance_to(Vector2(at0.x, at0.y)), 1.2,
 		"the recorded assist never had the ball")
-	# The strike is the frame where the ball's speed jumps.
+
 	var strike := 0
 	var jump := 0.0
 	for i in range(1, frames.size()):
@@ -278,7 +265,6 @@ func test_the_viewer_interpolates_between_frames() -> void:
 	var done := GoalHighlight.blend(a, b, 1.0)
 	assert_true(is_equal_approx(GoalHighlight.ball_at(done).x, pb.x), "alpha 1 is not frame b")
 
-# --------------------------------------------------------------- commentary ---
 
 func test_an_away_goal_line_reads_from_the_scoring_side() -> void:
 	var goal := _goal(51, "MCI")
@@ -297,13 +283,11 @@ func test_the_line_names_the_report_scorer_and_score() -> void:
 	assert_true(line.contains("2-1") or line.contains("2–1"), "the line does not carry the score")
 	assert_eq(line, GoalHighlight.commentary(goal, 77), "the line is not deterministic")
 
-# ------------------------------------------------------------------- store ---
 
 class FakeActors:
 	var ball_trail: Array = []
 
-## Just enough of the play scene for the ring director: an engine, a mode and
-## the flags it drives.
+
 class FakeHost:
 	var engine = null
 	var mode := "full"
@@ -316,9 +300,8 @@ class FakeHost:
 	var accumulator := 0.0
 
 func _ring_host(seed: int) -> Array:
-	# Snapshot cadence is ~27 ticks (`HighlightDirector.SNAPSHOT_EVERY`); four
-	# frames is the capture floor, so ~90 ticks fills the ring without the old
-	# 150-tick warm-up tax under coverage.
+
+
 	var engine = MatchEngine.new(seed, "MUN", "MCI")
 	var host := FakeHost.new()
 	host.engine = engine
@@ -391,8 +374,7 @@ func test_a_shot_rewinds_the_live_picture_once() -> void:
 	director.on_event({"type": "shot", "clock": trigger, "player_id": -1})
 	assert_false(host.in_highlight, "the same shot was replayed twice")
 
-## Goals only (#164): the ring replays the goal and nothing else, and the report
-## clip is still cut — the capture path never reads the live mode.
+
 func test_goals_only_rewinds_on_a_goal_and_not_on_a_chance() -> void:
 	var ring := _ring_host(606)
 	var host: FakeHost = ring[0]
@@ -427,8 +409,8 @@ func test_goals_only_still_cuts_the_report_clip() -> void:
 	assert_eq(season.captured.size(), before + 1, "Goals only stopped cutting the report clip")
 
 func test_a_watch_goal_keeps_the_captured_clip() -> void:
-	# A watched fixture the engine has just finished: its goal rows are written,
-	# one goal has a live capture and the other does not.
+
+
 	var fx := str((season.record.fixtures.all(2)[0] as Dictionary)["id"])
 	var row := season.record.fixtures.one(fx)
 	var home := str(row["home_club_id"])
@@ -465,9 +447,7 @@ func test_a_watch_goal_keeps_the_captured_clip() -> void:
 	season.record.clips.clear(fx)
 	assert_true(season.record.clips.list(fx).is_empty(), "clearing a fixture left clip rows")
 
-## #171: a stored penalty recipe is drawn as a spot kick, and the line the
-## settling pass wrote survives beside it. The tag is part of the ledger, so a
-## reopened report still plays the right picture.
+
 func test_a_stored_penalty_clip_draws_as_a_spot_kick() -> void:
 	var fx := str((season.plan()[0] as Dictionary)["id"])
 	var row := season.record.fixtures.one(fx)
@@ -493,9 +473,8 @@ func test_a_stored_penalty_clip_draws_as_a_spot_kick() -> void:
 	season.record.clips.clear(fx)
 
 func test_a_settled_matchday_stores_a_clip_for_every_goal() -> void:
-	# Auto rows keep a recipe, not a picture (`LeagueHighlights._generated_row`).
-	# Assert every goal has a row, then draw one pack — redrawing every vignette
-	# was the suite's slowest coverage path (~1.8 s).
+
+
 	var result := season.advance()
 	var reports: Array = result["played"]
 	assert_gt(reports.size(), 0, "the matchday did not settle")
@@ -523,9 +502,7 @@ func test_a_settled_matchday_stores_a_clip_for_every_goal() -> void:
 	assert_eq(str(pack["scorer_id"]), str(sample["scorer_id"]), "the clip's scorer drifted")
 	assert_eq(int(pack["minute"]), int(sample["minute"]), "the clip's minute drifted")
 
-## A settled auto goal keeps a recipe, not a picture: the first report to ask
-## draws the pack from the save itself. It must be the clip the settling pass
-## would have drawn eagerly — same seed, same eleven, same scoreline.
+
 func test_a_settled_clip_is_drawn_from_its_recipe() -> void:
 	var fixture := ""
 	var row := {}
@@ -543,7 +520,7 @@ func test_a_settled_clip_is_drawn_from_its_recipe() -> void:
 	var home := str(fx["home_club_id"])
 	var away := str(fx["away_club_id"])
 	var club := str(row["club_id"])
-	# The scoreline at that goal, from the report's own goal rows.
+
 	var score := [0, 0]
 	var goals := 0
 	for e in season.report(fixture)["events"]:
@@ -572,13 +549,13 @@ func test_a_settled_clip_is_drawn_from_its_recipe() -> void:
 		[fixture, index]).get("bytes", PackedByteArray())
 	assert_false(stored.is_empty(), "the report did not draw the clip")
 	assert_true(stored == eager, "the drawn clip is not the one the recipe describes")
-	# The draw is cached in the row: a second report reads the same bytes back.
+
 	assert_true(PLDatabase.row(
 		"SELECT bytes FROM goal_highlight WHERE fixture_id = ? AND goal_index = ?;",
 		[fixture, index]).get("bytes", PackedByteArray()) == eager,
 		"the recipe drew two different clips")
-	# A clip that is not there, and a recipe too bare to draw, read as empty
-	# rather than throw: a report must never crash on a missing picture.
+
+
 	season.record.clips.add([{"fixture_id": "gw99-NONE-NONE", "goal_index": 0,
 		"club_id": "NONE", "minute": 1, "source": "auto"}])
 	assert_true(season.record.clips.pack("gw99-NONE-NONE", 0).is_empty(),
@@ -587,7 +564,7 @@ func test_a_settled_clip_is_drawn_from_its_recipe() -> void:
 		"a missing clip decoded to a picture")
 
 func test_a_clip_records_the_assist_it_was_built_with() -> void:
-	# One drawn pack is enough: the recipe → pack path is the same for every row.
+
 	var row := {}
 	for candidate in season.record.fixtures.all():
 		var rows := season.record.clips.list(str(candidate["id"]))

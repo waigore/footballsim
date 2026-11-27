@@ -1,10 +1,5 @@
 extends GdToolsTest
 
-## The English pyramid (#258/#260): five linked tiers in one save, the 2026/27
-## promotion play-offs, and the membership swap that follows them. The suite
-## builds finished seasons by hand (every fixture given a result, as the clock
-## would leave them) so it can read the brackets and the swap without playing a
-## 46-round calendar through the model.
 
 var SAVE_DIR := TestScratch.dir("saves_test_english_pyramid")
 var CACHE_DIR := TestScratch.dir("cache_test_english_pyramid")
@@ -13,8 +8,8 @@ const ENGLISH := ["PL", "CH", "L1", "L2", "NL"]
 
 var season: LeagueSeason = null
 var slug := ""
-## Cached from the shared five-tier save so create-determinism pays for one extra
-## PL+CH finish instead of two.
+
+
 var expected_bracket: Dictionary = {}
 
 func before_all() -> void:
@@ -28,9 +23,7 @@ func before_all() -> void:
 	slug = season.save.slug if season != null else ""
 	expected_bracket = LeaguePlayoffs.build(season, "CH") if season != null else {}
 
-## The shared pyramid season, rebound when another test created a season of its
-## own (creating one closes whatever was open, as the game does). Reopening the
-## save is the cheap path: a finished save keeps its swap and does not roll on.
+
 func _current() -> LeagueSeason:
 	if season == null or LeagueSeason.active != season:
 		season = LeagueSeason.open(slug)
@@ -52,9 +45,7 @@ func _clean() -> void:
 		if name.ends_with(".sqlite"):
 			DirAccess.remove_absolute(SAVE_DIR.path_join(name))
 
-## A season whose calendar is played out: every fixture given a result from the
-## two club ids (so no model run is needed) and the tables rebuilt. No second
-## season starts — the save is marked complete, as the clock leaves it.
+
 func _finished(name: String, seed: int, comps: Array) -> LeagueSeason:
 	var built := LeagueSeason.create(name, "generated", "fixture_days", seed, comps)
 	if built == null:
@@ -73,7 +64,6 @@ func _finished(name: String, seed: int, comps: Array) -> LeagueSeason:
 		built.save.set_status("complete")
 	return built
 
-# ------------------------------------------------------------------- seed ---
 
 func test_the_seed_ships_the_english_pyramid() -> void:
 	for cid in ENGLISH:
@@ -155,11 +145,10 @@ func test_the_table_legend_reads_the_leagues_own_bands() -> void:
 	assert_eq(straight, ["promotion", "relegation"],
 		"a tier with no play-off band still painted one")
 
-# ----------------------------------------------------------------- clock ---
 
 func test_a_five_tier_save_builds_every_calendar() -> void:
-	# before_all already built the five-tier save (then played it out). Fixture
-	# counts are still on the ledger — read the full set per competition.
+
+
 	var full := _current()
 	assert_not_null(full, "the five-tier save did not build")
 	assert_eq(full.save.competition_ids(), ENGLISH, "the save lost a tier")
@@ -170,9 +159,7 @@ func test_a_five_tier_save_builds_every_calendar() -> void:
 		assert_eq(full.record.standings.table(str(cid)).size(), 20 if cid == "PL" else 24,
 			"%s table is the wrong size" % cid)
 
-## Every contiguous English stack a player can pick short of the full pyramid.
-## Depth 5 is the shared before_all season; one four-tier create covers the rest
-## (each tier's calendar is the same under a taller contiguous stack).
+
 func test_any_contiguous_english_stack_builds() -> void:
 	var stack: Array = ENGLISH.slice(0, 4)
 	var built := LeagueSeason.create(
@@ -185,8 +172,7 @@ func test_any_contiguous_english_stack_builds() -> void:
 			"%s did not build in the four-tier stack" % cid)
 	built.close()
 
-## The English pyramid beside La Liga and the German pair: one save runs both
-## chains, and neither country's end-of-season reading takes the other's.
+
 func test_the_pyramid_runs_beside_the_other_countries() -> void:
 	var mixed := _finished("Two Countries", 6060, ["PL", "CH", "L1", "LL", "BL", "BL2"])
 	assert_not_null(mixed, "the mixed save did not build")
@@ -204,7 +190,6 @@ func test_the_pyramid_runs_beside_the_other_countries() -> void:
 			"the pyramid swapped a club out of England")
 	mixed.close()
 
-# --------------------------------------------------------------- brackets ---
 
 func test_the_bracket_draws_the_places_under_promotion() -> void:
 	var current := _current()
@@ -246,8 +231,8 @@ func test_each_tier_plays_its_own_bracket() -> void:
 			assert_eq((tie["legs"] as Array).size(), 1, "a National League round is not one leg")
 
 func test_a_bracket_without_its_tier_above_is_not_played() -> void:
-	# CH-with-PL-above is already on the shared finished pyramid; only the
-	# "L1 is not in this save" assert needs its own (unplayed) PL+CH create.
+
+
 	assert_false(LeaguePlayoffs.build(_current(), "CH").is_empty(),
 		"the Championship's bracket needs the Premier League above it")
 	var pair := LeagueSeason.create(
@@ -258,9 +243,8 @@ func test_a_bracket_without_its_tier_above_is_not_played() -> void:
 	pair.close()
 
 func test_one_seed_settles_one_bracket() -> void:
-	# One extra create against the cached bracket: create + settle stay
-	# deterministic without rebuilding the calendar twice. Same seed on PL+CH
-	# alone settles the same CH bracket as the shared five-tier save.
+
+
 	var again := _finished("Bracket B", SEED, ["PL", "CH"])
 	assert_not_null(again, "the second English season was not created")
 	var bracket := LeaguePlayoffs.build(again, "CH")
@@ -275,7 +259,6 @@ func test_a_level_tie_goes_to_extra_time_and_penalties() -> void:
 	assert_eq(first, again, "the shootout is not deterministic for a seed")
 	assert_ne(first.x, first.y, "a shootout finished level")
 
-# ------------------------------------------------------------------ swap ---
 
 func test_the_swap_keeps_every_tier_its_size() -> void:
 	var current := _current()
@@ -309,8 +292,8 @@ func test_the_playoff_winner_goes_up_and_the_drop_goes_down() -> void:
 				"%s did not go up" % club_id)
 
 func test_the_national_league_drop_stays_put() -> void:
-	# The chain ends at the National League: its bottom four read RELEGATED, and
-	# with no tier below there is nowhere to move them.
+
+
 	var below := LeagueRules.template("NL")
 	assert_eq(int(below["relegation_places"]), 4, "the National League drops four")
 	assert_eq(LeagueTiers.below("NL"), "", "the National League gained a tier below it")

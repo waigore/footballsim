@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## One date form for the whole game (#99): `15/AUG/2026` everywhere, with the
-## weekday kept for the hover hint instead of crowding the date itself. The
-## overlay is driven here through plain dictionaries, so the pointer plumbing is
-## measured without a rendered frame.
 
 func _screen(chrome: DateHints) -> Dictionary:
 	return {
@@ -78,10 +74,10 @@ func test_rows_are_read_in_the_space_they_were_laid_out_in() -> void:
 	over.screen["rows_hints"] = rows
 	over.body = {"position": Vector2(0.0, 50.0), "size": Vector2(400.0, 300.0),
 		"scroll": 4.0, "hscroll": 6.0}
-	# A league row sits in design space: the pointer moves back past the scroll.
+
 	over.screen["mouse"] = Vector2(16.0, 100.0)
 	assert_eq(str(over.zone_at().get("date", "")), "2026-08-15", "a league row was not found")
-	# An encyclopedia row sits inside the body window instead.
+
 	over.rows_local = true
 	over.screen["mouse"] = Vector2(16.0, 150.0)
 	assert_eq(str(over.zone_at().get("date", "")), "2026-08-15", "a page row was not found")

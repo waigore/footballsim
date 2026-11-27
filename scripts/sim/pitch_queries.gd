@@ -1,14 +1,10 @@
 class_name PitchQueries
 extends RefCounted
 
-## Geometry queries over live match state: reach times, the offside line, the
-## defensive line and passing lanes. Kept out of MatchAI so the brain stays
-## inside the size budget.
 
-## How far ahead the ball's path is predicted, in seconds, and how coarsely.
 const REACH_HORIZON := 3.6
 const REACH_STEP := 0.12
-## Reach time when the ball cannot be met inside the horizon.
+
 const UNREACHABLE := 9.0
 
 var e = null
@@ -16,11 +12,7 @@ var e = null
 func _init(engine) -> void:
 	e = engine
 
-## The ball's predicted path over the next `REACH_HORIZON` seconds: its position
-## at each `REACH_STEP`, with the time at that sample. A side asking "who gets
-## there first" is asking 22 questions about one path, so the walk is built once
-## and shared. Same arithmetic and same sample points as the per-player walk it
-## replaces, so every answer is unchanged.
+
 func ball_trajectory() -> Dictionary:
 	var pts := PackedVector2Array()
 	var times := PackedFloat64Array()
@@ -36,20 +28,19 @@ func ball_trajectory() -> Dictionary:
 		t += REACH_STEP
 	return {"points": pts, "times": times}
 
-## How soon this player meets the ball on a path already built by
-## `ball_trajectory`; `UNREACHABLE` when they never do inside the horizon.
+
 func reach_time_on(p, path: Dictionary) -> float:
 	var pts: PackedVector2Array = path["points"]
 	var times: PackedFloat64Array = path["times"]
-	# The squad layer caches `Attrs.max_speed` per body (it is fixed once the
-	# attributes exist), and this read runs 22 times a shape pass.
+
+
 	var spd: float = p.spd_max * (0.72 + 0.28 * p.stamina)
 	for i in pts.size():
 		if p.pos.distance_to(pts[i]) <= spd * times[i] + 1.35:
 			return times[i]
 	return UNREACHABLE
 
-## Where on the path this player meets it — the presser's aim point.
+
 func intercept_on(p, path: Dictionary) -> Vector2:
 	var pts: PackedVector2Array = path["points"]
 	var times: PackedFloat64Array = path["times"]
@@ -67,14 +58,13 @@ func intercept_point(p) -> Vector2:
 	return intercept_on(p, ball_trajectory())
 
 func offside_line(t: int) -> float:
-	# Attacking-x of the second-last defender of the opposing team.
+
 	var xs: Array = e.offside_xs(t)
 	if xs.size() < 2:
 		return e.L * 0.85
 	return xs[1]
 
-## World position of the deepest outfield defender (for line discipline). Read
-## once per side and shared by that side's backs in `MatchAI._update_shapes`.
+
 func defensive_line(t: int) -> Vector2:
 	var best = null
 	var bx = 1e9
@@ -91,7 +81,6 @@ func defensive_line(t: int) -> Vector2:
 		return e.to_world(t, Vector2(0.18, 0.5))
 	return best.pos
 
-# -------------------------------------------------------------- goalkeeper --
 
 func lane_risk(from: Vector2, to: Vector2, team: int) -> float:
 	var seg = to - from

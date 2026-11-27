@@ -1,28 +1,18 @@
 class_name LeagueChrome
 extends RefCounted
 
-## The chrome every league sheet shares: the header band's height, the bottom
-## action bar, the compact reading's breakpoint, the zone colours and the one
-## pending-watch test CONTINUE's caption reads.
-##
-## These bars used to be constants of `LeagueSheet`, the season hub, so every
-## other pose — the front door, the table, the report, the body's own scroll
-## window — imported the hub to learn where the header ends. The hub now reads
-## them from here like everyone else: one module owns the shared bars, and no
-## sheet depends on another's payload to find its own geometry.
 
-## Air above a sheet's content: the header band, with BACK and the primary door.
 const HEADER := 58.0
-## The bottom action bar under the content (the table's reading doors, the
-## podium's exits).
+
+
 const BAR_H := 52.0
-## Below this height the sheets take their compact reading.
+
 const COMPACT_H := 620.0
-## The planner's row pitch: the tightest a plan row gets, and the air under it.
+
 const ROW_H := 26.0
 const ROW_GAP := 5.0
 
-## The zone band a league place falls in, in the table's own colours.
+
 static func zone_color(band: String) -> Color:
 	if band == "ucl":
 		return UiChrome.C_GOLD
@@ -38,9 +28,7 @@ static func zone_color(band: String) -> Color:
 		return UiChrome.C_DANGER
 	return UiChrome.C_DIM
 
-## A competition chip's caption: its short name when the chip can hold one,
-## otherwise the competition's own code. Four leagues make five chips on a
-## phone, where "2. BUNDESLIGA" would overflow a sixty-unit chip (#242).
+
 static func competition_chip_label(row: Dictionary, width: float) -> String:
 	var name := str(row.get("short_name", row.get("name", "")))
 	if width >= 100.0 or name.length() <= 5:
@@ -64,12 +52,9 @@ static func competition_chip_label(row: Dictionary, width: float) -> String:
 			return "NL"
 	return name.substr(0, 5)
 
-## The picker's winner control (#249): a friendly is level at full time unless
-## the player asks for a cup finish, which reuses the engine's own extra time and
-## shootout path (#238). Two chips, the draw as the default, drawn under the
-## cards so they never grow the sheet's fixed doors.
+
 const WINNER_MODES: Array = [["draw", "ALLOW DRAW"], ["extra", "EXTRA TIME & PENS"]]
-## The chip row's own height, and the air between it and the club cards.
+
 const WINNER_H := 24.0
 const WINNER_GAP := 14.0
 
@@ -82,18 +67,11 @@ static func winner_rects(vp: Vector2, card_bottom: float) -> Array:
 				card_bottom + WINNER_GAP, w, WINNER_H)})
 	return out
 
-## The lowest pixel the chip row reaches. The picker's fixed doors sit below it,
-## so a short sheet places them against the control rather than over it: at
-## 640x360 and 640x300 the doors used to cover both chips.
+
 static func winner_bottom(card_bottom: float) -> float:
 	return card_bottom + WINNER_GAP + WINNER_H
 
-## The picker's top band, as geometry: the wordmark line, the league chip row,
-## the sheet's gold rule and (on a roomy sheet) its ghosted title. A phone has no
-## room for the heading between the rule and the club cards, so the compact
-## reading drops it and the chips take the band under the rule (#266). One
-## function for both the paint and the test, so the chips can never land in the
-## title's ink again.
+
 const PICKER_CHIP_H := 24.0
 static func picker_header(vp: Vector2) -> Dictionary:
 	var compact: bool = vp.y < COMPACT_H
@@ -103,23 +81,19 @@ static func picker_header(vp: Vector2) -> Dictionary:
 		"title": not compact,
 		"wordmark_y": vp.y * (0.075 if compact else 0.105),
 		"rule_y": rule_y,
-		# Roomy: the chips ride above the rule, which anchors the title below
-		# them. Compact: no title, so they keep the band under the rule they
-		# always had, clear of the club cards' HOME/AWAY labels.
+
+
 		"chips_y": vp.y * 0.155 if compact else rule_y - PICKER_CHIP_H - 6.0,
 		"title_y": vp.y * (0.195 if compact else 0.235),
 		"title_size": 30 if compact else 38,
 		"rule_w": 48.0 if compact else 54.0,
 	}
 
-## The picker's league chip row as one rect: the row spans the sheet's content
-## width and its top comes from `picker_header`, so the paint and the hit box
-## share the band (#266).
+
 static func picker_chips_band(vp: Vector2) -> Rect2:
 	return Rect2(24.0, float(picker_header(vp)["chips_y"]), vp.x - 48.0, PICKER_CHIP_H)
 
-## The chip row's own rects, one per competition door. Paint and press both come
-## from here, so a chip can never be drawn where nothing answers (#266).
+
 const PICKER_CHIP_GAP := 8.0
 static func picker_chip_rects(vp: Vector2, count: int) -> Array:
 	var out: Array = []
@@ -133,12 +107,10 @@ static func picker_chip_rects(vp: Vector2, count: int) -> Array:
 		x += w + PICKER_CHIP_GAP
 	return out
 
-## The picker's KICK OFF and RANDOM doors, always below the winner control. They
-## keep their own height and their air under them; what a short design space
-## takes away is how far they rise, never the control they would cover.
+
 static func picker_doors(vp: Vector2, card_bottom: float) -> Array:
-	# A portrait handset is narrower than two 190-unit doors and the air between
-	# them, so the pair is clamped to the sheet instead of running off it.
+
+
 	var bw: float = minf(190.0, (vp.x - 32.0) * 0.5 - 4.0)
 	var bh := 50.0
 	var lowest: float = winner_bottom(card_bottom) + 10.0
@@ -160,18 +132,13 @@ static func winner_control(c: CanvasItem, vp: Vector2, card_bottom: float, mode:
 			Color(0.06, 0.06, 0.05) if on else UiChrome.C_DIM, bold)
 		c._add_button("win:" + str(spec["id"]), r)
 
-## The picker's league chips in key order (#279): ALL first, then every active
-## competition. The chips the sheet draws, the keys it accepts and the footer
-## legend all read this one list, so adding a league can never leave the legend
-## advertising keys the sheet does not answer.
+
 static func competition_rows() -> Array:
 	var rows: Array = [{"id": "", "short_name": "ALL"}]
 	rows.append_array(PLCompetitions.active())
 	return rows
 
-## The picker's league-key legend, one entry per chip: key 1 selects ALL and every
-## league takes the key its own chip sits at (#279). Empty when the sheet draws no
-## league chips, because then there is nothing to switch.
+
 static func picker_league_keys(rows: Array) -> String:
 	if rows.size() < 2:
 		return ""
@@ -181,28 +148,22 @@ static func picker_league_keys(rows: Array) -> String:
 		parts.append("%d  %s" % [i + 1, str(row.get("short_name", row.get("name", "")))])
 	return "   ·   ".join(PackedStringArray(parts))
 
-## The chip a league key selects (#279), or `{}` when the key names no chip: key
-## 1 is ALL, then each league takes the key its own chip sits at. A key past the
-## last chip is refused so the footer legend can promise exactly what the sheet
-## answers.
+
 static func league_key_row(code: int, rows: Array) -> Dictionary:
 	var pick := code - KEY_1
 	if pick < 0 or pick >= rows.size():
 		return {}
 	return rows[pick]
 
-## The picker's footer captions, so the sheet's own script keeps its lines for
-## layout and the words live in one place. Each entry is [dy, text, size, ink].
+
 static func picker_hints(picker, touch: bool, back_to_menu: bool) -> Array:
 	var clubs := picker_clubs_line(picker)
 	var gold := Color(0.96, 0.78, 0.30, 0.55)
 	if touch:
 		return [[-44.0, "TAP THE ARROWS TO CHANGE CLUBS  ·  TAP KICK OFF", 11, UiChrome.C_DIM],
 			[-24.0, clubs, 10, gold]]
-	# The key legend is derived from the chips, never written by hand: the old
-	# hard-coded `1/2/3 LEAGUE` kept advertising three keys after the German
-	# tiers made the sheet answer five (#279). KICK OFF and RANDOM already wear
-	# their own ENTER / TAB hints, so this line holds the leagues and the exit.
+
+
 	var keys: String = picker_league_keys(competition_rows())
 	var tail := "   ·   ESC  %s" % ("MENU" if back_to_menu else "BACK")
 	return [[-64.0, "CLICK THE ARROWS OR USE  ← →  (HOME)   ·   ↑ ↓  (AWAY)", 11, UiChrome.C_DIM],
@@ -210,7 +171,7 @@ static func picker_hints(picker, touch: bool, back_to_menu: bool) -> Array:
 			10, UiChrome.C_DIM],
 		[-24.0, clubs, 10, gold]]
 
-## "n clubs · league" for the footer, reading the picker's own filter.
+
 static func picker_clubs_line(picker) -> String:
 	if str(picker.league_filter) != "":
 		return picker.clubs_line(picker.ids.size(),
@@ -223,10 +184,7 @@ static func picker_clubs_line(picker) -> String:
 	var name := str(TeamData.get_team(str(picker.home_id())).get("competition_name", ""))
 	return picker.clubs_line(picker.ids.size(), name)
 
-## Paint one of the doors a sheet pinning in place (BACK, the primary door, the
-## month chips, the table's reading doors). They are not part of the scrolling
-## rows, so the body draws them itself with the host's paint grammar — button
-## with the sheet's style cache, chip plain — above the content it clips.
+
 static func pinned_door(c: CanvasItem, cache: Dictionary, item: Dictionary,
 		fonts: Dictionary) -> void:
 	var rect: Rect2 = item["rect"]
@@ -236,14 +194,11 @@ static func pinned_door(c: CanvasItem, cache: Dictionary, item: Dictionary,
 		UiChrome.button(c, cache, rect, str(item["label"]), fonts["bold"],
 			bool(item.get("primary", false)), -1, "", not bool(item.get("disabled", false)))
 
-## True on a window short enough for the sheets' compact reading (a landscape
-## phone), where rows tighten and the hub drops its side table.
+
 static func compact(vp: Vector2) -> bool:
 	return vp.y < COMPACT_H
 
-## True when today's plan still holds an unplayed watch, which is exactly when
-## CONTINUE's caption has something to promise (#100). A played fixture stops
-## counting the moment its result lands, whatever watch flag it kept (#124).
+
 static func watch_pending(plan: Array) -> bool:
 	for fx in plan:
 		if int(fx.get("watched", 0)) == 1 and str(fx.get("status", "")) != "played":

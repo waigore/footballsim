@@ -1,19 +1,6 @@
 class_name LeagueRules
 extends RefCounted
 
-## League regulations, one row per active competition: points, European and
-## relegation places, the calendar window and the advance policy.
-##
-## The templates are the shipped competitions' own regulations (cups omitted):
-## the Premier League's and La Liga's 20-club, 38-matchday shape with 1–4 to the
-## Champions League, 5th to the Europa League, 6th to the Conference League and
-## three relegated. A save copies each active competition's template into its
-## own row at creation, so a later seed refresh or a regulation change can never
-## rewrite a season already in progress.
-##
-## `advance_mode` and `calendar_mode` belong to the save, not to one league: the
-## clock is shared, so the two rows always carry the same pair. They live here so
-## a save written before multi-league keeps reading its own choice.
 
 const TEMPLATES := {
 	"PL": {
@@ -26,9 +13,8 @@ const TEMPLATES := {
 		"playoff_format": "",
 	},
 	"LL": {
-		# La Liga runs the same 20-club shape; Spain's own band counts are the
-		# same 4 / 1 / 1 and three relegated. Spain plays more weekend rounds, so
-		# four rounds move midweek rather than England's five.
+
+
 		"win_points": 3, "draw_points": 1, "relegation_places": 3,
 		"ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38, "clubs": 20,
 		"promotion_places": 0, "promotion_playoff_places": 0, "relegation_playoff_places": 0,
@@ -38,10 +24,8 @@ const TEMPLATES := {
 		"playoff_format": "",
 	},
 	"BL": {
-		# The Bundesliga's 18-club, 34-matchday shape. Without a domestic cup
-		# in the save, 1-4 go to the Champions League, 5th to the Europa League
-		# and 6th to the Conference League; 17th and 18th go down directly and
-		# 16th plays the Relegation (the graph itself lands with #240).
+
+
 		"win_points": 3, "draw_points": 1, "clubs": 18,
 		"relegation_places": 2, "relegation_playoff_places": 1,
 		"ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 34,
@@ -51,9 +35,8 @@ const TEMPLATES := {
 		"playoff_format": "",
 	},
 	"BL2": {
-		# 18 clubs, 34 matchdays. 1st and 2nd go up and 3rd plays the Relegation;
-		# 17th and 18th go down. No European bands: the 2.BL podium reads
-		# promotion or RELEGATED only (the graph itself lands with #240).
+
+
 		"win_points": 3, "draw_points": 1, "clubs": 18,
 		"promotion_places": 2, "promotion_playoff_places": 1,
 		"relegation_places": 2, "relegation_playoff_places": 1,
@@ -63,12 +46,10 @@ const TEMPLATES := {
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
 		"playoff_format": "",
 	},
-	# The English pyramid (#258). Two up-and-down tiers of 24 clubs, 46
-	# matchdays; the promotion play-offs are a mini-tournament inside the lower
-	# tier, so `promotion_playoff_places` is how many places enter it and
-	# `playoff_format` names the bracket LeaguePlayoffs settles.
+
+
 	"CH": {
-		# 1-2 up, 3-8 into the six-team play-offs for one place; 22-24 down.
+
 		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
 		"promotion_places": 2, "promotion_playoff_places": 6,
 		"relegation_places": 3, "relegation_playoff_places": 0,
@@ -79,7 +60,7 @@ const TEMPLATES := {
 		"playoff_format": "six_two_leg",
 	},
 	"L1": {
-		# 1-2 up, 3-6 into the four-team play-offs; 21-24 down.
+
 		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
 		"promotion_places": 2, "promotion_playoff_places": 4,
 		"relegation_places": 4, "relegation_playoff_places": 0,
@@ -90,7 +71,7 @@ const TEMPLATES := {
 		"playoff_format": "four_two_leg",
 	},
 	"L2": {
-		# 1-3 up, 4-7 into the four-team play-offs; 23-24 down.
+
 		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
 		"promotion_places": 3, "promotion_playoff_places": 4,
 		"relegation_places": 2, "relegation_playoff_places": 0,
@@ -101,8 +82,8 @@ const TEMPLATES := {
 		"playoff_format": "four_two_leg",
 	},
 	"NL": {
-		# 1 up, 2-7 into the National League's one-leg ladder; 21-24 read
-		# RELEGATED with nowhere further to go (the chain ends here).
+
+
 		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
 		"promotion_places": 1, "promotion_playoff_places": 6,
 		"relegation_places": 4, "relegation_playoff_places": 0,
@@ -114,8 +95,7 @@ const TEMPLATES := {
 	},
 }
 
-## The v1 Premier League template, kept as the default for a caller that names
-## no competition (single-league tests and an old save's fallback).
+
 const DEFAULTS := TEMPLATES["PL"]
 
 const ADVANCE_MODES := ["fixture_days", "every_day"]
@@ -154,15 +134,12 @@ const UPSERT_SQL := (
 	+ "playoff_format = excluded.playoff_format;"
 )
 
-## The linked-tier columns (#240): a competition's own size, its promotion
-## places and the Relegation place on either side of the graph.
+
 const LINK_COLUMNS := [
 	"clubs", "promotion_places", "promotion_playoff_places", "relegation_playoff_places",
 ]
 
-## The bracket name an English tier's promotion play-offs use (#260); the German
-## pair leaves it empty because its extra place is a cross-tier Relegation, not a
-## mini-tournament.
+
 const TEXT_COLUMNS := ["playoff_format"]
 
 const COLUMNS := [
@@ -172,7 +149,7 @@ const COLUMNS := [
 	"promotion_playoff_places", "relegation_playoff_places", "playoff_format",
 ]
 
-## The template with both setup choices filled in.
+
 static func defaults(calendar_mode: String = "generated", advance_mode: String = "fixture_days",
 		competition_id: String = "PL") -> Dictionary:
 	var out: Dictionary = template(competition_id).duplicate(true)
@@ -180,22 +157,19 @@ static func defaults(calendar_mode: String = "generated", advance_mode: String =
 	out["advance_mode"] = advance_mode if ADVANCE_MODES.has(advance_mode) else "fixture_days"
 	return out
 
-## One competition's shipped template, without the setup choices applied.
+
 static func template(competition_id: String) -> Dictionary:
 	var row: Dictionary = TEMPLATES.get(competition_id, DEFAULTS)
 	return row.duplicate(true)
 
-## The template a competition row in the seed carries when it ships its own
-## regulations; the compiled template is the fallback.
+
 static func template_from(competition_id: String, stored: Dictionary) -> Dictionary:
 	var out := template(competition_id)
 	for key in stored.keys():
 		out[key] = stored[key]
 	return out
 
-## Read one competition's regulations from the bound save. With no competition
-## id the save's primary row answers, which is what a single-league caller (and
-## an old save) expects.
+
 static func read(competition_id: String = "") -> Dictionary:
 	var row := {}
 	if competition_id == "":
@@ -206,7 +180,7 @@ static func read(competition_id: String = "") -> Dictionary:
 		return defaults("generated", "fixture_days", competition_id if competition_id != "" else "PL")
 	return normalize(row)
 
-## Every competition's regulations, keyed by competition id.
+
 static func read_all() -> Dictionary:
 	var out := {}
 	for row in PLDatabase.rows("SELECT * FROM league_rules ORDER BY rowid;"):
@@ -214,7 +188,7 @@ static func read_all() -> Dictionary:
 		out[cid] = normalize(row)
 	return out
 
-## Coerce a row (or a partial dictionary) into the typed rules dictionary.
+
 static func normalize(raw: Dictionary) -> Dictionary:
 	var out: Dictionary = DEFAULTS.duplicate(true)
 	for key in ["win_points", "draw_points", "relegation_places", "ucl_places",
@@ -229,7 +203,7 @@ static func normalize(raw: Dictionary) -> Dictionary:
 		out["weekend_bias"] = float(raw["weekend_bias"])
 	return out
 
-## Copy one competition's regulations into the bound save.
+
 static func write(competition_id: String, rules: Dictionary) -> bool:
 	var r := normalize(rules)
 	var bindings: Array = [competition_id]
@@ -237,10 +211,7 @@ static func write(competition_id: String, rules: Dictionary) -> bool:
 		bindings.append(r[key])
 	return PLDatabase.execute(UPSERT_SQL, bindings)
 
-## Lay the per-competition rules table onto the bound file and lift a save that
-## shipped before multi-league: its single `league_rules` row has an `id`
-## column and no `competition_id`. The old row is copied under the save's one
-## competition, so a season in progress keeps its own places.
+
 static func migrate(default_competition: String = "") -> void:
 	var columns := _columns("league_rules")
 	if not columns.is_empty() and not columns.has("competition_id"):
@@ -258,15 +229,15 @@ static func migrate(default_competition: String = "") -> void:
 			write(owner, normalize(old))
 		return
 	PLDatabase.execute(CREATE_SQL)
-	# A save written before the German pair has no size/promotion columns; the
-	# table's own defaults then stand until the competition is written again.
+
+
 	var have := _columns("league_rules")
 	for column in LINK_COLUMNS:
 		if not have.has(column):
 			PLDatabase.execute("ALTER TABLE league_rules ADD COLUMN %s INTEGER NOT NULL DEFAULT 0;"
 				% column)
-	# A save written before the English pyramid has no bracket name; its own
-	# competition cannot run a mini-tournament, so the empty default is right.
+
+
 	for column in TEXT_COLUMNS:
 		if not have.has(column):
 			PLDatabase.execute("ALTER TABLE league_rules ADD COLUMN %s TEXT NOT NULL DEFAULT '';"
@@ -278,8 +249,7 @@ static func _columns(table: String) -> Dictionary:
 		out[str(row["name"])] = true
 	return out
 
-## Points for one result from the saved table (win / draw values are not
-## hard-coded: a save can carry different regulations).
+
 static func points(goals_for: int, goals_against: int, rules: Dictionary) -> int:
 	if goals_for > goals_against:
 		return int(rules.get("win_points", 3))
@@ -287,10 +257,7 @@ static func points(goals_for: int, goals_against: int, rules: Dictionary) -> int
 		return int(rules.get("draw_points", 1))
 	return 0
 
-## Which table band a position sits in: "ucl", "uel", "uecl", "promotion",
-## "playoff", "relegation" or "". The German pair uses the two extra bands: the
-## 2. Bundesliga's top places go up, and each tier's last safe place plays the
-## Relegation (#240).
+
 static func zone(position: int, rules: Dictionary) -> String:
 	var ucl := int(rules.get("ucl_places", 4))
 	var uel := int(rules.get("uel_places", 1))
@@ -331,7 +298,7 @@ static func zone_label(band: String) -> String:
 		return "REL"
 	return ""
 
-## Places that matter at the end of the season, read back from the save.
+
 static func places(rules: Dictionary) -> Dictionary:
 	var ucl := int(rules.get("ucl_places", 4))
 	var uel := int(rules.get("uel_places", 1))

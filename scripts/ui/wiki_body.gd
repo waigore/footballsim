@@ -1,9 +1,6 @@
 class_name WikiBody
 extends Control
 
-## Scrollable body of an encyclopedia page. `WikiBody.layout()` turns the block
-## list from WikiModel into positioned rows (pure, no fonts, testable headless);
-## this node only draws those rows and reports which target a tap hit.
 
 const MARGIN := 6.0
 const GAP := 14.0
@@ -24,15 +21,14 @@ var _rows: Array = []
 var _height := 0.0
 var _focus := -1
 var mouse := Vector2(-1000, -1000)
-## Date strips this page painted, in body space (#99): the screen's overlay
-## paints the weekday for the one under the pointer.
+
+
 var hints := DateHints.new()
-## Club names this page painted, in body space (#107): a long press reads them
-## to know which club is under the finger.
+
+
 var names := InterestNames.new()
-## Followed club ids as a set (#107): their printed names are gold. The screen
-## hands it in whenever the page or the shortlist changes, so a paint pass never
-## reads the save.
+
+
 var followed := {}
 
 func _ready() -> void:
@@ -42,15 +38,10 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
 
-## The pitch a touch build lays its table rows on: 48 density points of hit area
-## plus the sheet's own divider, the same pitch the league table took in #204
-## (#274). The encyclopedia is where clubs are looked up, so a phone must be able
-## to press one club per finger.
+
 const TAP_ROW_H := 49.0
 
-## Positioned rows for a block list at a given content width. Every row keeps
-## its own rect and (for rows that open a page) its target. `touch` asks for the
-## finger-sized row pitch; a mouse keeps the dense reading.
+
 static func layout(blocks: Array, width: float, compact: bool = false,
 		touch: bool = false) -> Dictionary:
 	var rows: Array = []
@@ -152,9 +143,7 @@ func rows() -> Array:
 func content_height() -> float:
 	return _height
 
-## Whether a table row that opens another page is on screen right now (#203).
-## The footer only advertises a tap while a link is under the player's eye: the
-## top of a club page lists values, so nothing there opens.
+
 func has_open_row_in_view() -> bool:
 	for row in _rows:
 		if str(row.get("k", "")) != "trow":
@@ -167,7 +156,7 @@ func has_open_row_in_view() -> bool:
 			return true
 	return false
 
-## First row whose target sits under a body-local point (hover/tap).
+
 func hit(p: Vector2) -> Dictionary:
 	var local := _content_point(p)
 	if local.x < 0.0:
@@ -178,17 +167,14 @@ func hit(p: Vector2) -> Dictionary:
 			return row["target"]
 	return {}
 
-## The club whose printed name is under a body point (#107). Only a cell that
-## prints one club counts: a fixture line that names both clubs has no answer,
-## so a hold there stays an ordinary press.
+
 func club_at(p: Vector2) -> String:
 	var local := p - position
 	if not Rect2(Vector2.ZERO, size).has_point(local):
 		return ""
 	return names.at(local)
 
-## Register the strip a row printed one club's name in. The painter knows the
-## cell's width; the model says which cell is the club's own name.
+
 func _name_strip(row: Dictionary, rect: Rect2) -> void:
 	var target: Dictionary = row.get("target", {})
 	if str(target.get("page", "")) != WikiModel.TEAM:
@@ -216,9 +202,7 @@ func row_at(p: Vector2) -> int:
 			return i
 	return -1
 
-## A body-local point in content space. Scrolling already moved the pixels, so
-## hit tests must move with them — and a point outside the sheet (in the header,
-## the footer, or clipped below the fold) comes back as a miss.
+
 func _content_point(p: Vector2) -> Vector2:
 	var local := p - position
 	if not Rect2(Vector2.ZERO, size).has_point(local):
@@ -226,7 +210,6 @@ func _content_point(p: Vector2) -> Vector2:
 	local.y += scroll
 	return local
 
-# ------------------------------------------------------------------ drawing --
 
 func _draw() -> void:
 	if _rows.is_empty():
@@ -244,8 +227,7 @@ func _draw() -> void:
 		_name_strip(row, shifted)
 		_draw_row(row, shifted, i == focus_row)
 
-## The body owns its pixels: a page swap, a scroll or a hover change must ask
-## for a redraw itself, because nothing above it redraws this child.
+
 func _process(_d: float) -> void:
 	queue_redraw()
 
@@ -308,13 +290,13 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 		var x := rect.position.x + 6.0
 		var text_cols: Array = row.get("text_cols", [1])
 		var dates: Dictionary = row.get("dates", {})
-		# A followed club's printed name is gold here too (#107), on the cell the
-		# model marked as that club's own name.
+
+
 		var mark := int(row.get("club_cell", -1))
 		var marked: bool = mark >= 0 and followed.has(str((row.get("target", {}) as Dictionary).get("id", "")))
 		for i in range(cells.size()):
 			var cw: float = (rect.size.x - 6.0) * float(widths[i])
-			# A date cell carries its weekday as a hint (#99), not in the text.
+
 			if dates.has(i):
 				hints.add(Rect2(x, rect.position.y + 2.0, cw, rect.size.y - 4.0), str(dates[i]))
 			var ink: Color = UiChrome.C_GOLD if marked and i == mark else Color(0.92, 0.95, 0.96)
@@ -329,9 +311,7 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 func _clip(s: String, max_chars: int) -> String:
 	return s if s.length() <= max_chars else s.substr(0, max_chars - 1) + "…"
 
-## A row's text baseline: the dense reading's fixed offset, or the centre of a
-## finger-sized row, so a touch row's club name sits in the middle of the strip
-## that answers the press (#274).
+
 func _row_baseline(rect: Rect2) -> float:
 	if rect.size.y > 30.0:
 		return rect.position.y + rect.size.y * 0.5 + 4.0

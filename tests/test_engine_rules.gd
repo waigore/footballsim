@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Laws at the boundaries: the ball over the line, offside at the pass, the
-## restart each exit earns, and the changes a side is allowed to make.
-## Engine-level, seeded, headless.
 
 func _eng(seed_in: int = 31) -> MatchEngine:
 	var eng := MatchEngine.new(seed_in)
@@ -30,7 +27,6 @@ func _park_keepers_off_the_line(eng) -> void:
 			p.pos = Vector2(52.5, 34.0)
 			p.cooldown = 0.0
 
-# ------------------------------------------------------------------ goals ---
 
 func test_ball_over_the_line_between_the_posts_is_a_goal() -> void:
 	var eng := _eng(41)
@@ -107,10 +103,7 @@ func test_defender_putting_it_in_his_own_net_is_an_own_goal() -> void:
 	assert_true(bool(eng.last_goal["own_goal"]), "the own goal was credited as a normal goal")
 	assert_eq(int(eng.stats[1]["goals"]), 0, "the conceding side was credited with the goal")
 
-# ---------------------------------------------------- the whistle sheet ---
 
-## A ball already over `team`'s line with the keepers out of the picture: the
-## shortest way to a real goal, and so to a row in the whistle sheet.
 func _goal_for(eng, team: int) -> void:
 	_park_keepers_off_the_line(eng)
 	eng.phase = "play"
@@ -171,8 +164,8 @@ func test_the_whistle_sheet_survives_a_snapshot() -> void:
 	assert_eq(int(other.goal_sheet[0]["minute"]), 15, "the snapshot lost the goal's minute")
 
 func test_a_goal_with_no_last_touch_is_still_on_the_sheet() -> void:
-	# A clearance that swings in, or a ball the engine cannot attribute: the card
-	# must still list the goal rather than quietly counting one it cannot name.
+
+
 	var eng := _eng(73)
 	_park_keepers_off_the_line(eng)
 	var goal: Vector2 = eng.target_goal_pos(0)
@@ -208,7 +201,6 @@ func test_goal_line_save_keeps_the_ball_out() -> void:
 			assert_eq(int(eng.stats[0]["saves"]), 1, "the goal-line save was not counted")
 	assert_gt(saved, 0, "the keeper never got a ball on his own line")
 
-# ------------------------------------------------------------ out of play ---
 
 func test_ball_over_the_touchline_is_a_throw_in_for_the_other_side() -> void:
 	var eng := _eng(46)
@@ -228,7 +220,6 @@ func test_ball_straight_into_touch_from_nobody_is_a_throw_for_the_home_side() ->
 	assert_eq(str(eng.restart["type"]), "throw_in", "an untouched ball out of play is not a throw-in")
 	assert_eq(int(eng.restart["team"]), 0, "the throw-in went to the wrong side")
 
-# ---------------------------------------------------------------- offside ---
 
 func test_runner_beyond_the_last_defender_is_flagged_at_the_pass() -> void:
 	var eng := _eng(48)
@@ -276,7 +267,6 @@ func test_a_touch_clears_the_offside_stage() -> void:
 	eng._try_control(p, 0.3)
 	assert_false(mate.offside_flag, "a touch did not reset the offside stage")
 
-# --------------------------------------------------------------- restarts ---
 
 func test_throw_in_is_taken_and_play_resumes() -> void:
 	var eng := _eng(51)
@@ -330,7 +320,6 @@ func test_opponents_are_pushed_off_the_free_kick() -> void:
 		if p.team == 1 and not p.sent_off:
 			assert_gte(p.pos.distance_to(spot), 9.0, "an opponent stood inside the free-kick wall distance")
 
-# ------------------------------------------------------------- possession ---
 
 func test_possession_clock_follows_the_side_in_control() -> void:
 	var eng := _eng(57)
@@ -351,7 +340,6 @@ func test_loose_ball_still_credits_the_side_that_touched_it_last() -> void:
 	assert_almost_eq(float(eng.stats[1]["possession"]), before + 0.5, 0.001, "a loose ball credited nobody")
 	assert_true(eng.possession_loose, "a loose ball was read as controlled")
 
-# ----------------------------------------------------------- substitutions ---
 
 func test_side_without_a_keeper_brings_one_on() -> void:
 	var eng := _eng(59)

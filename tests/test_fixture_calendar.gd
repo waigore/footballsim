@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## The two fixture calendars: real pairings and dates from the snapshot, and a
-## generated PL-like double round robin that obeys the saved window and the
-## weekend/midweek policy.
 
 var CACHE_DIR := TestScratch.dir("cache_test_calendar_issue58")
 
@@ -105,8 +102,8 @@ func test_a_real_calendar_matches_the_snapshot() -> void:
 		assert_eq(int(fx["home_goals"]) if fx.has("home_goals") else 0, 0, "a real fixture kept a result")
 
 func test_a_real_calendar_keeps_one_gameweek_per_date() -> void:
-	## A gameweek is the weekend it was played on (#206): the ten games of one
-	## round sit on the same few days, and one date never carries two rounds.
+
+
 	var rows := FixtureCalendar.real_rows()
 	var rounds := {}
 	var dates := {}
@@ -129,8 +126,8 @@ func test_a_real_calendar_keeps_one_gameweek_per_date() -> void:
 		assert_lte(days, 4, "gameweek %d spreads over %d days" % [md, days])
 
 func test_real_gameweeks_follow_the_calendar() -> void:
-	## The round number only ever moves forward with the dates, so the hub's
-	## `GW n` and the STATS list read the season in the order it was played.
+
+
 	var rows := FixtureCalendar.build("real", _rules(), 1)
 	var last_md := 0
 	var last_day := ""
@@ -149,8 +146,8 @@ func test_real_gameweeks_follow_the_calendar() -> void:
 	assert_eq(first_week.keys(), [1], "the opening weekend is not gameweek one")
 
 func test_date_rounds_splits_dates_and_rolls_on_a_clash() -> void:
-	## The round walk: a date joins one round, a full round closes, and a
-	## rearranged fixture whose clubs already play that round waits for the next.
+
+
 	var rows := [
 		{"kickoff": "2026-08-21", "home_club_id": "A", "away_club_id": "B"},
 		{"kickoff": "2026-08-22", "home_club_id": "C", "away_club_id": "D"},
@@ -160,7 +157,7 @@ func test_date_rounds_splits_dates_and_rolls_on_a_clash() -> void:
 	assert_eq(FixtureCalendar.date_rounds(rows, 4), [1, 1, 1, 2], "a clash did not open a round")
 	assert_eq(FixtureCalendar.date_rounds(rows, 2), [1, 2, 2, 3], "a full round did not close")
 	assert_eq(FixtureCalendar.date_rounds([], 10), [], "an empty calendar took rounds")
-	# Two games on one date never land in different rounds, however tight the cap.
+
 	var same_day := [
 		{"kickoff": "2026-08-22", "home_club_id": "A", "away_club_id": "B"},
 		{"kickoff": "2026-08-22", "home_club_id": "C", "away_club_id": "D"},

@@ -1,8 +1,6 @@
 class_name CommentaryExtraTime
 extends RefCounted
 
-## The decider lane's words: extra time and the shootout. Split from Commentary
-## so the regulation lines stay inside their size budget (RUB-P3-01).
 
 static func _pick(rng, lines: Array) -> String:
 	return lines[rng.randi_range(0, lines.size() - 1)]

@@ -1,12 +1,7 @@
 class_name TeamSelectPaint
 extends RefCounted
 
-## The fixture picker's paint: league chips, club cards, arrows and doors.
-## Geometry for chips/doors/header lives in `LeagueChrome`; this module owns the
-## sheet's own drawing so `team_select.gd` keeps actions and state inside the
-## soft size budget (RUB-P3-01).
 
-# gd-tools: no cover start
 static func arrow(sheet: Control, r: Rect2, glyph: String, id: String) -> void:
 	var hovered: bool = r.has_point(sheet.mouse as Vector2)
 	sheet.rect(sheet.C_PANEL_LIGHT if hovered else sheet.C_PANEL, r, 8,
@@ -15,11 +10,7 @@ static func arrow(sheet: Control, r: Rect2, glyph: String, id: String) -> void:
 		sheet.C_TEXT if hovered else sheet.C_DIM, sheet.f_bold)
 	sheet._add_button(id, r)
 
-## Competition chips over the cards: ALL, then each league the seed (or the open
-## save) carries. The pool the arrows walk is the selected set, so picking both
-## leagues is what makes a cross-league fixture. With four competitions on a
-## phone five chips no longer hold their full names, so a narrow chip falls back
-## to the competition's short code (PL, LL, BL, 2.BL) instead of overflowing.
+
 static func league_chips(sheet: Control, vp: Vector2) -> void:
 	var rows: Array = LeagueChrome.competition_rows()
 	if rows.size() < 2:
@@ -40,7 +31,7 @@ static func card(sheet: Control, r: Rect2, t: Dictionary, side: int) -> void:
 	sheet.rect(sheet.C_PANEL, r, 14, Color(1, 1, 1, 0.10))
 	sheet.draw_rect(Rect2(r.position.x + 1, r.position.y + 1, 6, r.size.y - 2), t["color"])
 	var cx := r.position.x + r.size.x * 0.5
-	# A followed club's card wears the interest mark (#107).
+
 	var club := str(t.get("id", ""))
 	if club == "":
 		club = str(sheet.home_id() if side == 0 else sheet.away_id())
@@ -62,7 +53,7 @@ static func doors(sheet: Control, vp: Vector2, card_bottom: float) -> void:
 			UiChrome.button(sheet, sheet.style_cache, r, "KICK OFF", sheet.f_bold, true, 16,
 				"" if bool(sheet.touch) else "ENTER")
 		else:
-			# RANDOM stays the picker's quiet door: it keeps its hover fill.
+
 			sheet.rect(sheet.C_PANEL_LIGHT if hovered else sheet.C_PANEL, r, 10,
 				Color(1, 1, 1, 0.10 if hovered else 0.06))
 			var middle: float = r.position.y + r.size.y * 0.5
@@ -74,7 +65,7 @@ static func doors(sheet: Control, vp: Vector2, card_bottom: float) -> void:
 		sheet._add_button(str(door["id"]), r)
 
 static func chrome_doors(sheet: Control, vp: Vector2) -> void:
-	# A touch build has no Escape key: the sheet needs a visible way out.
+
 	var back: Rect2 = sheet.back_rect(vp)
 	var back_hover: bool = back.has_point(sheet.mouse as Vector2)
 	sheet.rect(sheet.C_PANEL_LIGHT if back_hover else sheet.C_PANEL, back, 8,
@@ -84,8 +75,7 @@ static func chrome_doors(sheet: Control, vp: Vector2) -> void:
 		sheet.C_TEXT if back_hover else sheet.C_DIM, sheet.f_bold)
 	sheet._add_button("back", back)
 
-	# Encyclopedia door: the whole league is one tap from the fixture sheet, in
-	# the corner opposite BACK (#163).
+
 	var league_btn := Rect2(vp.x - 24.0 - 138.0, 12.0, 138.0, 44.0)
 	var league_hover: bool = league_btn.has_point(sheet.mouse as Vector2)
 	sheet.rect(sheet.C_PANEL_LIGHT if league_hover else sheet.C_PANEL, league_btn, 8,
@@ -101,10 +91,8 @@ static func paint(sheet: Control) -> void:
 	sheet.draw_rect(Rect2(Vector2.ZERO, vp), Color(0.015, 0.025, 0.032, 0.94))
 	sheet.draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
 	sheet.draw_rect(Rect2(0, vp.y - 3, vp.x, 3), Color(0, 0, 0, 0.5))
-	# The header band is one geometry for the wordmark, the rule and the heading:
-	# a phone drops the ghosted heading so the league chips can hold the band under
-	# the rule (#266). BACK owns the top-left corner and the league door the other
-	# (#163), so what is left rides the centre.
+
+
 	var head: Dictionary = LeagueChrome.picker_header(vp)
 	UiChrome.wordmark_c(sheet, vp.x * 0.5, float(head["wordmark_y"]), 12, sheet.f_bold)
 	UiChrome.rule(sheet, vp.x * 0.5, float(head["rule_y"]), float(head["rule_w"]))
@@ -131,7 +119,7 @@ static func paint(sheet: Control) -> void:
 	var away: Dictionary = TeamData.get_team(str(sheet.away_id()))
 	card(sheet, home_rect, home, 0)
 	card(sheet, away_rect, away, 1)
-	# The cards are also encyclopedia doors: a club page is one tap away.
+
 	sheet._add_button("team_home", home_rect)
 	sheet._add_button("team_away", away_rect)
 
@@ -143,23 +131,22 @@ static func paint(sheet: Control) -> void:
 	arrow(sheet, Rect2(away_rect.position.x + away_rect.size.x + 12.0, ay, arrow_s, arrow_s), "›", "away_next")
 
 	sheet.text_c(vp.x * 0.5, card_y + card_h * 0.50, "v", 22, sheet.C_DIM, sheet.f_med)
-	# The venue clears the inner arrows and is fitted to the column it sits in,
-	# with 12 units of air either side (#200).
+
+
 	var venue: String = LeagueColumns.fit_caption(str(home.get("stadium", "")).to_upper(),
 		sheet.f_med, 10, gap - 24.0)
 	if venue != "":
 		sheet.text_c(vp.x * 0.5, ay + arrow_s + 22.0, venue, 10, sheet.C_DIM, sheet.f_med)
 
 	LeagueChrome.winner_control(sheet, vp, card_y + card_h, str(sheet.winner_mode), sheet.f_bold)
-	# The doors sit under the winner control, never over it (#249): on a short
-	# handset they rise against it instead of covering the chips.
+
+
 	doors(sheet, vp, card_y + card_h)
 
-	# Footer: the same words on both shells, owned by the chrome module so this
-	# script stays inside its size budget.
+
 	for spec in LeagueChrome.picker_hints(sheet, bool(sheet.touch), bool(sheet.back_to_menu)):
 		sheet.text_c(vp.x * 0.5, vp.y + float(spec[0]), str(spec[1]), int(spec[2]),
 			spec[3] as Color, sheet.f_med)
 
 	chrome_doors(sheet, vp)
-# gd-tools: no cover end
+

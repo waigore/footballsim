@@ -1,35 +1,27 @@
 class_name InterestMenu
 extends RefCounted
 
-## The little context menu a long press raises on a team name (#107): the club,
-## the state of the shortlist, and the one door that follows or releases it.
-##
-## Geometry and paint only — where the menu is shown, which club it names and
-## what a press does all live in `InterestHold`. One module paints the same menu
-## on the league sheets, the encyclopedia, the fixture picker and the match HUD,
-## so the gesture reads the same wherever a club name is printed.
 
-## A press on the door: follow the club, or stop following it.
 const TOGGLE := "imenu:toggle"
-## A press on the ✕.
+
 const CLOSE := "imenu:close"
-## A press anywhere else: dismiss the menu and swallow the press.
+
 const DISMISS := "imenu:dismiss"
 
 const W := 320.0
 const H := 122.0
-## Air kept from the sheet's own edges, so the menu never hangs off the screen.
+
 const EDGE := 12.0
-## The press point sits a little above the menu's top edge.
+
 const DROP := 12.0
 
 var club_id := ""
-## Full name on the title line, abbreviation on the door.
+
 var name := ""
 var abbr := ""
 var followed := false
 var at := Vector2.ZERO
-## Pointer position in the same design space as `at`, for the door's hover fill.
+
 var mouse := Vector2(-1000, -1000)
 var cache := {}
 
@@ -49,8 +41,7 @@ func close() -> void:
 func is_open() -> bool:
 	return club_id != ""
 
-## The card: under the press point when there is room, above it when there is
-## not, and always inside the sheet.
+
 func rect(vp: Vector2) -> Rect2:
 	var w: float = minf(W, maxf(vp.x - EDGE * 2.0, 120.0))
 	var x: float = clampf(at.x - 12.0, EDGE, maxf(vp.x - w - EDGE, EDGE))
@@ -59,18 +50,17 @@ func rect(vp: Vector2) -> Rect2:
 		y = maxf(at.y - H - DROP, EDGE)
 	return Rect2(x, y, w, H)
 
-## The follow / stop-following door.
+
 func door_rect(vp: Vector2) -> Rect2:
 	var r := rect(vp)
 	return Rect2(r.position.x + 14.0, r.position.y + 68.0, r.size.x - 28.0, 38.0)
 
-## The ✕ in the corner.
+
 func close_rect(vp: Vector2) -> Rect2:
 	var r := rect(vp)
 	return Rect2(r.end.x - 40.0, r.position.y + 10.0, 28.0, 26.0)
 
-## The door a press lands on while the menu is up. Every press is answered: a
-## press beside the card dismisses it, and never reaches the sheet underneath.
+
 func hit(p: Vector2, vp: Vector2) -> String:
 	if not is_open():
 		return ""
@@ -80,19 +70,18 @@ func hit(p: Vector2, vp: Vector2) -> String:
 		return CLOSE
 	return DISMISS
 
-## What the door says: the action a press performs, not the state it shows.
+
 func door_label() -> String:
 	if followed:
 		return "STOP FOLLOWING %s" % abbr
 	return "FOLLOW %s" % abbr
 
-## The state line under the club name.
+
 func state_line() -> String:
 	if followed:
 		return "FOLLOWED  ·  ITS GAMES STAY ON WATCH"
 	return "NOT FOLLOWED  ·  FOLLOW TO KEEP ITS GAMES ON WATCH"
 
-# gd-tools: no cover start
 
 func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary) -> void:
 	if not is_open():
@@ -123,4 +112,4 @@ func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary) -> void:
 	UiChrome.text(c, Vector2(r.position.x + 18.0, r.end.y - 10.0),
 		"TAP ELSEWHERE TO CLOSE", 8, UiChrome.C_DIM, med)
 
-# gd-tools: no cover end
+

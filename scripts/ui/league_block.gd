@@ -1,31 +1,16 @@
 class_name LeagueBlock
 extends RefCounted
 
-## The one fixture block every result surface prints (#168): the kick-off time
-## or `FT` and the score, both clubs by full name, then each side's events in
-## its own column beneath its own name.
-##
-## Geometry and paint live together so the hub's planner, the calendar's day
-## list and the roundup can never drift apart: a played row is the same block in
-## all three, only the width and the type it is given change. Names are
-## shortened with an ellipsis rather than painted into the other column, and the
-## event lines are measured against their own column, so a long scorer or an
-## assist bracket never crosses the gutter.
-##
-## Only the name strips the long press needs are registered here, through the
-## caller's own `InterestNames` registry — the same strips the rows have always
-## painted (#107).
 
-## A played row with no events still holds the lines it prints.
 const BASE := 36.0
-## One event line, and the tight line a calendar day row uses.
+
 const LINE := 15.0
 const TIGHT_BASE := 32.0
 const TIGHT_LINE := 14.0
 const GUTTER := 16.0
 const INSET := 10.0
 
-## The two columns a block prints in, from the row it sits in.
+
 static func columns(rect: Rect2) -> Dictionary:
 	var mid := rect.position.x + rect.size.x * 0.5 + GUTTER * 0.5
 	return {
@@ -35,13 +20,11 @@ static func columns(rect: Rect2) -> Dictionary:
 		"away_w": maxf(rect.end.x - mid - INSET, 60.0),
 	}
 
-## The events of a fixture, from the report the caller holds: the hub and the
-## calendar carry them on the fixture row, a roundup carries the report itself.
+
 static func report_of(fixture: Dictionary) -> Dictionary:
 	return {"fixture": fixture, "events": fixture.get("events", [])}
 
-## How tall one played fixture's block is at this density. A pending fixture has
-## no block: the hub's planner keeps its one-line row.
+
 static func height(fixture: Dictionary, tight: bool = false) -> float:
 	if str(fixture.get("status", "")) != "played":
 		return 0.0
@@ -49,10 +32,7 @@ static func height(fixture: Dictionary, tight: bool = false) -> float:
 	var rows := maxi((sides["home"] as Array).size(), (sides["away"] as Array).size())
 	return (TIGHT_BASE if tight else BASE) + float(rows) * (TIGHT_LINE if tight else LINE)
 
-# gd-tools: no cover start
 
-## Paint the block inside `rect`. `names` registers the club strips the long
-## press reads; `home_ink` / `away_ink` carry a followed club's gold.
 static func paint(c: CanvasItem, rect: Rect2, fixture: Dictionary, fonts: Dictionary,
 		names: InterestNames, home_ink: Color, away_ink: Color, tight: bool = false) -> void:
 	var bold: Font = fonts["bold"]
@@ -62,15 +42,15 @@ static func paint(c: CanvasItem, rect: Rect2, fixture: Dictionary, fonts: Dictio
 	var places := columns(rect)
 	var played := str(fixture.get("status", "")) == "played"
 	var kick := str(fixture.get("kickoff_time", ""))
-	# A played row leads with FT where the kick-off sat, so the list reads as a
-	# results column once the day is done (#124).
+
+
 	UiChrome.text(c, Vector2(rect.position.x + 8.0, rect.position.y + 15.0),
 		"FT" if played else kick, 10, UiChrome.C_GOLD if played else UiChrome.C_DIM, bold)
 	var score := "%d  –  %d" % [int(fixture.get("home_goals", 0)), int(fixture.get("away_goals", 0))]
 	UiChrome.text_r(c, rect.end.x - 12.0, rect.position.y + (15.0 if tight else 16.0), score,
 		12 if tight else 13, UiChrome.C_TEXT, bold)
-	# The names share one line and each column keeps its own width, so a long
-	# name is shortened inside its half instead of running under the score.
+
+
 	var home_name: String = LeagueColumns.fit_name(str(fixture.get("home_name", "")), bold,
 		name_size, float(places["home_w"]))
 	var away_name: String = LeagueColumns.fit_name(str(fixture.get("away_name", "")), bold,
@@ -93,4 +73,4 @@ static func _paint_side(c: CanvasItem, x: float, top: float, w: float, events: A
 		LeagueMarks.line(c, Vector2(x, top + float(i) * line_h), events[i], fonts, w,
 			UiChrome.C_TEXT)
 
-# gd-tools: no cover end
+

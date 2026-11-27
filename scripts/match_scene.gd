@@ -1,14 +1,11 @@
 class_name MatchScene
 extends RefCounted
 
-## Pitch, actors, camera and HUD assembly for the play scene. Lives beside
-## main.gd (not under scripts/view/) so it can wire the HUD without crossing the
-## view→ui layer ban. The host keeps the node handles this builder writes.
 
 const W := 68.0
 const L := 105.0
 
-## Build the arena graph and the presentation helpers the host already owns.
+
 static func build(game: Node) -> void:
 	game.arena = Node2D.new()
 	game.arena.name = "Arena"

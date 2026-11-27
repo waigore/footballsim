@@ -1,7 +1,5 @@
 extends GdToolsTest
 
-## The encyclopedia sheet driven the way a player drives it: open on the league,
-## tap through to a club and a player, walk the stack back, and scroll.
 
 var wiki: Control = null
 
@@ -81,8 +79,8 @@ func test_rows_inside_a_page_stay_inside_the_viewport() -> void:
 	assert_gte((row["rect"] as Rect2).size.x, 100.0, "rows have no width")
 
 func test_scrolling_clamps_to_the_content() -> void:
-	# A phone-sized body: the test viewport is square, so the scroll window is
-	# set here instead of read from it.
+
+
 	var body := WikiBody.new()
 	body.size = Vector2(800.0, 360.0)
 	body.set_page(WikiModel.page(WikiModel.TEAM, "MUN"), true)
@@ -150,38 +148,33 @@ func test_a_snapshot_date_reveals_its_weekday_on_hover() -> void:
 	assert_eq(str(wiki.tooltip.zone_at().get("date", "")), str(zone["date"]),
 		"a hovered snapshot date did not reach the overlay")
 
-# ------------------------------------------------------------ footer advice --
 
-## A phone has no keys, so the footer names none (#203): the touch copy is the
-## drag-and-tap one, and no word of it belongs to a keyboard.
 func test_the_touch_footer_names_no_keys() -> void:
 	var hint := WikiChrome.footer_hint(true, true, true)
 	assert_eq(hint, "TAP A ROW TO OPEN  ·  DRAG TO SCROLL", "the phone footer is not the touch copy")
 	for word in ["KEY", "ESC", "WHEEL", "CLICK"]:
 		assert_false(hint.contains(word), "the phone footer still says %s" % word)
 
-## The desktop keeps the keys it really has, and the escape door.
+
 func test_the_desktop_footer_keeps_its_keys() -> void:
 	var hint := WikiChrome.footer_hint(false, true, true)
 	assert_eq(hint, "CLICK A ROW TO OPEN  ·  ESC BACK  ·  WHEEL, DRAG OR KEYS SCROLL",
 		"the desktop footer lost its own copy")
 
-## A surface with nothing to open says nothing about rows.
+
 func test_a_page_with_nothing_to_open_advertises_no_row() -> void:
 	var hint := WikiChrome.footer_hint(true, false, true)
 	assert_eq(hint, "DRAG TO SCROLL", "a stat-only page still advertises a row to open")
 	assert_false(WikiChrome.footer_hint(false, false, true).contains("ROW"),
 		"the desktop footer advertises a row a stat-only page does not have")
 
-## A page that fits has nothing to scroll, so the footer drops that too; with
-## nothing to say at all it is empty and the sheet paints no strip.
+
 func test_a_short_page_has_no_scroll_advice() -> void:
 	assert_eq(WikiChrome.footer_hint(true, true, false), "TAP A ROW TO OPEN", "a fitting page still says drag")
 	assert_eq(WikiChrome.footer_hint(true, false, false), "", "a fitted stat page still paints a footer")
 	assert_eq(WikiChrome.footer_hint(false, false, false), "ESC BACK", "the desktop footer lost the escape door")
 
-## The body reports a row to open only while a link is on screen: the top of a
-## club page lists values, the squad below it opens player pages.
+
 func test_a_club_page_top_has_no_row_to_open_but_its_squad_has() -> void:
 	var body := WikiBody.new()
 	body.size = Vector2(800.0, 360.0)
@@ -197,8 +190,7 @@ func test_a_club_page_top_has_no_row_to_open_but_its_squad_has() -> void:
 	assert_true(body.has_open_row_in_view(), "the squad on screen is not read as rows to open")
 	body.free()
 
-## #274: on a touch build the encyclopedia's table rows are finger-sized, so one
-## press picks one club — the same 49-unit pitch the league table took in #204.
+
 func test_touch_table_rows_are_finger_sized() -> void:
 	var page := WikiModel.page(WikiModel.LEAGUE, "")
 	var desk := WikiBody.layout(page["blocks"], 1048.0, true, false)
@@ -215,8 +207,8 @@ func test_touch_table_rows_are_finger_sized() -> void:
 	assert_eq(touch_rows.size(), 36, "the league page lost clubs on a phone")
 	assert_almost_eq((desk_rows[1] as Rect2).position.y - (desk_rows[0] as Rect2).position.y, 24.0, 0.01,
 		"the desktop reading stopped being dense")
-	# Within one table the rows share the finger pitch; between tables a section
-	# heading or a note takes its own lines, which is not a lost row.
+
+
 	var previous: Dictionary = {}
 	for row in touch_rows:
 		var r: Rect2 = row["rect"]
@@ -226,8 +218,7 @@ func test_touch_table_rows_are_finger_sized() -> void:
 				"two touch rows in one table do not share the finger pitch")
 		previous = row
 
-## A press in the middle of a row's own strip opens that row's page, even after
-## the sheet has scrolled it into view (#274).
+
 func test_a_touch_row_answers_a_press_after_scrolling() -> void:
 	var body := WikiBody.new()
 	body.size = Vector2(1096.0, 493.0)
@@ -249,7 +240,7 @@ func test_a_touch_row_answers_a_press_after_scrolling() -> void:
 	assert_gt(checked, 10, "no scrolled row answered a press")
 	body.free()
 
-## The league table opens a club from its first row, so its footer keeps the hint.
+
 func test_the_league_table_keeps_the_row_hint() -> void:
 	var body := WikiBody.new()
 	body.size = Vector2(800.0, 360.0)

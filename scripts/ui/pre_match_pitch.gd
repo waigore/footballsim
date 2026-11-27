@@ -1,19 +1,11 @@
 class_name PreMatchPitch
 extends RefCounted
 
-## The two formation pitches on the pre-match briefing (#157): each side drawn in
-## its own kit, in its own shape, facing the other.
-##
-## A player is a numbered disc in the club's shirt colour with the armband in
-## gold; his name sits under the disc when the pitch is wide enough to read it.
-## The shape comes from `TeamData.formation_slot`, the same geometry the match
-## engine and the tactics board use, so the briefing cannot invent a formation.
 
 const GRASS := Color(0.045, 0.115, 0.068)
 const LINE := Color(1, 1, 1, 0.20)
 
-## `mirror` flips the shape so the two sides face each other.
-# gd-tools: no cover start
+
 static func draw(c: CanvasItem, rect: Rect2, team: Dictionary, xi: Array,
 		captain_id: String, fonts: Dictionary, mirror: bool) -> void:
 	if rect.size.x < 8.0 or rect.size.y < 8.0:
@@ -50,9 +42,7 @@ static func draw(c: CanvasItem, rect: Rect2, team: Dictionary, xi: Array,
 			UiChrome.text_c(c, at.x, at.y + radius + 11.0,
 				LeagueColumns.fit_name(label, bold, 10, room), 10, UiChrome.C_TEXT, bold)
 
-# gd-tools: no cover end
 
-## The name a pitch has room for: the last word of a full name.
 static func short_name(name: String) -> String:
 	var parts := name.strip_edges().split(" ", false)
 	if parts.size() <= 1:

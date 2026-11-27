@@ -1,12 +1,10 @@
 class_name HudBannersBand
 extends RefCounted
 
-## Case banners over the pitch: the goal card, the half/full-time card, the
-## opening team sheet that fades out, the paused card and the broadcast vignette.
 
 var touch := false
-## The chrome has slid away (#158). A card's hint then cannot name a door that
-## left with it, so the card becomes the door itself (#202).
+
+
 var chrome_hidden := false
 
 func events(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:
@@ -42,8 +40,8 @@ func _break(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 			home_goals += 1
 		else:
 			away_goals += 1
-	# The card grows by the goals it can list and is capped at the band between
-	# the scoreboard and the ticker, so a seven-goal game never covers either.
+
+
 	var m: Dictionary = HudLayout.break_metrics(p.vp, home_goals, away_goals)
 	var r: Rect2 = m["rect"]
 	p.panel(c, Color(0.02, 0.03, 0.04, 0.94), r, 14, Color(1, 1, 1, 0.12))
@@ -55,11 +53,11 @@ func _break(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 	var compact := bool(m["compact"])
 	if not compact and r.size.y >= HudLayout.BREAK_BASE_H:
 		p.text_c(c, cx, r.position.y + float(m["abbr_y"]), "%s  ·  %s" % [engine.teams[0]["data"]["abbr"], engine.teams[1]["data"]["abbr"]], int(m["abbr_size"]), UiChrome.C_DIM, f_med)
-	# A shootout card lists the kicks, not the goals that got the tie there.
+
 	if engine.phase != "shootout":
 		_goals(p, c, engine, r, m, f_med)
-	# A league watch keeps this card until the player reads it (#124): the result
-	# is in the save, and the season sheet is one tap behind the whistle.
+
+
 	var held: bool = engine.phase == "full_time" and game != null and bool(game.result_hold)
 	var sub := break_hint(str(engine.phase), touch, chrome_hidden, held)
 	var pens := pens_line(engine)
@@ -68,12 +66,11 @@ func _break(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 	if float(m["sub_y"]) <= r.size.y - 4.0:
 		p.text_c(c, cx, r.position.y + float(m["sub_y"]), sub, int(m["sub_size"]), UiChrome.C_DIM, f_med)
 		if break_restarts(str(engine.phase), touch, chrome_hidden, held):
-			# Nothing on screen carries RESTART while the chrome is hidden, so
-			# the card the hint names is the door (#202).
+
+
 			p.add_button("restart", r, sub, "")
 
-## What the card is called in each break. Full time after penalties still reads
-## FULL TIME; the shootout itself is its own card.
+
 static func break_title(phase: String) -> String:
 	if phase == "half_time":
 		return "HALF TIME"
@@ -83,19 +80,14 @@ static func break_title(phase: String) -> String:
 		return "PENALTIES"
 	return "FULL TIME"
 
-## The shootout tally once it has been decided: "PENS 4 – 3". Empty otherwise,
-## so a regulation full time keeps the card it always had.
+
 static func pens_line(engine) -> String:
 	var tally: Array = engine.shootout_score
 	if tally.size() < 2 or int(tally[0]) == int(tally[1]):
 		return ""
 	return "PENS %d – %d" % [int(tally[0]), int(tally[1])]
 
-## What the card says under the score. Every hint names a control the player can
-## reach in this state: with the chrome shown the bar's PLAY AGAIN door; with it
-## hidden that door and its key hint are gone, so a phone's card offers its own
-## press instead (#202). The season's own SPACE stays live either way, because a
-## key never leaves.
+
 static func break_hint(phase: String, touch: bool, hidden: bool, held: bool) -> String:
 	if phase == "half_time":
 		return "SECOND HALF STARTS SHORTLY"
@@ -113,15 +105,11 @@ static func break_hint(phase: String, touch: bool, hidden: bool, held: bool) -> 
 		return "TAP THE CARD TO PLAY AGAIN"
 	return "TAP PLAY AGAIN"
 
-## Whether the full-time card is its own restart door: only on a phone, only
-## while the chrome is hidden, and never over a league result the season holds.
+
 static func break_restarts(phase: String, touch: bool, hidden: bool, held: bool) -> bool:
 	return phase == "full_time" and touch and hidden and not held
 
-## The goals that made the score, in the card's own space: two columns on a
-## desktop scorecard (home left, visitors right) and two short entries per row on
-## a phone, where each entry carries its club. Anything past the last row is
-## counted (`+2`) instead of dropped silently.
+
 func _goals(p: HudPaint, c: CanvasItem, engine, r: Rect2, m: Dictionary, f_med: Font) -> void:
 	var rows: int = int(m["rows"])
 	if rows <= 0:
@@ -177,7 +165,6 @@ static func _entry(engine, g: Dictionary, with_club: bool) -> String:
 	return "%d'  %s" % [minute, name]
 
 
-## Opening team sheet; waits out the kickoff and fades across the first seconds.
 func intro(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:
 	if engine.clock > 90.0 or engine.phase in ["full_time", "half_time", "et_break",
 			"shootout", "goal"]:
@@ -214,14 +201,13 @@ func paused(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 	p.panel(c, Color(0.02, 0.03, 0.04, 0.88), r, 12, Color(0.96, 0.78, 0.30, 0.55))
 	p.text_c(c, p.vp.x * 0.5, y + 25, "PAUSED", 20, UiChrome.C_GOLD, f_bold)
 	p.text_c(c, p.vp.x * 0.5, y + 42, "TAP RESUME TO CARRY ON" if touch else "PRESS SPACE TO RESUME", 9, UiChrome.C_DIM, f_med)
-	# RESUME rides the control bar, so a hidden chrome leaves the banner's own
-	# copy pointing at a door nobody can see: the banner answers the tap instead
-	# (#202). A whistle card keeps the press, because restart is the way on.
+
+
 	if touch and chrome_hidden and engine.phase not in ["half_time", "full_time", "goal"]:
 		p.add_button("pause", r, "RESUME", "")
 
 func vignette(p: HudPaint, c: CanvasItem) -> void:
-	# subtle broadcast frame
+
 	c.draw_rect(Rect2(0, 0, p.vp.x, 3), Color(0, 0, 0, 0.35))
 	c.draw_rect(Rect2(0, p.vp.y - 3, p.vp.x, 3), Color(0, 0, 0, 0.35))
 

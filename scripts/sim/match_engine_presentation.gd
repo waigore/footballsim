@@ -1,21 +1,18 @@
 extends "res://scripts/sim/match_engine_pitch.gd"
 
-## Broadcast-facing helpers: event log, clock formatting, possession and summaries.
 
-## Implemented by the restarts layer. Declared here so the base layers can
-## reach it virtually (a base script cannot call a method only a subclass has).
 func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) -> void:
 	pass
 
-## Implemented by the restarts layer (tick calls it).
+
 func _update_restart(dt: float) -> void:
 	pass
 
-## Implemented by the rules layer (actions call it when a flagged man touches it).
+
 func _offside(p) -> void:
 	pass
 
-## Implemented by the rules layer (a bad challenge can take the victim off).
+
 func _injure(p) -> void:
 	pass
 
@@ -44,7 +41,7 @@ func display_clock() -> String:
 	if phase == "shootout":
 		return "PENALTIES"
 	if half >= 3:
-		# Extra time reads 91:00–105:00 and 106:00–120:00, then its own added time.
+
 		var end_clock: float = 6300.0 if half == 3 else 7200.0
 		var board: String = "105:00" if half == 3 else "120:00"
 		if clock <= end_clock:
@@ -61,13 +58,9 @@ func display_clock() -> String:
 func minute_of(t: float) -> int:
 	return clampi(int(ceil(t / 60.0)), 1, 120)
 
-## Every goal this match has scored, in order: `team` (the side credited),
-## `minute`, `scorer` and `own_goal`. Written where the goal is narrated, so the
-## half/full-time card can list the goals without re-reading `events`, which
-## drops its oldest entries once a match gets busy (DR-20261125-04).
+
 var goal_sheet: Array = []
 
-# ----------------------------------------------------------------- physics --
 
 func _emit(kind: String, text: String, team: int, player, extra: Dictionary = {}) -> void:
 	ev_seq += 1
@@ -92,8 +85,7 @@ func _emit(kind: String, text: String, team: int, player, extra: Dictionary = {}
 	_official_reacts(kind, player)
 	event_fired.emit(e)
 
-## The official's cue: whistle and move to the spot when play stops. Purely
-## presentation, but it is driven by the same event log the HUD narrates.
+
 func _official_reacts(kind: String, player) -> void:
 	if not kind in ["foul", "card", "offside", "handball", "penalty", "penalty_taken",
 			"kickoff", "half_time", "full_time", "injury"]:
@@ -103,8 +95,7 @@ func _official_reacts(kind: String, player) -> void:
 		referee.focus = player.pos
 		referee.focus_t = 1.8
 
-## The referee runs the same diagonal as a real official: behind the ball, on
-## the opposite side of the pitch, closing on the spot whenever play stops.
+
 func _update_referee(dt: float) -> void:
 	var r = referee
 	r.whistle = maxf(0.0, r.whistle - dt)
@@ -151,8 +142,7 @@ func possession_pct() -> Vector2:
 	var a: float = float(stats[0]["possession"]) / tot * 100.0
 	return Vector2(snappedf(a, 0.1), snappedf(100.0 - a, 0.1))
 
-## Each side's momentum, 0..1, read on its own. The broadcast meter asks for this
-## every frame, so it does not build a summary to get it.
+
 func momentum_level() -> Vector2:
 	return MatchStats.momentum_level(momentum)
 
@@ -161,6 +151,6 @@ func summary() -> Dictionary:
 		"score": score.duplicate(), "half": half, "clock": display_clock(),
 		"possession": possession_pct(), "stats": stats.duplicate(true),
 		"events": events.size(), "phase": phase,
-		# Each side's momentum, 0..1 (DR-20261125-01).
+
 		"momentum": MatchStats.momentum_level(momentum),
 	}

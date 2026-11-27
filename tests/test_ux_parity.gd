@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## REQ-P5-07 / RUB-P5-07: intent parity phone+tablet ↔ desktop for main chrome.
-## Layout may differ; mobile must not lose desktop intents (extras on phone OK).
-## Also pins REQ-P1-05 weekday reveal: touch arms via hold, not hover-only.
 
 const DESKTOP := Vector2(1600, 900)
 const PHONE := Vector2(913, 411)
@@ -63,7 +60,6 @@ func _control_ids(vp: Vector2, touch: bool) -> Array:
 		ids.append(str(spec[0]))
 	return ids
 
-# --------------------------------------------------------------- menu ---
 
 func test_menu_door_intents_match_across_viewports() -> void:
 	for has_match in [false, true]:
@@ -76,7 +72,6 @@ func test_menu_door_intents_match_across_viewports() -> void:
 				assert_gte(r.size.y, MenuScreen.DOOR_MIN, "menu door too short at %s" % vp)
 				assert_gte(r.size.x, 44.0, "menu door too narrow at %s" % vp)
 
-# ------------------------------------------------------------ settings ---
 
 func test_settings_intents_match_across_viewports() -> void:
 	var desk := _settings_ids(DESKTOP)
@@ -89,7 +84,6 @@ func test_settings_intents_match_across_viewports() -> void:
 	for vp in [PHONE, PHONE_PORTRAIT, TABLET]:
 		_assert_not_weaker(desk, _settings_ids(vp), "settings@%s" % vp)
 
-# ------------------------------------------------------------- confirm ---
 
 func test_confirm_intents_match_across_viewports() -> void:
 	var prompt := ConfirmPrompt.new()
@@ -105,14 +99,13 @@ func test_confirm_intents_match_across_viewports() -> void:
 			ids.append(prompt.button_at(rect.get_center(), vp))
 		assert_eq(ids, desk_ids, "confirm intents drifted at %s" % vp)
 
-# --------------------------------------------------------- league panel ---
 
 func test_league_panel_intents_match_across_viewports() -> void:
 	var desk := _panel_nav_ids(DESKTOP, false)
 	assert_eq(desk.size(), LeaguePanel.ITEMS.size(), "desktop panel lost a nav row")
 	for vp in [PHONE, TABLET]:
 		_assert_not_weaker(desk, _panel_nav_ids(vp, true), "league panel@%s" % vp)
-	# Edge tab is the only way into the panel when closed — both poses.
+
 	for pair in [[DESKTOP, false], [PHONE, true], [PHONE_PORTRAIT, true]]:
 		var vp: Vector2 = pair[0]
 		var touch: bool = pair[1]
@@ -125,17 +118,15 @@ func test_league_panel_intents_match_across_viewports() -> void:
 		assert_eq(panel.hit(tab.get_center(), vp), "panel",
 			"closed panel tab is not hittable at %s (touch=%s)" % [vp, touch])
 
-# --------------------------------------------------------------- HUD bar ---
 
 func test_hud_control_intents_are_not_weaker_on_phone() -> void:
 	var desk := _control_ids(DESKTOP, false)
 	var phone := _control_ids(PHONE, true)
 	_assert_not_weaker(desk, phone, "HUD controls")
-	# Phone may add TEAMS (compact fixture card is gone); that is stronger, not weaker.
+
 	assert_true(phone.has("teams"), "phone HUD lost the teams door")
 	assert_false(desk.has("teams"), "desktop HUD unexpectedly gained teams on the bar")
 
-# ----------------------------------------------------------- date hover ---
 
 func test_weekday_reveal_is_not_hover_only_on_touch() -> void:
 	var over := DateOverlay.new()

@@ -1,12 +1,5 @@
 extends GdToolsTest
 
-## FM tactics slice: the club style survives as the default, formations re-slot
-## the same XI, mentality moves the effective style, and the whole board rides
-## the match snapshot.
-##
-## The board's reach onto the pitch rides with it: width stretches the attacking
-## shape, a formation moves the base targets, a role duty moves the push, and a
-## press change lands in the live style. Same theme, one coverage boot.
 
 func _ids() -> Array:
 	return TeamData.team_ids()
@@ -146,12 +139,6 @@ func test_corner_and_free_kick_routines_execute() -> void:
 	eng._execute_restart()
 	assert_eq(eng.phase, "play", "a worked free kick did not put the ball back in play")
 
-# ------------------------------------------------------------------------
-
-
-## The FM board reaches the pitch: a width change stretches the attacking
-## shape, a formation change moves the base slots, and a role duty moves the
-## player's push. Seeded engines, no UI.
 
 func _mean_spread(eng, t: int) -> float:
 	var total := 0.0
@@ -244,16 +231,13 @@ func test_tempo_changes_pass_speed() -> void:
 		fast_total += fast.ball.vel.length()
 	assert_gt(fast_total, slow_total, "tempo does not change how fast the ball travels")
 
-## The `marking` instruction is the defending side's own (wiki Live tactics:
-## `zonal` / `man`, "man-marking radius (30 m vs 26 m)"). Two defects are pinned:
-## the band used to be read off the side holding the ball, and the assignment a
-## defender was handed was never read by the shape at all.
+
 func test_marking_band_belongs_to_the_defending_side() -> void:
 	assert_almost_eq(MatchMarking.band({"marking": "zonal"}), 26.0, 0.0001, "zonal band drifted")
 	assert_almost_eq(MatchMarking.band({"marking": "man"}), 30.0, 0.0001, "man band drifted")
 	assert_almost_eq(MatchMarking.band({}), 26.0, 0.0001, "an unset instruction must mark like the default")
-	# Team 1 does the marking. Telling team 0 to mark tight must not widen team
-	# 1's reach; telling team 1 to mark tight must.
+
+
 	var on_holder := _marks_in_band(0)
 	var on_marker := _marks_in_band(1)
 	var nobody := _marks_in_band(-1)
@@ -266,10 +250,7 @@ func test_man_marking_covers_the_man_it_picks_up() -> void:
 	assert_gt(man, zonal, "man marking picked up no one extra in the 26-30 m band")
 	assert_gt(_target_drift(), 0.0, "the extra assignment never moved a defender onto his man")
 
-## How many defenders team 1 marks up in the 26-30 m band the two instructions
-## disagree about. `holder` names the side given the `man` instruction: -1 for
-## neither, so the default is measured too. Outside this band both instructions
-## reach, or neither does, so only here can they be told apart.
+
 func _marks_in_band(holder: int) -> int:
 	var total := 0
 	for gap in [26.5, 28.0, 29.5]:
@@ -277,7 +258,7 @@ func _marks_in_band(holder: int) -> int:
 			total += _marked_count(_marking_scene(gap, ay, holder), 1)
 	return total
 
-## Cells whose defender ends up somewhere else once team 1 marks tight.
+
 func _target_drift() -> int:
 	var drifted := 0
 	for gap in [26.5, 28.0, 29.5]:
@@ -290,9 +271,7 @@ func _target_drift() -> int:
 				drifted += 1
 	return drifted
 
-## Team 1's right centre-back stands `gap` metres from a home striker who has
-## dropped goal-side of the ball, with the ball beyond the pair: the picture
-## where a defender may legally step out to a man.
+
 func _marking_scene(gap: float, ay: float, holder: int) -> MatchEngine:
 	var eng := _scene(56)
 	for p in eng.players:

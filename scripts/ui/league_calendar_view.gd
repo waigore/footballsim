@@ -1,26 +1,20 @@
 class_name LeagueCalendarView
 extends RefCounted
 
-## The season calendar reading: month grid cells, day fixture rows, and the
-## month chips. Geometry and paint only — `LeagueBook` keeps the pose names the
-## screen already calls, the same way `LeagueTableView` owns the table.
-##
-## Month arithmetic lives in `LeagueMonth`; day selection state lives in
-## `LeagueCalendar`. This module only places cells and paints them.
 
 const HEADER := LeagueChrome.HEADER
 
 var cache := {}
-## Dates this reading painted, with the strip each one occupies (#99).
+
 var hints := DateHints.new()
-## Club names this reading painted (#107).
+
 var names := InterestNames.new()
 
 func layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 	var month := str(view.get("month", ""))
-	## The month label and the month chips own the row under the header; the
-	## weekday labels start below them so neither is drawn through the other.
+
+
 	var grid_top := HEADER + 50.0
 	var cw := (vp.x - 48.0) / 7.0
 	var ch: float = 30.0 if vp.y < 620.0 else 34.0
@@ -59,21 +53,17 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append(LeagueExtra.back_item())
 	return items
 
-## True when the day on screen holds more than one competition, which is when
-## the calendar groups the list under league headings.
+
 static func _has_many_comps(view: Dictionary) -> bool:
 	var seen := {}
 	for fx in view.get("day_fixtures", []):
 		seen[str(fx.get("competition_id", ""))] = true
 	return seen.size() > 1
 
-## Paste `body` into the paint path so the first painted frame reuses the
-## `_draw` call already entered (see docs/testing.md). Headless suites never
-## paint, so this is the only branch there.
+
 func _paint_band(c: CanvasItem, body: Callable) -> void:
 	body.call(c)
 
-# gd-tools: no cover start
 
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
@@ -105,9 +95,8 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
 				"%s  ·  GW %d" % [name, int(item.get("matchday", 1))], 9, UiChrome.C_GOLD, bold)
 		elif kind == "fixture":
-			# A result reads as the same block the hub prints: full names and
-			# each side's events under its own name (#168). A pending fixture
-			# keeps the calendar's one line with OPEN in the score's place.
+
+
 			var fx: Dictionary = item["fixture"]
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 4)
 			var home_id := str(fx.get("home_club_id", ""))
@@ -144,9 +133,8 @@ func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 	if selected:
 		fill = UiChrome.C_GOLD.darkened(0.25)
 	UiChrome.panel(c, cache, rect, fill, 4, UiChrome.C_BORDER, 1)
-	# A selected cell is gold, so the sheet's light inks wash out on it: the day
-	# and its counter take the dark ink the gold doors and the WATCH chip use
-	# (#126). On a dark cell the counter keeps its live/planned colour.
+
+
 	var ink: Color = Color(0.06, 0.06, 0.05) if selected else (UiChrome.C_TEXT if has else UiChrome.C_DIM)
 	UiChrome.text(c, Vector2(rect.position.x + 4.0, rect.position.y + 12.0), "%d" % int(item["day"]), 10,
 		ink, fonts["med"])
@@ -156,8 +144,8 @@ func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 		var count_ink: Color = ink if selected else (UiChrome.C_LIVE if done == total else UiChrome.C_GOLD)
 		UiChrome.text_r(c, rect.end.x - 3.0, rect.end.y - 4.0, "%d/%d" % [done, total], 10,
 			count_ink, fonts["bold"])
-		# A mixed day says which league plays: one short mark per competition
-		# (P = Premier League, L = La Liga) with its fixture count.
+
+
 		var by_league: Dictionary = info.get("by_league", {})
 		if by_league.size() > 1:
 			var mx := rect.position.x + 4.0
@@ -168,4 +156,4 @@ func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 					ink if selected else UiChrome.C_SOFT, fonts["med"])
 				mx += 12.0
 
-# gd-tools: no cover end
+

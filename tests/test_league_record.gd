@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## The season ledger's own door, tested against a real save without driving a
-## whole season: a fixture's report lands in the rows the season suites read
-## (the fixtures module loads before `LeagueClips` exists), an unknown fixture
-## is refused, and the standings recompute repairs a drifted table.
 
 var SAVE_DIR := TestScratch.dir("saves_test_record_split")
 var CACHE_DIR := TestScratch.dir("cache_test_record_split")
@@ -74,8 +70,8 @@ func test_a_result_and_recompute_repair_the_table() -> void:
 	assert_not_null(season, "the season was not created")
 	var fx: Dictionary = season.plan()[0]
 	var id := str(fx["id"])
-	# Drift the side columns by hand, then let a result and the repair path fix
-	# them: the fixture and its table rows are the same ledger either way.
+
+
 	PLDatabase.execute(
 		"UPDATE league_table SET home_gf = 999, away_played = 0, points = 0 "
 		+ "WHERE club_id = ? OR club_id = ?;",

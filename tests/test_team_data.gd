@@ -1,7 +1,5 @@
 extends GdToolsTest
 
-## Squad data: every Premier League club resolves to a full squad, and the
-## formation table answers for every role a manager can hand a player.
 
 const CLUBS := 20
 
@@ -53,8 +51,8 @@ func test_unknown_formation_falls_back_to_the_default_shape() -> void:
 	assert_eq(fallback, TeamData.FORMATIONS["4-2-3-1"], "the fallback is not the default shape")
 
 func test_bench_roles_fall_back_to_a_sensible_line() -> void:
-	# Every formation names the same eleven canonical roles; a bench body uses
-	# the generic position, so the fallback table is what places him.
+
+
 	var cb: Vector2 = TeamData.formation_slot_for("4-2-3-1", "CB")
 	var cdm: Vector2 = TeamData.formation_slot_for("4-2-3-1", "CDM")
 	var cm: Vector2 = TeamData.formation_slot_for("4-2-3-1", "CM")

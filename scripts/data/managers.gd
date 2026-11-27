@@ -1,14 +1,6 @@
 class_name ManagerData
 extends RefCounted
 
-## In-match manager identity. Real manager names live with the squad shards
-## (teams_*.gd); this table adds the identity profile that biases live
-## decisions — how quickly a manager reacts, how stubborn he is, how much risk
-## he takes, how patient he is between changes, and which levers he reaches for.
-##
-## Profiles are inputs to the decision engine only: they never apply pitch
-## physics themselves. Every playable club resolves to a real manager plus a
-## profile, even when the club has no entry here (the default is steady).
 
 const DEFAULT := {
 	"reactive": 0.55,
@@ -22,11 +14,7 @@ const DEFAULT := {
 	"trait": "steady hand",
 }
 
-## reactive  — how strongly events feed urgency (0 = ice cold, 1 = touchline)
-## stubborn  — resistance to changing a plan (dampens urgency, slows reactions)
-## risk      — leans attacking / chasing when a game turns (0 = shut up shop)
-## patience  — how long he waits between tactical changes
-## sub_style — how eagerly he rotates the bench (0.5 = reactive, 0.8 = proactive)
+
 const PROFILES := {
 	"MUN": {"reactive": 0.62, "stubborn": 0.44, "risk": 0.58, "patience": 0.48, "sub_style": 0.55,
 		"levers": ["mentality", "press", "formation", "width"], "formation": "4-2-3-1", "mentality": "positive",
@@ -92,8 +80,7 @@ const PROFILES := {
 
 const REQUIRED := ["name", "reactive", "stubborn", "risk", "patience", "sub_style", "levers", "formation", "mentality", "trait"]
 
-## Resolve the real manager of a club plus the profile that biases his match
-## decisions. Unknown clubs fall back to a steady hand built from squad data.
+
 static func profile(club_id: String) -> Dictionary:
 	var out: Dictionary = DEFAULT.duplicate(true)
 	if PROFILES.has(club_id):
@@ -110,6 +97,6 @@ static func has_full_profile(p: Dictionary) -> bool:
 			return false
 	return true
 
-## One short line for the broadcast overlay, e.g. "front-foot, switches shape early".
+
 static func trait_line(club_id: String) -> String:
 	return str(profile(club_id).get("trait", ""))

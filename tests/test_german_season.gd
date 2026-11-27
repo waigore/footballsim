@@ -1,11 +1,5 @@
 extends GdToolsTest
 
-## The German pair in one save (#239): the shipped Bundesliga and 2. Bundesliga
-## snapshots start a season at their own 18-club, 34-matchday shape, on the real
-## 2026-27 calendar or a generated one, and share the clock.
-##
-## One real BL+BL2 save is built in `before_all` and reused for the shape and
-## Continue asserts so coverage does not pay for two 612-fixture creates.
 
 var SAVE_DIR := TestScratch.dir("saves_test_german_season")
 var CACHE_DIR := TestScratch.dir("cache_test_german_season")
@@ -40,7 +34,7 @@ func _clean() -> void:
 		if name.ends_with(".sqlite"):
 			DirAccess.remove_absolute(SAVE_DIR.path_join(name))
 
-## The shared real pair, rebound when another create closed it.
+
 func _pair() -> LeagueSeason:
 	if pair != null and LeagueSeason.active == pair:
 		return pair

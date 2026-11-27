@@ -1,16 +1,7 @@
 class_name PreMatchCopy
 extends RefCounted
 
-## The words on a pre-match briefing: one manager line per side and a short
-## sports-desk blurb. Everything is a deterministic template pack seeded from the
-## fixture, so the same game always reads the same way and no network, model or
-## clock is involved (templates first — DR-20261125-13).
-##
-## A quote picks the most specific pack that applies: a derby, then form, then
-## table pressure, then the plain respect line.
 
-## Hand-authored derby set for v1: the pairings whose two clubs share a city or a
-## history long enough that the briefing should say so. Order-independent.
 const DERBIES := [
 	["MUN", "MCI"], ["LIV", "EVE"], ["ARS", "TOT"], ["NEW", "SUN"],
 	["CHE", "FUL"], ["AVL", "WOL"], ["NFO", "LEI"],
@@ -46,8 +37,7 @@ const PLAIN_LINES := [
 	"The plan is simple: be compact, be brave, take our chances.",
 ]
 
-## A friendly's line: no table, no points, no derby stakes — the packs below all
-## talk about a league a friendly is not part of, so they stay shut (#209).
+
 const FRIENDLY_LINES := [
 	"A good run-out for both squads. We want the habits right before the season.",
 	"No points at stake, but the standards are the same. That is why we play it.",
@@ -60,17 +50,14 @@ const NEWS_TITLE_BOTTOM := "SURVIVAL WATCH"
 const NEWS_TITLE_PLAIN := "MATCHDAY BRIEFING"
 const NEWS_TITLE_FRIENDLY := "FRIENDLY"
 
-## True when the two clubs are one of the hand-authored derby pairs.
+
 static func derby(a: String, b: String) -> bool:
 	for pair in DERBIES:
 		if (str(pair[0]) == a and str(pair[1]) == b) or (str(pair[0]) == b and str(pair[1]) == a):
 			return true
 	return false
 
-## One manager's line. `ctx` carries what the pack may say: derby, form (a W/D/L
-## string, newest last), place (the table place as copy: "2nd", "18th") and
-## opponent place, plus the competition the game is played in. A friendly takes
-## its own pack: form, table pressure and derby stakes all belong to a league.
+
 static func quote(seed: int, team: Dictionary, opponent: Dictionary, ctx: Dictionary) -> Dictionary:
 	var manager := str(team.get("manager", "")).to_upper()
 	var wins := str(ctx.get("form", "")).count("W")
@@ -89,10 +76,7 @@ static func quote(seed: int, team: Dictionary, opponent: Dictionary, ctx: Dictio
 		line = _pick(PLAIN_LINES, seed, 13).replace("{opponent}", str(opponent.get("name", "")))
 	return {"by": manager, "line": line}
 
-## The desk blurb: what a viewer reads on the ticker before kick-off. A friendly
-## names no matchday, no table and no points: it is not part of a season (see
-## `MatchBilling`), so the league packs stay shut — a derby keeps its own title
-## and gets a line that promises no points.
+
 static func news(seed: int, home: Dictionary, away: Dictionary, ctx: Dictionary) -> Dictionary:
 	var title := NEWS_TITLE_PLAIN
 	var line := ""
@@ -127,9 +111,7 @@ static func news(seed: int, home: Dictionary, away: Dictionary, ctx: Dictionary)
 			str(home.get("name", "")), str(away.get("name", "")), str(home.get("stadium", ""))]
 	return {"title": title, "line": line}
 
-## A table place as copy: 1st, 2nd, 3rd, 4th … 11th, 12th, 13th, 21st, 22nd,
-## 23rd. The teens are the one trap (11th, not 11st), and a place is read on
-## every briefing, so the suffix is chosen from the number, never hard-coded.
+
 static func place(n: int) -> String:
 	if n <= 0:
 		return ""

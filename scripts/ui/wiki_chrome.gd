@@ -1,9 +1,6 @@
 class_name WikiChrome
 extends RefCounted
 
-## Shared drawing for the encyclopedia sheet: the panel palette and the three
-## primitives every part of the screen uses. Kept out of the screen script so
-## each file stays inside the P3 method budget.
 
 const PANEL := Color(0.035, 0.055, 0.070, 0.97)
 const PANEL_LIGHT := Color(0.075, 0.105, 0.125, 0.97)
@@ -26,8 +23,7 @@ static func box(c: CanvasItem, col: Color, r: Rect2, radius: int = 10, bc: Color
 		_styles[key] = sb
 	c.draw_style_box(sb, r)
 
-## The size an encyclopedia caption paints at: the shared non-match reading floor
-## lifts anything smaller, so no page can author a hairline (#126).
+
 static func text_size(size_px: int) -> int:
 	return ChromeDensity.read_size(size_px)
 
@@ -44,16 +40,12 @@ static func label_r(c: CanvasItem, font: Font, right_x: float, y: float, s: Stri
 	var w: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	c.draw_string(font, Vector2(right_x - w, y), s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, color)
 
-## A chrome button with a hover/pressed fill; returns nothing, the caller owns
-## the hit rect it already has.
+
 static func button(c: CanvasItem, font: Font, r: Rect2, text: String, hovered: bool) -> void:
 	box(c, PANEL_LIGHT if hovered else PANEL, r, 8, Color(1, 1, 1, 0.14 if hovered else 0.07))
 	label_c(c, font, r.position.x + r.size.x * 0.5, r.position.y + r.size.y * 0.66, text, 13, TEXT if hovered else DIM)
 
-## The one line of instructions under the body (#203). It names only gestures a
-## player can make right now: a phone has no keys to press, a page with no link
-## on screen has no row to open, and a page that fits has nothing to scroll.
-## Empty when there is nothing to say, and the caller then draws nothing.
+
 static func footer_hint(touch: bool, can_open: bool, can_scroll: bool) -> String:
 	var parts: Array = []
 	if can_open:

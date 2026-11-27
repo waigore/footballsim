@@ -1,10 +1,6 @@
 class_name MatchAI
 extends RefCounted
 
-## Team brain: collective shape, pressing, marking and keeper play. On-ball
-## decisions (shoot / pass / cross / clear / dribble) and their shared state live
-## in MatchAIPlanning so each half of the brain stays inside the P3 size budget.
-## All reads/writes go through the engine `e` (untyped to keep the dependency one-way).
 
 var e = null
 var pq = null
@@ -55,16 +51,13 @@ func update_restart(dt: float, restart: Dictionary) -> void:
 	if shape_timer <= 0.0:
 		_update_shapes()
 		shape_timer = 0.15
-	# The taker is driven by the engine; everyone else holds shape.
 
-# ------------------------------------------------------------------- shape --
 
 func _update_shapes() -> void:
 	var bt: int = e.possession_team
 	var ball = e.ball
-	# One defensive-line read per side for the whole pass: no body moves inside
-	# it, so every back reads the same line. Filled lazily, so an attacking side
-	# pays nothing for it.
+
+
 	var dlines := {}
 	for p in e.players:
 		if p.sent_off or p.celebrate > 0.0:
@@ -94,7 +87,7 @@ func _update_shapes() -> void:
 			var line: float = style["line"]
 			tx = b.x * 0.88 + 0.055 + bn.x * 0.30 - 0.12 - (line - 0.5) * 0.10
 			ty = 0.5 + (b.y - 0.5) * 0.78
-			# Compact toward the ball side.
+
 			ty -= (bn.y - 0.5) * 0.10
 		tx = clampf(tx, 0.035, 0.96)
 		ty = clampf(ty, 0.035, 0.965)
@@ -113,7 +106,7 @@ func _attack_shape(p, fallback: Vector2) -> Vector2:
 	var my_ax = e.attacking_x(p.team, p.pos)
 	var style: Dictionary = e.style_of(p.team)
 	var target = fallback
-	# Strikers and wingers attack the space behind once the ball is advanced.
+
 	if e.push_of(p) >= 0.7 and ax > e.L * 0.48:
 		var line = pq.offside_line(p.team)
 		var run_x = line - e.rng.randf_range(0.4, 2.4)
@@ -121,11 +114,11 @@ func _attack_shape(p, fallback: Vector2) -> Vector2:
 			var world_y = p.pos.y
 			if p.role == "ST":
 				world_y = lerpf(world_y, 34.0, 0.35)
-			# Convert attacking x back to world x.
+
 			var world_x = e.teams[p.team]["dir"] * 1.0
 			var w = Vector2(run_x if e.teams[p.team]["dir"] == 1 else e.L - run_x, world_y)
 			target = w
-	# Support the carrier: offer a lane 10-16m ahead and to the side.
+
 	var owner = e.ball_owner()
 	if owner != null and owner.team == p.team and owner.id != p.id:
 		var d = p.pos.distance_to(owner.pos)
@@ -133,10 +126,10 @@ func _attack_shape(p, fallback: Vector2) -> Vector2:
 			var ahead: Vector2 = target
 			ahead.x += e.teams[p.team]["dir"] * 2.0
 			target = target.lerp(ahead, 0.25)
-	# Wide players hold width when the ball is central.
+
 	if p.role in ["RW", "LW"] and absf(ball.pos.y - 34.0) < 12.0:
 		target.y = lerpf(target.y, 8.0 if p.role == "RW" else 60.0, 0.35)
-	# Respect the offside line unless the ball is already beyond it.
+
 	if e.push_of(p) >= 0.6:
 		var line = pq.offside_line(p.team)
 		var cap = line - 0.35
@@ -154,7 +147,7 @@ func _defence_shape(p, fallback: Vector2, dlines: Dictionary = {}) -> Vector2:
 	var target: Vector2 = fallback
 	var is_back: bool = Attrs.is_defender(p.role)
 	var is_holder: bool = p.role in ["RDM", "LDM", "CDM"]
-	# Last-ditch wall: with the ball in our box, the back line forms a screen in front of goal.
+
 	if dist_to_own < 21.0 and is_back:
 		var axis_w: Vector2 = (ball.pos - own).normalized()
 		if axis_w.length() < 0.1:
@@ -162,7 +155,7 @@ func _defence_shape(p, fallback: Vector2, dlines: Dictionary = {}) -> Vector2:
 		var perp_w: Vector2 = Vector2(-axis_w.y, axis_w.x)
 		var lat: float = (p.base.y - 0.5) * 2.0
 		return own + axis_w * 4.6 + perp_w * (lat * 8.5)
-	# Zonal block: when the ball is near our goal, every defender must be goal-side of it.
+
 	if dist_to_own < 34.0 and (is_back or is_holder):
 		var to_ball: Vector2 = (ball.pos - own)
 		if to_ball.length() < 0.1:
@@ -170,15 +163,13 @@ func _defence_shape(p, fallback: Vector2, dlines: Dictionary = {}) -> Vector2:
 		var axis: Vector2 = to_ball.normalized()
 		var perp: Vector2 = Vector2(-axis.y, axis.x)
 		var lateral: float = (p.base.y - 0.5) * 2.0
-		# Back four hold a line 4-7m goal-side of the ball; holders screen in front of it.
+
 		var depth: float = dist_to_own - (4.5 if is_back else 7.5)
 		depth = clampf(depth, 1.6, 30.0)
 		var spread: float = (8.0 if is_back else 11.0) * lateral
 		target = own + axis * depth + perp * spread
-	# Man-mark: a defender carrying an assignment covers that man, goal-side of
-	# him, out to whatever band his side's own `marking` instruction buys
-	# (`MatchMarking`, wiki Live tactics: man 30 m vs zonal 26 m). A body with no
-	# assignment keeps the zone's pounce on whoever steps inside it.
+
+
 	var threat = null
 	if p.mark_id >= 0:
 		var marked = e.by_id.get(p.mark_id, null)
@@ -202,10 +193,10 @@ func _defence_shape(p, fallback: Vector2, dlines: Dictionary = {}) -> Vector2:
 	if threat != null and (is_back or is_holder or p.role in ["RM", "LM", "CM"]):
 		var goal_side: Vector2 = (own - threat.pos).normalized()
 		var mark: Vector2 = threat.pos + goal_side * 1.15
-		# Only abandon the zone if the mark is still goal-side of the ball.
+
 		if mark.distance_to(own) < dist_to_own + 2.5:
 			target = mark
-	# Never go ahead of the ball when defending deep.
+
 	if dist_to_own < 26.0 and target.distance_to(own) > dist_to_own + 3.5:
 		target = own + (target - own).normalized() * (dist_to_own + 3.5)
 	if is_back:
@@ -220,11 +211,10 @@ func _defence_shape(p, fallback: Vector2, dlines: Dictionary = {}) -> Vector2:
 
 func _apply_pressing() -> void:
 	var bt: int = e.possession_team
-	# Every "who gets to the ball first" question in this pass is a question
-	# about one path: the ball does not move inside a shape pass, so the walk is
-	# built once and every body reads it.
+
+
 	var path: Dictionary = pq.ball_trajectory()
-	# Each team sends its quickest player to the ball, with a second player covering.
+
 	for t in range(2):
 		if t == bt and e.ball.owner_id >= 0:
 			continue
@@ -274,7 +264,7 @@ func _apply_pressing() -> void:
 				second.target = cover
 				second.speed_scale = 0.95
 		if deep:
-			# Emergency: the third-closest defender also collapses on the ball.
+
 			var third = null
 			var third_t := 99.0
 			for p in e.players:
@@ -314,9 +304,8 @@ func _assign_marks() -> void:
 				if dist < bd:
 					bd = dist
 					best = d
-			# The band belongs to the side doing the marking: it is 1 - t that
-			# hands out the marks, so it is 1 - t's own instruction that decides
-			# how far a defender will reach for one (MatchMarking).
+
+
 			if best != null and bd < MatchMarking.band(e.style_of(1 - t)):
 				best.mark_id = a.id
 
@@ -326,7 +315,7 @@ func _gk_shape(gk) -> void:
 	var to_ball: Vector2 = ball.pos - own
 	var dist = to_ball.length()
 	var target: Vector2
-	# Anticipate a shot: move to the projected crossing point.
+
 	var toward_goal: bool = ball.vel.dot(Vector2(-float(e.teams[gk.team]["dir"]), 0.0)) > 2.0
 	if toward_goal and dist < 34.0 and ball.vel.length() > 9.0:
 		var t_cross = (own.x - ball.pos.x) / maxf(absf(ball.vel.x), 0.1) * signf(ball.vel.x)
@@ -343,15 +332,14 @@ func _gk_shape(gk) -> void:
 					gk.dive_t = 0.35
 				gk.target = target
 				return
-	# Otherwise hold a keeper's arc between ball and goal.
-	# Keeper's arc: come out to narrow the angle when the ball is close, drop
-	# back onto the line when it is far. (Depth must fall as ball distance rises.)
+
+
 	var depth = clampf(5.0 - dist * 0.065, 1.2, 4.0)
 	var guard: Vector2 = own + to_ball.normalized() * depth
-	# Stay inside the posts so the far corner is not a free shot.
+
 	guard.y = clampf(guard.y, own.y - 2.8, own.y + 2.8)
 	guard.x = clampf(guard.x, minf(own.x, own.x + (2.0 if gk.team == 0 else -2.0)), maxf(own.x, own.x + (2.0 if gk.team == 0 else -2.0)))
-	# Sweeper-keeper: come and collect loose balls, and close down a clean run at goal.
+
 	if ball.owner_id < 0 and dist < 20.0 and ball.z < 1.2:
 		var opp = e.nearest_opponent(ball.pos, gk.team)
 		var od: float = 99.0 if opp == null else opp.pos.distance_to(ball.pos)

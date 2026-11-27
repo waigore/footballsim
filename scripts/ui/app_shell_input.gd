@@ -1,17 +1,12 @@
 class_name AppShellInput
 extends RefCounted
 
-## The menu shell's pointer and key routing: which sheet owns a press, the
-## volume track drag, and the one-key doors on the menu and settings. The shell
-## keeps the state; this module owns the branching. Split out of `AppShell` so
-## the Control stays inside its P3 size and method budget.
 
 var shell = null
 
 func _init(host: Control) -> void:
 	shell = host
 
-# ------------------------------------------------------------------ hit ---
 
 func button_at(p: Vector2) -> String:
 	var vp: Vector2 = shell.design_vp()
@@ -23,7 +18,6 @@ func button_at(p: Vector2) -> String:
 		return shell.confirm.button_at(p, vp)
 	return ""
 
-# ---------------------------------------------------------------- click ---
 
 func click(p: Vector2) -> bool:
 	if shell.screen == AppShell.SCREEN_MENU:
@@ -69,7 +63,7 @@ func settings_click(p: Vector2) -> bool:
 		if v >= 0.0:
 			shell.set_volume(v)
 	elif id == "hud":
-		# One preference, written here and handed to the scene to apply (#158).
+
 		shell.hud_visible = not shell.hud_visible
 		Prefs.save_hud(shell.hud_visible, shell.prefs_path)
 		shell.hud_visibility_changed.emit(shell.hud_visible)
@@ -86,7 +80,6 @@ func confirm_click(p: Vector2) -> bool:
 		shell.cancel_confirm()
 	return true
 
-# ------------------------------------------------------------------ keys ---
 
 func key(code: int) -> bool:
 	if not shell.active():
@@ -105,11 +98,7 @@ func key(code: int) -> bool:
 		return settings_key(code)
 	return false
 
-## The confirm key presses whichever door wears the gold (#277): with a match
-## waiting that is Resume, so the key the sheet advertises returns to the match
-## instead of leaving it. Start Sim keeps `T`, the broadcast's own teams key, so
-## every door stays reachable without a pointer. Both go through the pointer
-## path, so a key can never do something the door under it would not.
+
 func menu_key(code: int) -> bool:
 	var want := ""
 	if code == KEY_ENTER or code == KEY_KP_ENTER:
@@ -139,15 +128,13 @@ func settings_key(code: int) -> bool:
 	elif code == KEY_RIGHT or code == KEY_D:
 		shell.set_volume(shell.volume + 0.1)
 	elif code >= KEY_1 and code <= KEY_3:
-		# The segments' printed key line: keyboard reaches the same three views.
+
 		shell.set_match_mode(str(Prefs.MODES[code - KEY_1]))
 	else:
 		return false
 	return true
 
-# ------------------------------------------------------------- event route ---
 
-## Forward an input event in design space; returns true when the shell took it.
 func handle(event: InputEvent, p: Vector2) -> bool:
 	if not shell.active():
 		return false

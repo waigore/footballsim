@@ -1,19 +1,10 @@
 class_name LeaguePlanner
 extends RefCounted
 
-## The planner's own rule: after five completed gameweeks, point at the upcoming
-## clashes between the clubs in the current top six, so a matchday has something
-## worth watching. It reads the table and flags fixtures; the clock, the save and
-## the match engine stay in `LeagueSeason`.
-##
-## One rule per active competition: a league's own top six, measured after five
-## of that league's own rounds, never a shared table across leagues.
 
-## Completed gameweeks before the planner starts suggesting watches.
 const SUGGEST_AFTER_ROUNDS := 5
 
-## Fixture ids the planner flags on the clock's date, or [] before any league has
-## a shape to read. Writes the flags onto the ledger and tells the surface.
+
 static func suggest(season) -> Array:
 	if season == null or season.record == null or season.save == null:
 		return []
@@ -30,7 +21,7 @@ static func suggest(season) -> Array:
 	season.state_changed.emit()
 	return ids
 
-## The six clubs one competition's table currently leads with.
+
 static func top_six(record, competition_id: String = "") -> Dictionary:
 	var out := {}
 	var rows: Array = record.standings.table(competition_id)

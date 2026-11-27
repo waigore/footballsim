@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## The on-ball half of the brain (MatchAIPlanning): a keeper distributes, a
-## carrier decides on a fixed cadence, and each possession choice — shoot,
-## long shot, pass, cross, through ball, clear, dribble — can be staged and
-## observed. Seeded engines, no UI, live state only.
 
 func _scene(seed_in: int) -> MatchEngine:
 	var eng := MatchEngine.new(seed_in)
@@ -21,8 +17,8 @@ func _outfield(eng, t: int):
 	return null
 
 func _clear_opponents(eng, team: int, keep := -1) -> void:
-	# Park the other side on its own byline so a staged decision has no bodies
-	# in the lane and no pressure, except the one keeper we keep in goal.
+
+
 	for q in eng.players:
 		if q.team == team or q.id == keep:
 			continue
@@ -49,11 +45,11 @@ func test_a_keeper_in_possession_distributes() -> void:
 	eng.ball.pos = gk.pos
 	eng.brain.on_ball.update(0.016)
 	assert_gt(gk.action_t, 0.0, "the keeper did not start a distribution")
-	# A short outlet hands the ball on; a clearance leaves it loose. Either
-	# way the keeper no longer holds it.
+
+
 	assert_ne(eng.ball.owner_id, gk.id, "the keeper kept the ball after distributing")
 	assert_gt(gk.action_t, 0.4, "the keeper finished the distribution beat early")
-	# While a distribution is cooling down it must not fire twice.
+
 	var t: float = gk.action_t
 	eng.brain.on_ball.update(0.016)
 	assert_almost_eq(gk.action_t, t, 0.001, "the keeper distributed twice in the same beat")
@@ -90,8 +86,8 @@ func test_a_carrier_in_the_box_shoots() -> void:
 	eng.ball.owner_id = p.id
 	eng.ball.vel = Vector2.ZERO
 	eng.brain.on_ball.reset_state()
-	# The scoring bar is strict and the clear-sight arm is a 14% roll, so keep
-	# the beat running frame by frame until the finish lands.
+
+
 	var shot_at := -1.0
 	for i in range(240):
 		eng.clock += 1.0 / 60.0
@@ -124,14 +120,10 @@ func test_a_wide_carrier_crosses_or_passes_into_the_box() -> void:
 	eng.brain.on_ball.decide(p)
 	assert_ne(eng.ball.owner_id, p.id, "a wide carrier kept the ball instead of playing it in")
 
-## The Live tactics page says `crossing` sets "cross preference and cross
-## accuracy". The accuracy half has always been read in `pass_ball`; this pins
-## the preference half, which used to be a flat constant, so the lever moves a
-## side's on-ball choice and not only the ball's error.
+
 func test_the_crossing_lever_moves_the_choice_to_cross() -> void:
-	# The pull is added to every candidate's score, so it decides between a cross
-	# and the same ball played short; a lever that never moves it is the bug this
-	# pins. Low lever: the cross is worth nothing. High lever: plainly worth more.
+
+
 	var low: float = MatchAIPlanning.cross_pull({"crossing": 0.0})
 	var mid: float = MatchAIPlanning.cross_pull({"crossing": 0.5})
 	var high: float = MatchAIPlanning.cross_pull({"crossing": 1.0})
@@ -139,27 +131,23 @@ func test_the_crossing_lever_moves_the_choice_to_cross() -> void:
 	assert_gt(high, mid, "a side told to cross did not value the cross more")
 	assert_gt(high - low, 0.90,
 		"the crossing lever's whole range barely moves the cross (%0.2f)" % (high - low))
-	# The shipped clubs run 0.48–0.60. At that spread the lever has to be worth
-	# something — a preference that cannot separate the league's own sides is not
-	# a preference. Measured: this spread decides the close calls in the staged
-	# wide-carrier sweep.
+
+
 	var weakest: float = MatchAIPlanning.cross_pull({"crossing": 0.48})
 	var strongest: float = MatchAIPlanning.cross_pull({"crossing": 0.60})
 	assert_gt(strongest - weakest, 0.15,
 		"the shipped clubs' own crossing spread is worth nothing (%0.2f)" % (strongest - weakest))
 
-## At the league's default lever (0.5) the cross is worth exactly what the flat
-## constant used to be, so a default side plays the match it always played.
+
 func test_the_default_crossing_level_keeps_the_old_pull() -> void:
 	assert_almost_eq(MatchAIPlanning.cross_pull({"crossing": 0.5}), 0.28, 0.0001,
 		"the default crossing level no longer reproduces the shipped cross pull")
-	# A style with no lever at all (a bare fixture, a save written before the
-	# field existed) reads the default, never zero.
+
+
 	assert_almost_eq(MatchAIPlanning.cross_pull({}), 0.28, 0.0001,
 		"a style without a crossing lever did not fall back to the default")
 
-## The staged wide carrier still plays the ball in, so the lever never strands a
-## cross the geometry asks for at a low setting.
+
 func test_a_wide_carrier_still_plays_the_ball_in_at_a_low_lever() -> void:
 	var eng := _scene(652)
 	_clear_opponents(eng, 0)

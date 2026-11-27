@@ -1,10 +1,5 @@
 extends GdToolsTest
 
-## Teams of Interest (#104) driven like a player drives them: mark a club, and
-## every unplayed fixture it plays is on Watch; unmark it, and those fixtures go
-## back to Auto unless the opponent is still followed. The shortlist belongs to
-## the save, so it survives a quit and a save written before the table existed
-## opens with an empty one.
 
 var SAVE_DIR := TestScratch.dir("saves_test_interest")
 var CACHE_DIR := TestScratch.dir("cache_test_interest")
@@ -42,7 +37,7 @@ func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
 		TestScratch.clear(folder)
 
-## The unplayed fixtures one club has left, as the ledger holds them.
+
 func _open_fixtures(club_id: String) -> Array:
 	return PLDatabase.rows(
 		"SELECT id, watched, home_club_id, away_club_id FROM league_fixture "
@@ -56,7 +51,6 @@ func _watched(club_id: String) -> int:
 			n += 1
 	return n
 
-# ------------------------------------------------------------------ model ---
 
 func test_a_new_season_follows_nobody() -> void:
 	assert_true(season.record.interest.interests().is_empty(), "a new season already follows a club")
@@ -93,7 +87,7 @@ func test_unmarking_reverts_to_auto_unless_the_opponent_is_followed() -> void:
 	assert_eq(int(season.record.fixtures.one(str(fx["id"]))["watched"]), 0,
 		"both sides unmarked and the fixture stayed on Watch")
 
-## One of the club's games whose opponent is nobody on the shortlist.
+
 func _fixture_against_neither(club_id: String, followed: String) -> Dictionary:
 	for fx in _open_fixtures(club_id):
 		var other := str(fx["away_club_id"]) if str(fx["home_club_id"]) == club_id else str(fx["home_club_id"])
@@ -122,7 +116,6 @@ func test_continue_holds_the_clock_for_a_followed_club() -> void:
 	assert_eq(str(season.record.fixtures.one(str(pending[0]["id"]))["status"]), "pending",
 		"the followed game was auto-simmed")
 
-# ------------------------------------------------------------------- save ---
 
 func test_the_shortlist_survives_a_reopen() -> void:
 	var club_id := str(season.record.standings.table()[0]["club_id"])
@@ -140,12 +133,12 @@ func test_a_save_written_before_interest_opens_with_an_empty_shortlist() -> void
 	var path := season.save.path
 	var slug := season.save.slug
 	season.close()
-	# The table arrives with the schema, so a save written before it existed has
-	# no such table at all: dropping it is that save.
+
+
 	PLDatabase.open_path(path)
 	PLDatabase.execute("DROP TABLE league_interest;")
-	# A save written before the feature has no shortlist and no fixture forced
-	# onto Watch by one; its own manual watches are what it kept.
+
+
 	PLDatabase.execute("UPDATE league_fixture SET watched = 0;")
 	PLDatabase.reset()
 	season = LeagueSeason.open(slug)
@@ -153,7 +146,6 @@ func test_a_save_written_before_interest_opens_with_an_empty_shortlist() -> void
 	assert_true(season.record.interest.interests().is_empty(), "the migration invented a shortlist")
 	assert_eq(_watched(club_id), 0, "the migration left games on Watch")
 
-# --------------------------------------------------------------------- ui ---
 
 func test_the_hub_and_the_table_mark_a_followed_club() -> void:
 	var club_id := str(season.plan()[0]["home_club_id"])
@@ -168,13 +160,13 @@ func test_the_hub_and_the_table_mark_a_followed_club() -> void:
 	assert_true((row.get("away_ink", UiChrome.C_TEXT) as Color).is_equal_approx(
 		LeagueInterestMark.ink(LeagueSheet.interest_view(view), str(view["plan"][0]["away_club_id"]))),
 		"the hub row painted the wrong club's ink")
-	# The followed game's chip states the rule instead of offering a switch that
-	# the shortlist would refuse.
+
+
 	var chip := _hub_chip(hub_items, str(view["plan"][0]["id"]))
 	assert_true(bool(chip.get("followed", false)), "the followed game still offers an AUTO/WATCH chip")
 	assert_eq(str(chip["id"]), "", "the followed game's chip is still a door")
-	# #189: the hub keeps no side table; the TABLES sheet is where a followed
-	# club is marked in the standings.
+
+
 	var table_items: Array = LeagueTableView.new().layout(Vector2(1200.0, 900.0),
 		{"table": view["table"], "rules": view["rules"], "interests": view["interests"]})
 	var full_row := _item_with(table_items, "table_row", club_id)

@@ -1,24 +1,12 @@
 class_name MatchRestarts
 extends RefCounted
 
-## Dead-ball judgement: how long a restart is held and when play comes back.
-##
-## The taker only kicks once most of his side is roughly on its slot; how long
-## he is willing to hold play up depends on how well he reads the game and on
-## whether the clock is on his side. Pure reads over live engine state (state,
-## clock, score, live style), so the engine can hold the decision without the
-## match loop growing a branch per rule.
 
-## A player counts as set this close to his slot, and only once he has stopped
-## sprinting: still moving fast means he is not ready for the ball.
-const READY_RADIUS := 8.5   # metres from a target that counts as set
-const SETTLED_SPEED := 3.0  # m/s; still sprinting = not set
-const WAIT_STEP := 0.3      # seconds per re-read while play is held up
+const READY_RADIUS := 8.5
+const SETTLED_SPEED := 3.0
+const WAIT_STEP := 0.3
 
-## The taker's picture of his side: x = share of nearby outfield team-mates
-## roughly on their slot and no longer sprinting, y = their mean distance from
-## it. Players far from the restart are not part of this picture — nobody holds
-## a throw-in up for a centre-back 50m away.
+
 static func picture(eng, team: int, taker, pos: Vector2) -> Vector2:
 	var set_count := 0
 	var outfield := 0
@@ -39,7 +27,7 @@ static func picture(eng, team: int, taker, pos: Vector2) -> Vector2:
 		return Vector2(1.0, 0.0)
 	return Vector2(float(set_count) / float(outfield), err_sum / float(outfield))
 
-## How well this player reads a dead-ball picture (0..1, home composure included).
+
 static func read(eng, taker) -> float:
 	if taker == null:
 		return 0.5
@@ -47,13 +35,11 @@ static func read(eng, taker) -> float:
 	var ovr: float = float(taker.attr.get("ovr", 60)) / 100.0
 	return clampf((pas * 0.6 + ovr * 0.4) * eng.home_factor(taker), 0.0, 1.0)
 
-## Share of his side the taker wants set before he plays it: a better reader
-## waits for a cleaner picture.
+
 static func ready_needed(eng, taker) -> float:
 	return 0.45 + read(eng, taker) * 0.35
 
-## Seconds of extra waiting the taker will tolerate. A good reader and a side
-## protecting a lead will hold play up; a chase or a quick restart won't.
+
 static func patience(eng, taker, kind: String, team: int) -> float:
 	if taker == null:
 		return 0.0
@@ -83,7 +69,7 @@ static func patience(eng, taker, kind: String, team: int) -> float:
 			limit = 7200.0 + float(eng.added[3])
 	return clampf(minf(want, limit - eng.clock - 1.5), 0.0, 4.5)
 
-## Hold the ball up or take it now, given how set the side already looks.
+
 static func should_wait(eng, restart: Dictionary, ready: float, taker) -> bool:
 	var kind: String = str(restart.get("type", ""))
 	if kind == "kickoff" or kind == "penalty":
@@ -94,14 +80,13 @@ static func should_wait(eng, restart: Dictionary, ready: float, taker) -> bool:
 		return false
 	if ready >= ready_needed(eng, taker):
 		return false
-	# A picture that has stopped improving is as good as it is going to get:
-	# the taker gets on with it rather than burning his whole patience.
+
+
 	if float(restart.get("still", 0.0)) >= 1.2:
 		return false
 	return true
 
-## Track how long the picture has gone without improving, so the wait ends when
-## the side has settled even if it never hits the ideal shape.
+
 static func note_picture(restart: Dictionary, pic: Vector2) -> void:
 	restart["ready"] = pic.x
 	var err: float = pic.y

@@ -1,11 +1,6 @@
 class_name FixtureArgs
 extends RefCounted
 
-## Command-line fixture flags (`--seed=`, `--home=`, `--away=`), parsed away from
-## the scene controller so main.gd stays inside its P3 size ratchet.
-##
-## Unknown club codes are ignored rather than defaulting the fixture: a typo
-## should leave the previous side in place, not silently kick off a derby.
 
 static func parse(args: PackedStringArray, known: Array, defaults: Dictionary) -> Dictionary:
 	var out := {

@@ -1,9 +1,6 @@
 class_name MatchAudio
 extends RefCounted
 
-## Crowd bed and the small one-shot pool the broadcast fires on kicks, goals and
-## whistles. Kept out of main.gd so the scene controller stays inside its P3
-## size budget; the owner asks for a sound by name and never sees a player node.
 
 const POOL := 6
 
@@ -44,6 +41,6 @@ func play(name: String, vol_db: float = -8.0, pitch: float = 1.0) -> void:
 	player.pitch_scale = pitch
 	player.play()
 
-## A kick's weight nudges the volume and pitch, the way a struck ball reads.
+
 func ball_kicked(strength: float) -> void:
 	play("kick", -10.0 + strength * 4.0, randf_range(0.9, 1.08))

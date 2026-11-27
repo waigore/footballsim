@@ -1,18 +1,7 @@
 class_name LeagueSeasonDoors
 extends RefCounted
 
-## The season's own doors: the clock (Continue and a fixture row), the calendar
-## day a matchday opens on, and the shortlist a club row writes.
-##
-## Split out of `LeagueDoors` (the dispatch table is at its size budget) and
-## written like `LeagueCalendar` / `LeagueSystemActions`: static helpers that
-## work on the screen's own fields and hand anything the host owns — the match
-## view, the report — back through the screen's doors. None of them repaints on
-## their own; the press table asks for the repaint once the door has moved.
 
-## Continue: settle the auto-played day, or open the pending watch first (#100).
-## Only the hub's Continue plays a day: on a Result reading it leaves instead
-## (#326), because the day it shows was settled on the way in.
 static func continue_day(screen) -> void:
 	if screen.mode == screen.MODE_REPORT:
 		leave_results(screen)
@@ -39,12 +28,7 @@ static func continue_day(screen) -> void:
 	screen.month = LeagueMonth.state_month(screen.season, screen.month)
 	screen.refresh()
 
-## Continue on a Result reading: leave it for the page that opened it — Today's
-## Fixtures, or Stats when that list opened the roundup — and settle nothing.
-## The clock already stands on the next day when the roundup is shown, so this
-## door plays no match and moves no date (#326); only the hub's Continue does.
-## With no page behind it the reading still lands on the hub rather than leaving
-## the player on a sheet with no way out.
+
 static func leave_results(screen: LeagueScreen) -> void:
 	var entry: Dictionary = screen.nav.pop()
 	if entry.is_empty():
@@ -52,16 +36,16 @@ static func leave_results(screen: LeagueScreen) -> void:
 	else:
 		LeagueNavStack.restore(screen, entry)
 	if screen.season != null:
-		# The day just settled may have closed a month: the calendar's reading
-		# follows the clock rather than the page the reading was pushed from.
+
+
 		screen.month = LeagueMonth.state_month(screen.season, screen.month)
 	screen.refresh()
 
-## Hand a started watch to the host: it owns the match view and reports back.
+
 static func request_watch(screen, watch: Dictionary) -> void:
 	screen.match_requested.emit(str(watch["home"]), str(watch["away"]), str(watch["fixture_id"]))
 
-## Flip the watch flag of a pending fixture. A played fixture has no watch flag.
+
 static func toggle_fixture(screen, fixture_id: String) -> void:
 	if screen.season == null:
 		return
@@ -70,7 +54,7 @@ static func toggle_fixture(screen, fixture_id: String) -> void:
 		return
 	screen.season.set_watch(fixture_id, int(fx["watched"]) != 1)
 
-## A fixture row: open its report, start a watched match, or flip the flag.
+
 static func press_fixture(screen, fixture_id: String) -> void:
 	if screen.season == null:
 		return
@@ -86,7 +70,7 @@ static func press_fixture(screen, fixture_id: String) -> void:
 	else:
 		toggle_fixture(screen, fixture_id)
 
-## A matchday opened from the Stats list: BACK returns there, not to the hub.
+
 static func open_day(screen, date: String) -> void:
 	if screen.season == null:
 		return
@@ -99,8 +83,7 @@ static func open_day(screen, date: String) -> void:
 	screen.report = {}
 	screen.report_back = screen.MODE_STATS
 
-## Teams of Interest: add or remove a club in this save (#104). True when the
-## save took the change, so the shortlist's search is cleared only on an add.
+
 static func set_interest(screen, club_id: String, follow: bool) -> bool:
 	if screen.season == null or club_id == "":
 		return false

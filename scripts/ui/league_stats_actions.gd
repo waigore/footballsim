@@ -1,12 +1,7 @@
 class_name LeagueStatsActions
 extends RefCounted
 
-## The STATS sheet's doors: competition, month, team and leader-stat filters,
-## and opening a matchday from the report list. Split out of `LeagueDoors` so the
-## press table stays inside its line budget; each door reads and writes the
-## screen's own `stats_filter`, exactly like the interest search reads its query.
 
-## Handle one STATS door. True when the id belonged to this sheet.
 static func press(screen, id: String) -> bool:
 	if id.begins_with("statsleague:"):
 		screen.stats_filter["league"] = id.substr(12)
