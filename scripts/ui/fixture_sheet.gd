@@ -1,10 +1,6 @@
 class_name FixtureSheet
 extends RefCounted
 
-## The fixture picker's scene glue: build the sheet layer, open and close it,
-## take the confirmed clubs back into the scene, and read the `--home/--away`
-## command-line override. The scene keeps the state; this module owns the
-## branching. Split out of main.gd so the scene stays inside its P3 size budget.
 
 var game: Node = null
 
@@ -44,8 +40,7 @@ func open(from_menu := false) -> void:
 	game.sel_layer.visible = true
 	game.selector.visible = true
 
-## Back from the sheet: a sheet opened out of the menu returns to the menu; one
-## opened mid-match hands the broadcast back and unpauses.
+
 func close() -> void:
 	game.select_open = false
 	if game.sel_layer != null:
@@ -59,13 +54,7 @@ func close() -> void:
 		game.hud_layer.visible = true
 	game.paused = false
 
-## A confirmed fixture opens the pre-match briefing (#157). Its KICK OFF starts
-## the match on a fresh seed; BACK returns to this picker with its clubs, and the
-## match never starts.
-##
-## The picker's match is a friendly (#209): no league fixture behind it, so the
-## briefing, the broadcast's fixture card and the team sheet all name one — and
-## the same — competition.
+
 func confirm(home: String, away: String) -> void:
 	game.home_id = home
 	game.away_id = away
@@ -79,15 +68,15 @@ func confirm(home: String, away: String) -> void:
 		return
 	start(home, away)
 
-## The briefing's KICK OFF: the confirmed fixture becomes the next match.
+
 func start_confirmed() -> void:
 	start(game.home_id, game.away_id)
 
-## The briefing's BACK: this picker comes back on the same two clubs.
+
 func back_from_briefing() -> void:
 	reopen()
 
-## The picker's own start: the confirmed fixture becomes the next match.
+
 func start(home: String, away: String) -> void:
 	game.home_id = home
 	game.away_id = away
@@ -102,17 +91,16 @@ func start(home: String, away: String) -> void:
 	game.match_started = true
 	game.seeded += randi_range(1, 9999)
 	game.new_match(game.seeded)
-	# The picker's winner choice belongs to this kick-off only (#249); the engine
-	# starts level-allowed and every competition path leaves it that way.
+
+
 	if game.engine != null:
 		game.engine.requires_winner = game.selector.winner_mode == "extra"
 
-## BACK from the briefing: the picker comes back on the same two clubs.
+
 func reopen() -> void:
 	open(game.select_from_menu)
 
-## `--seed=`, `--home=` and `--away=` from the command line; report whether a
-## fixture was named so the menu can stay closed on a scripted run.
+
 func parse_args() -> bool:
 	var f := FixtureArgs.parse(OS.get_cmdline_user_args(), TeamData.team_ids(), {"seed": game.seeded, "home": game.home_id, "away": game.away_id})
 	game.seeded = int(f["seed"])

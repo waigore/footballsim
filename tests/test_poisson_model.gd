@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Poisson / Dixon-Coles scoreline model: rating-driven λ, a normalised joint
-## distribution, the low-score correction, deterministic sampling and the
-## weather/modifier knobs.
 
 const HOME := "MCI"
 const AWAY := "IPS"
@@ -11,7 +8,6 @@ func _model(seed: int = 1, h: String = HOME, a: String = AWAY, weather: String =
 		mods: Dictionary = {}) -> PoissonModel:
 	return PoissonModel.new(seed, h, a, weather, mods)
 
-# ----------------------------------------------------------- rating model ---
 
 func test_league_means_cover_every_club() -> void:
 	var means := PoissonModel.league_means("PL")
@@ -42,7 +38,7 @@ func test_rating_gap_drives_expected_goals() -> void:
 	assert_gte(m.lambda_home, 2.20, "an 11-point rating edge should clear 2.2 expected goals")
 	assert_lte(m.lambda_away, 0.95, "the weaker side kept too much of its expected goals")
 	assert_gt(m.lambda_home / m.lambda_away, 2.5, "the rating gap did not translate into a λ ratio")
-	# Monotone in the gap: the closer the opponent, the fewer the home goals.
+
 	var vs_ars := _model(1, "MCI", "ARS")
 	var vs_mun := _model(1, "MCI", "MUN")
 	var vs_ips := _model(1, "MCI", "IPS")
@@ -51,11 +47,10 @@ func test_rating_gap_drives_expected_goals() -> void:
 	assert_lt(vs_ips.lambda_away, vs_mun.lambda_away, "the weaker side was given too many goals")
 	assert_lt(vs_mun.lambda_away, vs_ars.lambda_away, "the opponent's λ is not monotone in their rating")
 
-# ------------------------------------------------------------ distribution --
 
 func test_exponent_terms_feed_both_consumers() -> void:
-	# λ's exponent is published as its two halves so the physics engine's shot
-	# contest can read the defensive half without deriving ratings again.
+
+
 	var terms := PoissonModel.exponent_terms(HOME, AWAY)
 	var attack: Vector2 = terms["attack"]
 	var defence: Vector2 = terms["defence"]
@@ -67,7 +62,7 @@ func test_exponent_terms_feed_both_consumers() -> void:
 	var def_ex := PoissonModel.defence_exponents(HOME, AWAY)
 	assert_almost_eq(def_ex.x, defence.x, 0.0001, "defence_exponents disagrees with exponent_terms")
 	assert_almost_eq(def_ex.y, defence.y, 0.0001, "defence_exponents disagrees with exponent_terms")
-	# Facing IPS's back line is a break; facing ARS's is not.
+
 	assert_gt(def_ex.x, 0.0, "IPS's defence was not read as below the league")
 	assert_lt(PoissonModel.defence_exponents(HOME, "ARS").x, 0.0, "ARS's defence was not read as above the league")
 
@@ -89,9 +84,8 @@ func test_dixon_coles_correction_shapes_low_scores() -> void:
 	var plain_10 := exp(-m.lambda_home) * m.lambda_home * exp(-m.lambda_away)
 	var plain_01 := exp(-m.lambda_away) * m.lambda_away * exp(-m.lambda_home)
 	assert_gt(m.joint(0, 0), 0.0, "0-0 vanished")
-	# ρ > 0 at the PL-scoring retune (see the model's RHO note): the two
-	# low-scoring draws are trimmed and 1-0 / 0-1 lifted, which is what keeps the
-	# pre-tune win–draw–loss mix at the lower scoring level.
+
+
 	var ratio_00 := m.joint(0, 0) / plain_00
 	var ratio_11 := m.joint(1, 1) / plain_11
 	var ratio_10 := m.joint(1, 0) / plain_10
@@ -122,7 +116,6 @@ func _market(m: PoissonModel, kind: String) -> float:
 				acc += m.joint(x, y)
 	return acc
 
-# ---------------------------------------------------------------- sampling --
 
 func test_sampling_matches_the_distribution() -> void:
 	var m := _model(4242)
@@ -158,7 +151,6 @@ func test_sampling_is_deterministic_per_seed() -> void:
 			break
 	assert_true(differ, "different seeds produced the same scoreline sequence")
 
-# ------------------------------------------------------------------ knobs ---
 
 func test_weather_reduces_goals() -> void:
 	var dry := _model(1)
@@ -181,12 +173,10 @@ func test_expected_goals_are_capped() -> void:
 	assert_lte(m.lambda_home, 6.5, "λ was not clamped")
 	assert_gte(m.lambda_home, 0.05, "λ was not clamped")
 
-# -------------------------------------------------------------- envelope -----
 
 func test_calibration_sits_inside_the_pl_scoring_envelope() -> void:
-	# The retune gate: sampled seasons must sit inside the last-10 PL scoring
-	# bands (data/pl_scoring_envelope.json) and keep the pre-tune 1X2 mix. A retune
-	# that fixes scores by reshaping the result market fails here.
+
+
 	var envelope := PoissonCalibration.load_envelope()
 	assert_false(envelope.is_empty(), "the PL scoring envelope is missing from data/")
 	var gate: Dictionary = envelope["gate"]
@@ -198,15 +188,13 @@ func test_calibration_sits_inside_the_pl_scoring_envelope() -> void:
 			str(row["name"]), fmt % float(row["value"]), fmt % float(row["lo"]), fmt % float(row["hi"])])
 
 func test_a_gate_reuses_one_model_per_pairing_without_changing_the_draw() -> void:
-	# The gate's speed-up (tools/poisson_calibration.gd `models_for`): λ and the
-	# 10x10 table read the two clubs and which is at home, not the season, so a
-	# fixture's model is reused across seasons. Reseeded each season, it must
-	# deal the same scorelines a fresh model per fixture did.
+
+
 	var clubs := ["MCI", "ARS", "IPS", "MUN"]
 	var fixtures := PoissonCalibration.season_fixtures(clubs)
 	var models := PoissonCalibration.models_for(fixtures, PoissonModel.DEFAULT_CALIBRATION)
-	# One table per fixture in the circle: λ swaps with the home end, so the
-	# two legs of a tie are not the same model.
+
+
 	assert_eq(models.size(), fixtures.size(), "a fixture lost its model")
 	var reference := _season_built_per_fixture(3, 7000, fixtures)
 	var shot := PoissonCalibration.shot_season(3, 7000, models, fixtures)
@@ -215,8 +203,7 @@ func test_a_gate_reuses_one_model_per_pairing_without_changing_the_draw() -> voi
 		assert_eq(shared[row], reference[row], "the shared models changed %s" % row)
 	assert_eq(shared["matches"], fixtures.size(), "the shared season skipped a fixture")
 
-## The same season the way the gate used to play it: a fresh model per fixture,
-## seeded with the fixture's own seed, playing one sampled scoreline.
+
 func _season_built_per_fixture(season: int, seed0: int, fixtures: Array) -> Dictionary:
 	var goals: Array = []
 	var lambdas: Array = []

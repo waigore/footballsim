@@ -1,14 +1,7 @@
 class_name TeamData
 extends RefCounted
 
-## Squads, clubs and the league table come from the cached SQLite snapshot
-## (`data/pl_seed.sqlite`, built by `tools/pl_snapshot.py`). This facade keeps
-## the small API the engine, picker and tests already speak, so the storage swap
-## stays invisible above it. Formation geometry is code, not data, and lives
-## here.
 
-## Named match official. One source for the broadcast chrome and the pitch
-## official: a referee name change belongs here, not in the HUD.
 const REFEREE := "M. OLIVER"
 
 const FIXTURE := {
@@ -21,9 +14,7 @@ const FIXTURE := {
 	"kickoff": "20:00",
 }
 
-## Live formations for the FM-style tactics board. Every shape lists all eleven
-## canonical squad roles so a mid-match change re-slots the same XI instead of
-## inventing players; bench roles fall back in `formation_slot`.
+
 const CANONICAL_ROLES := ["GK", "RB", "RCB", "LCB", "LB", "RDM", "LDM", "RW", "CAM", "LW", "ST"]
 
 const FORMATIONS := {
@@ -122,10 +113,7 @@ static func slots(formation: String) -> Dictionary:
 static func formation_slot(team: Dictionary, role: String) -> Vector2:
 	return formation_slot_for(str(team.get("formation", "4-2-3-1")), role)
 
-## Where a role stands when the formation does not name it: bench players
-## brought on out of position fall back to a sensible line. A table, not a
-## match, because every formation names the same eleven roles — the arms for
-## the roles no shape omits would be unreachable code.
+
 const FALLBACK_SLOTS := {
 	"CB": Vector2(0.155, 0.5),
 	"CDM": Vector2(0.33, 0.5),

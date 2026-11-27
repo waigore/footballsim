@@ -1,9 +1,6 @@
 class_name HudCommentary
 extends RefCounted
 
-## Bottom-left commentary ticker. The newest engine event owns the panel while
-## it is fresh, then a live description of the pitch takes over. Split out of
-## hud.gd so the broadcast overlay keeps its P3 size budget.
 
 var text := ""
 var label := ""
@@ -28,9 +25,7 @@ func _init(panel: Color, accent: Color, ink: Color, muted: Color) -> void:
 	_box.set_border_width_all(1)
 	_box.border_color = Color(1, 1, 1, 0.07)
 
-## Keep the ticker honest: narrate the newest event while it is fresh, then
-## describe the actual pitch state. A rewind (highlight replay) refreshes the
-## cue immediately instead of leaving a future event on screen.
+
 func tick(d: float, engine, game) -> void:
 	if engine == null or game == null:
 		return
@@ -38,7 +33,7 @@ func tick(d: float, engine, game) -> void:
 		return
 	var evs: Array = engine.events
 	if evs.is_empty():
-		# Fresh match / restart: forget the previous fixture's lines.
+
 		text = ""
 		label = ""
 		ev_id = -1
@@ -59,15 +54,15 @@ func tick(d: float, engine, game) -> void:
 		if game.mode != "full" and game.fast_mode:
 			hold *= 0.55
 	if hold <= 0.0 or text == "":
-		# A finished match has no live play left to narrate, so its last line —
-		# the whistle — stays on screen instead of falling back to LIVE (#276).
+
+
 		if str(engine.phase) == "full_time":
 			return
 		label = "LIVE"
 		text = CommentaryLive.live(engine)
 		minute = int(engine.minute_of(engine.clock))
 
-## How long a line of this type stays on screen, in real seconds.
+
 func _freshness(kind: String) -> float:
 	var h := 3.2
 	match kind:
@@ -92,7 +87,7 @@ func _fit(s: String, max_chars: int) -> String:
 		cut = cut.substr(0, space)
 	return cut + "…"
 
-## Sits above the control bar so the buttons are never covered.
+
 func draw(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, game) -> void:
 	var box := HudLayout.commentary_rect(vp)
 	var w := box.size.x

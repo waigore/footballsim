@@ -1,17 +1,6 @@
 class_name FixtureCalendar
 extends RefCounted
 
-## The two ways a league save gets its fixture list.
-##
-## **Real** copies the shipped snapshot's calendar — the pairings and the dates
-## of the season it was taken from (2026-27) — and clears the results, so a new
-## save starts at gameweek one on real dates. **Generated** builds a PL-like
-## schedule from the saved regulations: a double round robin (every club home
-## and away against every other), mostly weekends from late August to May with
-## the regulated number of midweek rounds.
-##
-## Both modes produce the same rows, so everything downstream (planner, table,
-## calendar) is mode-blind.
 
 const WEEKDAYS := ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 const MONTHS := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT",
@@ -19,10 +8,7 @@ const MONTHS := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", 
 const KICKOFF_TIMES := ["12:30", "15:00", "17:30"]
 const SECONDS_PER_DAY := 86400
 
-## Rows ready for `league_fixture`: id, matchday, kickoff, kickoff_time, home,
-## away. Results stay empty — a save starts unplayed in either mode. A
-## competition id scopes the calendar to that league's clubs and fixtures; the
-## ids it writes carry the league so two leagues in one save never collide.
+
 static func build(mode: String, rules: Dictionary, seed: int, competition_id: String = "PL") -> Array:
 	var rows: Array = []
 	if mode == "real":
@@ -32,22 +18,7 @@ static func build(mode: String, rules: Dictionary, seed: int, competition_id: St
 		rows = generate(ids, rules, seed, competition_id)
 	return rows
 
-# ------------------------------------------------------------------ real ---
 
-## Pairings and dates from the shipped snapshot for one competition. The
-## snapshot is a reading of a live season, so some fixtures already carry
-## results; a new save starts unplayed, so the results are deliberately left
-## behind and the calendar and its dates are what a real-mode save inherits.
-##
-## The snapshot stores no round number, and a real season packs one gameweek
-## into the dates it was played on, so the gameweek is read off the calendar
-## itself: dates are walked oldest first and a new gameweek opens at the first
-## date that would not fit the one before it (see `date_rounds`). A date is
-## never split across two gameweeks, so the hub's `GW n`, the round's ten games
-## and the dates they are played on always name one weekend.
-##
-## One competition per call: the ids it writes carry the league so two leagues
-## in one save never collide.
 static func real_rows(competition_id: String = "PL") -> Array:
 	var rows := PLDatabase.rows(
 		"SELECT * FROM fixture WHERE competition_id = ? ORDER BY kickoff, id;", [competition_id])
@@ -75,16 +46,7 @@ static func real_rows(competition_id: String = "PL") -> Array:
 static func slug_key(text: String) -> String:
 	return text.to_lower()
 
-## The gameweek of every snapshot row, in the order the rows arrive (kickoff,
-## then id).
-##
-## Rows are grouped by date and a whole date joins one round, so a weekend's
-## games are never divided between two gameweeks. A new round opens when the
-## date would take the round past `per_round` games, or when a club on the date
-## is already playing in that round — a rearranged fixture dropped among
-## another weekend's games files itself into the next one. Consecutive dates
-## therefore stay in one round until it is full, which is how a real weekend
-## spreads ten games over Friday to Monday.
+
 static func date_rounds(rows: Array, per_round: int) -> Array:
 	var out: Array = []
 	var round := 1
@@ -113,8 +75,6 @@ static func date_rounds(rows: Array, per_round: int) -> Array:
 	return out
 
 
-# ------------------------------------------------------------- generated ---
-
 static func generate(clubs: Array, rules: Dictionary, seed: int,
 		competition_id: String = "PL") -> Array:
 	var ids := clubs.duplicate()
@@ -122,7 +82,7 @@ static func generate(clubs: Array, rules: Dictionary, seed: int,
 		return []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
-	# A fixed pairing pattern, rotated per save so no two saves start alike.
+
 	for i in range(ids.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)
 		var swap = ids[i]
@@ -158,8 +118,7 @@ static func generate(clubs: Array, rules: Dictionary, seed: int,
 			})
 	return out
 
-## Circle method: one round of pairings per call, alternating the home side so
-## no club collects a long home or away run.
+
 static func pairings(clubs: Array) -> Array:
 	var pool := clubs.duplicate()
 	if pool.size() % 2 == 1:
@@ -185,13 +144,7 @@ static func pairings(clubs: Array) -> Array:
 		rotation.append_array(rest)
 	return rounds
 
-## One date per round: Saturdays across the window, with the regulated number
-## of rounds moved to the Wednesday before. Dates stay strictly increasing.
-##
-## A season with more rounds than the window has weekends — the English lower
-## tiers play 46 rounds — cannot give every round a Saturday: the rounds that do
-## not fit land on Tuesday nights, spread evenly between the weekends, which is
-## how those leagues actually play them. The window still holds the season.
+
 static func round_dates(start: String, end: String, rounds: int, midweek: int) -> Array:
 	var first := days_from(start)
 	var last := days_from(end)
@@ -226,8 +179,7 @@ static func round_dates(start: String, end: String, rounds: int, midweek: int) -
 		out.append(date_from(int(v)))
 	return out
 
-## A window with fewer weekends than rounds: every Saturday, then the missing
-## rounds on Tuesday nights spread evenly between them, in date order.
+
 static func _weekend_and_midweek(saturdays: Array, tuesdays: Array, rounds: int) -> Array:
 	var picks := saturdays.duplicate()
 	var extra := rounds - picks.size()
@@ -246,7 +198,6 @@ static func _weekend_and_midweek(saturdays: Array, tuesdays: Array, rounds: int)
 		out.append(date_from(prev))
 	return out
 
-# ------------------------------------------------------------------ dates ---
 
 static func days_from(date: String) -> int:
 	return int(Time.get_unix_time_from_datetime_string(date + "T00:00:00")) / SECONDS_PER_DAY
@@ -260,25 +211,21 @@ static func weekday_of(days: int) -> int:
 static func add_days(date: String, days: int) -> String:
 	return date_from(days_from(date) + days)
 
-## "15/AUG/2026" — the one display form for a calendar date. The day carries no
-## leading zero; months are the three-letter English name in upper case and the
-## year is always four digits. Internal storage stays ISO.
+
 static func day_label(date: String) -> String:
 	var d := _parts(date)
 	if d.is_empty():
 		return ""
 	return "%d/%s/%d" % [int(d["day"]), MONTHS[int(d["month"]) - 1], int(d["year"])]
 
-## "SAT" — the weekday a displayed date carries as its hover hint, never in the
-## date itself.
+
 static func weekday_label(date: String) -> String:
 	var d := _parts(date)
 	if d.is_empty():
 		return ""
 	return WEEKDAYS[int(d["weekday"])]
 
-## The calendar pieces of an ISO date, or an empty dictionary when there is no
-## date to read (a month key, a timeslot, an empty field).
+
 static func _parts(date: String) -> Dictionary:
 	if date.length() < 10:
 		return {}

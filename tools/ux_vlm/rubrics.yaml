@@ -38,3 +38,10 @@ rubrics:
       Fail if gaps look crushed (controls touching) or wildly uneven for a
       finished layout, or if columns/rows collide. Pass if spacing looks
       intentional and readable.
+  - id: pitch-action
+    title: Pitch action
+    prompt: >-
+      Only when the screen shows a live football pitch: fail if the player
+      tokens carry no shirt numbers, or if the kits and numbers are washed out
+      against the turf so the pitch reads as empty of action. On a screen with
+      no live pitch (a menu, a table, a sheet) this rubric passes.

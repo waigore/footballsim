@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## A save written before multi-league has one `league_rules` row keyed by `id`
-## and no `competition_id`. Opening it must copy that row under the save's one
-## competition and leave a per-competition table behind (#188, parent #185).
 
 func before_all() -> void:
 	PLDatabase.cache_dir = TestScratch.dir("cache_test_rules_migration")
@@ -13,7 +10,7 @@ func after_all() -> void:
 	PLDatabase.reset()
 
 func test_a_single_row_rules_table_is_lifted_per_competition() -> void:
-	# The old shape: `id` primary key, every regulation column, no competition.
+
 	PLDatabase.execute("DROP TABLE IF EXISTS league_rules;")
 	PLDatabase.execute(
 		"CREATE TABLE league_rules (id INTEGER PRIMARY KEY, win_points INTEGER NOT NULL, "

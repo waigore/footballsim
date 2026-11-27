@@ -1,13 +1,6 @@
 class_name PLSimStats
 extends RefCounted
 
-## In-sim career record, written to the cached seed after a match.
-##
-## A finished match is one transaction: every player line and both club records
-## go in together, so the overlay never waits on a per-player round trip and a
-## half-written match can never show up on a dashboard. The cache is thrown away
-## when the shipped seed's `db_version` changes, which is the documented way to
-## start a fresh sim history.
 
 const PLAYER_UPSERT := (
 	"INSERT INTO sim_player_stat (player_id, apps, minutes, goals, assists, shots, passes, "
@@ -31,8 +24,7 @@ const CLUB_UPSERT := (
 	+ "updated_at = excluded.updated_at;"
 )
 
-## A player's match rating: the same weights the player card prints, so the
-## encyclopedia and the in-match dossier cannot drift apart.
+
 static func rating(stats: Dictionary) -> float:
 	var r := 6.0
 	r += float(stats.get("goals", 0)) * 1.2 + float(stats.get("assists", 0)) * 0.7
@@ -40,7 +32,7 @@ static func rating(stats: Dictionary) -> float:
 	r += float(stats.get("tackles", 0)) * 0.12 - float(stats.get("fouls", 0)) * 0.05
 	return clampf(r, 4.0, 10.0)
 
-## One line per player from the live engine, ready to persist.
+
 static func player_line(player, club_id: String, minutes: int = 90) -> Dictionary:
 	var stats: Dictionary = player.stats
 	return {
@@ -59,7 +51,7 @@ static func player_line(player, club_id: String, minutes: int = 90) -> Dictionar
 		"rating": rating(stats),
 	}
 
-## Pull the finished match out of a live engine and persist it.
+
 static func record_match(engine) -> bool:
 	var lines: Array = []
 	for p in engine.players:
@@ -72,14 +64,13 @@ static func record_match(engine) -> bool:
 		"score": [engine.score[0], engine.score[1]],
 		"players": lines,
 	})
-	# A league save whose planner sent this fixture to the viewer owns the
-	# result too; the controller stays league-blind.
+
+
 	if ok and LeagueSeason.active != null:
 		LeagueSeason.engine_finished(engine)
 	return ok
 
 
-## Persist a finished match. Returns false when the cache is unavailable.
 static func record(summary: Dictionary) -> bool:
 	var players: Array = summary.get("players", [])
 	if players.is_empty():
@@ -115,7 +106,7 @@ static func record(summary: Dictionary) -> bool:
 	PLRepository.shared().invalidate()
 	return true
 
-## Test hook: forget every in-sim line (the cache remains the shipped seed).
+
 static func clear() -> void:
 	PLDatabase.execute("DELETE FROM sim_player_stat;")
 	PLDatabase.execute("DELETE FROM sim_club_stat;")

@@ -7,9 +7,9 @@ Tests and headless e2e smoke; two tiers, hard budgets.
 | Tier | When | Command / gate | Budget |
 |------|------|----------------|--------|
 | **1 (PR)** | Code/test path PRs | Impacted suites + **80% patch**; e2e smoke; UX VLM on UI paths | tests **≤5 min**; smoke **≤4 min**; ux-vlm **≤1 min**/10 |
-| **2 (trunk)** | Every **8 hours** on `main` (+ manual) | Full suite; **80%**; Poisson census; catalogue UX VLM | shard **≤45 min**; UX **≤10 min** |
+| **2 (trunk)** | Every **8 hours** on `main` (+ manual) | Full suite; **90%**; Poisson census; catalogue UX VLM | shard **≤45 min**; UX **≤10 min** |
 
-Tier 1 merge gate: `tests` / `e2e-smoke` / `ux-vlm`. Tier 2 does not block PRs; failures sticky `ci-tier2`.
+Tier 1 merge gate: `tests` / `e2e-smoke` / `ux-vlm`. Tier 2 is not a PR gate; sticky `ci-tier2`+`todo`.
 
 ## Impact map
 
@@ -67,7 +67,7 @@ gd-tools instrumentation rules:
 - A `match` arm with a statement body must use block form (`"ST":` then an indented `return` on its own line). Inline arms (`"ST": return 1.0`) cannot be tracked and the file drops out of the plan.
 - A ternary inside a `:=` declaration must carry an explicit type (`var x: float = a if c else b`); the tracker wrapper hides the inferred type.
 
-`gd-tools coverage show --min 80` reports files it could not instrument.
+`gd-tools coverage show --min 90` lists files it could not instrument.
 
 ## Speed rules
 

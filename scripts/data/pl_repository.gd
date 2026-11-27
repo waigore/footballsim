@@ -1,16 +1,6 @@
 class_name PLRepository
 extends RefCounted
 
-## Read API over the cached football seed. One shape per caller:
-## `team()` returns exactly the dictionary the match engine and picker already
-## consume, `player()` returns the dossier the encyclopedia draws, and the
-## league calls return ready-to-draw rows. Everything is memoised per process,
-## so opening a dashboard never re-parses the snapshot.
-##
-## The seed holds more than one competition, so every league-wide reading takes
-## an optional competition id: no argument means the whole universe (the
-## encyclopedia's index), a competition id means one league's table, fixtures
-## or scorer chart.
 
 const CANONICAL_ROLES := ["GK", "RB", "RCB", "LCB", "LB", "RDM", "LDM", "RW", "CAM", "LW", "ST"]
 
@@ -26,7 +16,7 @@ static func shared() -> PLRepository:
 		_shared = PLRepository.new()
 	return _shared
 
-## Drop memoised rows after a write (in-sim stats) or a cache rebuild.
+
 func invalidate() -> void:
 	_teams.clear()
 	_players.clear()
@@ -39,7 +29,7 @@ func meta() -> Dictionary:
 		out[str(row["key"])] = str(row["value"])
 	return out
 
-## Every competition the seed (or the bound save) carries, in seed order.
+
 func competitions() -> Array:
 	if not _competitions.is_empty():
 		return _competitions
@@ -59,12 +49,12 @@ func competition(competition_id: String) -> Dictionary:
 			return row
 	return {}
 
-## Display name for a competition id, falling back to the id itself.
+
 func competition_name(competition_id: String) -> String:
 	var row := competition(competition_id)
 	return str(row.get("short_name", row.get("name", competition_id)))
 
-## Club ids, optionally only those filed under one competition.
+
 func club_ids(competition_id: String = "") -> Array:
 	var ids: Array = []
 	var sql := "SELECT id FROM club "
@@ -76,11 +66,7 @@ func club_ids(competition_id: String = "") -> Array:
 		ids.append(str(row["id"]))
 	return ids
 
-## Club row plus its league table line: what the team dashboard header needs.
-## The row also names the competition the club plays in (#209): the id, its
-## short name for chrome and its full name for prose. They ride the memoised
-## club row so a match bound to a competition never has to read the file again
-## — the broadcast paints every frame.
+
 func club(club_id: String) -> Dictionary:
 	if _clubs.has(club_id):
 		return _clubs[club_id]
@@ -90,8 +76,8 @@ func club(club_id: String) -> Dictionary:
 	var competition_id := str(row.get("competition_id", ""))
 	var competition := PLDatabase.row(
 		"SELECT name, short_name FROM competition WHERE id = ?;", [competition_id])
-	# A season save owns its own standings, so the header reads the row the
-	# season keeps; without one it is the snapshot's reading of the real table.
+
+
 	var table: Dictionary = LeagueLedger.club_record(club_id) \
 		if PLCompetitions.season_owns(competition_id) \
 		else PLDatabase.row("SELECT * FROM table_row WHERE club_id = ?;", [club_id])
@@ -125,7 +111,7 @@ func club(club_id: String) -> Dictionary:
 	_clubs[club_id] = out
 	return out
 
-## The engine-facing team dictionary (the shape TeamData used to serve).
+
 func team(club_id: String) -> Dictionary:
 	if _teams.has(club_id):
 		return _teams[club_id]
@@ -154,7 +140,7 @@ func team(club_id: String) -> Dictionary:
 	_teams[club_id] = out
 	return out
 
-## Squad rows in snapshot order: the eleven starters, then the bench.
+
 func squad(club_id: String) -> Array:
 	var out: Array = []
 	for row in PLDatabase.rows("SELECT * FROM player WHERE club_id = ? ORDER BY ord;", [club_id]):
@@ -178,7 +164,7 @@ func _player_row(row: Dictionary) -> Dictionary:
 		"date_of_birth": str(row["date_of_birth"]), "espn_id": str(row["espn_id"]),
 	}
 
-## Full dossier: identity, ratings, the real-world season and career figures.
+
 func player(player_id: String) -> Dictionary:
 	if _players.has(player_id):
 		return _players[player_id]
@@ -197,20 +183,17 @@ func player_by_name(club_id: String, name: String) -> Dictionary:
 	var row := PLDatabase.row("SELECT id FROM player WHERE club_id = ? AND name = ?;", [club_id, name])
 	return player(str(row["id"])) if not row.is_empty() else {}
 
-## League table: the save's live standings while the season owns the
-## competition, otherwise the snapshot's table as of its snapshot date. An empty
-## competition id reads every active league (the index), a competition id one,
-## so two hubs can never mix their rows.
+
 func table(competition_id: String = "") -> Array:
 	if LeagueLedger.bound():
-		# A bound season answers only for the leagues it is playing: an active
-		# competition reads its live standings, anything else is not on offer.
+
+
 		if competition_id == "" or PLCompetitions.season_owns(competition_id):
 			return _live_table(competition_id)
 		return []
 	return _snapshot_table(competition_id)
 
-## The snapshot's own table, filtered to one competition when one is named.
+
 func _snapshot_table(competition_id: String = "") -> Array:
 	var sql := (
 		"SELECT t.*, c.name AS club_name, c.abbr AS club_abbr, c.color AS club_color "
@@ -223,8 +206,7 @@ func _snapshot_table(competition_id: String = "") -> Array:
 	return _placed(PLDatabase.rows(
 		sql + "ORDER BY c.competition_id, t.position;", bindings))
 
-## A league save adds `league_table` beside the snapshot's `table_row`; when it
-## is there, the encyclopedia must show the season the player is actually in.
+
 func _live_table(competition_id: String = "") -> Array:
 	if PLDatabase.row(
 		"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'league_table';"
@@ -242,8 +224,7 @@ func _live_table(competition_id: String = "") -> Array:
 		sql + "ORDER BY t.competition_id, t.points DESC, (t.gf - t.ga) DESC, t.gf DESC, c.name ASC;",
 		bindings))
 
-## Renumber `position` per competition: each league keeps its own ladder even
-## when one reading carries several.
+
 func _placed(rows: Array) -> Array:
 	var place := 0
 	var last := ""
@@ -254,7 +235,7 @@ func _placed(rows: Array) -> Array:
 		rows[i]["position"] = place
 	return rows
 
-## Top scorers from the real-world snapshot; `stat` is goals or assists.
+
 func leaders(limit: int = 6, stat: String = "goals", competition_id: String = "") -> Array:
 	var column := "assists" if stat == "assists" else "goals"
 	var sql := (
@@ -270,9 +251,7 @@ func leaders(limit: int = 6, stat: String = "goals", competition_id: String = ""
 	return PLDatabase.rows(
 		sql + "ORDER BY s.%s DESC, s.assists DESC, p.name LIMIT ?;" % column, bindings)
 
-## Fixtures for one club (or the whole league), newest first. Only a played game
-## is a result: an unplayed one is `upcoming()`'s reading, never a 0 – 0 line.
-## A season save answers with the fixtures it has actually played.
+
 func fixtures(club_id: String = "", limit: int = 8, competition_id: String = "") -> Array:
 	if LeagueLedger.bound() \
 			and (competition_id == "" or PLCompetitions.season_owns(competition_id)):
@@ -293,9 +272,7 @@ func fixtures(club_id: String = "", limit: int = 8, competition_id: String = "")
 	sql += "ORDER BY f.kickoff DESC, f.id DESC LIMIT ?;"
 	return PLDatabase.rows(sql, bindings + [club_id, club_id, limit])
 
-## The fixtures still ahead, soonest first: what a page reads as what comes next
-## for a club. A season answers with the games its clock still holds; the
-## snapshot answers with the remaining schedule it ships.
+
 func upcoming(club_id: String = "", limit: int = 6, competition_id: String = "") -> Array:
 	if LeagueLedger.bound() \
 			and (competition_id == "" or PLCompetitions.season_owns(competition_id)):
@@ -315,25 +292,23 @@ func upcoming(club_id: String = "", limit: int = 6, competition_id: String = "")
 	sql += "AND (f.home_club_id = ? OR f.away_club_id = ?) ORDER BY f.kickoff ASC, f.id ASC LIMIT ?;"
 	return PLDatabase.rows(sql, bindings + [club_id, club_id, limit])
 
-## True while a league save owns the connection (DR-20261125-08): the pages
-## label which season their Footballsim readings belong to.
+
 func season_active() -> bool:
 	return LeagueLedger.bound()
 
-## One player's Footballsim line. While a season is open it is that season's own
-## ledger; without one it is the single-match ledger the cache keeps.
+
 func sim_player(player_id: String) -> Dictionary:
 	if LeagueLedger.bound():
 		return LeagueLedger.player_line(player_id)
 	return PLDatabase.row("SELECT * FROM sim_player_stat WHERE player_id = ?;", [player_id])
 
-## A club's Footballsim record: the season's league row, or the single-match one.
+
 func sim_club(club_id: String) -> Dictionary:
 	if LeagueLedger.bound():
 		return LeagueLedger.club_record(club_id)
 	return PLDatabase.row("SELECT * FROM sim_club_stat WHERE club_id = ?;", [club_id])
 
-## Footballsim scorer chart for a club: the season's, or the single-match one.
+
 func sim_scorers(club_id: String, limit: int = 5) -> Array:
 	if LeagueLedger.bound():
 		return LeagueLedger.scorers(club_id, limit)
@@ -344,7 +319,7 @@ func sim_scorers(club_id: String, limit: int = 5) -> Array:
 		[club_id, limit],
 	)
 
-## Footballsim top scorers across the league: the season's, or the single-match one.
+
 func sim_leaders(limit: int = 5, competition_id: String = "", stat: String = "goals",
 		teams: Array = []) -> Array:
 	if LeagueLedger.bound():

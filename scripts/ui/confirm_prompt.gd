@@ -1,8 +1,6 @@
 class_name ConfirmPrompt
 extends RefCounted
 
-## Small modal yes/no used before quitting. Drawn over whatever sheet was
-## underneath; the game underneath stays paused, so no motion races input.
 
 var mouse := Vector2(-1000, -1000)
 var _cache := {}

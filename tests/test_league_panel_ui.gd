@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## The left panel, Teams of Interest and Stats driven through the real scene:
-## the hub without its bottom door bar, BACK/CONTINUE in the header, panel
-## navigation to every destination, the shortlist's search/add/remove, and the
-## Stats reports and podium door (#103, #105, #106, #108, #110).
 
 var SAVE_DIR := TestScratch.dir("saves_test_panel_103")
 var CACHE_DIR := TestScratch.dir("cache_test_panel_103")
@@ -63,7 +59,7 @@ func press_id(id: String) -> void:
 			return
 	assert_true(false, "no button %s on screen %s" % [id, screen().mode])
 
-## The panel's tab, then the slide settled: a row's hit target travels with it.
+
 func open_panel() -> void:
 	if panel().target < 0.5:
 		panel().open()
@@ -91,7 +87,6 @@ func _menu_door(id: String) -> Rect2:
 			return b["rect"]
 	return Rect2()
 
-# ------------------------------------------------------------------ chrome ---
 
 func test_the_hub_has_no_bottom_door_bar_and_keeps_back_and_continue() -> void:
 	new_season()
@@ -112,11 +107,11 @@ func test_the_hub_has_no_bottom_door_bar_and_keeps_back_and_continue() -> void:
 	assert_almost_eq(cont.end.x, vp().x - 24.0, 0.5, "CONTINUE is not top-right")
 	assert_lte(back.end.y, LeagueChrome.HEADER, "BACK left the header")
 	assert_lte(cont.end.y, LeagueChrome.HEADER, "CONTINUE left the header")
-	# The body now runs to the window's bottom edge: no bar is reserved.
+
 	assert_almost_eq(screen().body.size.y, vp().y - LeagueBody.TOP, 0.5,
 		"the hub still reserves a bottom bar")
-	# #169: the hub is the root of the season's history, so BACK is visible but
-	# disabled — it never leaves the season. The System dialog is the way out.
+
+
 	var back_item := {}
 	for item in screen().buttons:
 		if str(item["id"]) == "back":
@@ -129,14 +124,10 @@ func test_the_hub_has_no_bottom_door_bar_and_keeps_back_and_continue() -> void:
 	press_id("sys:menu")
 	assert_false(game.menus.league_active(), "MAIN MENU did not leave the league")
 
-# ------------------------------------------------------------------- panel ---
 
-## #273: the season's drawer belongs to a season. The New League and Load sheets
-## exist before one does, so neither the plate nor an open drawer may sit on their
-## forms — and the plate that is painted is exactly the rect that answers a press.
 func test_the_drawer_never_sits_on_a_front_door_form() -> void:
 	new_season()
-	# Leave the drawer out, then walk to the New League form the way a player does.
+
 	open_panel()
 	assert_eq(screen().mode, "hub", "the panel did not open on the hub")
 	game.menus.open_menu()
@@ -146,17 +137,17 @@ func test_the_drawer_never_sits_on_a_front_door_form() -> void:
 	assert_false(panel().is_open(), "the season's drawer was left out over the form")
 	assert_eq(panel().slide, 0.0, "the drawer was still sliding over the form")
 	var door: Rect2 = panel().tab_rect(vp())
-	# Nothing the drawer owns answers on this form: not the plate, not a row, not
-	# the scrim that dismisses it.
+
+
 	assert_eq(panel().hit(door.get_center(), vp()), "", "the form answers a press for a plate it does not paint")
 	assert_eq(panel().hit(Vector2(door.end.x + 8.0, door.get_center().y), vp()), "",
 		"the form answers a press beside its plate")
 	for i in range(LeaguePanel.ITEMS.size()):
 		var row: Rect2 = panel().item_rect(vp(), i)
 		assert_eq(panel().hit(row.get_center(), vp()), "", "a nav row answers over the form")
-	# And the form's own door under that corner still answers its own press.
+
 	assert_ne(screen().button_at(door.get_center()), "panel", "the plate shadows the form's own control")
-	# The plate that is painted on a reading is exactly the rect that answers.
+
 	new_season()
 	var painted: Rect2 = panel().tab_rect(vp())
 	assert_eq(panel().hit(painted.get_center(), vp()), "panel", "the painted plate answers nothing")
@@ -180,7 +171,7 @@ func test_the_panel_slides_open_navigates_and_closes() -> void:
 	open_panel()
 	press_nav("nav:fixtures")
 	assert_eq(screen().mode, "hub", "Today's Fixtures did not come back")
-	# A scrim press closes the panel and leaves the sheet where it was.
+
 	open_panel()
 	press(Vector2(vp().x - 30.0, vp().y * 0.5))
 	panel().settle()
@@ -210,7 +201,6 @@ func test_the_panel_icons_are_distinct_assets() -> void:
 		assert_eq(image.get_format(), Image.FORMAT_RGBA8, "%s icon is not RGBA" % name)
 		assert_true(image.get_pixel(0, 0).a < 0.5, "%s icon has an opaque corner" % name)
 
-# --------------------------------------------------------------- interest ---
 
 func test_the_interest_list_searches_adds_and_removes() -> void:
 	new_season()
@@ -248,7 +238,6 @@ func test_a_followed_club_reads_watch_on_the_planner() -> void:
 	LeagueSeason.active.set_interest(club, false)
 	screen().refresh()
 
-# ------------------------------------------------------------------- stats ---
 
 func test_stats_lists_reports_and_the_podium_when_available() -> void:
 	new_season()
@@ -272,8 +261,8 @@ func test_stats_lists_reports_and_the_podium_when_available() -> void:
 	assert_eq(str(screen().report_back), "stats", "the report forgot it came from Stats")
 	press_id("back")
 	assert_eq(screen().mode, "stats", "Back did not return to Stats")
-	# #326: CONTINUE on a roundup opened from Stats leaves for Stats too, and
-	# settles nothing — the season's clock is the hub's to move.
+
+
 	press_id(day)
 	var clock := str(LeagueSeason.active.state()["date"])
 	press_id("continue")
@@ -293,12 +282,7 @@ func test_stats_lists_reports_and_the_podium_when_available() -> void:
 	press_id("stats:podium")
 	assert_eq(screen().mode, "podium", "the Stats Podium door did not open")
 
-# ----------------------------------------------------------------- results ---
 
-## #326: RESULTS carries CONTINUE in the hub's corner — BACK stays the leave
-## control and CONTINUE sits top-right — but its press only leaves the reading
-## for Today's Fixtures. The day was settled by the hub's Continue, so the clock
-## already stands on the next day: no second settle, no second Results sheet.
 func test_results_continue_returns_to_todays_fixtures_without_settling() -> void:
 	new_season()
 	press_id("continue")
@@ -327,8 +311,8 @@ func test_results_continue_returns_to_todays_fixtures_without_settling() -> void
 	assert_false((screen().current_view()["plan"] as Array).is_empty(),
 		"the next day's fixtures are not on the hub")
 	assert_eq(str(screen().current_view()["date"]), clock, "the hub named another day")
-	# The reading left the history with CONTINUE: the hub is the season's root
-	# again, so BACK cannot walk back into the Results that were just left.
+
+
 	var root_back := {}
 	for item in screen().buttons:
 		if str(item["id"]) == "back":
@@ -340,13 +324,7 @@ func _roundup_day() -> String:
 		return ""
 	return str((screen().roundup[0].get("fixture", {}) as Dictionary).get("kickoff", ""))
 
-# ------------------------------------------------------------ pinned doors ---
 
-## #284: Godot clips a Control's own draw along with its children's, and every
-## door a sheet pins lies outside the band the body clips itself to (BACK and
-## CONTINUE in the header lane, the table's readings under the reserved bar).
-## The screen therefore paints them on its own unclipped layer above the body:
-## on top of the rows, and handed the fonts and style cache the paint needs.
 func test_the_pinned_doors_paint_on_a_layer_above_the_clipped_body() -> void:
 	new_season()
 	var body: LeagueBody = screen().body
@@ -360,8 +338,8 @@ func test_the_pinned_doors_paint_on_a_layer_above_the_clipped_body() -> void:
 	assert_false(layer.fonts.is_empty(), "the pinned layer was handed no font set")
 	assert_almost_eq(layer.size.x, vp().x, 0.5, "the pinned layer is not the sheet's width")
 	assert_almost_eq(layer.size.y, vp().y, 0.5, "the pinned layer is not the sheet's height")
-	# Every door the pose pins stands outside the body's band; inside it the body
-	# could paint the door itself and the layer would be redundant.
+
+
 	var band := Rect2(body.position, body.size)
 	var doors := 0
 	for item in screen().buttons:
@@ -371,7 +349,7 @@ func test_the_pinned_doors_paint_on_a_layer_above_the_clipped_body() -> void:
 		var rect: Rect2 = item["rect"]
 		assert_false(band.encloses(rect), "%s sits inside the clipped band" % str(item["id"]))
 	assert_gte(doors, 2, "the hub pinned fewer doors than BACK and CONTINUE")
-	# The table's two readings sit under the reserved bar, outside the same band.
+
 	press_nav("nav:table")
 	var tband := Rect2(screen().body.position, screen().body.size)
 	var readings := 0

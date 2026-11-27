@@ -1,13 +1,5 @@
 extends GdToolsTest
 
-## Attribute mapping: the one table that turns EA FC ratings into simulation
-## quantities. Every mapping is asserted at both ends of the scale so a tuning
-## change cannot silently invert a curve.
-##
-## The contact half reads those numbers back on the pitch: a keeper who catches
-## and one who parries, a header at goal and one away from it, a tackle that
-## wins the ball and a challenge late enough to give away the restart. Mapped
-## attributes and the duels they decide are one theme.
 
 class Stub:
 	var attr := {}
@@ -116,12 +108,6 @@ func test_role_push_orders_the_attacking_weight() -> void:
 	assert_almost_eq(Attrs.role_push("CB"), 0.05, 0.001)
 	assert_almost_eq(Attrs.role_push("UNKNOWN"), 0.3, 0.001)
 
-# ------------------------------------------------------------------------
-
-
-## Duels and handling: a keeper who catches and one who parries, a header at
-## goal and a header away from it, a tackle that wins the ball and a challenge
-## late enough to give away the restart. Engine-level, seeded, no UI.
 
 const TRIES := 40
 
@@ -154,7 +140,6 @@ func _put_on_the_spot(p, pos: Vector2) -> void:
 	p.vel = Vector2.ZERO
 	p.cooldown = 0.0
 
-# ------------------------------------------------------------ first touch ---
 
 func test_loose_ball_at_his_feet_is_taken_cleanly() -> void:
 	var eng := _eng()
@@ -186,7 +171,7 @@ func test_heavy_touch_lets_the_ball_squirt_away() -> void:
 	assert_gt(miscontrols, 0, "a ball arriving at speed was never miscontrolled")
 
 func test_carrying_over_the_line_is_no_touch_by_the_keeper() -> void:
-	# A keeper holding the ball on his own line keeps it in play.
+
 	var eng := _eng(5)
 	var gk = _gk_of(eng, 0)
 	_put_on_the_spot(gk, Vector2(0.3, 34.0))
@@ -194,7 +179,6 @@ func test_carrying_over_the_line_is_no_touch_by_the_keeper() -> void:
 	eng._check_rules()
 	assert_eq(eng.score[1], 0, "a keeper carrying the ball over his line was scored past")
 
-# ------------------------------------------------------------- keepers ------
 
 func test_keeper_catches_and_it_counts_as_a_save() -> void:
 	var held := 0
@@ -238,8 +222,8 @@ func test_keeper_parry_pushes_the_ball_wide_and_stays_loose() -> void:
 	assert_gt(parried, 0, "the keeper never parried a shot")
 
 func test_keeper_smothers_a_carrier_who_broke_through() -> void:
-	# The smother only happens on a ball nobody controls any more: the last
-	# defender has just poked it away from the carrier.
+
+
 	var smothered := 0
 	for seed_in in range(TRIES):
 		var eng := _eng(seed_in + 200)
@@ -258,9 +242,8 @@ func test_keeper_smothers_a_carrier_who_broke_through() -> void:
 	assert_gt(smothered, 0, "a keeper never came out to smother a loose ball at a striker's feet")
 
 func test_keeper_challenges_a_carrier_still_in_control() -> void:
-	# A carrier walking the ball in is a chance the model never priced: the ball
-	# leads his feet by half a metre, so a keeper standing on top of him used to
-	# watch it cross the line (issue #192). The dive has to read the carrier.
+
+
 	var smothered := 0
 	for seed_in in range(TRIES):
 		var eng := _eng(seed_in + 300)
@@ -279,8 +262,8 @@ func test_keeper_challenges_a_carrier_still_in_control() -> void:
 	assert_gt(smothered, 0, "a keeper never challenged a carrier in his reach")
 
 func test_a_carried_ball_over_the_line_is_a_goal_once_the_keeper_is_beaten() -> void:
-	# The other half of the same rule: a carrier the keeper cannot reach still
-	# walks it in, and it is a goal.
+
+
 	var eng := _eng(77)
 	eng.teams[0]["dir"] = 1
 	eng.teams[1]["dir"] = -1
@@ -295,7 +278,6 @@ func test_a_carried_ball_over_the_line_is_a_goal_once_the_keeper_is_beaten() -> 
 	eng._check_rules()
 	assert_eq(eng.score[1], 1, "a carrier the keeper could not reach did not score")
 
-# -------------------------------------------------------------- headers -----
 
 func test_header_at_goal_is_a_shot() -> void:
 	var eng := _eng(7)
@@ -356,7 +338,6 @@ func test_high_ball_is_won_by_the_better_header() -> void:
 	eng._ball_interactions(1.0 / 60.0)
 	assert_eq(eng.ball.last_touch_id, tall.id, "the smaller player won a header against a giant")
 
-# --------------------------------------------------------------- duels ------
 
 func test_tackle_won_turns_the_ball_over() -> void:
 	var won := 0
@@ -385,7 +366,7 @@ func test_late_challenge_inside_the_box_is_a_penalty() -> void:
 	var eng := _eng(11)
 	var carrier = _outfield(eng, 0)
 	var d = _outfield(eng, 1)
-	# The defender defends his own box: the victim is fouled there.
+
 	var their_goal: Vector2 = eng.own_goal_pos(1)
 	_put_on_the_spot(carrier, their_goal + Vector2(6.0, 0.0))
 	_put_on_the_spot(d, carrier.pos + Vector2(0.8, 0.0))
@@ -421,7 +402,7 @@ func test_second_bookable_challenge_sends_a_player_off() -> void:
 	assert_eq(p.vel, Vector2.ZERO, "a sent-off player kept moving")
 
 func test_awarding_fouls_books_someone() -> void:
-	# Cards come out of the foul roll; over a run of fouls the book has to open.
+
 	var eng := _eng(16)
 	var carrier = _outfield(eng, 0)
 	var d = _outfield(eng, 1)

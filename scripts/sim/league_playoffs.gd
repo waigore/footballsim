@@ -1,34 +1,7 @@
 class_name LeaguePlayoffs
 extends RefCounted
 
-## The English promotion play-offs (#258/#260): a mini-tournament inside one
-## division whose winner takes the last promotion place above it.
-##
-## Every bracket is settled from the save's own seed with the season's Poisson
-## model, so a save settles the same bracket the same way every time — the lane
-## the German Relegation already uses. A play-off is not a league fixture:
-## nothing here writes a fixture row, moves a table or starts a second season;
-## the settled reading rides the season's podium and the membership swap.
-##
-## The bracket is named by `league_rules.playoff_format` and sized by
-## `promotion_playoff_places` (the places it draws from, starting right under the
-## automatic promotion places):
-##
-## | Format | Places | Shape |
-## |--------|-------:|-------|
-## | `four_two_leg` | 4 | semi-finals 1v4 and 2v3 over two legs, then a one-off final |
-## | `six_two_leg` | 6 | one-leg eliminators 3v6 and 4v5, two-leg semis for 1st and 2nd, one-off final |
-## | `six_one_leg` | 6 | every round one leg: eliminators 3v6 and 4v5, semis, final |
-##
-## The higher-placed club hosts a one-leg match and the second leg of a two-leg
-## tie. A level tie goes to extra time (half an hour at a third of the fixture's
-## own expected goals) and then to penalties, by the shared shootout lane.
 
-## A save settles only a bracket whose tier above is playing too: a play-off
-## with nowhere to promote is not worth the games.
-##   `season` — the finished season; `competition_id` — the tier that owns the
-##   bracket. Empty until the tier and its neighbour are both active and the
-##   calendar is played out.
 static func runs(season: LeagueSeason, competition_id: String) -> bool:
 	if season == null or season.save == null or season.record == null:
 		return false
@@ -39,7 +12,7 @@ static func runs(season: LeagueSeason, competition_id: String) -> bool:
 		return false
 	return season.record.fixtures.unplayed() == 0
 
-## Every bracket this save settles, keyed by the tier that owns it.
+
 static func build_all(season: LeagueSeason) -> Dictionary:
 	var out := {}
 	if season == null or season.save == null:
@@ -50,15 +23,14 @@ static func build_all(season: LeagueSeason) -> Dictionary:
 			out[str(cid)] = bracket
 	return out
 
-## The bracket's shape: how many places it draws, and how many legs each round
-## plays for the formats that play some rounds one-legged.
+
 const FORMATS := {
 	"four_two_leg": {"places": 4, "eliminators": false, "semi_legs": 2},
 	"six_two_leg": {"places": 6, "eliminators": true, "semi_legs": 2},
 	"six_one_leg": {"places": 6, "eliminators": true, "semi_legs": 1},
 }
 
-## One tier's bracket, or {} when the save does not settle it.
+
 static func build(season: LeagueSeason, competition_id: String) -> Dictionary:
 	if not runs(season, competition_id):
 		return {}
@@ -93,8 +65,8 @@ static func build(season: LeagueSeason, competition_id: String) -> Dictionary:
 			_tie(season, competition_id, "ELIMINATOR 2", seeds[3], seeds[4], 1),
 		]
 		rounds.append({"name": "ELIMINATORS", "ties": elims})
-		# The better-placed semi-finalist meets the worse-placed eliminator
-		# winner, which is the shape the EFL and the National League both use.
+
+
 		var semis := [
 			_tie(season, competition_id, "SEMI-FINAL 1", seeds[0],
 				_side(seeds, str(elims[1]["winner_club_id"])), semis_legs),
@@ -123,8 +95,7 @@ static func build(season: LeagueSeason, competition_id: String) -> Dictionary:
 		"text": "%s beat %s in the final" % [_club_name(winner), _club_name(loser)],
 	}
 
-## The clubs a bracket draws from, best placed first, with the place they
-## finished in.
+
 static func _seeds(season: LeagueSeason, competition_id: String, up: int,
 		places: int) -> Array:
 	var table: Array = season.record.standings.table(competition_id)
@@ -137,17 +108,14 @@ static func _seeds(season: LeagueSeason, competition_id: String, up: int,
 		})
 	return out
 
-## A seed by club id, or the last seed when the id is unknown (never expected:
-## a bracket only ever meets its own winners).
+
 static func _side(seeds: Array, club_id: String) -> Dictionary:
 	for seed in seeds:
 		if str((seed as Dictionary)["club_id"]) == club_id:
 			return seed
 	return seeds[seeds.size() - 1]
 
-## One tie of the bracket: `legs` matches, the higher-placed side listed as
-## `home` and hosting the second leg. A level tie is settled by extra time and
-## then penalties, and the result carries both.
+
 static func _tie(season: LeagueSeason, competition_id: String, label: String,
 		high: Dictionary, low: Dictionary, legs: int) -> Dictionary:
 	var seed := _tie_seed(season, competition_id, label, str(high["club_id"]), str(low["club_id"]))
@@ -205,12 +173,11 @@ static func _tie(season: LeagueSeason, competition_id: String, label: String,
 		"text": _tie_text(high, low, high_goals, low_goals, pens),
 	}
 
-## One ninety-minute sample from the season's own model.
+
 static func _ninety(seed: int, home: String, away: String) -> Vector2i:
 	return PoissonModel.new(seed, home, away).sample()
 
-## Half an hour of extra time: a third of the fixture's expected goals, so a
-## tie decided in extra time reads at the same level as the game it followed.
+
 static func _extra_time(seed: int, home: String, away: String) -> Vector2i:
 	var goals := PoissonModel.new(seed, home, away).expected_goals()
 	return Vector2i(_poisson_draw(seed + 31, goals.x / 3.0),
@@ -229,8 +196,7 @@ static func _poisson_draw(seed: int, mean: float) -> int:
 		acc += term
 	return k
 
-## A tie's seed: the season's own seed folded with the bracket and pairing, so
-## the same save settles the same tie and two brackets never share a draw.
+
 static func _tie_seed(season: LeagueSeason, competition_id: String, label: String,
 		high_id: String, low_id: String) -> int:
 	var key := "%s|%s|%s|%s" % [competition_id, label, high_id, low_id]

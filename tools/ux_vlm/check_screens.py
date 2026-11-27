@@ -52,7 +52,7 @@ def _ssl_context() -> ssl.SSLContext:
 
 DEFAULT_BASE_URL = "https://api.cheaperinference.com/v1"
 DEFAULT_MODEL = "qwen3.5-flash"
-MAX_PR_IMAGES = 10
+MAX_PR_IMAGES = 11
 
 
 def _api_key() -> str:

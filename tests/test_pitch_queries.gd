@@ -1,13 +1,5 @@
 extends GdToolsTest
 
-## The pitch queries the brain asks every shape pass: how soon a body meets the
-## ball, and the line a back holds.
-##
-## A whole side asking "who gets there first" is 22 questions about **one**
-## predicted path, so the walk is built once and shared. These tests pin the two
-## things that make that safe: the shared read answers exactly what the
-## per-player walk answered, and the defensive line is read once per pass while
-## it still tracks the bodies it is read from.
 
 func _engine(seed_in: int = 31) -> MatchEngine:
 	var eng := MatchEngine.new(seed_in, "MUN", "MCI")
@@ -15,12 +7,11 @@ func _engine(seed_in: int = 31) -> MatchEngine:
 	eng.possession_team = 0
 	return eng
 
-## The boot template (`TestEngineBoot`) already holds the kick-off shape a
-## 4242 engine starts in; `match` copies it onto an engine free to tick.
+
 func _seeded(seed_in: int) -> MatchEngine:
 	return TestEngineBoot.match(seed_in)
 
-## The walk as the per-player query did it, kept here as the oracle.
+
 func _walk_reach(eng, p) -> float:
 	var bp: Vector2 = eng.ball.pos
 	var bv: Vector2 = eng.ball.vel
@@ -51,9 +42,7 @@ func _walk_intercept(eng, p) -> Vector2:
 		t += 0.12
 	return last
 
-## A ball in flight through the kick-off shape. The queries read only the ball
-## and body positions, so the state is built directly rather than playing
-## minutes of match to reach one — the arithmetic under test is the same.
+
 func _in_flight() -> MatchEngine:
 	var eng := _engine()
 	eng.ball.pos = eng.to_world(0, Vector2(0.55, 0.5))
@@ -61,7 +50,6 @@ func _in_flight() -> MatchEngine:
 	eng.ball.owner_id = -1
 	return eng
 
-# ------------------------------------------------------- the shared path ----
 
 func test_shared_path_answers_the_same_reach_time_as_the_per_player_walk() -> void:
 	var eng := _in_flight()
@@ -115,7 +103,6 @@ func test_the_wrappers_still_answer_the_per_player_walk() -> void:
 		assert_eq(pq.intercept_point(p), _walk_intercept(eng, p),
 			"intercept_point no longer matches the walk it replaced for %s" % p.key)
 
-# --------------------------------------------------------- defensive line ----
 
 func test_the_defensive_line_is_the_deepest_outfield_back() -> void:
 	var eng := _engine(36)
@@ -134,8 +121,8 @@ func test_the_defensive_line_is_the_deepest_outfield_back() -> void:
 		assert_eq(pq.defensive_line(t), deepest.pos, "side %d's line is not its deepest back" % t)
 
 func test_the_defensive_line_is_shared_within_one_shape_pass() -> void:
-	# One read per side per pass: the pass fills the map, and both backs read the
-	# same entry, so a pass that reads it twice cannot see two different lines.
+
+
 	var eng := _engine(37)
 	var pq := PitchQueries.new(eng)
 	var shared := {}
@@ -147,12 +134,10 @@ func test_the_defensive_line_is_shared_within_one_shape_pass() -> void:
 		assert_eq(shared[p.team], pq.defensive_line(p.team),
 			"the line moved between two backs of the same side inside one pass")
 
-# ------------------------------------------------------------ behaviour ------
 
 func test_the_line_follows_the_bodies_rather_than_a_stale_read() -> void:
-	# No cross-pass cache: after the back four move, the next read reports the
-	# new line. A cache keyed on the tick or the squad would answer with the old
-	# one, and a back would hold a line the pitch no longer has.
+
+
 	var eng := _engine(38)
 	var pq := PitchQueries.new(eng)
 	var before: Vector2 = pq.defensive_line(1)
@@ -161,8 +146,8 @@ func test_the_line_follows_the_bodies_rather_than_a_stale_read() -> void:
 		if p.team == 1 and not p.sent_off and not p.is_gk and Attrs.is_defender(p.role):
 			backs.append(p)
 	assert_gt(backs.size(), 1, "side 1 did not field a back four")
-	# Park the whole back four on a line the engine has never held, with one of
-	# them five metres deeper than the rest.
+
+
 	var spot: Vector2 = eng.to_world(1, Vector2(0.30, 0.5))
 	for i in backs.size():
 		backs[i].pos = spot + Vector2(0.0, 3.0 * float(i))
@@ -171,11 +156,7 @@ func test_the_line_follows_the_bodies_rather_than_a_stale_read() -> void:
 	assert_eq(after, backs[0].pos, "the line did not follow the back four that moved")
 	assert_true(after != before, "the line was answered from a stale read rather than the bodies on the pitch")
 
-## A seeded match must stay reproducible: two engines on one seed agree on every
-## body's position through a real stretch of play, so the shared path changed no
-## decision. The first five seconds already carry kick-off, the opening shape
-## passes and the first restarts — where the shared path is read — and two
-## hundred ticks of two engines is a fraction of a coverage-instrumented second.
+
 func test_a_shared_path_leaves_a_seeded_match_reproducible() -> void:
 	var a := _seeded(4242)
 	var b := _seeded(4242)

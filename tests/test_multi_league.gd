@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## Multi-league saves (#185/#188): one file, one clock, two active competitions.
-## The suite creates a Premier League + La Liga season, walks a day, and reads
-## every league-scoped surface back: fixtures, tables, leaders, the advance-mode
-## edit, the completion gate, and the old PL-only save's migration path.
 
 var SAVE_DIR := TestScratch.dir("saves_test_multi_league")
 var CACHE_DIR := TestScratch.dir("cache_test_multi_league")
@@ -113,8 +109,8 @@ func test_the_advance_mode_can_change_mid_season() -> void:
 	assert_true(season.set_advance_mode("fixture_days"), "the change back did not stick")
 
 func test_the_summary_waits_for_every_active_league() -> void:
-	# Not finished yet: the podium must stay empty while any league has a fixture
-	# left. Then mark both calendars played and read the two champion blocks.
+
+
 	var slug := str(season.save.slug)
 	assert_true(season.summary().is_empty(), "an unfinished multi-league season had a podium")
 	PLDatabase.execute("UPDATE league_fixture SET status = 'played', home_goals = 1, away_goals = 0;")
@@ -127,13 +123,12 @@ func test_the_summary_waits_for_every_active_league() -> void:
 	assert_eq(str(sections[0]["id"]), "PL", "the podium lost the league order")
 	assert_eq(str(sections[1]["id"]), "LL", "the podium lost the league order")
 	assert_eq((sections[1]["table"] as Array).size(), 20, "a podium section has no table")
-	# The save is left on disk; the relaunch test reopens it.
+
 	assert_true(str(slug) != "", "the save has no slug")
 
 func test_the_boot_orders_and_closes_competitions() -> void:
-	# The create path reads known_competitions from LeagueSeasonBoot: a lower
-	# tier closes over the chain above it, and the published order wins over the
-	# wizard's pick order (#241, #258).
+
+
 	assert_eq(LeagueSeasonBoot.known_competitions(["LL", "PL"]), ["PL", "LL"],
 		"the boot lost the published fixture order")
 	assert_eq(LeagueSeasonBoot.known_competitions(["CH"]), ["PL", "CH"],
@@ -168,8 +163,8 @@ func test_a_pre_multi_save_is_migrated_on_open() -> void:
 	assert_not_null(season, "the legacy save was not created")
 	var save: LeagueSave = season.save
 	var slug := str(save.slug)
-	# A save written before multi-league has no active-competition table and no
-	# competition column on its match rows.
+
+
 	PLDatabase.execute("DROP TABLE save_competition;")
 	PLDatabase.execute("DELETE FROM save_meta WHERE key = 'competitions';")
 	PLDatabase.execute("DROP INDEX IF EXISTS league_fixture_comp_idx;")

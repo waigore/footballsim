@@ -1,25 +1,20 @@
 class_name MatchInput
 extends RefCounted
 
-## The play scene's keyboard and pointer routing: which sheet owns the event,
-## the zoom wheel, the click table on the overlay bar, and the one-key match
-## controls. The scene keeps the state; this module owns the branching. Split
-## out of main.gd so the scene stays inside its P3 size budget.
 
 var game = null
-## A press the long-press grammar is watching (#107): the click it held back runs
-## on release, when the press turns out to be a short tap.
+
+
 var held_by = null
 var held_at := Vector2(-1, -1)
 
 func _init(host) -> void:
 	game = host
 
-## Route one event to whoever owns the screen. Returns true when a sheet over
-## the pitch (encyclopedia, menus, fixture picker) swallowed it.
+
 func handle(event: InputEvent) -> bool:
-	# The pre-match briefing is the top modal while it is up: it answers every
-	# event, and nothing underneath it can start or scroll a match (#157).
+
+
 	if game.prematch != null and game.prematch.is_open():
 		var point: Vector2 = Vector2.ZERO
 		if event is InputEventMouse:
@@ -43,7 +38,7 @@ func handle(event: InputEvent) -> bool:
 		_key(event.keycode)
 	return false
 
-## Fixture sheet: hover and taps read in the chrome layer's design space.
+
 func _select(event: InputEvent) -> void:
 	var sheet = game.selector
 	if event is InputEventMouseMotion:
@@ -55,7 +50,7 @@ func _select(event: InputEvent) -> void:
 		game.mouse = event.position
 		sheet.mouse = game.view.design(event.position, game.chrome_scale)
 		if event.pressed:
-			# A club card is held back until the release says tap or hold (#107).
+
 			if sheet.interest.press_at(sheet.mouse):
 				held_by = sheet.interest
 				held_at = event.position
@@ -78,14 +73,13 @@ func _pointer(event: InputEventMouseButton) -> void:
 	elif event.button_index == MOUSE_BUTTON_LEFT:
 		game.mouse = event.position
 		if event.pressed:
-			# A held club name on the overlay opens the menu instead of the page.
+
 			if game.hud != null and game.hud.interest.press_at(game.view.design(event.position)):
 				held_by = game.hud.interest
 				held_at = event.position
 				return
-			# The HUD show/hide pill is the overlay's own door (#158): it never
-			# hides, so the router answers it here and the scene's click table
-			# stays about the match.
+
+
 			if game.view.button_at(event.position) == "hud":
 				game.hud.toggle_hud()
 				return
@@ -93,8 +87,7 @@ func _pointer(event: InputEventMouseButton) -> void:
 		else:
 			_release(event.position)
 
-## The release of a press a long-press grammar held back: a short tap still runs
-## the click the press would have run, a hold or a menu press is consumed (#107).
+
 func _release(screen_point: Vector2) -> void:
 	if held_by == null:
 		return
@@ -112,8 +105,7 @@ func _release(screen_point: Vector2) -> void:
 		return
 	click(held_at if held_at.x >= 0.0 else screen_point)
 
-## Overlay bar doors and a pitch token pick. The scene keeps the flags; this
-## module owns the branching so main.gd stays a thin host.
+
 func click(p: Vector2) -> void:
 	var b: String = game.view.button_at(p)
 	if b == "pause":
@@ -156,11 +148,10 @@ func _cycle_speed() -> void:
 	var idx := opts.find(game.speed)
 	game.speed = opts[(idx + 1) % opts.size()]
 
-# if/elif rather than match: the coverage injector cannot instrument a match
-# statement, and an uninstrumentable main.gd fails the patch gate.
+
 func _key(k: int) -> void:
-	# The whistle has gone: nothing is left to pause, pace or skip, so the keys
-	# behind those doors answer exactly as the dead doors do (#276).
+
+
 	var over: bool = game.engine != null and str(game.engine.phase) == "full_time"
 	if over and k in [KEY_SPACE, KEY_1, KEY_2, KEY_3, KEY_4, KEY_S]:
 		return

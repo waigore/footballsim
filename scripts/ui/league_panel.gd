@@ -1,14 +1,7 @@
 class_name LeaguePanel
 extends RefCounted
 
-## The league season's left slide panel: navigation and system actions that
-## used to be a row of doors across the bottom of the hub.
-##
-## Geometry, motion, paint and hit-testing live together here so a headless
-## test can open, settle and press a row without a renderer. The panel owns no
-## league state: `active` is the destination id the screen says is on screen.
 
-## Destinations, in reading order. `icon` names a PNG under assets/ui/league.
 const ITEMS := [
 	{"id": "nav:fixtures", "label": "TODAY'S FIXTURES", "icon": "fixtures", "pose": "hub"},
 	{"id": "nav:table", "label": "TABLES", "icon": "table", "pose": "table"},
@@ -21,29 +14,26 @@ const ITEMS := [
 const HEAD := 84.0
 const ROW_H := 46.0
 const ROW_GAP := 4.0
-## The drawer door on the left edge. A mouse finds a tall thin strip easily, so
-## the desktop door keeps the sliver it always had; a thumb does not, and the old
-## 24x104 strip sat inside Android's system gesture band with nothing printed on
-## it (#204). A touch sheet therefore gets a labelled 48-unit square set inboard
-## of the gesture inset, clear of the club rows, which start at 24.
+
+
 const TAB_W := 24.0
 const TAB_H := 104.0
-## The touch door: Android's 48-density-point floor, and a square because a
-## thumb's reach is round rather than tall.
+
+
 const TAP_DOOR := 48.0
-## Clear of Android's ~16 dp system-gesture strip, and clear of the sheet edge so
-## a back-swipe never lands on the door.
+
+
 const TAB_INSET := 16.0
-## Seconds the slide takes end to end; a settled panel never blocks input.
+
 const SLIDE := 0.22
 
-## 0 = closed, 1 = fully out. `target` is where the animation is heading.
+
 var slide := 0.0
 var target := 0.0
-## Destination id on screen, supplied by the screen each refresh.
+
 var active := "nav:fixtures"
-## True when the sheet is presenting to a handheld: the drawer door becomes a
-## finger-sized square inboard of the gesture strip (#204).
+
+
 var touch := false
 var cache := {}
 var icons := {}
@@ -63,15 +53,14 @@ func is_open() -> bool:
 func settled() -> bool:
 	return is_equal_approx(slide, target)
 
-## Advance the slide. Returns true while the panel is still moving, so the
-## screen can repaint; once settled it costs nothing and eats no input.
+
 func update(delta: float) -> bool:
 	if settled():
 		return false
 	slide = move_toward(slide, target, delta / SLIDE)
 	return true
 
-## Snap the slide where it was heading (a test or a pose switch needs no wait).
+
 func settle() -> void:
 	slide = target
 
@@ -85,13 +74,7 @@ func panel_rect(vp: Vector2) -> Rect2:
 	var w := width(vp)
 	return Rect2(-w + w * eased(slide), 0.0, w, vp.y)
 
-## The always-available door on the left edge that opens the panel. It rides
-## above the panel when that is settled open, so closing is never a hunt.
-##
-## A touch sheet gets a 48-unit square set inboard of the gesture strip (#204):
-## the panel is the only way to reach the other readings, so the way in is a real
-## target. A desktop sheet keeps the tall sliver against the edge, where a mouse
-## finds it without it covering any of the club rows behind it.
+
 func tab_rect(vp: Vector2) -> Rect2:
 	if touch:
 		return Rect2(TAB_INSET, vp.y * 0.5 - TAP_DOOR * 0.5, TAP_DOOR, TAP_DOOR)
@@ -101,15 +84,7 @@ func item_rect(vp: Vector2, index: int) -> Rect2:
 	return Rect2(panel_rect(vp).position.x + 12.0, HEAD + float(index) * (ROW_H + ROW_GAP),
 		width(vp) - 24.0, ROW_H)
 
-## What a press lands on. Closed: only the edge tab. Open: a nav row, or the
-## scrim that dismisses the panel; the rest of the sheet is not reachable while
-## the panel is out, so a stray tap can never press a row underneath it.
-##
-## A pose with no reading — the New League and Load sheets, which exist before a
-## season does — has no door: there is nothing behind it to reach, and on a
-## handset the floating square would sit over the sheet's own text (#261). That
-## holds for the open panel too: a drawer left out on the last season must never
-## eat a press on the form that replaced it (#273).
+
 func hit(p: Vector2, vp: Vector2) -> String:
 	if active == "":
 		return ""
@@ -121,17 +96,16 @@ func hit(p: Vector2, vp: Vector2) -> String:
 	for i in range(ITEMS.size()):
 		if item_rect(vp, i).has_point(p):
 			return str(ITEMS[i]["id"])
-	# Inside the panel but between rows (its header and footer): no action, and
-	# certainly not a dismissal.
+
+
 	return ""
 
-# ------------------------------------------------------------------ paint ---
 
 # gd-tools: no cover start
 
 func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, active_pose: String) -> void:
-	# No reading, no panel — not even a drawer left out on the last season: the
-	# New League and Load forms are the only thing on screen (#261/#273).
+
+
 	if active_pose == "":
 		return
 	if slide <= 0.01:
@@ -172,14 +146,7 @@ func _draw_icon(c: CanvasItem, name: String, rect: Rect2, ink: Color) -> void:
 	if tex != null:
 		c.draw_texture_rect(tex, rect, false, ink)
 
-## Closed state: a labelled door on the left edge. Three rules read as a menu at
-## any size and are tinted gold, and the word under them says what the plate is
-## for (#204: the old sliver was unlabelled and 9x15 dp). It is an overlay door
-## like the broadcast's HUD pill — the rows scroll under it, so nothing it covers
-## is stranded.
-##
-## The plate is painted on exactly the rect that answers a press: a tap box and a
-## painted square that disagree leave a strip of gold that does nothing (#273).
+
 func _draw_tab(c: CanvasItem, vp: Vector2, fonts: Dictionary) -> void:
 	var rect := tab_rect(vp)
 	if touch:

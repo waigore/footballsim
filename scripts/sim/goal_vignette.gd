@@ -1,31 +1,16 @@
 class_name GoalVignette
 extends RefCounted
 
-## AUTO report clips: a bounded physics simulation of one chance.
-##
-## Bodies steer with an acceleration and a top speed; the ball is dribbled,
-## passed and struck with the engine's own gravity, drag, bounce and swerve; the
-## keeper dives on a seeded reaction delay. Only the decisions come from the
-## seed — the run, the pass, the aim, the corner — so no two goals share a shape,
-## and the chance always finishes with the report's own scorer and assist: the
-## strike is aimed at the goal mouth and solved against the very flight it is
-## then flown through, and a planned strike is never intercepted (the engine's
-## `planned_goal` rule). World space is the attacking frame; an away goal is
-## mirrored once at sampling, like the engine's own direction switch.
-##
-## This file is the chance's state and its tick order. The cast and their
-## steering live in `GoalVignetteCast`, where each body is heading in
-## `GoalVignetteAI`, the ball's own physics in `GoalVignetteFlight`, and the spot
-## kick layout in `GoalVignettePenalty`.
+
 const L := 105.0
 const W := 68.0
 const CENTRE := W * 0.5
 const POST := 3.66
 const BAR := 2.44
 const LENGTH := 10.0
-## Two sim ticks per stored pose, so a pack is exactly twelve poses a second.
+
 const DT := 1.0 / 24.0
-## Sub-steps of the free ball inside one tick; the shot solver uses the same.
+
 const SUB := 16
 const GRAVITY := 9.81
 const NEAR := 1.7
@@ -71,7 +56,7 @@ class Sim:
 		if bool(goal.get("penalty", false)):
 			GoalVignettePenalty.lay_out(self, shooter, keeper, rng)
 
-	## Play the chance out: one tick of physics, then every other tick a pose.
+
 	func run() -> void:
 		for i in range(int(round(LENGTH / DT)) + 1):
 			if i > 0:
@@ -91,8 +76,8 @@ class Sim:
 				Vector2(ball.x, ball.y).distance_to(bodies[shooter].pos) < NEAR
 			if owner < 0 and reach:
 				owner = shooter
-			# The strike is a decision with a deadline, never a hope: a finisher
-			# takes the chance he has and never lets the ball run into the net.
+
+
 			if not shot and (ball.x > L - 8.0 or t >= strike_at + 0.5 or \
 					(owner == shooter and t >= strike_at)):
 				GoalVignetteFlight.strike(self)
@@ -112,7 +97,7 @@ class Sim:
 		var bx := L - ball.x if mirror else ball.x
 		frames.append({
 			"t": snappedf(t, 0.01),
-			# The clip's clock meets the report's minute exactly at the finish.
+
 			"c": snappedf(float(minute) * 60.0 - goal_at + t, 0.01),
 			"s": [int(shown[0]), int(shown[1])],
 			"g": 1 if scored else 0,
@@ -120,7 +105,7 @@ class Sim:
 			"p": flat,
 		})
 
-## The pack's poses for one goal: home XI first, then the away XI, in key order.
+
 static func build(goal: Dictionary, sides: Dictionary, seed: int) -> Dictionary:
 	var home := str(goal.get("home", ""))
 	var keys: Array = []
@@ -132,6 +117,6 @@ static func build(goal: Dictionary, sides: Dictionary, seed: int) -> Dictionary:
 	sim.run()
 	return {"keys": keys, "frames": sim.frames}
 
-## The mirror across the halfway line: the defending shape in the attacking frame.
+
 static func mirror(p: Vector2) -> Vector2:
 	return Vector2(L - p.x, p.y)

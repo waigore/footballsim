@@ -1,18 +1,6 @@
 extends GdToolsTest
 
-## The aggression lever: the `aggression` bar is shipped per club (0.48–0.62 in
-## the seed), drawn on every club's tactical profile and read by the challenge
-## when a side goes in for the ball. It leans both halves of the duel — wins and
-## fouls — so it is a style, not a free upgrade.
-##
-## A full match gives ~10 fouls, which cannot resolve a style at any sane n, so
-## the rule is pinned directly here and measured on a staged duel sweep
-## (`tools/aggression_sweep.gd`).
 
-## The same staged challenge, repeated, so only the bar can move the outcome.
-## Staged 25 m from the carrier's own goal — outside the box, where a foul is a
-## free kick — because that is where the law prices a missed challenge highest
-## and the foul half can be read at this n.
 func _duel(level: float, trials: int, seed_in: int = 4242) -> Dictionary:
 	var eng := MatchEngine.new(seed_in, "MUN", "MCI")
 	eng.phase = "play"
@@ -57,8 +45,7 @@ func _duel(level: float, trials: int, seed_in: int = 4242) -> Dictionary:
 		fouls += int(eng.stats[1]["fouls"]) - f0
 	return {"won": won, "fouls": fouls}
 
-## Every club in the seed carries its own bar, and the ship's spread is real —
-## the value the read is fitted to.
+
 func test_the_seed_ships_a_per_club_aggression_bar() -> void:
 	var seen := {}
 	for id in TeamData.team_ids():
@@ -70,23 +57,20 @@ func test_the_seed_ships_a_per_club_aggression_bar() -> void:
 		seen[bar] = true
 	assert_gt(seen.size(), 1, "every club ships the same aggression, so the bar cannot be a style")
 
-## The neutral value is the league's mean aggression: at the mean both halves of
-## the duel carry exactly the numbers the tackle always carried, so the league
-## plays the football it always played on aggregate and only its own spread
-## moves.
+
 func test_the_neutral_bar_changes_nothing() -> void:
 	assert_almost_eq(MatchContact.tackle_bonus({"aggression": MatchContact.NEUTRAL}), 0.0, 1e-9,
 		"the neutral bar moved the tackle chance")
 	assert_almost_eq(MatchContact.foul_multiplier({"aggression": MatchContact.NEUTRAL}), 1.0, 1e-9,
 		"the neutral bar moved the foul chance")
-	# A style that omits the bar (a bare fixture, a save written before the field
-	# existed) reads the neutral side, never a side that never challenges.
+
+
 	assert_almost_eq(MatchContact.tackle_bonus({}), 0.0, 1e-9,
 		"a style without an aggression bar did not fall back to neutral")
 	assert_almost_eq(MatchContact.foul_multiplier({}), 1.0, 1e-9,
 		"a style without an aggression bar changed the foul chance")
 
-## Both halves lean the same way: more aggression wins more and gives more away.
+
 func test_aggression_leans_both_halves_of_a_challenge() -> void:
 	var low: float = MatchContact.tackle_bonus({"aggression": 0.0})
 	var mid: float = MatchContact.tackle_bonus({"aggression": MatchContact.NEUTRAL})
@@ -97,8 +81,7 @@ func test_aggression_leans_both_halves_of_a_challenge() -> void:
 		MatchContact.foul_multiplier({"aggression": 1.0}),
 		"aggression did not also raise the foul risk, so it is a free upgrade")
 
-## The shipped 0.48–0.62 spread has to be worth something: a preference that
-## cannot separate the league's own clubs is not a preference.
+
 func test_the_shipped_spread_is_worth_something() -> void:
 	var weakest: float = MatchContact.tackle_bonus({"aggression": 0.48})
 	var strongest: float = MatchContact.tackle_bonus({"aggression": 0.62})
@@ -109,8 +92,7 @@ func test_the_shipped_spread_is_worth_something() -> void:
 	assert_gt(high_foul - low_foul, 0.05,
 		"the shipped aggression spread does not move the foul risk")
 
-## The whole range is a real lean, not a rounding error — but it stays a lean
-## on a challenge the laws already price at 0.04–0.60.
+
 func test_the_whole_range_moves_a_challenge_plainly() -> void:
 	var high: float = MatchContact.tackle_bonus({"aggression": 1.0})
 	var low: float = MatchContact.tackle_bonus({"aggression": 0.0})
@@ -118,8 +100,7 @@ func test_the_whole_range_moves_a_challenge_plainly() -> void:
 	assert_gt(span, 0.10, "the whole aggression range barely moves the tackle chance (%0.2f)" % span)
 	assert_lt(span, 0.20, "the whole aggression range swamps a challenge (%0.2f)" % span)
 
-## The rule reaches the duel: the same staged challenge is won more often by the
-## aggressive side and given away more often too.
+
 func test_the_bar_reaches_the_staged_challenge() -> void:
 	var passive: Dictionary = _duel(0.0, 240)
 	var aggressive: Dictionary = _duel(1.0, 240)

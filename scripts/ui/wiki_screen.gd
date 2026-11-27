@@ -1,34 +1,30 @@
 extends Control
 
-## Football Manager-style encyclopedia sheet: league, club and player pages with
-## a cross-link stack. It is a modal surface over the broadcast — the match is
-## paused while it is open, and closing restores the viewer exactly as it was.
-## Chrome follows team_select: same palette, same type, same tap targets.
 
 signal closed()
-## The team page's follow door (#104): the club whose page is on screen. The
-## host answers it against the open season; the sheet never writes the save.
+
+
 signal interest_toggled(club_id: String)
 
 var ui_scale := 1.0
 var touch := false
 var mouse := Vector2(-1000, -1000)
-## The pointer's button is down. Touch has no hover, so a held press is what
-## reveals a date's weekday there (#99).
+
+
 var holding := false
 var buttons: Array = []
 var body: WikiBody = null
-## Snapshot dates the chrome painted, and the page's own date cells (#99): the
-## overlay paints the weekday for the one under the pointer.
+
+
 var hints := DateHints.new()
 var rows_hints: DateHints = null
 var tooltip: DateOverlay = null
-## Club names the sheet painted (#107): the page title of a team page, plus the
-## rows the body registered. A long press asks both.
+
+
 var names := InterestNames.new()
-## The long press itself: the clock, the menu and the one write it makes.
+
 var interest := InterestHold.new()
-## The layer that paints the menu above the body.
+
 var menu_layer: InterestLayer = null
 
 var stack: Array = []
@@ -49,8 +45,8 @@ func _ready() -> void:
 	add_child(body)
 	rows_hints = body.hints
 	tooltip = DateOverlay.attach(self, body, true)
-	# Where a club name is printed, which season owns the shortlist, and how to
-	# paint again once it moved (#107). The team page's own title is a name too.
+
+
 	interest.club_at = func(p: Vector2) -> String:
 		var own := names.at(p)
 		if own != "":
@@ -66,7 +62,6 @@ func _ready() -> void:
 	menu_layer.screen = self
 	add_child(menu_layer)
 
-# -------------------------------------------------------------------- pages --
 
 func open(page: String = WikiModel.LEAGUE, id: String = "") -> void:
 	if not WikiModel.has_page(page, id):
@@ -103,7 +98,7 @@ func current() -> Dictionary:
 func is_open() -> bool:
 	return not stack.is_empty()
 
-## Earlier pages on the stack, oldest first: the clickable crumb trail.
+
 func crumb_pages() -> Array:
 	return stack.slice(0, maxi(stack.size() - 1, 0))
 
@@ -119,7 +114,6 @@ func _refresh() -> void:
 		body.followed = WikiInterest.followed_set(LeagueSeason.active)
 	queue_redraw()
 
-# -------------------------------------------------------------------- input --
 
 func click(id: String) -> void:
 	if interest.click(id):
@@ -134,7 +128,7 @@ func click(id: String) -> void:
 	elif id.begins_with("interest:"):
 		interest_toggled.emit(id.substr(9))
 
-## A tap anywhere in a table row or chip opens its page.
+
 func tap(p: Vector2) -> bool:
 	if body == null:
 		return false
@@ -144,13 +138,12 @@ func tap(p: Vector2) -> bool:
 	push(str(target.get("page", "")), str(target.get("id", "")))
 	return true
 
-## Wheel, trackpad pan and drag travel arrives as one vertical step; the shared
-## pointer grammar also passes a horizontal step, which this sheet ignores.
+
 func scroll_by(delta: float, _dx: float = 0.0) -> void:
 	if body != null:
 		body.scroll_by(delta)
 
-## One row of keys scrolls by a wheel notch, a page of keys by most of the sheet.
+
 func key(code: int) -> bool:
 	if interest.is_open() and (code == KEY_ESCAPE or code == KEY_BACKSPACE):
 		interest.close()
@@ -188,7 +181,6 @@ func button_at(p: Vector2) -> String:
 			return str(b["id"])
 	return ""
 
-# ----------------------------------------------------------------- geometry --
 
 func design_vp() -> Vector2:
 	return get_viewport().get_visible_rect().size / maxf(ui_scale, 0.001)
@@ -196,16 +188,12 @@ func design_vp() -> Vector2:
 func is_compact() -> bool:
 	return HudLayout.is_compact(design_vp())
 
-## Body window under the header, above the key-hint strip. The header shrinks on
-## a phone design space so the league table still gets most of the height.
-## The body is a document column: on a wide desktop it stops growing so a
-## table row never stretches a short value across half a metre of screen.
+
 func body_rect(vp: Vector2) -> Rect2:
 	var header := 150.0 if is_compact() else 168.0
 	var w: float = minf(vp.x - 48.0, 1160.0)
 	return Rect2((vp.x - w) * 0.5, header, w, vp.y - header - 34.0)
 
-# ------------------------------------------------------------------ drawing --
 
 func _draw() -> void:
 	var vp := design_vp()
@@ -250,8 +238,6 @@ func _add(id: String, r: Rect2) -> void:
 	buttons.append({"id": id, "rect": r})
 
 
-## The identity line, with the snapshot date as its own label so the overlay can
-## give that date its weekday (#99).
 func _draw_subtitle(sub_x: float, y: float) -> void:
 	var sub := str(page_data.get("subtitle", ""))
 	WikiChrome.label(self, f_med, Vector2(sub_x, y), sub, 10, WikiChrome.DIM)
@@ -279,14 +265,14 @@ func _draw_crumbs(y: float) -> void:
 	if not trail.is_empty():
 		WikiChrome.label(self, f_bold, Vector2(x + 2.0, y - 1.0), str(page_data.get("title", "")), 10, WikiChrome.GOLD)
 
-## Scrollbar plus the footer strip: the one place the sheet explains itself.
+
 func _draw_furniture(vp: Vector2, br: Rect2) -> void:
 	var can_scroll := body != null and body.max_scroll() > 0.0
 	if can_scroll:
 		var track := Rect2(br.position.x + br.size.x + 6.0, br.position.y, 3.0, br.size.y)
 		var frac: float = clampf(body.size.y / maxf(body.content_height(), 1.0), 0.06, 1.0)
-		# The thumb travels the whole track between the top and the last row, so
-		# the end of the bar is where the end of the page is.
+
+
 		var offset: float = clampf(body.scroll / maxf(body.max_scroll(), 0.001), 0.0, 1.0)
 		var h: float = track.size.y * frac
 		draw_rect(track, Color(1, 1, 1, 0.05))

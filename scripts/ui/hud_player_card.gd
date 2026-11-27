@@ -1,9 +1,6 @@
 class_name HudPlayerCard
 extends RefCounted
 
-## Player dossier shown when a token is tracked. Split out of hud.gd so the
-## overlay keeps its P3 size budget, and so the handheld variant can stack the
-## same numbers horizontally instead of into a column that no phone has room for.
 
 const W := 286.0
 const W_TOUCH := 340.0
@@ -36,9 +33,7 @@ func player(engine, game):
 		return null
 	return engine.by_id.get(game.focus_id, null)
 
-## Where the card sits for this viewport. Read by the drawer and by the layout
-## test, so a phone build can prove the card stays clear of the ticker and the
-## stats panel instead of being judged from a screenshot.
+
 func rect_for(vp: Vector2) -> Rect2:
 	if HudLayout.is_compact(vp):
 		var w: float = minf(W_TOUCH, vp.x - 48.0)
@@ -46,13 +41,11 @@ func rect_for(vp: Vector2) -> Rect2:
 		var bottom: float = HudLayout.commentary_rect(vp).position.y - 8.0
 		var h: float = clampf(bottom - top, 96.0, 132.0)
 		return Rect2(vp.x - 12.0 - w, bottom - h, w, h)
-	# Desktop: the column hangs under the stats card, so it reads that card's
-	# bottom instead of a constant that the card's momentum footer would grow
-	# into.
+
+
 	return Rect2(vp.x - 12.0 - W, HudLayout.stats_rect(vp).end.y + 20.0, W, H)
 
-## The "open the full profile" door. Read by the drawer and by hud.gd, which
-## turns it into a hit target for the encyclopedia.
+
 func profile_rect(vp: Vector2) -> Rect2:
 	var box := rect_for(vp)
 	if HudLayout.is_compact(vp):
@@ -75,11 +68,7 @@ func draw(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, engine, game) -
 	else:
 		_draw_column(c, vp, f_bold, f_med, p, engine)
 
-# ------------------------------------------------------------- handheld ----
 
-## Horizontal card: header, six attribute bars, four match numbers. Dropped:
-## the involvement list, which no phone viewport can carry beside the pitch.
-## Its bottom edge parks above the commentary ticker so neither covers the other.
 func _draw_compact(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, engine) -> void:
 	var box := rect_for(vp)
 	var w := box.size.x
@@ -123,7 +112,6 @@ func _draw_compact(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, eng
 	_label(c, Vector2(x + 22, y + h - 6), "TAP THE PITCH TO CLEAR", 8, dim, f_med)
 	_draw_profile(c, profile_rect(vp), f_bold)
 
-# -------------------------------------------------------------- desktop ----
 
 func _draw_column(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, engine) -> void:
 	var w := W
@@ -192,9 +180,8 @@ func _value(p, key: String) -> float:
 	return float(p.gk[key]) if p.is_gk else float(p.attr[key])
 
 func rating(p) -> float:
-	# One formula, shared with the in-sim ledger and the stored match summary
-	# (DR-20261125-01): the card must never print a different number from the
-	# encyclopedia for the same match.
+
+
 	return PLSimStats.rating(p.stats)
 
 func _label(c: CanvasItem, pos: Vector2, s: String, size: int, color: Color, font: Font) -> void:

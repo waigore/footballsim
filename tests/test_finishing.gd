@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Finishing calibration: an on-target shot converts with probability
-## FINISH_EFFICIENCY · xG, and a converted shot cannot be vetoed at the line. These are the engine
-## side of the Poisson agreement, tested without running a full match.
 
 func _eng(seed: int = 1) -> MatchEngine:
 	var e := MatchEngine.new(seed)
@@ -126,13 +123,10 @@ func test_shot_records_expected_goals() -> void:
 	assert_gt(float(e.stats[0]["xg"]), 0.0, "no xG was accumulated")
 	assert_eq(int(e.stats[0]["on_target"]), 1, "a corner-placed shot should be on target")
 
-# ------------------------------------------------------------ shot contest ---
 
 func test_chance_quality_tracks_the_defence_faced() -> void:
-	# The same spot is a better chance against a weak back line than a strong
-	# one, and the size of that difference comes from the model's own defensive
-	# exponent — one rating source for both systems. The fixture's openness is
-	# divided out: it is the other half of the same multiplier.
+
+
 	var weak := MatchEngine.new(1, "MCI", "IPS")
 	var strong := MatchEngine.new(1, "MCI", "NEW")
 	var spot: Vector2 = weak.target_goal_pos(0) + Vector2(-14.0, 5.0)
@@ -145,17 +139,14 @@ func test_chance_quality_tracks_the_defence_faced() -> void:
 	assert_almost_eq(vs_weak / vs_strong, expected, 0.001,
 		"the contest gap does not read the model's defensive exponent")
 
-## How open the model expects a fixture to be: its λ total over the league
-## baselines. The engine reads it into both sides' chance quality.
+
 func _openness(home: String, away: String) -> float:
 	var ex := PoissonModel.side_exponents(home, away)
 	return (PoissonModel.HOME_XG * exp(ex.x) + PoissonModel.AWAY_XG * exp(ex.y)) / (PoissonModel.HOME_XG + PoissonModel.AWAY_XG)
 
 func test_chance_quality_tracks_how_open_the_fixture_is() -> void:
-	# Two good defences make a tight game, and the model prices that in λ; the
-	# engine's chance creation does not see the defence it faces, so the same
-	# spot must be worth less in an even game between elite sides than in a
-	# mismatch. The gap is the model's openness times the rating term.
+
+
 	var even := MatchEngine.new(1, "MCI", "MCI")
 	var gap := MatchEngine.new(1, "MCI", "IPS")
 	var spot: Vector2 = even.target_goal_pos(0) + Vector2(-14.0, 5.0)
@@ -170,9 +161,8 @@ func test_chance_quality_tracks_how_open_the_fixture_is() -> void:
 		"the level gap between the anchors is not the model's openness")
 
 func test_contest_factor_is_bounded_and_reads_the_ratings() -> void:
-	# The contest factor is the engine's share of the model's gradient: it must
-	# move with the ratings, and stay inside a sane band for real fixtures. The
-	# fixture's openness is divided out, so this reads the rating term alone.
+
+
 	var strong_home := MatchEngine.new(1, "MCI", "IPS")
 	var even := MatchEngine.new(1, "MCI", "MCI")
 	var strong_away := MatchEngine.new(1, "IPS", "MCI")
@@ -189,11 +179,8 @@ func test_contest_factor_is_bounded_and_reads_the_ratings() -> void:
 			"%s v %s away contest factor is out of family" % [pair[0], pair[1]])
 
 func test_equal_squads_carry_no_pricing_edge() -> void:
-	# An even fixture faces the same defence and takes the same chances, so the
-	# two forms are identical: the home edge lives in creation (the home side
-	# holds the ball higher and shoots from better positions), not in the
-	# finishing multiplier, which prices the venue twice when it does
-	# (DR-20261126-02).
+
+
 	var e := MatchEngine.new(1, "MCI", "MCI")
 	assert_eq(MatchEngine.XG_HOME_EDGE, 0.0, "the finishing multiplier prices the venue again")
 	assert_almost_eq(float(e.xg_form[0]) / float(e.xg_form[1]), 1.0, 0.0001,
@@ -203,10 +190,8 @@ func test_equal_squads_carry_no_pricing_edge() -> void:
 	assert_between(xg, 0.047, 0.057, "a central 11 m chance is outside the calibrated band")
 
 func test_the_canonical_chance_sits_on_the_census_level() -> void:
-	# Tier-1 tripwire for the level the big-n census owns: a central 12 m
-	# chance is worth this much once the engine is priced onto the PL-envelope
-	# λ (DR-20261126-02, wiki poisson-model). A move in XG_SCALE or the contest
-	# elasticity that is not followed by a census shows up here first.
+
+
 	var even := MatchEngine.new(1, "MCI", "MCI")
 	var strong := MatchEngine.new(1, "MCI", "IPS")
 	var even_xg: float = even.expected_goals(even.target_goal_pos(0) + Vector2(-12.0, 0.0), 0.0, 0)

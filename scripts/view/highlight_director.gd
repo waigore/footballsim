@@ -1,40 +1,25 @@
 class_name HighlightDirector
 extends RefCounted
 
-## The broadcast ring: engine snapshots, the rewind that turns a shot into a
-## live replay, and the goal captures a watched fixture stores for its report.
-##
-## Split out of the play scene so the scene keeps its size budget and so the
-## capture path lives next to the ring it reads. The host owns the clock and the
-## flags this class drives; every decision about *what* to replay is here.
-##
-## Snapshots are full engine states — they only live for the length of a match.
-## What a watched fixture stores afterwards is not a snapshot but a playback
-## pack (see `GoalHighlight`), cut from the ring when a goal lands.
-##
-## Which events turn into a live replay depends on the match view (#164):
-## Highlights rewinds on chances, cards and goals; Goals only rewinds on a
-## scored goal and fast-sims everything in between.
 
-## Seconds of match time between snapshots: ~18 seconds of picture in the ring.
 const SNAPSHOT_EVERY := 0.45
-## Ring length. Forty snapshots is every highlight window the viewer can rewind.
+
 const RING := 40
-## Match seconds of picture kept for one stored goal clip.
+
 const CAPTURE_WINDOW := 12.0
-## A capture needs enough frames to show a build-up, not just the net bulge.
+
 const MIN_CAPTURE_FRAMES := 4
 
 var host = null
 var history: Array = []
 var hist_timer := 0.0
-## Triggers already replayed, so one shot never rewinds twice.
+
 var shown: Dictionary = {}
 
 func _init(owner) -> void:
 	host = owner
 
-## Start a fresh match: empty ring, one snapshot of kick-off.
+
 func restart() -> void:
 	history.clear()
 	shown.clear()
@@ -48,15 +33,14 @@ func snapshot() -> void:
 	if history.size() > RING:
 		history.pop_front()
 
-## One sim tick has run: feed the ring at its fixed cadence.
+
 func sample() -> void:
 	hist_timer += 1.0 / 60.0
 	if hist_timer >= SNAPSHOT_EVERY:
 		hist_timer = 0.0
 		snapshot()
 
-## Rewind the live match to a window before `trigger_clock`. The engine state is
-## restored in place, so the viewer carries on from the replay's end.
+
 func rewind(trigger_clock: float) -> bool:
 	if history.is_empty():
 		return false
@@ -79,13 +63,12 @@ func rewind(trigger_clock: float) -> bool:
 	host.batch_abort = true
 	return true
 
-## Every engine event lands here. Capture first — the ring still holds the
-## build-up the report clip needs — then decide whether to replay it live.
+
 func on_event(e: Dictionary) -> void:
 	var kind: String = e.get("type", "")
 	var key := "%d|%s|%d" % [int(float(e.get("clock", 0.0)) * 60.0), kind, int(e.get("player_id", -1))]
-	# A rewound goal fires again when the replay reaches it: only the first pass
-	# may cut a clip, or the season would hold the same goal twice.
+
+
 	if kind == "goal" and not shown.has(key):
 		capture(e)
 	if not extends_window(kind):
@@ -93,7 +76,7 @@ func on_event(e: Dictionary) -> void:
 	if shown.has(key):
 		return
 	if host.in_highlight:
-		# extend the live window around goals and late chances
+
 		host.highlight_until = maxf(host.highlight_until, host.engine.clock + (5.0 if kind == "goal" else 3.0))
 		return
 	if not opens_replay(kind):
@@ -107,9 +90,7 @@ func on_event(e: Dictionary) -> void:
 		if kind in ["shot", "penalty", "corner"]:
 			host.accumulator = 0.0
 
-## Whether this event keeps an open window open. Highlights stretch a replay for
-## every chance; Goals only stretches it for the goal itself, because everything
-## between goals is fast-simmed.
+
 func extends_window(kind: String) -> bool:
 	if host.mode == "goals":
 		return kind == "goal"
@@ -117,9 +98,7 @@ func extends_window(kind: String) -> bool:
 		return false
 	return kind in ["shot", "goal", "penalty", "penalty_taken", "card", "corner"]
 
-## Whether this event starts a replay. Goals only rewinds on a scored goal — a
-## converted penalty and an own goal both land as `goal` — and never on a shot,
-## a corner, a card or a penalty that missed.
+
 func opens_replay(kind: String) -> bool:
 	if host.mode == "goals":
 		return kind == "goal"
@@ -127,11 +106,7 @@ func opens_replay(kind: String) -> bool:
 		return false
 	return kind in ["shot", "goal", "penalty", "corner", "card"]
 
-# ---------------------------------------------------------------- capture ---
 
-## A goal landed while a league fixture was being watched: cut the ring's
-## window into a playback pack and hand it to the season, which stores it when
-## the match result comes back.
 func capture(e: Dictionary) -> void:
 	var season := LeagueSeason.active
 	if season == null or season.watching_fixture == "":

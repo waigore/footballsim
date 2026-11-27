@@ -1,43 +1,36 @@
 class_name SettingsScreen
 extends RefCounted
 
-## Settings sheet: menu music volume, whether the match HUD's chrome is shown
-## (#158), and which match view a match opens in (#164). Every rect is a function
-## of the design viewport so the phone overlay (scaled by main.gd) gets the same
-## layout at 44-unit tap targets, and a headless test can read the geometry.
 
 var mouse := Vector2(-1000, -1000)
 var dragging := false
 var _cache := {}
 
-## The match HUD row's caption (#202): the switch's `ON` is chrome shown (#158),
-## so the line says what `ON` does instead of describing the other state.
+
 const HUD_ROW_HINT := "ON SHOWS THE BARS · SCORE AND MATCH CARDS STAY"
 
-## Three rows share one card: the volume row keeps its shipped geometry on top,
-## the match HUD switch sits a row below it and the match view a row below that.
+
 const CARD_H := 366.0
-## The shortest card that still holds three rows at the 44-unit tap floor, so a
-## short design space starts the card higher instead of clipping the last row.
+
+
 const CARD_H_MIN := 250.0
-## Distance from the volume row to the HUD row on a roomy card.
+
 const ROW_STEP := 104.0
-## Distance between rows on a short card: a tap row and a small gap, so the
-## captions and the track's end labels are dropped instead of the controls.
+
+
 const ROW_STEP_MIN := 52.0
 
-## The match-view segments: three doors on one line, each a finger's height.
+
 const SEG_W := 112.0
 const SEG_GAP := 8.0
 const SEG_H := 44.0
-## A card narrower than this stacks the row's title above the segments; a wider
-## one keeps the title beside them on the same line.
+
+
 const MODE_WIDE := 540.0
 const MODE_ROW_INLINE := 52.0
 const MODE_ROW_STACKED := 68.0
 
-## The card stands taller with each row, but a short design space lifts it
-## towards the header rather than letting the last row run off the screen.
+
 static func card_rect(vp: Vector2) -> Rect2:
 	var w: float = minf(560.0, vp.x - 48.0)
 	var top_max: float = maxf(12.0, vp.y - 12.0 - CARD_H_MIN)
@@ -64,22 +57,21 @@ static func track_rect(vp: Vector2) -> Rect2:
 	var w: float = maxf(b.position.x - 18.0 - x, 60.0)
 	return Rect2(x, row_y(vp) + 25.0, w, 10.0)
 
-## Distance between two settings rows: a tall card spends it on captions and
-## dividers, a short one compresses to the tap floor so every row stays on it.
+
 static func row_step(vp: Vector2) -> float:
 	var card := card_rect(vp)
 	var room: float = card.end.y - 12.0 - row_y(vp) - mode_row_h(vp)
 	return clampf(room * 0.5, ROW_STEP_MIN, ROW_STEP)
 
-## Captions, dividers and the track's end labels only fit when rows are roomy.
+
 static func roomy(vp: Vector2) -> bool:
 	return row_step(vp) >= ROW_STEP - 0.5
 
-## The match HUD row: one volume row lower.
+
 static func hud_row_y(vp: Vector2) -> float:
 	return row_y(vp) + row_step(vp)
 
-## The match-view row: one HUD row lower again.
+
 static func mode_row_y(vp: Vector2) -> float:
 	return hud_row_y(vp) + row_step(vp)
 
@@ -89,8 +81,7 @@ static func mode_stacked(vp: Vector2) -> bool:
 static func mode_row_h(vp: Vector2) -> float:
 	return MODE_ROW_STACKED if mode_stacked(vp) else MODE_ROW_INLINE
 
-## The three match-view segments in `Prefs.MODES` order: Highlights, Goals only,
-## Full match.
+
 static func seg_rects(vp: Vector2) -> Array:
 	var card := card_rect(vp)
 	var top: float = mode_row_y(vp) + (18.0 if mode_stacked(vp) else 8.0)
@@ -105,19 +96,16 @@ static func seg_rects(vp: Vector2) -> Array:
 		out.append(Rect2(left + float(i) * (each + SEG_GAP), top, each, SEG_H))
 	return out
 
-## The switch itself: the same 44-unit tap height as the volume steps, and wide
-## enough for `ON` / `OFF` at a finger's distance.
+
 static func hud_toggle_rect(vp: Vector2) -> Rect2:
 	var card := card_rect(vp)
 	return Rect2(card.end.x - 24.0 - 96.0, hud_row_y(vp) + 8.0, 96.0, 44.0)
 
-## BACK sits in the same top-left corner as every other sheet (#163); the door
-## keeps its 44-unit tap height rather than the league sheets' 32.
+
 static func back_rect(vp: Vector2) -> Rect2:
 	return Rect2(24.0, 12.0, 116.0, 44.0)
 
-## Volume a pointer at `p` means, read on the track plus a finger-sized margin
-## above and below it. `vp` is the design viewport the sheet was drawn in.
+
 func value_at(p: Vector2, vp: Vector2 = Vector2(1600, 900)) -> float:
 	var t := track_rect(vp)
 	var grab := Rect2(t.position.x, t.position.y - 20.0, t.size.x, t.size.y + 40.0)
@@ -148,7 +136,6 @@ func click(p: Vector2, vp: Vector2 = Vector2(1600, 900)) -> String:
 		dragging = true
 	return id
 
-# ----------------------------------------------------------------- drawing --
 
 func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, volume: float, touch: bool = false,
 		hud_on: bool = true, match_mode: String = Prefs.DEFAULT_MODE) -> void:
@@ -185,8 +172,7 @@ func _draw_step(c: CanvasItem, r: Rect2, glyph: String, fonts: Dictionary) -> vo
 	UiChrome.panel(c, _cache, r, UiChrome.C_PANEL_LIGHT if hovered else Color(0.05, 0.075, 0.09, 0.96), 8, Color(1, 1, 1, 0.14 if hovered else 0.07))
 	UiChrome.text_c(c, r.position.x + r.size.x * 0.5, r.position.y + 30.0, glyph, 24, UiChrome.C_TEXT if hovered else UiChrome.C_SOFT, fonts["bold"])
 
-## An on/off switch reads its state in the word and the gold rule under it, so the
-## row is legible without a colour judgement.
+
 func _draw_switch(c: CanvasItem, r: Rect2, on: bool, fonts: Dictionary) -> void:
 	var hovered := r.has_point(mouse)
 	var border: Color = Color(0.96, 0.78, 0.30, 0.45 if on else 0.16) if on or hovered else Color(1, 1, 1, 0.07)
@@ -199,8 +185,7 @@ func _draw_switch(c: CanvasItem, r: Rect2, on: bool, fonts: Dictionary) -> void:
 	if on:
 		c.draw_rect(Rect2(r.position.x + 2.0, r.position.y + r.size.y - 4.0, r.size.x - 4.0, 2.0), UiChrome.C_GOLD)
 
-## The match-view row (#164): `MATCH VIEW` and the three segments, in the same
-## grammar as the match bar's mode door. The chosen one is gold and ruled.
+
 func _draw_mode_row(c: CanvasItem, vp: Vector2, fonts: Dictionary, mode: String, touch: bool, roomy_rows: bool) -> void:
 	var card := card_rect(vp)
 	var my := mode_row_y(vp)
@@ -222,8 +207,8 @@ func _draw_segment(c: CanvasItem, r: Rect2, label: String, on: bool, key_hint: S
 	var fill: Color = Color(0.16, 0.13, 0.05, 0.96) if on else Color(0.05, 0.075, 0.09, 0.96)
 	UiChrome.panel(c, _cache, r, fill, 8, border)
 	var ink: Color = UiChrome.C_GOLD if on else (UiChrome.C_TEXT if hovered else UiChrome.C_SOFT)
-	# The key line under the caption is the bar door's grammar; touch bars have
-	# no keyboard, so they print the label alone.
+
+
 	if touch:
 		UiChrome.text_c(c, r.position.x + r.size.x * 0.5, r.position.y + r.size.y * 0.5 + 5.0, label, 12, ink, fonts["bold"])
 	else:

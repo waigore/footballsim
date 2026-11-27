@@ -1,41 +1,27 @@
 class_name WikiLedger
 extends RefCounted
 
-## The Footballsim blocks on the encyclopedia's pages, and the headings that say
-## which ledger they belong to.
-##
-## A save owns its own ledger (`LeagueLedger`), and the encyclopedia is the place
-## a player looks up what has happened, so while a season is open every in-sim
-## reading on these pages comes from it (DR-20261125-08). The real-world snapshot
-## keeps its own sections, labelled SNAPSHOT, so the two readings never wear the
-## same name.
 
 static func repo() -> PLRepository:
 	return PLRepository.shared()
 
-## Which ledger a page's figures come from: the season being played, or the
-## snapshot the encyclopedia ships with.
+
 static func ledger_label() -> String:
 	return "SEASON" if repo().season_active() else "SNAPSHOT"
 
-## A block heading that says which ledger answered: "IN FOOTBALLSIM  ·  SEASON".
-## The season is not named: the hub already carries the save's name, and one
-## season is open at a time (DR-20261125-08).
+
 static func heading(base: String) -> String:
 	if not repo().season_active():
 		return base
 	return "%s  ·  %s" % [base, ledger_label()]
 
-## The season block's heading: this save's season in play, or the snapshot's
-## label for the real-world figures.
+
 static func record_label(snapshot: String) -> String:
 	if repo().season_active():
 		return "SEASON  ·  IN PLAY"
 	return "SEASON  ·  %s SNAPSHOT" % snapshot
 
-## A player's Footballsim line. The season keeps apps, goals, assists and cards
-## on both paths; it keeps no per-match shots or rating, so the season block does
-## not promise them.
+
 static func player_line(line: Dictionary, season_open: bool) -> Dictionary:
 	if int(line.get("apps", 0)) <= 0:
 		if season_open:
@@ -61,8 +47,7 @@ static func player_line(line: Dictionary, season_open: bool) -> Dictionary:
 		],
 	}
 
-## A competition hub's in-sim block: that league's scorer chart, or the
-## single-match one. Absent (not an empty table) until someone has scored.
+
 static func competition_blocks(competition_id: String = "") -> Array:
 	var top: Array = []
 	for row in repo().sim_leaders(5, competition_id):
@@ -78,12 +63,11 @@ static func competition_blocks(competition_id: String = "") -> Array:
 		{"k": "table", "cols": ["PLAYER", "CLUB", "APPS", "GOALS"], "widths": [0.36, 0.22, 0.20, 0.22], "text_cols": [0, 1], "rows": top},
 	]
 
-## The hub's in-sim block, scoped to the competition it belongs to.
+
 static func league_blocks(competition_id: String = "") -> Array:
 	return competition_blocks(competition_id)
 
-## A club page's in-sim blocks. While a season is open the record is already in
-## the page's season header, so only the club's scorer chart is appended here.
+
 static func club_blocks(club_id: String) -> Array:
 	var season_open := repo().season_active()
 	var blocks: Array = []

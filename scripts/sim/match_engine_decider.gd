@@ -1,33 +1,23 @@
 extends "res://scripts/sim/match_engine_clock.gd"
 
-## The decider layer: extra time and penalty shootouts.
-##
-## A competition that cannot end level sets `requires_winner` before kick-off.
-## When the second half finishes with the teams level, the match plays two
-## fifteen-minute periods and, if it is still level, a shootout. Both periods
-## and every kick draw from the match RNG, so the same seed settles the same tie
-## (DR-20261126-11). The regulation lane in the clock calls the hooks below.
 
-## Clock marks: the second half ends at 5400, extra time runs 5400–6300 and
-## 6300–7200, then the shootout takes over.
 const ET_FIRST_END := 6300.0
 const ET_SECOND_END := 7200.0
-## Presentation pace: a beat before the first kick, then one every few seconds.
+
 const SHOOTOUT_START := 2.4
 const SHOOTOUT_GAP := 3.0
-## Best-of-five, then sudden death.
+
 const SHOOTOUT_ROUND := 5
 
-## Every kick, in order: team, taker, whether it went in, and the tally after it.
+
 var shootout: Array = []
-## Penalties scored, per side.
+
 var shootout_score: Array = [0, 0]
 var shootout_timer := 0.0
-## Each side's kick order, as player ids (built once, when the shootout starts).
+
 var shootout_ids: Array = [[], []]
 var shootout_done := false
 
-# ------------------------------------------------------------- regulation ---
 
 func _second_half_over() -> void:
 	if requires_winner and int(score[0]) == int(score[1]):
@@ -78,7 +68,6 @@ func _tick_extra_time_period() -> void:
 		else:
 			_end_match()
 
-# -------------------------------------------------------------- shootout ----
 
 func _begin_shootout() -> void:
 	phase = "shootout"
@@ -98,14 +87,14 @@ func _tick_shootout(dt: float) -> void:
 	shootout_timer = SHOOTOUT_GAP
 	_take_shootout_kick()
 
-## Best takers first, keeper excluded until the pool runs out.
+
 func _build_shootout_order() -> void:
 	for t in range(2):
 		var pool: Array = []
 		for p in players:
 			if p.team == t and not p.sent_off and not p.is_gk:
 				pool.append(p)
-		# A plain selection sort keeps the order deterministic without a lambda.
+
 		var n: int = pool.size()
 		for i in range(n):
 			var top: int = i
@@ -169,8 +158,7 @@ func _shootout_kicks_for(t: int) -> int:
 			n += 1
 	return n
 
-## Best of five, decided early when the trailing side cannot catch up; then
-## sudden death, which ends once both sides have taken the same number.
+
 func _shootout_decided() -> bool:
 	var a: int = int(shootout_score[0])
 	var b: int = int(shootout_score[1])
@@ -198,7 +186,6 @@ func _full_time_text() -> String:
 			_short(1), int(score[1]), int(shootout_score[0]), int(shootout_score[1]))
 	return super()
 
-# ------------------------------------------------------------------ state ---
 
 func _short(t: int) -> String:
 	return str(teams[t]["data"]["short"])

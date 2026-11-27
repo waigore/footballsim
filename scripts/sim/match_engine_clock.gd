@@ -1,6 +1,5 @@
 extends "res://scripts/sim/match_engine_bench.gd"
 
-## Match lifecycle: kick-off, the tick loop, halves, and state snapshots.
 
 func _init(seed_in: int = 4242, home_id: String = "MUN", away_id: String = "MCI") -> void:
 	seed_value = seed_in
@@ -44,7 +43,7 @@ func setup_kickoff(kicking_team: int, swap: bool) -> void:
 	restart_timer = 1.6
 	for p in players:
 		p.pos = to_world(p.team, p.base)
-		# Keep both teams in their own halves for the kick-off.
+
 		var own_half_x = L * 0.5
 		if teams[p.team]["dir"] == 1:
 			p.pos.x = minf(p.pos.x, own_half_x - 1.0)
@@ -58,7 +57,7 @@ func setup_kickoff(kicking_team: int, swap: bool) -> void:
 		p.state = "idle"
 		p.offside_flag = false
 		p.mark_id = -1
-	# Opponents must be outside the centre circle at kick-off.
+
 	for p in players:
 		if p.team != kicking_team:
 			var dc: float = p.pos.distance_to(CENTER)
@@ -67,7 +66,7 @@ func setup_kickoff(kicking_team: int, swap: bool) -> void:
 				if away.length() < 0.1:
 					away = Vector2(-teams[p.team]["dir"], 0.0)
 				p.pos = CENTER + away * 9.6
-	# Put the taker on the ball.
+
 	var taker = _nearest_teammate_to(CENTER, kicking_team, true)
 	if taker != null:
 		taker.pos = CENTER + Vector2(-0.7 * teams[kicking_team]["dir"], 0.0)
@@ -81,7 +80,6 @@ func setup_kickoff(kicking_team: int, swap: bool) -> void:
 func start() -> void:
 	pass
 
-# -------------------------------------------------------------------- tick --
 
 func tick() -> void:
 	if phase == "shootout":
@@ -97,7 +95,7 @@ func tick() -> void:
 
 	if phase != "goal":
 		_tick_clock_end()
-		# A break or a shootout stops the regulation tick here; the caller resumes.
+
 		if (phase == "half_time" or phase == "full_time" or phase == "et_break"
 				or phase == "shootout"):
 			return
@@ -118,7 +116,7 @@ func tick() -> void:
 		_tick_injuries(DT)
 		return
 
-	# Open play.
+
 	brain.update(DT)
 	_move_players(DT)
 	_ball_physics(DT)
@@ -131,8 +129,6 @@ func tick() -> void:
 
 func _tick_clock_end() -> void:
 	if half == 1:
-		# The fourth official's board goes up when 45:00 is reached; the half
-		# then plays the added time it earned (cards, fouls, restarts).
 		if added[0] <= 0.0 and clock >= 2700.0:
 			added[0] = 20.0 + rng.randf_range(0.0, 50.0) + minf(100.0, stoppage_events * 4.0)
 		if clock >= 2700.0 + added[0]:
@@ -141,14 +137,13 @@ func _tick_clock_end() -> void:
 		if clock >= 5400.0 + added[1]:
 			_second_half_over()
 	else:
-		# Extra time: the decider layer owns both periods' clocks and breaks.
 		_tick_extra_time_period()
 
 func _end_first_half() -> void:
 	phase = "half_time"
 	half_break_timer = 4.0
 	_emit("half_time", CommentaryRestarts.half_time(rng, teams[0]["data"]["short"], score[0], teams[1]["data"]["short"], score[1]), -1, null)
-	# Half-time is a free substitution window and a natural tactics moment.
+
 	manager.on_half_time()
 	blackout()
 
@@ -159,7 +154,7 @@ func begin_second_half() -> void:
 	if phase != "half_time":
 		return
 	added[1] = 90.0 + rng.randf_range(0.0, 90.0) + minf(120.0, stoppage_events * 8.0)
-	# Each half earns its own added time: no carrying first-half stoppages over.
+
 	stoppage_events = 0
 	injury_timer = 45.0
 	for t in range(2):
@@ -176,21 +171,19 @@ func _end_match() -> void:
 	finished = true
 	if winner < 0 and int(score[0]) != int(score[1]):
 		winner = 0 if int(score[0]) > int(score[1]) else 1
-	# The summary carries the rating it is read by. One formula, the same one the
-	# player card and the in-sim ledger use, computed once at the final whistle
-	# (DR-20261125-01) instead of three times from three copies.
+
+
 	for p in players:
 		p.stats["rating"] = PLSimStats.rating(p.stats)
 	var line: String = _full_time_text()
 	_emit("full_time", line, -1, null)
 
-## The final whistle's line. A match that went to penalties says so.
+
 func _full_time_text() -> String:
 	return CommentaryRestarts.full_time(rng, teams[0]["data"]["short"], score[0],
 		teams[1]["data"]["short"], score[1])
 
-# Hooks the decider layer (extra time + shootouts) fills in. They live here so
-# the regulation lane can reach them without knowing the tie-break rules.
+
 func _second_half_over() -> void:
 	_end_match()
 
@@ -200,14 +193,11 @@ func _tick_extra_time_period() -> void:
 func _tick_shootout(_dt: float) -> void:
 	pass
 
-## Leave the break after 90 (or after the first extra-time period).
+
 func resume_after_break() -> void:
 	pass
 
-## Play the rest of the match out with no presentation: a caller that has left
-## the viewer drives this in slices. `budget_usec` caps the work in one call so
-## the caller can keep painting; a negative budget runs to the end. Returns true
-## once the match is at full time.
+
 func run_to_full_time(budget_usec: int = -1) -> bool:
 	var started := Time.get_ticks_usec()
 	var guard := 0
@@ -270,7 +260,7 @@ func from_dict(d: Dictionary) -> void:
 	restart = d["restart"].duplicate(true)
 	restart_timer = d["restart_timer"]
 	added = d["added"].duplicate()
-	# Snapshots taken before extra time existed carry only the two halves.
+
 	while added.size() < 4:
 		added.append(0.0)
 	score = d["score"].duplicate()
@@ -355,8 +345,8 @@ func from_dict(d: Dictionary) -> void:
 	sim_tick = d["sim_tick"]
 	goal_timer = d["goal_timer"]
 	last_goal = d["last_goal"].duplicate(true)
-	# Snapshots taken before the whistle card existed carry no sheet; the goals
-	# then rest with the event log they were cut from, so an empty sheet is right.
+
+
 	goal_sheet = d.get("goal_sheet", []).duplicate(true)
 	rng.state = d["rng"]
 	teams[0]["dir"] = d["dirs"][0]
@@ -382,4 +372,4 @@ func from_dict(d: Dictionary) -> void:
 	if brain != null:
 		brain.on_restore()
 
-# ------------------------------------------------------------------- misc ---
+

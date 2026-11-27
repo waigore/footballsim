@@ -1,6 +1,6 @@
 # Agent guide — Footballsim
 
-Godot 4 football world simulation for **desktop** (Windows, macOS, Linux) and **mobile** (Android, iOS). Prefer reuse and existing project patterns over new abstractions. Player is god-like (not club manager); sim engines drive outcomes.
+Godot 4 football world sim for **desktop** (Windows, macOS, Linux) and **mobile** (Android, iOS). Prefer reuse over new abstractions. Player is god-like (not club manager); sim engines drive outcomes.
 
 ## Always refer to
 
@@ -17,13 +17,15 @@ Godot 4 football world simulation for **desktop** (Windows, macOS, Linux) and **
 
 ## Docs policy
 
-Root and `docs/` Markdown **≤ 500 words** (fenced code excluded). CI `docs-lint` enforces (`python tools/lint_docs_words.py`). Prefer tables/bullets; long mechanics → wiki.
+Root and `docs/` Markdown **≤ 500 words** (fenced code excluded). CI `docs-lint` (`python tools/lint_docs_words.py`). Prefer tables/bullets; long mechanics → wiki.
+
+**No `.gd` comments** in `scripts/`/`tests/`/`playtests/` (`#`/`##`/`//`/`/* */`); wiki is SoT. CI `no-comments-lint`. Only `# gd-tools: no cover start|end` allowed. `tools/`+YAML free.
 
 ## Stack
 
 - Engine: Godot 4.7.x · GDScript (typed where practical)
 - Scenes: `.tscn` + scripts; logic in scripts / sim modules, composition in scenes
-- Tests: [`gd-tools`](https://github.com/mansyar/gd-tools) (`GdToolsTest`); PR **tier 1** impacted suites + **80% patch** coverage (**≤5 min**); **tier 2** every 8h full suite + overall 80%; e2e smoke **≤4 min** — see [`docs/testing.md`](docs/testing.md). Until `project.godot` exists, Godot CI jobs no-op.
+- Tests: [`gd-tools`](https://github.com/mansyar/gd-tools) (`GdToolsTest`); PR **tier 1** impacted + **80%** patch (**≤5 min**); **tier 2** every 8h full + 90%; e2e smoke **≤4 min** — [`docs/testing.md`](docs/testing.md). Until `project.godot` exists, Godot CI no-ops.
 
 ## Layout
 
@@ -48,7 +50,7 @@ Root and `docs/` Markdown **≤ 500 words** (fenced code excluded). CI `docs-lin
 ## Do / don’t
 
 - Do keep scenes focused; guard early; shallow nesting.
-- Do open/merge PRs with `gh`; wait for required checks — see [`docs/pull-requests.md`](docs/pull-requests.md).
+- Do open/merge PRs with `gh`; wait for required checks — [`docs/pull-requests.md`](docs/pull-requests.md).
 - Don’t commit `.godot/`, export caches, or local overrides.
 - Don’t add plugins/addons without need; don’t hard-code resolutions or OS names in gameplay/sim.
 - Don’t bypass, force-merge, or skip required PR checks.
@@ -56,7 +58,7 @@ Root and `docs/` Markdown **≤ 500 words** (fenced code excluded). CI `docs-lin
 
 ## Project skills
 
-Do **not** create, edit, rename, or delete project skills unless the user **explicitly** asks for a skills change. Scope: `.agents/skills/` (incl. README), facades (`.cursor/skills/`, `.opencode/skill/`, `.grok/skills/`), and `docs/skills.md`. Side edits during other work are banned; CI `skills-isolation` fails code∩skills PRs.
+Do **not** create, edit, rename, or delete project skills unless the user **explicitly** asks. Scope: `.agents/skills/` (incl. README), facades (`.cursor/skills/`, `.opencode/skill/`, `.grok/skills/`), and `docs/skills.md`. Side edits banned; CI `skills-isolation` fails code∩skills PRs.
 
 ## When unsure
 

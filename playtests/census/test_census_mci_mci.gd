@@ -1,10 +1,5 @@
 extends GdToolsTest
 
-## Tier-2 census runner on the even-strength anchor (MCI v MCI). Parent: #31.
-## Same contract as the MCI v IPS runner: play one shard of the fixed grid,
-## fail fast when a full match breaks the wall-clock budget, and write the
-## per-match rows for `test_census_aggregate.gd`, which pools every shard and
-## owns the dispersion assert. Means and xG are logged, not gated. Tier-2 only.
 
 const ANCHOR := "mci_mci"
 
@@ -15,7 +10,7 @@ func test_census_shard_runs_the_grid() -> void:
 	var budget := CensusLib.env_int("CENSUS_MATCH_BUDGET_MS", CensusLib.MATCH_BUDGET_MS)
 	var rows := CensusLib.run_shard(ANCHOR, n, shard, shards)
 	var worst := CensusLib.slowest(rows)
-	# Per-match sim-cost budget: a full headless match may not exceed it.
+
 	assert_gte(rows.size(), 1, "shard %d of %d played no matches" % [shard, shards])
 	assert_lte(int(worst["ms"]), budget,
 		"full match %d took %d ms (budget %d ms)" % [worst["seed"], worst["ms"], budget])

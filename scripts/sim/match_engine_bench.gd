@@ -1,21 +1,16 @@
 extends "res://scripts/sim/match_engine_rules.gd"
 
-## The bench: rolling changes and injuries. A manager picks most changes at
-## stoppages (MatchManager); this layer owns the legality of a change and the
-## two automatic ones — a keeper who must be replaced and a body that breaks.
 
 func _tick_substitutions() -> void:
-	# Managers choose changes at stoppages and half-time (MatchManager). The
-	# only automatic change left is the emergency goalkeeper: a side must
-	# always have a keeper.
+
+
 	for t in range(2):
 		if int(teams[t]["subs_left"]) <= 0:
 			continue
 		if _gk_of(t) == null and not _bench_keeper(t).is_empty():
 			_make_substitution(t, true)
 
-## Is a change legal right now? Five changes in three windows; half-time is a
-## free window, and a second change in the same stoppage shares its window.
+
 func sub_window_available(t: int, at_half_time: bool = false) -> bool:
 	if int(teams[t]["subs_left"]) <= 0:
 		return false
@@ -56,7 +51,7 @@ func _most_tired_outfield(t: int):
 	return worst
 
 func _role_family(role: String) -> String:
-	# Formation slots use sided labels; bench entries use the generic position.
+
 	if role == "RCB" or role == "LCB":
 		return "CB"
 	if role == "RDM" or role == "LDM":
@@ -75,7 +70,7 @@ func _pick_bench(t: int, want_role: String, for_gk: bool) -> Dictionary:
 	for b in teams[t]["data"]["bench"]:
 		if on_field.has(b["name"]):
 			continue
-		# Keepers only come on for a keeper; outfield subs never take the gloves.
+
 		if (b["role"] == "GK") != for_gk:
 			continue
 		if _role_family(b["role"]) == want:
@@ -95,10 +90,7 @@ func _make_substitution(t: int, for_gk: bool = false) -> bool:
 		return false
 	return _bring_on(t, worst, true, false, {"reason": "emergency_keeper"})
 
-## Replace one player with the best available bench body. Charges one of the
-## five changes and, outside half-time, one of the three windows. The
-## emergency-keeper change is exempt from the window count so a side is never
-## left without a keeper.
+
 func _bring_on(t: int, off, for_gk: bool = false, at_half_time: bool = false, meta: Dictionary = {}) -> bool:
 	if off == null or int(teams[t]["subs_left"]) <= 0:
 		return false
@@ -108,7 +100,7 @@ func _bring_on(t: int, off, for_gk: bool = false, at_half_time: bool = false, me
 	if candidate.is_empty():
 		return false
 	var np = _make_player(candidate, t, 200 + t * 40 + int(teams[t]["subs_made"]))
-	# The substitute fills the slot of the player he replaces, not his own.
+
 	np.role = off.role
 	np.is_gk = off.is_gk
 	np.base = off.base
@@ -133,9 +125,7 @@ func _bring_on(t: int, off, for_gk: bool = false, at_half_time: bool = false, me
 	_add_involvement(np, "sub", "On for %s" % off.name, np.pos)
 	return true
 
-## Tired bodies break down: one roll every 45s of play picks a side, and that
-## side's most fatigued outfield player may pull up. A knock costs a change; a
-## side with no changes left plays on a man short.
+
 func _tick_injuries(dt: float) -> void:
 	injury_timer -= dt
 	if injury_timer > 0.0:
@@ -147,7 +137,7 @@ func _tick_injuries(dt: float) -> void:
 		var cand = _most_tired_outfield(t)
 		if cand == null:
 			continue
-		# Cramp or a knock: the same tired legs make the serious ones likelier.
+
 		if rng.randf() < 0.25 + (1.0 - cand.stamina) * 0.55:
 			_injure(cand)
 
@@ -159,8 +149,8 @@ func _injure(p) -> void:
 	stats[t]["injuries"] += 1
 	p.stats["injuries"] = int(p.stats.get("injuries", 0)) + 1
 	_flash(0.5)
-	# The manager picks the replacement; without a legal change the side plays
-	# on a man short.
+
+
 	if manager != null and manager.replace_injured(p):
 		return
 	_emit("injury", CommentaryBench.injury(rng, p.name, false), t, p)

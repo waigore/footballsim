@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Dead-ball judgement, split out of the engine leaf: how a taker reads his
-## side's shape, how long he holds play up, and when the wait ends even if the
-## picture never hits the ideal. Engine-level, seeded, headless.
 
 func _eng(seed_in: int = 61) -> MatchEngine:
 	var eng := MatchEngine.new(seed_in)
@@ -16,8 +13,7 @@ func _taker(eng) -> Object:
 			return p
 	return null
 
-## A stand-in taker carrying a chosen technical profile, for the reads that
-## only look at pas/ovr and never need the live object.
+
 func _reader(pas: int, ovr: int) -> Object:
 	var p = MatchEngine.new(62).players[1]
 	p.attr = p.attr.duplicate()
@@ -25,8 +21,7 @@ func _reader(pas: int, ovr: int) -> Object:
 	p.attr["ovr"] = ovr
 	return p
 
-## Put the whole side on its slots offset by `offset`, moving at `speed`, then
-## read the picture from inside the shape so every mate is in range.
+
 func _set_side(eng, taker, offset: Vector2, speed: float) -> void:
 	var anchor := Vector2.ZERO
 	for q in eng.players:

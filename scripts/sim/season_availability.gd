@@ -1,62 +1,39 @@
 class_name SeasonAvailability
 extends RefCounted
 
-## Availability across a season: injuries that outlive the match they started in,
-## and suspensions served by later fixtures. Both are stored in the save, so a
-## club carries them through every gameweek on either outcome path.
-##
-## An injury has a **severity grade**, an exact number of days out that the
-## player never sees, and a recovery rate. The hidden count is only recalculated
-## when the season clock crosses a calendar month (see `month_tick`); the screen
-## reads weeks or months (`recovery_label`), never the days.
-##
-## A suspension is a count of the club's next fixtures. The Premier League
-## 2026-27 disciplinary table lives here (`THRESHOLDS`, `BAN_RED`,
-## `BAN_SECOND_YELLOW`) and the cards themselves stay the sims' own: this module
-## only turns cards already in the report into bans.
-##
-## Everything reads the save bound to `PLDatabase` through the active
-## `LeagueSeason`, so single-match mode — which closes the season — never sees a
-## season absence and fields a full squad.
 
-## Severity grades, lightest first. Days out are hidden from the player.
 const GRADE_DAYS := {
 	"knock": [3, 9],
 	"muscle": [10, 28],
 	"ligament": [29, 84],
 	"severe": [85, 240],
 }
-## Share of season injuries in each grade. Most knocks, few long terms.
+
 const GRADE_WEIGHTS := {"knock": 0.55, "muscle": 0.28, "ligament": 0.13, "severe": 0.04}
 
-## A straight red is a one-match ban; so is a second yellow in one match.
+
 const BAN_RED := 1
 const BAN_SECOND_YELLOW := 1
-## Yellow accumulation: `[cards, by matchday, matches banned]`. A player who
-## reaches five after the nineteenth game carries on without a ban but still
-## counts towards ten, exactly as the league's own table works.
+
+
 const THRESHOLDS := [[5, 19, 1], [10, 32, 2], [15, 38, 3]]
 
-## Chance a side loses a body in an auto-simmed fixture, per side. The engine's
-## fatigue path lands at about a quarter per side, so the two paths agree.
+
 const INJURY_RATE := 0.22
-## A recovery rate is drawn per injury and stays with it: a body heals a little
-## faster or slower than the calendar, never wildly so.
+
+
 const RATE_MIN := 0.8
 const RATE_MAX := 1.2
 
 const KIND_INJURY := "injury"
 const KIND_SUSPENSION := "suspension"
 
-# ------------------------------------------------------------------ state ---
 
-## A season is open and owns the bound save. Without one there is no availability
-## to read: single-match mode always fields a full squad.
 static func enabled() -> bool:
 	var season := LeagueSeason.active
 	return season != null and season.save != null and PLDatabase.get_db() != null
 
-## Player ids who cannot be picked for `club_id` (injured or suspended).
+
 static func unavailable(club_id: String) -> Dictionary:
 	var out := {}
 	if club_id == "" or not enabled():
@@ -65,7 +42,7 @@ static func unavailable(club_id: String) -> Dictionary:
 		out[str(row["player_id"])] = true
 	return out
 
-## Every absence row for one club, joined with the player's name and number.
+
 static func rows(club_id: String) -> Array:
 	if club_id == "" or not enabled():
 		return []
@@ -75,7 +52,7 @@ static func rows(club_id: String) -> Array:
 		+ "WHERE a.club_id = ? ORDER BY a.kind DESC, a.days_left DESC, a.matches_left DESC;",
 		[club_id])
 
-## What the briefing reads: one line per absence, in public wording only.
+
 static func absences(club_id: String) -> Array:
 	var out: Array = []
 	for row in rows(club_id):
@@ -92,8 +69,7 @@ static func absences(club_id: String) -> Array:
 		})
 	return out
 
-## Public wording for an injury: weeks up to two months, then months. The exact
-## day count is never printed.
+
 static func recovery_label(days_left: int) -> String:
 	if days_left <= 0:
 		return "FIT"
@@ -104,15 +80,13 @@ static func recovery_label(days_left: int) -> String:
 	var months := int(ceil(float(days_left) / 30.0))
 	return "%d MONTHS" % months if months > 1 else "1 MONTH"
 
-## Public wording for a suspension: the club's next fixtures.
+
 static func ban_label(matches_left: int) -> String:
 	if matches_left <= 0:
 		return "AVAILABLE"
 	return "1 MATCH" if matches_left == 1 else "%d MATCHES" % matches_left
 
-# ----------------------------------------------------------------- writes ---
 
-## Grade one injury and write it into the save. `days` is hidden.
 static func injure(player_id: String, club_id: String, date: String, grade: String,
 		days: int, rate: float = 1.0) -> bool:
 	if player_id == "" or club_id == "" or not enabled():
@@ -128,12 +102,12 @@ static func injure(player_id: String, club_id: String, date: String, grade: Stri
 		[player_id, club_id, KIND_INJURY, grade, out_days, date,
 			FixtureCalendar.add_days(date, out_days) if date != "" else "", rate])
 
-## Write a suspension: `matches` of the club's next fixtures.
+
 static func suspend(player_id: String, club_id: String, matches: int, reason: String,
 		date: String = "") -> bool:
 	if player_id == "" or club_id == "" or matches <= 0 or not enabled():
 		return false
-	# A ban replaces any ban already being served rather than stacking silently.
+
 	return PLDatabase.execute(
 		"INSERT INTO league_absence (player_id, club_id, kind, grade, days_left, matches_left, "
 		+ "started_on, due_on, rate) VALUES (?, ?, ?, ?, 0, ?, ?, '', 1.0) "
@@ -142,7 +116,7 @@ static func suspend(player_id: String, club_id: String, matches: int, reason: St
 		+ "started_on = excluded.started_on, due_on = '';",
 		[player_id, club_id, KIND_SUSPENSION, reason, matches, date])
 
-## Draw a severity grade and its exact days out from a seeded generator.
+
 static func roll(rng: RandomNumberGenerator) -> Dictionary:
 	var pick := rng.randf()
 	var acc := 0.0
@@ -156,11 +130,7 @@ static func roll(rng: RandomNumberGenerator) -> Dictionary:
 	var days := rng.randi_range(int(span[0]), int(span[1]))
 	return {"grade": grade, "days": days, "rate": rng.randf_range(RATE_MIN, RATE_MAX)}
 
-# ------------------------------------------------------------- fixture hook ---
 
-## Settle one finished fixture for both clubs: serve the bans that were waiting
-## for it, read today's cards into new bans, and turn injury events into season
-## injuries. `sides` is `[{club_id, rows: [{player_id, yellow, red}]}, …]`.
 static func apply_fixture(matchday: int, date: String, sides: Array, seed: int) -> void:
 	if not enabled():
 		return
@@ -168,8 +138,8 @@ static func apply_fixture(matchday: int, date: String, sides: Array, seed: int) 
 		var club := str(side.get("club_id", ""))
 		if club == "":
 			continue
-		# A ban is served by the club's next fixture, so today's games clear
-		# yesterday's bans before today's cards can add new ones.
+
+
 		_serve(club)
 		_discipline(club, matchday, side.get("rows", []), date)
 		_injuries(club, side.get("events", []), date, seed)
@@ -198,8 +168,7 @@ static func _discipline(club_id: String, matchday: int, lines: Array, date: Stri
 			suspend(id, club_id, BAN_SECOND_YELLOW, "second_yellow", date)
 		_accumulation(id, club_id, matchday, date)
 
-## Yellow accumulation against the locked table. A threshold already punished is
-## remembered in `league_discipline`, so ten cards never pays twice for five.
+
 static func _accumulation(player_id: String, club_id: String, matchday: int, date: String) -> void:
 	var stat := PLDatabase.row("SELECT yellow FROM league_player_stat WHERE player_id = ?;",
 		[player_id])
@@ -214,8 +183,8 @@ static func _accumulation(player_id: String, club_id: String, matchday: int, dat
 		var by := int(step[1])
 		if total < cards or mark >= cards:
 			continue
-		# Past its cut-off the threshold no longer bans, but it is spent: the
-		# next one (ten) is what the rest of the season plays for.
+
+
 		if matchday > by:
 			_set_mark(player_id, club_id, cards)
 			continue
@@ -241,19 +210,14 @@ static func _injuries(club_id: String, events: Array, date: String, seed: int) -
 		var drawn := roll(rng)
 		injure(id, club_id, date, str(drawn["grade"]), int(drawn["days"]), float(drawn["rate"]))
 
-## Deterministic per player, so reopening a save and replaying the same fixture
-## draws the same injury.
+
 static func _seed(seed: int, player_id: String) -> int:
 	var h := seed
 	for i in range(player_id.length()):
 		h = int((h * 31 + player_id.unicode_at(i)) % 2147483647)
 	return h
 
-# ------------------------------------------------------------- month tick ---
 
-## The clock crossed into a new calendar month: every body out heals by the days
-## that passed, scaled by its own recovery rate. Bounded drift, not a reroll —
-## an injury can heal faster or slower than the calendar but never jump.
 static func month_tick(from_date: String, to_date: String) -> int:
 	if not enabled() or from_date == "" or to_date == "":
 		return 0

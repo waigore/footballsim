@@ -1,27 +1,19 @@
 class_name AppShell
 extends Control
 
-## The menu shell laid over the match scene: main menu, settings, quit confirm,
-## menu music and the stills backdrop. The match underneath stays paused; the
-## shell owns no sim state and talks to the scene through two signals.
-##
-## Screens are presentational RefCounted sheets (the same pattern as the HUD's
-## ticker), so every rect and hit-test stays testable without a renderer.
-## Pointer and key routing live in `AppShellInput`; stills and confirm copy in
-## `AppShellPaint`, so this Control stays inside its P3 size and method budget.
 
 signal start_requested
 signal resume_requested
 signal new_league_requested
 signal load_league_requested
-## The sheet on screen changed: the host re-stacks the shell so the quit
-## confirmation draws over whatever raised it (#123).
+
+
 signal screen_changed
-## The player switched the match HUD on or off from the settings sheet (#158);
-## the host hands it to the match, which owns the overlay.
+
+
 signal hud_visibility_changed(hud_on: bool)
-## The player chose a match view on the settings sheet (#164); the host hands it
-## to the match, which owns the broadcast.
+
+
 signal match_mode_changed(mode: String)
 
 const SCREEN_MENU := "menu"
@@ -33,12 +25,11 @@ var screen := SCREEN_NONE
 var prev_screen := SCREEN_NONE
 var has_match := false
 var volume: float = Prefs.DEFAULT_BGM
-## The match HUD's show/hide choice, kept in the same prefs file as the volume
-## (#158). The shell reads and writes it for the settings sheet; the match scene
-## applies it.
+
+
 var hud_visible: bool = Prefs.DEFAULT_HUD
-## The match view the player chose (#164), kept beside the HUD switch in the same
-## prefs file and shared with the broadcast's own mode door.
+
+
 var match_mode: String = Prefs.DEFAULT_MODE
 var prefs_path: String = Prefs.PATH
 var ui_scale := 1.0
@@ -51,8 +42,8 @@ var confirm: ConfirmPrompt = null
 var music: MenuMusic = null
 var stills: Array = []
 var motion := 0.0
-## Soft left-to-right scrim so the wordmark and doors always sit on dark pixels
-## without a hard-edged panel over the still.
+
+
 var scrim: GradientTexture2D = null
 var input: AppShellInput = null
 var paint: AppShellPaint = null
@@ -94,7 +85,6 @@ func design_vp() -> Vector2:
 		vp = get_viewport().get_visible_rect().size / maxf(ui_scale, 0.001)
 	return vp
 
-# ------------------------------------------------------------------ state ---
 
 func open_menu(has_match_now: bool) -> void:
 	has_match = has_match_now
@@ -113,8 +103,8 @@ func open_menu(has_match_now: bool) -> void:
 func open_settings() -> void:
 	screen = SCREEN_SETTINGS
 	prev_screen = SCREEN_NONE
-	# The sheet reads both prefs the moment it opens, so it can never show a stale
-	# switch after the file was changed elsewhere.
+
+
 	volume = Prefs.load_bgm(prefs_path)
 	hud_visible = Prefs.load_hud(prefs_path)
 	match_mode = Prefs.load_mode(prefs_path)
@@ -136,8 +126,7 @@ func open_quit_confirm() -> void:
 func back_to_menu() -> void:
 	open_menu(has_match)
 
-## Leave the shell. `keep_music` covers the walk from the menu into fixture
-## setup: the music belongs to the pre-match shell, not to the match.
+
 func close(keep_music: bool = false) -> void:
 	screen = SCREEN_NONE
 	prev_screen = SCREEN_NONE
@@ -170,9 +159,7 @@ func set_volume(v: float) -> void:
 		music.set_volume(volume)
 	queue_redraw()
 
-## The match view, written to the same pref the broadcast's mode door writes
-## (#164). Pressing the segment already chosen is a no-op, so the sheet never
-## rewrites the file for nothing.
+
 func set_match_mode(mode: String) -> void:
 	var next := Prefs.normalize_mode(mode)
 	if next == match_mode:
@@ -182,7 +169,6 @@ func set_match_mode(mode: String) -> void:
 	match_mode_changed.emit(match_mode)
 	queue_redraw()
 
-# ------------------------------------------------------------------ input ---
 
 func button_at(p: Vector2) -> String:
 	return input.button_at(p) if input != null else ""
@@ -193,11 +179,10 @@ func click(p: Vector2) -> bool:
 func key(code: int) -> bool:
 	return input.key(code) if input != null else false
 
-## Forward an input event in design space; returns true when the shell took it.
+
 func handle_input(event: InputEvent, p: Vector2) -> bool:
 	return input.handle(event, p) if input != null else false
 
-# ---------------------------------------------------------------- drawing ---
 
 func _draw() -> void:
 	if not active() or paint == null:

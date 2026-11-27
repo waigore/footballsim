@@ -1,19 +1,12 @@
 class_name Tactics
 extends RefCounted
 
-## Live Football Manager–style tactics for one side: mentality, in/out-of-
-## possession shape, tempo/directness/crossing, time-wasting, roles and duties,
-## opposition instructions and set-piece routines.
-##
-## The club's squad style is the kickoff default. "Balanced" mentality applies
-## no shift, so a match with no manager input plays exactly the old static
-## style; every manager change is a named delta on top of it.
 
 const MENTALITIES := ["very_defensive", "defensive", "cautious", "balanced", "positive", "attacking", "very_attacking"]
 const NEUTRAL := "balanced"
 const DUTIES := ["defend", "support", "attack"]
 
-## Shift applied on top of the club style. Balanced is all zeroes on purpose.
+
 const MENTALITY_SHIFT := {
 	"very_defensive": {"possession": 0.06, "line": -0.12, "press": -0.10, "tempo": -0.06, "directness": 0.08, "width": -0.06},
 	"defensive": {"possession": 0.03, "line": -0.06, "press": -0.05, "tempo": -0.03, "directness": 0.04, "width": -0.03},
@@ -41,9 +34,7 @@ var roles := {}
 var opposition := {"press": "standard", "marking": "zonal"}
 var set_pieces := {"corner": "far_post", "free_kick": "worked", "penalty": "striker"}
 
-## Build a side's opening tactics from squad style and manager preference. The
-## manager's preferred mentality is a decision bias, not a kickoff override:
-## the match starts balanced so defaults match the club's documented style.
+
 static func from_team(data: Dictionary, profile: Dictionary = {}) -> Tactics:
 	var t := Tactics.new()
 	var style: Dictionary = data.get("style", {})
@@ -93,8 +84,7 @@ func describe() -> Array:
 		out.append("time-wasting")
 	return out
 
-## Effective style in the keys MatchAI already reads. Defaults (balanced, no
-## deltas) equal the club style exactly.
+
 func style() -> Dictionary:
 	var m: Dictionary = MENTALITY_SHIFT.get(mentality, {})
 	return {
@@ -114,7 +104,7 @@ func style() -> Dictionary:
 func duty_of(role: String) -> String:
 	return str(roles.get(role, "support"))
 
-## Role duties move a player's push: attack runs higher, defend holds deeper.
+
 func duty_offset(role: String) -> float:
 	match duty_of(role):
 		"attack":
@@ -129,7 +119,7 @@ func corner_routine() -> String:
 func free_kick_routine() -> String:
 	return str(set_pieces.get("free_kick", "worked"))
 
-## Apply a change set; returns human-readable labels of what actually moved.
+
 func apply(change: Dictionary) -> Array:
 	var out := []
 	if change.has("formation"):

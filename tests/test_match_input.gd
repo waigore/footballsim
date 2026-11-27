@@ -1,34 +1,29 @@
 extends GdToolsTest
 
-## The play scene's input router and presentation face, driven through the real
-## main.gd with real input events: sheets take the event first, the wheel zooms,
-## taps on the overlay bar land in design space, key shortcuts reach the scene,
-## and the frame's tick budget follows the mode.
 
 var game = null
 var game2 = null
 
 func before_all() -> void:
-	# A second scene is split later so the cold-start path (no fixture arg, the
-	# dev harness still unset) is covered without disturbing the main one.
+
+
 	game2 = Node2D.new()
 	game2.set_script(load("res://scripts/main.gd"))
 	add_child(game2)
 	game = Node2D.new()
 	game.set_script(load("res://scripts/main.gd"))
 	add_child(game)
-	# The HUD's show/hide choice is a player preference (#158): keep the suite on
-	# its own file so the developer's last choice cannot hide the bands it drives.
+
+
 	var prefs := TestScratch.file("test_match_input_prefs.cfg")
 	for g in [game, game2]:
 		g.menus.shell.prefs_path = prefs
-		# Attach restored HUD/mode from the developer's user://prefs.cfg; point
-		# both at the scratch file and re-read so the suite never inherits a
-		# leftover match view (#164).
+
+
 		g.menus.restore_hud()
 		g.menus.restore_mode()
 	game._on_fixture_confirmed("MUN", "MCI")
-	# Every match opens the pre-match briefing first (#157): kick it off.
+
 	TestBriefing.kick(game)
 	game.paused = true
 	game.hud.queue_redraw()
@@ -64,7 +59,6 @@ func _tap(r: Rect2) -> void:
 	ev.position = (r.position + r.size * 0.5) * game.hud_scale
 	game._input(ev)
 
-# ----------------------------------------------------------------- routing ---
 
 func test_the_cold_start_waits_on_the_menu_and_shows_no_pitch_until_kick_off() -> void:
 	assert_not_null(game2.dev, "the dev harness was not built")
@@ -90,7 +84,6 @@ func test_the_menu_swallows_input_and_keyboard_events_reach_the_shell() -> void:
 	assert_eq(game.menus.shell.screen, AppShell.SCREEN_MENU, "the second Esc did not cancel the quit")
 	game.menus.close()
 
-# ------------------------------------------------------------ fixture sheet ---
 
 func test_the_fixture_sheet_routes_hover_taps_and_keys() -> void:
 	game.open_select()
@@ -103,14 +96,14 @@ func test_the_fixture_sheet_routes_hover_taps_and_keys() -> void:
 	motion.position = Vector2(40, 40) * game.chrome_scale
 	game._input(motion)
 	assert_eq(sheet.mouse, Vector2(40, 40), "the sheet pointer is not in chrome design space")
-	# A key repeat never reaches the sheet.
+
 	var echo := InputEventKey.new()
 	echo.keycode = KEY_ESCAPE
 	echo.pressed = true
 	echo.echo = true
 	game._input(echo)
 	assert_true(game.select_open, "a key repeat closed the fixture sheet")
-	# A right press in the home row cycles the home club through the tap path.
+
 	var next_home := Rect2()
 	for b in sheet.buttons:
 		if str(b["id"]) == "home_next":
@@ -118,7 +111,7 @@ func test_the_fixture_sheet_routes_hover_taps_and_keys() -> void:
 	assert_gt(next_home.size.x, 0.0, "the sheet has no next-home door")
 	_tap_css(next_home)
 	assert_ne(sheet.home_idx, home, "a tap on the next-home door did not cycle the club")
-	# An unmapped key is handed to the sheet and leaves the sheet open.
+
 	var f1 := InputEventKey.new()
 	f1.keycode = KEY_F1
 	f1.pressed = true
@@ -134,7 +127,6 @@ func _tap_css(r: Rect2) -> void:
 	ev.position = (r.position + r.size * 0.5) * game.chrome_scale
 	game._input(ev)
 
-# ------------------------------------------------------------ match input ---
 
 func test_the_wheel_zooms_the_camera_and_a_left_tap_picks_a_token() -> void:
 	game.menus.close()
@@ -144,7 +136,7 @@ func test_the_wheel_zooms_the_camera_and_a_left_tap_picks_a_token() -> void:
 	assert_almost_eq(game.zoom_scale, clampf(start * 1.08, 0.65, 2.4), 0.0001, "the wheel did not zoom in")
 	_wheel(MOUSE_BUTTON_WHEEL_DOWN)
 	assert_almost_eq(game.zoom_scale, start, 0.0001, "the wheel did not zoom back out")
-	# A right-press never reaches the click table.
+
 	var right := InputEventMouseButton.new()
 	right.button_index = MOUSE_BUTTON_RIGHT
 	right.pressed = true
@@ -168,7 +160,7 @@ func test_a_tap_on_another_token_switches_the_focus_and_asks_again() -> void:
 		ev.position = screen
 		game._input(ev)
 	assert_eq(game.focus_id, second, "a tap on another token did not move the focus")
-	# Tapping the focused token again drops it.
+
 	var again := InputEventMouseButton.new()
 	again.button_index = MOUSE_BUTTON_LEFT
 	again.pressed = true
@@ -195,7 +187,6 @@ func test_the_overlay_doors_reach_the_sheets_and_settings() -> void:
 	assert_true(game.camera_follow, "the camera door did not follow the ball")
 	_tap(_door("camera"))
 
-# ------------------------------------------------------------------ keys ----
 
 func test_every_one_key_shortcut_reaches_the_scene() -> void:
 	game.paused = true
@@ -223,23 +214,23 @@ func test_every_one_key_shortcut_reaches_the_scene() -> void:
 	game.menus.close()
 
 func test_the_frame_budget_follows_the_mode_and_the_pace() -> void:
-	# Full match at 30 fps: 2x speed runs about four ticks a frame, capped.
+
 	game.mode = "full"
 	game.fast_mode = false
 	game.speed = 2.0
 	game.accumulator = 0.0
 	assert_eq(game.view.ticks_this_frame(1.0 / 30.0), 4, "a 2x full-match frame ran the wrong number of ticks")
-	# A slow frame is capped so the loop cannot stall on a backlog.
+
 	game.accumulator = 0.0
 	assert_eq(game.view.ticks_this_frame(10.0), 120, "the full-match frame cap was not applied")
-	# Highlights fast-forward at the director's rate.
+
 	game.mode = "highlights"
 	game.fast_mode = true
 	game.accumulator = 0.0
 	assert_eq(game.view.ticks_this_frame(1.0 / 30.0), 48, "a highlights frame ran the wrong number of ticks")
 	game.accumulator = 0.0
 	assert_eq(game.view.ticks_this_frame(10.0), 60, "the highlights frame cap was not applied")
-	# A leftover fraction carries to the next frame instead of being dropped.
+
 	game.accumulator = 0.0
 	var first: int = game.view.ticks_this_frame(0.01)
 	var second: int = game.view.ticks_this_frame(0.01)
@@ -254,9 +245,8 @@ func test_skip_through_the_router_advances_a_fast_highlight() -> void:
 	assert_gt(game.engine.clock, clock, "skip did not advance the highlight")
 
 func test_the_play_keys_stop_at_the_whistle() -> void:
-	# #276: the keys printed on PAUSE, speed and SKIP answer exactly as those
-	# doors do once the match has finished — and the doors that still mean
-	# something (a restart) keep working.
+
+
 	var phase_before: String = str(game.engine.phase)
 	game.engine.phase = "full_time"
 	game.mode = "highlights"

@@ -1,20 +1,7 @@
 class_name LeagueNavStack
 extends RefCounted
 
-## The season's page history: every forward move inside the league pushes the
-## page it left, and BACK / Esc / Backspace pop one page at a time (#169).
-##
-## The stack is **session UI state** — a field of the screen, never written into
-## a save. It holds at most `CAPACITY` entries; a player who walks deeper drops
-## the oldest page rather than the newest, because the nearest history is what
-## BACK is expected to reach.
-##
-## A page is a snapshot of what the pose needs to paint itself again: the mode,
-## the calendar's selected day and month, the report or roundup on screen, the
-## shortlist's query, the System dialog's own state, and the scroll offsets. The
-## table's reading lives in the save, so it needs no entry from here.
 
-## Deepest history BACK keeps. Older pages fall off the bottom.
 const CAPACITY := 30
 
 var entries: Array = []
@@ -25,14 +12,13 @@ func depth() -> int:
 func is_empty() -> bool:
 	return entries.is_empty()
 
-## Remember the page the player is leaving. A stack at its cap drops the oldest
-## entry, so the thirty most recent pages are always the ones BACK can reach.
+
 func push(entry: Dictionary) -> void:
 	entries.append(entry)
 	while entries.size() > CAPACITY:
 		entries.pop_front()
 
-## The page BACK returns to, or an empty dictionary at the root.
+
 func pop() -> Dictionary:
 	if entries.is_empty():
 		return {}
@@ -41,7 +27,7 @@ func pop() -> Dictionary:
 func clear() -> void:
 	entries.clear()
 
-## Everything one pose needs to come back as it was left.
+
 static func snapshot(screen) -> Dictionary:
 	var body = screen.body
 	return {
@@ -59,9 +45,7 @@ static func snapshot(screen) -> Dictionary:
 		"hscroll": float(body.hscroll) if body != null else 0.0,
 	}
 
-## Put a page back exactly as it was left: its pose, its day and month, the
-## report or roundup it was showing, and where it was scrolled to. The scroll
-## is applied after the relayout, which is why the refresh comes first.
+
 static func restore(screen, entry: Dictionary) -> void:
 	if entry.is_empty():
 		return

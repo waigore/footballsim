@@ -1,7 +1,5 @@
 extends GdToolsTest
 
-## Commentary: lines name the actors, fit the ticker, vary, and the live line
-## describes the actual state of play.
 
 const MAX_LEN := 92
 
@@ -51,8 +49,8 @@ func test_restart_wait_names_team() -> void:
 	assert_lte(line.length(), MAX_LEN, "restart line too long: " + line)
 
 func test_live_line_describes_state() -> void:
-	# Craft the picture the live line reads — possession, a carrier, pressure —
-	# instead of ticking six hundred steps to stumble into one under coverage.
+
+
 	var eng := TestEngineBoot.match(5)
 	eng.phase = "play"
 	eng.possession_team = 0
@@ -67,10 +65,9 @@ func test_live_line_describes_state() -> void:
 		"live line lost the side in possession: " + line)
 	assert_lte(line.length(), MAX_LEN, "live line too long: " + line)
 
-# ---------------------------------------------------------- every builder ---
 
 func _each(builder: Callable, count: int, must_contain: String) -> void:
-	# Every line a builder can produce must name the actor and fit the ticker.
+
 	for i in range(count):
 		var line: String = builder.call(i)
 		assert_true(line.contains(must_contain), "a line lost \"%s\": %s" % [must_contain, line])
@@ -83,8 +80,8 @@ func test_save_lines_cover_hold_parry_and_the_goal_line() -> void:
 
 func test_goal_lines_read_leads_assists_and_late_winners() -> void:
 	_each(func(i): return Commentary.goal(_rng(), "B. Šeško", "Bruno", false, "MUN", "MCI", 1, 0, 30), 8, "Šeško")
-	# An assist is only named when the goal line is not already carrying the
-	# state of the game (level, ahead, late drama).
+
+
 	var assisted: String = Commentary.goal(_rng(), "B. Šeško", "Bruno", false, "MUN", "MCI", 0, 2, 30)
 	assert_true(assisted.to_lower().contains("bruno"), "an assist was dropped from the goal line: " + assisted)
 	var lead: String = Commentary.goal(_rng(), "B. Šeško", "", false, "MUN", "MCI", 1, 0, 30)
@@ -118,7 +115,7 @@ func test_substitution_lines_name_manager_or_team() -> void:
 func test_restart_lines_cover_every_kind_and_the_wait() -> void:
 	for kind in ["throw_in", "corner", "free_kick", "penalty", "kickoff"]:
 		_each(func(i): return CommentaryRestarts.restart(_rng(), kind, "NFO", "M. Sels", false), 6, "NFO")
-	# A goal kick is named for the keeper who takes it.
+
 	_each(func(i): return CommentaryRestarts.restart(_rng(), "goal_kick", "NFO", "M. Sels", false), 6, "Sels")
 	_each(func(i): return CommentaryRestarts.restart(_rng(), "goal_kick", "NFO", "", false), 6, "NFO")
 	for kind in ["corner", "free_kick", "throw_in"]:
