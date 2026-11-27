@@ -381,6 +381,42 @@ func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 		assert_eq(matches, 2, "the day lost its fixtures")
 
 
+func test_the_calendar_names_what_its_day_counters_count() -> void:
+	var fonts: Dictionary = UiChrome.fonts()
+	var view := {"month": "2026-08", "days": {"2026-08-15": {"n": 10, "played": 0}}}
+	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(640, 360)]:
+		for touch in [false, true]:
+			view["touch"] = touch
+			var legend: Dictionary = LeagueCalendarView.legend_rect(vp, view, fonts)
+			assert_false(legend.is_empty(), "the day counters are unlabelled at %s (touch %s)" % [vp, touch])
+			var rect: Rect2 = legend["rect"]
+			var text := str(legend["text"])
+			assert_true(text.contains("PLAYED") and text.contains("TOTAL"),
+				"the legend does not name the pair it explains: " + text)
+			assert_eq(text, LeagueCalendarView.LEGEND, "a roomy sheet shortened the legend at %s" % vp)
+			assert_almost_eq(rect.position.x, 24.0 + UiChrome.text_width(fonts["bold"],
+				LeagueMonth.label("2026-08"), 13) + 12.0, 0.01, "the legend does not sit by the month")
+			assert_almost_eq(rect.end.y, LeagueCalendarView.HEADER + 25.0, 0.01,
+				"the legend left the month's line")
+			assert_lt(rect.end.y, LeagueCalendarView.grid_top(touch), "the legend crowds the day grid")
+			assert_lte(rect.end.x, LeagueCalendarView.month_door_rects(vp, touch)[0].position.x - 12.0,
+				"the legend runs into the month doors at %s" % vp)
+			assert_lte(rect.end.x, vp.x - 24.0, "the legend runs off the sheet at %s" % vp)
+
+
+func test_a_month_with_no_counters_carries_no_legend() -> void:
+	var fonts: Dictionary = UiChrome.fonts()
+	var vp := Vector2(1600, 900)
+	assert_true(LeagueCalendarView.legend_rect(vp, {"month": "2026-07", "days": {}}, fonts).is_empty(),
+		"an empty month explained a counter it does not draw")
+	assert_true(LeagueCalendarView.legend_rect(vp,
+		{"month": "2026-07", "days": {"2026-07-04": {"n": 0, "played": 0}}}, fonts).is_empty(),
+		"a day with no fixtures raised a legend")
+	var narrow: Dictionary = LeagueCalendarView.legend_rect(Vector2(240, 411),
+		{"month": "2026-08", "touch": true, "days": {"2026-08-15": {"n": 10, "played": 0}}}, fonts)
+	assert_true(narrow.is_empty(), "a sheet too narrow for the legend painted one anyway")
+
+
 func test_the_sheet_chrome_keeps_back_top_left_and_the_primary_top_right() -> void:
 	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
 		var book := LeagueBook.new()
