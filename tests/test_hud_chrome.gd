@@ -164,6 +164,8 @@ func test_phone_bar_carries_one_tappable_teams_door() -> void:
 		var mid: Vector2 = r.position + r.size * 0.5
 		assert_eq(hud.button_at(mid), str(b["id"]), "%s is not tappable at its centre" % str(b["id"]))
 		assert_lte(r.end.x, vp.x, "%s runs off the right edge" % str(b["id"]))
+		if str(b["id"]) == "teams":
+			assert_eq(str(b["label"]), "TEAMS", "the phone's teams door lost its caption")
 	hud.queue_free()
 
 func test_desktop_bar_keeps_the_fixture_panel_door() -> void:
@@ -178,6 +180,65 @@ func test_desktop_bar_keeps_the_fixture_panel_door() -> void:
 		ids.append(str(b["id"]))
 	assert_eq(ids.count("teams"), 1, "expected the fixture panel's teams door only, got %s" % str(ids))
 	assert_eq(ids.size(), HudLayout.CONTROL_COUNT + 1 + 2 + 1, "desktop should hold the bar, the fixture door, two club doors and the HUD pill")
+	hud.queue_free()
+
+
+class LabelSurface extends HudChrome:
+	var texts: Array = []
+
+	func text(c: CanvasItem, pos: Vector2, s: String, size: int, color: Color, font: Font, outline: int = 0, outline_col: Color = Color(0, 0, 0, 0.5)) -> void:
+		texts.append({"s": s, "pos": pos, "size": size, "color": color})
+
+
+func test_the_fixture_card_labels_its_change_teams_door() -> void:
+	var eng := MatchEngine.new(357)
+	var hud := _hud(eng)
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 900.0
+	var surface := LabelSurface.new()
+	var shipped: HudChrome = hud.chrome
+	hud.chrome = surface
+	hud.queue_redraw()
+	await get_tree().process_frame
+	hud.chrome = shipped
+	var door := Rect2()
+	var label := ""
+	var hint := ""
+	for b in surface.buttons:
+		if str(b["id"]) != "teams":
+			continue
+		door = b["rect"]
+		label = str(b["label"])
+		hint = str(b["hint"])
+	assert_eq(label, "CHANGE TEAMS", "the fixture door has no stored caption")
+	assert_eq(hint, "T", "the fixture door lost its T shortcut")
+	assert_eq(surface.button_at(door.get_center()), "teams", "the fixture door does not answer a press")
+	var painted := 0
+	var keyed := 0
+	for t in surface.texts:
+		var pos: Vector2 = t["pos"]
+		if not door.has_point(pos):
+			continue
+		if str(t["s"]) == label:
+			painted += 1
+		elif str(t["s"]) == hint:
+			keyed += 1
+	assert_gte(painted, 1, "the fixture door drew no CHANGE TEAMS caption")
+	assert_gte(keyed, 1, "the fixture door drew no T hint")
+	var key_x: float = door.end.x - 10.0 - hud.f_med.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+	var caption_w: float = hud.f_bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+	assert_lte(door.position.x + 10.0 + caption_w, key_x, "the fixture door's caption runs under its T hint")
+	surface.texts.clear()
+	hud.mouse = door.get_center()
+	hud.chrome = surface
+	hud.queue_redraw()
+	await get_tree().process_frame
+	hud.chrome = shipped
+	var lit := 0
+	for t in surface.texts:
+		if str(t["s"]) == label and door.has_point(t["pos"]) and (t["color"] as Color) == UiChrome.C_TEXT:
+			lit += 1
+	assert_gte(lit, 1, "a hovered fixture door kept its resting ink")
+	hud.mouse = Vector2.ZERO
 	hud.queue_free()
 
 func test_phone_player_card_stays_clear_of_the_other_panels() -> void:
