@@ -124,6 +124,30 @@ func test_the_club_page_offers_the_manager() -> void:
 			found = true
 	assert_true(found, "the club page has no door to its manager")
 
+func test_the_club_page_draws_its_season_race() -> void:
+	var page := WikiModel.page(WikiModel.TEAM, "MUN")
+	var spark := {}
+	for block in page["blocks"]:
+		if str(block["k"]) == "spark":
+			spark = block
+	assert_false(spark.is_empty(), "the club page drew no position race")
+	var points: Array = spark["points"]
+	assert_gte(points.size(), 11, "the race lost a gameweek into the snapshot")
+	assert_eq(int(spark["clubs"]), 20, "the race counts the wrong clubs")
+	assert_eq(int(spark["place"]), int((points[points.size() - 1] as Dictionary)["position"]),
+		"the gold place is not the last day")
+	var spark_row := {}
+	for row in WikiBody.layout(page["blocks"], 1112.0, false)["rows"]:
+		if str(row["k"]) == "spark":
+			spark_row = row
+	assert_false(spark_row.is_empty(), "the body laid the race out as nothing")
+	assert_eq((spark_row["rect"] as Rect2).size.y, WikiBody.SPARK_H, "the chart is not its own height")
+	for row in WikiBody.layout(page["blocks"], 800.0, true)["rows"]:
+		if str(row["k"]) == "spark":
+			assert_eq((row["rect"] as Rect2).size.y, WikiBody.SPARK_COMPACT_H,
+				"a compact body kept the desktop chart height")
+
+
 func test_layout_fits_a_page_into_rows() -> void:
 	var page := WikiModel.page(WikiModel.TEAM, "MUN")
 	var desktop := WikiBody.layout(page["blocks"], 1112.0, false)

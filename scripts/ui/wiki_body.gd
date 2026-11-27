@@ -11,6 +11,8 @@ const SECTION_COMPACT_H := 18.0
 const NOTE_H := 24.0
 const KV_H := 34.0
 const BAR_H := 24.0
+const SPARK_H := 96.0
+const SPARK_COMPACT_H := 78.0
 const CHIP_H := 34.0
 const HEADER_ROW := 22.0
 
@@ -76,6 +78,15 @@ static func layout(blocks: Array, width: float, compact: bool = false,
 				rows.append({"k": "bar", "rect": Rect2(x, y, width, BAR_H), "label": str(item[0]), "value": float(item[1])})
 				y += BAR_H
 			y += 4.0
+		elif kind == "spark":
+			var h: float = SPARK_COMPACT_H if compact else SPARK_H
+			rows.append({
+				"k": "spark", "rect": Rect2(x, y, width, h), "points": block.get("points", []),
+				"clubs": int(block.get("clubs", 0)), "place": int(block.get("place", 0)),
+				"best": int(block.get("best", 0)), "worst": int(block.get("worst", 0)),
+				"accent": str(block.get("accent", "")),
+			})
+			y += h
 		elif kind == "chips":
 			if bool(block.get("strip", false)) and compact:
 				continue
