@@ -112,7 +112,7 @@ func test_leaving_a_watch_early_finishes_it_on_the_engine() -> void:
 	assert_eq(str(watch["fixture_id"]), held, "the watch did not take the fixture")
 	var engine := MatchEngine.new(SEED + 3, str(watch["home"]), str(watch["away"]))
 	engine.half = 2
-	engine.clock = 5390.0
+	engine.clock = 5399.5
 	engine.added[1] = 0.0
 	season.finishing = true
 	assert_false(season.set_watch(held, false), "a finishing watch took a planner flag")

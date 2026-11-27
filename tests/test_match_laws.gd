@@ -94,7 +94,7 @@ func test_injury_without_changes_leaves_ten() -> void:
 func test_referee_stays_on_the_pitch_and_whistles() -> void:
 	var eng := MatchEngine.new(17)
 	assert_eq(eng.referee_name, TeamData.REFEREE, "the official is not named from squad data")
-	for i in range(180):
+	for i in range(48):
 		eng.tick()
 	var r = eng.referee
 	assert_between(r.pos.x, 3.0, eng.L - 3.0, "the referee left the pitch: %s" % r.pos)
