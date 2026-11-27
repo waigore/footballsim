@@ -40,6 +40,9 @@ func _initialize() -> void:
 		return
 	league.show_season(season)
 	await _frames(3)
+	# The UX catalogue grades the league-hub surface, whose CONTINUE is the flow
+	# screen's named CTA; the report is shot beside it on the evidence page.
+	await _shot("issue320_hub_1600")
 	league.screen.show_report(picked)
 	await _frames(4)
 	print("REPORT fixture=", picked, " ", _read(league.screen))
