@@ -20,7 +20,6 @@ func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) 
 	ball.z = 0.0
 	ball.spin = 0.0
 	ball.planned_goal = false
-	ball.planned_save = false
 	ball.pos = pos
 	for q in players:
 		q.offside_flag = false
@@ -232,21 +231,10 @@ func _execute_restart() -> void:
 			_claim_ball(taker)
 
 func _take_penalty(taker, team: int) -> void:
-	var gk = _gk_of(1 - team)
 	var side = 1.0 if rng.randf() < 0.5 else -1.0
 	var aim_y = side * rng.randf_range(1.6, 3.3)
 	var aim_z = rng.randf_range(0.3, 1.5)
-	var conversion = 0.76 + float(taker.attr["sho"]) * 0.0018
-	var scored: bool = rng.randf() <= conversion
-	if not scored:
-		aim_y = side * rng.randf_range(3.7, 4.6)
 	shoot_ball(taker, aim_y, aim_z, 0.92, "penalty")
-
-
-	ball.planned_goal = scored
-	stats[team]["xg"] += conversion
-	stats[team]["shots"] += 1
-	stats[team]["on_target"] += 1
 	ball.pos = restart["pos"]
 	phase = "play"
 	_emit("penalty_taken", CommentaryRestarts.penalty_taken(rng, taker.name), team, taker)

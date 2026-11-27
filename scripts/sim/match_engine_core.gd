@@ -115,7 +115,6 @@ class Ball:
 	var last_touch_time := -10.0
 	var shot_saved := false
 	var planned_goal := false
-	var planned_save := false
 	var loose_t := 0.0
 
 

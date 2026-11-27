@@ -1,13 +1,17 @@
 name: Census (Poisson agreement)
 
 # Tier-2's physics↔Poisson censuses, and the dispatchable probe for a bigger
-# grid. Parent: #31; gate record DR-20261123-02.
+# grid. Parent: #31; gate record DR-20261123-02; the goals↔xG band: #361,
+# DR-20261127-07.
 #
 # A full 60 Hz GDScript match costs tens of seconds, so n = 32 matches per
 # anchor does not fit one runner. The fixed grid is therefore split across
 # shard jobs: each plays its slice, fails fast on the per-match wall-clock
 # budget and uploads its per-match rows. The assert job pools every shard and
-# gates dispersion against λ (`CensusLib.variance_tolerance`).
+# hard-gates two readings: goal dispersion against λ (`variance_tolerance`) and
+# mean goals against mean displayed xG, per side and pooled
+# (`goals_tolerance`). A breach in either fails this workflow's assert job, so
+# the ±10% calibration band is not a manual check.
 #
 # Dispatch with a larger `n` for a bigger manual census, or a smaller `n` plus
 # a higher `budget_ms` to measure a new host.
