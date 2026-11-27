@@ -169,6 +169,8 @@ suites = [
   "test_pl_competitions.gd",
   # The German pair's own season (#239): 18-club calendars start and advance.
   "test_german_season.gd",
+  # The player log reads the save's own goal/card rows, a ledger query.
+  "test_wiki_player_log.gd",
   # The Relegation and the membership swap (#240): the tie, the bands and the
   # save's new tiers.
   "test_german_relegation.gd",
@@ -230,6 +232,8 @@ suites = [
   "test_wiki_upcoming.gd",
   # The league index and the per-competition hubs (#190).
   "test_pl_competitions.gd",
+  # The player page reads his season match by match (DR-20261127-10).
+  "test_wiki_player_log.gd",
   "test_hud_layout.gd",
   "test_hud_chrome.gd",
   "test_touch_flow.gd",

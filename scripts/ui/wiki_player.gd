@@ -78,6 +78,7 @@ static func page(player_id: String) -> Dictionary:
 	var season_open := WikiModel.repo().season_active()
 	out["blocks"].append({"k": "section", "text": WikiLedger.heading("IN FOOTBALLSIM")})
 	out["blocks"].append(WikiLedger.player_line(sim, season_open))
+	out["blocks"].append_array(WikiPlayerLog.blocks(player_id, str(p["club_id"])))
 	out["blocks"].append({"k": "chips", "items": [{
 		"text": str(club.get("name", "")).to_upper(),
 		"target": {"page": WikiModel.TEAM, "id": str(p["club_id"])},
