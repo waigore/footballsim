@@ -129,8 +129,6 @@ func tick() -> void:
 
 func _tick_clock_end() -> void:
 	if half == 1:
-
-
 		if added[0] <= 0.0 and clock >= 2700.0:
 			added[0] = 20.0 + rng.randf_range(0.0, 50.0) + minf(100.0, stoppage_events * 4.0)
 		if clock >= 2700.0 + added[0]:
@@ -139,7 +137,6 @@ func _tick_clock_end() -> void:
 		if clock >= 5400.0 + added[1]:
 			_second_half_over()
 	else:
-
 		_tick_extra_time_period()
 
 func _end_first_half() -> void:

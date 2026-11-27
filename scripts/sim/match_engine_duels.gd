@@ -55,13 +55,11 @@ func _header(p) -> void:
 		_stats_shot(p, hxg, "header")
 		stats[p.team]["xg"] += hxg
 	elif p.team == possession_team or attacking:
-
 		var mate = _best_outlet(p)
 		var tp: Vector2 = mate.pos if mate != null else p.pos + Vector2(teams[p.team]["dir"] * 8.0, 0.0)
 		ball.vel = (tp - ball.pos).normalized() * 9.0
 		ball.vz = 1.0
 	else:
-
 		var away = Vector2(teams[p.team]["dir"] * 24.0, rng.randf_range(-14.0, 14.0))
 		ball.vel = away.normalized() * rng.randf_range(10.0, 16.0)
 		ball.vz = 5.5

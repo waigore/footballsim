@@ -5,8 +5,6 @@ const SMOTHER_RADIUS := 2.1
 const SMOTHER_BOX := 3.0
 
 func _move_players(dt: float) -> void:
-
-
 	_sep_x.resize(players.size())
 	_sep_y.resize(players.size())
 	var idx := 0
@@ -113,7 +111,6 @@ func _ball_physics(dt: float, goal_mode: bool = false) -> void:
 		if p == null:
 			ball.owner_id = -1
 		else:
-
 			var lead = 0.55 + 0.18 * sin(clock * 9.0 + p.id)
 			var ahead = p.facing * lead + p.vel * 0.045
 			var target = p.pos + ahead
@@ -153,8 +150,6 @@ func _ball_physics(dt: float, goal_mode: bool = false) -> void:
 		ball.pos += ball.vel * dt * 0.55
 
 func _ball_interactions(dt: float) -> void:
-
-
 	if ball.planned_goal:
 		return
 
@@ -218,7 +213,6 @@ func _ball_interactions(dt: float) -> void:
 			if q.team == ball.shot_team or q.sent_off or q.is_gk or q.cooldown > 0.0:
 				continue
 			if q.pos.distance_to(ball.pos) < 1.75:
-
 				if rng.randf() < HANDBALL_P:
 					_award_handball(q)
 					break

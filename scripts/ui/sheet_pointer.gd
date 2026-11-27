@@ -36,8 +36,6 @@ func handle(event: InputEvent, point: Vector2) -> bool:
 	if event is InputEventMouseMotion:
 		_motion(point)
 	elif event is InputEventPanGesture:
-
-
 		sheet.scroll_by(event.delta.y * PAN_STEP, event.delta.x * PAN_STEP)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
 		sheet.scroll_by(-WHEEL_STEP)
@@ -49,8 +47,6 @@ func handle(event: InputEvent, point: Vector2) -> bool:
 		else:
 			_up()
 	elif event is InputEventKey and event.pressed and not event.echo:
-
-
 		if not (sheet.has_method("text_key") and sheet.text_key(event.keycode, event.unicode)):
 			sheet.key(event.keycode)
 	else:

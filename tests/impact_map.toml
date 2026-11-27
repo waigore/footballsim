@@ -259,6 +259,11 @@ suites = [
   "test_hud_layout.gd",
 ]
 
+[domains.coverage_headers]
+suites = [
+  "test_coverage_branch_headers.gd",
+]
+
 # ----------------------------------------------------------------- sim ---
 
 [[rules]]
@@ -745,6 +750,10 @@ domain = "misc"
 [[rules]]
 match = "addons/**"
 domain = "misc"
+
+[[rules]]
+match = "tests/test_coverage_branch_headers.gd*"
+domain = "coverage_headers"
 
 [[rules]]
 match = "tools/select_impacted_tests.py"
