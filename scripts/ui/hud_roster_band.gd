@@ -123,6 +123,8 @@ func status(p: HudPaint, c: CanvasItem, game, speed_label: String, f_bold: Font,
 	var col := UiChrome.C_DIM
 	if game.paused:
 		col = UiChrome.C_GOLD
+	elif game.get("skip_armed") == true:
+		col = UiChrome.C_LIVE
 	elif is_over(phase):
 		col = UiChrome.C_DIM
 	elif game.mode != "full" and game.fast_mode:
@@ -145,6 +147,8 @@ static func is_over(phase: String) -> bool:
 func state_label(game, speed_label: String, phase: String = "") -> String:
 	if game.paused:
 		return "PAUSED"
+	if game.get("skip_armed") == true:
+		return skip_label(game.engine)
 	if is_over(phase):
 		return "FULL TIME  ·  MATCH OVER"
 	if game.mode != "full" and game.fast_mode:
@@ -152,6 +156,11 @@ func state_label(game, speed_label: String, phase: String = "") -> String:
 	if game.mode != "full":
 		return "%s  ·  LIVE" % Prefs.mode_label(game.mode)
 	return "FULL MATCH  ·  %s" % speed_label
+
+
+static func skip_label(engine: MatchEngine) -> String:
+	var target := "HALF TIME" if engine == null or int(engine.half) <= 1 else "FULL TIME"
+	return "SKIPPING  ·  TO %s" % target
 
 
 func tooltip(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font) -> void:
