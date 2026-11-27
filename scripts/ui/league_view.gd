@@ -22,9 +22,8 @@ static func sheets() -> Dictionary:
 		LeagueScreen.MODE_REPORT: ["book", "report_layout", "draw_report_body", "draw_report_chrome"],
 		LeagueScreen.MODE_PODIUM: ["book", "podium_layout", "draw_podium_body", "draw_podium_chrome"],
 		LeagueScreen.MODE_SYSTEM: ["system", "layout", "draw_body", "draw_chrome"],
-		LeagueScreen.MODE_STATS: ["extra", "stats_layout", "draw_stats_body", "draw_stats_chrome"],
-		LeagueScreen.MODE_INTEREST: ["extra", "interest_layout", "draw_interest_body",
-			"draw_interest_chrome"],
+		LeagueScreen.MODE_STATS: ["stats", "layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_INTEREST: ["interest", "layout", "draw_body", "draw_chrome"],
 	}
 
 

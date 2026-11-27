@@ -89,8 +89,10 @@ func sheet(pose: Array) -> RefCounted:
 			return screen.book
 		"system":
 			return screen.system
-		"extra":
-			return screen.sheet_extra
+		"stats":
+			return screen.sheet_stats
+		"interest":
+			return screen.sheet_interest
 	return screen.hub
 
 

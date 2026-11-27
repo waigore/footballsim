@@ -390,8 +390,8 @@ func test_the_sheet_chrome_keeps_back_top_left_and_the_primary_top_right() -> vo
 			"report": book.report_layout(vp, {"fixture": _fixture(1), "events": [], "day": "x"}),
 			"podium": book.podium_layout(vp, {"summary": {}}),
 			"system": LeagueSystemSheet.new().layout(vp, {"date": "2026-08-15", "name": "S"}),
-			"stats": LeagueExtra.new().stats_layout(vp, {"name": "S", "reports": []}),
-			"interest": LeagueExtra.new().interest_layout(vp, {"query": "", "results": [], "clubs": []}),
+			"stats": LeagueStatsSheet.new().layout(vp, {"name": "S", "reports": []}),
+			"interest": LeagueInterestSheet.new().layout(vp, {"query": "", "results": [], "clubs": []}),
 			"hub": LeagueSheet.new().hub_layout(vp, _state([_fixture(1)], _table())),
 		}
 		for label in sheets:
@@ -521,23 +521,23 @@ func test_the_load_row_status_reads_as_player_copy() -> void:
 
 func test_the_month_stepper_binds_its_label_and_chevrons() -> void:
 	for vp in [Vector2(1280, 720), Vector2(1600, 900), Vector2(913, 411), Vector2(360, 780)]:
-		var items: Array = LeagueExtra.new().stats_layout(vp, {"name": "S", "reports": [],
+		var items: Array = LeagueStatsSheet.new().layout(vp, {"name": "S", "reports": [],
 			"filters": {"league": "", "month": "2026-09", "team": "", "stat": "goals"}})
 		var prev := _item_rect(items, "statsmonth:-1")
 		var next := _item_rect(items, "statsmonth:1")
 		var read := _item_rect(items, "")
 		var goals := _item_rect(items, "statsstat:goals")
 		assert_true(read.size.x >= 72.0, "the readout has no width at %s" % vp)
-		assert_almost_eq(read.position.x, prev.end.x + LeagueExtra.STEP_GAP, 0.01,
+		assert_almost_eq(read.position.x, prev.end.x + LeagueStatsSheet.STEP_GAP, 0.01,
 			"the readout does not follow its back arrow at %s" % vp)
-		assert_almost_eq(next.position.x, read.end.x + LeagueExtra.STEP_GAP, 0.01,
+		assert_almost_eq(next.position.x, read.end.x + LeagueStatsSheet.STEP_GAP, 0.01,
 			"the forward arrow does not hug its readout at %s" % vp)
 		assert_almost_eq(prev.position.y, next.position.y, 0.01,
 			"the stepper cells do not share a row at %s" % vp)
 		assert_almost_eq(prev.size.y, read.size.y, 0.01,
 			"the readout left the arrows' height at %s" % vp)
 		if goals.position.y == next.position.y:
-			assert_gte(goals.position.x - next.end.x, LeagueExtra.STEP_AFTER,
+			assert_gte(goals.position.x - next.end.x, LeagueStatsSheet.STEP_AFTER,
 				"the stat chips crowd the stepper at %s" % vp)
 		else:
 			assert_gte(goals.position.y, next.end.y,
@@ -1162,20 +1162,20 @@ func test_the_system_advance_hint_names_the_pointer() -> void:
 
 
 func test_the_stats_empty_state_names_the_season_not_the_filters() -> void:
-	var sheet := LeagueExtra.new()
+	var sheet := LeagueStatsSheet.new()
 	var vp := Vector2(1280, 720)
-	var unplayed: Array = sheet.stats_layout(vp, {"name": "S", "reports": [],
+	var unplayed: Array = sheet.layout(vp, {"name": "S", "reports": [],
 		"played": 0, "leaders": [],
 		"filters": {"league": "", "month": "", "team": "", "stat": "goals"}})
 	assert_eq(_note(unplayed), "No matchday has been played yet.",
 		"an unplayed season blamed the filters")
 	assert_false(_has_caption(unplayed, "LEADERS"), "an empty LEADERS chart printed a bare heading")
-	var filtered: Array = sheet.stats_layout(vp, {"name": "S", "reports": [],
+	var filtered: Array = sheet.layout(vp, {"name": "S", "reports": [],
 		"played": 20, "leaders": [],
 		"filters": {"league": "PL", "month": "", "team": "mun", "stat": "goals"}})
 	assert_eq(_note(filtered), "No matchdays match these filters.",
 		"a played season emptied by its filters lost its note")
-	var charted: Array = sheet.stats_layout(vp, {"name": "S", "reports": [],
+	var charted: Array = sheet.layout(vp, {"name": "S", "reports": [],
 		"played": 20, "leaders": [{"name": "A. Scorer", "abbr": "MUN", "stat_value": 3}],
 		"filters": {"league": "", "month": "", "team": "", "stat": "goals"}})
 	assert_true(_has_caption(charted, "LEADERS  ·  GOALS"), "a chart with rows lost its caption")
@@ -1200,24 +1200,24 @@ func _item(items: Array, id: String) -> Dictionary:
 
 
 func test_a_phone_stats_sheet_lays_its_chips_and_stepper_for_a_finger() -> void:
-	var sheet := LeagueExtra.new()
+	var sheet := LeagueStatsSheet.new()
 	var vp := Vector2(913, 411)
 	var filters := {"league": "", "month": "2026-09", "team": "", "stat": "goals"}
 	var view := {"name": "S", "reports": [], "filters": filters,
 		"competitions": [{"id": "PL", "short": "PL"}, {"id": "LL", "short": "LL"}]}
-	var desk: Array = sheet.stats_layout(vp, view)
+	var desk: Array = sheet.layout(vp, view)
 	assert_almost_eq(_item_rect(desk, "statsleague:").size.y, 30.0, 0.01,
 		"the desktop league chip left its dense pitch")
-	assert_almost_eq(_item_rect(desk, "statsstat:goals").size.y, LeagueExtra.STEP_H, 0.01,
+	assert_almost_eq(_item_rect(desk, "statsstat:goals").size.y, LeagueStatsSheet.STEP_H, 0.01,
 		"the desktop stat chip left its dense pitch")
-	assert_almost_eq(_item_rect(desk, "statsmonth:-1").size.y, LeagueExtra.STEP_H, 0.01,
+	assert_almost_eq(_item_rect(desk, "statsmonth:-1").size.y, LeagueStatsSheet.STEP_H, 0.01,
 		"the desktop month arrow left its dense pitch")
-	assert_almost_eq(_item_rect(desk, "statsmonth:-1").size.x, LeagueExtra.STEP_W, 0.01,
+	assert_almost_eq(_item_rect(desk, "statsmonth:-1").size.x, LeagueStatsSheet.STEP_W, 0.01,
 		"the desktop month arrow left its dense width")
 
 	var phone_view: Dictionary = view.duplicate()
 	phone_view["touch"] = true
-	var phone: Array = sheet.stats_layout(vp, phone_view)
+	var phone: Array = sheet.layout(vp, phone_view)
 	var chips := 0
 	for item in phone:
 		var id := str(item["id"])
@@ -1239,9 +1239,9 @@ func test_a_phone_stats_sheet_lays_its_chips_and_stepper_for_a_finger() -> void:
 
 
 func test_a_narrow_phone_wraps_the_stat_chips_under_the_month_stepper() -> void:
-	var sheet := LeagueExtra.new()
+	var sheet := LeagueStatsSheet.new()
 	var vp := Vector2(360, 780)
-	var items: Array = sheet.stats_layout(vp, {"name": "S", "reports": [], "touch": true,
+	var items: Array = sheet.layout(vp, {"name": "S", "reports": [], "touch": true,
 		"filters": {"league": "", "month": "2026-09", "team": "", "stat": "goals"}})
 	var step: Rect2 = _item_rect(items, "statsmonth:1")
 	var goals: Rect2 = _item_rect(items, "statsstat:goals")
@@ -1291,11 +1291,11 @@ func test_a_phone_calendar_lays_day_cells_and_month_doors_for_a_finger() -> void
 
 
 func test_a_phone_interest_sheet_lays_its_rows_and_remove_doors_for_a_finger() -> void:
-	var sheet := LeagueExtra.new()
+	var sheet := LeagueInterestSheet.new()
 	var vp := Vector2(913, 411)
 	var club := {"id": "MUN", "name": "Manchester United", "abbr": "MUN"}
 	var view := {"query": "man", "clubs": [club], "results": [club]}
-	var desk: Array = sheet.interest_layout(vp, view)
+	var desk: Array = sheet.layout(vp, view)
 	assert_almost_eq(_item_rect(desk, "interest:add:MUN").size.y, LeagueExtra.ROW_H, 0.01,
 		"the desktop result row left its dense pitch")
 	assert_almost_eq(_item_rect(desk, "club:MUN").size.y, LeagueExtra.ROW_H, 0.01,
@@ -1305,7 +1305,7 @@ func test_a_phone_interest_sheet_lays_its_rows_and_remove_doors_for_a_finger() -
 
 	var phone_view: Dictionary = view.duplicate()
 	phone_view["touch"] = true
-	var phone: Array = sheet.interest_layout(vp, phone_view)
+	var phone: Array = sheet.layout(vp, phone_view)
 	var result: Rect2 = _item_rect(phone, "interest:add:MUN")
 	var row: Rect2 = _item_rect(phone, "club:MUN")
 	var door: Rect2 = _item_rect(phone, "interest:remove:MUN")
