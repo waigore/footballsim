@@ -278,11 +278,13 @@ func test_goals_only_replays_only_scored_goals() -> void:
 	var engine = MatchEngine.new(4242, "MUN", "MCI")
 	game.engine = engine
 	engine_dirty = true
-	game.highlights.restart()
-	for i in range(90):
-		engine.tick()
-		game.highlights.sample()
 	var director: HighlightDirector = game.highlights
+	director.restart()
+	while director.history.size() < HighlightDirector.MIN_CAPTURE_FRAMES:
+		engine.tick()
+		director.snapshot()
+		if director.history.size() < HighlightDirector.MIN_CAPTURE_FRAMES:
+			engine.clock += HighlightDirector.SNAPSHOT_EVERY
 	var clock := float(engine.clock)
 	director.on_event({"type": "shot", "clock": clock, "player_id": 7})
 	assert_false(director.waiting(), "a shot queued a replay in Goals only")
@@ -294,11 +296,11 @@ func test_goals_only_replays_only_scored_goals() -> void:
 	assert_false(director.waiting(), "a penalty that missed queued a replay in Goals only")
 	director.on_event({"type": "goal", "clock": clock, "player_id": 9, "team": 0, "text": "GOAL!"})
 	assert_true(director.waiting(), "a scored goal did not queue a replay in Goals only")
-	for i in range(180):
+	for i in range(3):
 		engine.tick()
-		game.highlights.sample()
-		if game.replay != null:
-			break
+		director.snapshot()
+		engine.clock += HighlightDirector.SNAPSHOT_EVERY * 0.5
+	director.open_pending(true)
 	assert_true(game.in_highlight, "a scored goal did not open a replay in Goals only")
 	assert_not_null(game.replay, "Goals only opened no clip for the goal")
 	game.replay.finish(true)
@@ -306,11 +308,11 @@ func test_goals_only_replays_only_scored_goals() -> void:
 	game.view.set_mode("highlights")
 	director.on_event({"type": "shot", "clock": float(engine.clock) + 0.5, "player_id": 10})
 	assert_true(director.waiting(), "Highlights stopped queuing shots")
-	for i in range(180):
+	for i in range(3):
 		engine.tick()
-		game.highlights.sample()
-		if game.replay != null:
-			break
+		director.snapshot()
+		engine.clock += HighlightDirector.SNAPSHOT_EVERY * 0.5
+	director.open_pending(true)
 	assert_true(game.in_highlight, "Highlights stopped replaying shots")
 	game.replay.finish(true)
 	game.replay = null
