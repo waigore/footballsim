@@ -9,6 +9,35 @@ const PAD := 22.0
 const SIZE := 12
 
 
+var chips: Array = []
+var rects: Array = []
+var short := false
+var layout_key := ""
+
+
+func clear() -> void:
+	chips = []
+	rects = []
+	short = false
+	layout_key = ""
+
+
+func rebuild(page: Dictionary, font: Font, width: float) -> void:
+	chips = items(page)
+	layout_key = cache_key(page, width, chips.size())
+	var built := layout(font, width, chips)
+	rects = built["rects"]
+	short = bool(built["short"])
+
+
+func stale(page: Dictionary, width: float) -> bool:
+	return layout_key != "" and layout_key != cache_key(page, width, chips.size())
+
+
+static func cache_key(page: Dictionary, width: float, count: int) -> String:
+	return "%s|%d|%d" % [str(page.get("title", "")), int(round(width)), count]
+
+
 static func items(page: Dictionary) -> Array:
 	var out: Array = []
 	for block in page.get("blocks", []):

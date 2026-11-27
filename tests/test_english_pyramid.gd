@@ -7,11 +7,19 @@ const SEED := 7301
 const ENGLISH := ["PL", "CH", "L1", "L2", "NL"]
 const PAIR_EMPTY := "_pair_empty.sqlite"
 const PAIR_SEED_EMPTY := "_pair_seed_empty.sqlite"
+const MIXED := "_mixed.sqlite"
+const LONE_PL := "_lone_pl.sqlite"
+const STACK4_EMPTY := "_stack4_empty.sqlite"
+const MIXED_COMPS := ["PL", "CH", "L1", "LL", "BL", "BL2"]
+const STACK4 := ["PL", "CH", "L1", "L2"]
 
 var season: LeagueSeason = null
 var slug := ""
 var slug_pair := ""
 var slug_pair_seed := ""
+var slug_mixed := ""
+var slug_lone := ""
+var slug_stack := ""
 
 
 var expected_bracket: Dictionary = {}
@@ -38,6 +46,22 @@ func before_all() -> void:
 	slug_pair_seed = seeded.save.slug
 	_snapshot_as(seeded, PAIR_SEED_EMPTY)
 	seeded.close()
+	var mixed := _finished("Two Countries", 6060, MIXED_COMPS)
+	assert_not_null(mixed, "the shared mixed-country calendar did not build")
+	slug_mixed = mixed.save.slug
+	_snapshot_as(mixed, MIXED)
+	mixed.close()
+	var lone := _finished("Premier League Alone", 7, ["PL"])
+	assert_not_null(lone, "the shared lone Premier League did not build")
+	slug_lone = lone.save.slug
+	_snapshot_as(lone, LONE_PL)
+	lone.close()
+	var stack := LeagueSeason.create(
+		"Stack 4", "generated", "fixture_days", 15, STACK4)
+	assert_not_null(stack, "the shared four-tier stack did not build")
+	slug_stack = stack.save.slug
+	_snapshot_as(stack, STACK4_EMPTY)
+	stack.close()
 	season = LeagueSeason.open(slug)
 
 
@@ -217,20 +241,19 @@ func test_a_five_tier_save_builds_every_calendar() -> void:
 
 
 func test_any_contiguous_english_stack_builds() -> void:
-	var stack: Array = ENGLISH.slice(0, 4)
-	var built := LeagueSeason.create(
-		"Stack 4", "generated", "fixture_days", 15, stack)
+	var built := _restore(STACK4_EMPTY, slug_stack)
 	assert_not_null(built, "the four-tier stack did not build")
-	assert_eq(built.save.competition_ids(), stack, "the four-tier stack lost a tier")
-	for cid in stack:
+	assert_eq(built.save.competition_ids(), STACK4, "the four-tier stack lost a tier")
+	for cid in STACK4:
 		var expected := 380 if cid == "PL" else 552
 		assert_eq(built.record.fixtures.unplayed(str(cid)), expected,
 			"%s did not build in the four-tier stack" % cid)
 	built.close()
+	_reopen_main()
 
 
 func test_the_pyramid_runs_beside_the_other_countries() -> void:
-	var mixed := _finished("Two Countries", 6060, ["PL", "CH", "L1", "LL", "BL", "BL2"])
+	var mixed := _restore(MIXED, slug_mixed)
 	assert_not_null(mixed, "the mixed save did not build")
 	var brackets := LeaguePlayoffs.build_all(mixed)
 	assert_true(brackets.has("CH"), "the Championship bracket did not settle beside Germany")
@@ -245,6 +268,7 @@ func test_the_pyramid_runs_beside_the_other_countries() -> void:
 		assert_eq(LeagueTiers.country_of(str(link["top"])), "England",
 			"the pyramid swapped a club out of England")
 	mixed.close()
+	_reopen_main()
 
 
 func test_the_bracket_draws_the_places_under_promotion() -> void:
@@ -403,7 +427,7 @@ func test_an_unplayed_calendar_settles_nothing() -> void:
 	_reopen_main()
 
 func test_a_lone_tier_settles_nothing() -> void:
-	var alone := _finished("Premier League Alone", 7, ["PL"])
+	var alone := _restore(LONE_PL, slug_lone)
 	assert_not_null(alone, "the single-tier save did not build")
 	var summary := alone.summary()
 	assert_true((summary.get("playoffs", {}) as Dictionary).is_empty(),
@@ -412,6 +436,7 @@ func test_a_lone_tier_settles_nothing() -> void:
 		"a lone Premier League swapped clubs")
 	assert_eq(int(PLCompetitions.clubs("PL")), 20, "the Premier League lost clubs with nowhere to go")
 	alone.close()
+	_reopen_main()
 
 func test_a_club_finds_its_new_tier_in_the_encyclopedia() -> void:
 	var summary := _current().summary()

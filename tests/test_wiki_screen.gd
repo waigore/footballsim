@@ -334,6 +334,22 @@ func test_a_phone_league_page_keeps_its_competition_doors() -> void:
 	assert_eq(seen.size(), 20, "the phone body still repeats the competition strip's chips")
 
 
+func test_a_competition_strip_door_opens_that_league() -> void:
+	wiki.touch = true
+	wiki.open(WikiModel.LEAGUE, "")
+	var doors := WikiPageStrip.doors(Vector2.ZERO, wiki.strip.rects, wiki.strip.chips)
+	assert_gte(doors.size(), 1, "the strip had no other competition to open")
+	var door: Dictionary = doors[0]
+	var want: String = str(door["id"]).substr(5)
+	var cut := want.find(":")
+	assert_gt(cut, 0, "a strip door lost its page id")
+	wiki.click(str(door["id"]))
+	assert_eq(str(wiki.current()["page"]), want.substr(0, cut),
+		"the strip door opened another page kind")
+	assert_eq(str(wiki.current()["id"]), want.substr(cut + 1),
+		"the strip door opened another competition")
+
+
 func test_a_phone_strip_names_the_league_it_cannot_fit() -> void:
 	var chips := WikiPageStrip.items(WikiModel.page(WikiModel.LEAGUE, ""))
 	var built := WikiPageStrip.layout(wiki.f_bold, 150.0, chips)
