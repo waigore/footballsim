@@ -30,11 +30,8 @@ var menu_layer: InterestLayer = null
 
 var nav := WikiNav.new()
 var page_data: Dictionary = {}
-
-var strip_items: Array = []
-var strip_rects: Array = []
-var strip_short := false
-var strip_key := ""
+var strip := WikiPageStrip.new()
+var input: WikiScreenInput = null
 
 var f_bold: FontFile
 var f_med: FontFile
@@ -57,6 +54,7 @@ func _ready() -> void:
 	add_child(body)
 	rows_hints = body.hints
 	tooltip = DateOverlay.attach(self, body, true)
+	input = WikiScreenInput.new(self)
 
 
 	interest.club_at = func(p: Vector2) -> String:
@@ -92,6 +90,7 @@ func back() -> void:
 func close() -> void:
 	nav.close()
 	page_data = {}
+	strip.clear()
 	closed.emit()
 
 func current() -> Dictionary:
@@ -107,8 +106,7 @@ func crumb_pages() -> Array:
 func _refresh() -> void:
 	var top := current()
 	page_data = WikiModel.page(str(top.get("page", WikiModel.LEAGUE)), str(top.get("id", "")))
-	strip_items = WikiPageStrip.items(page_data)
-	_strip_layout()
+	_strip_sync()
 	if body != null:
 		var box := body_rect(design_vp())
 		body.touch = touch
@@ -119,91 +117,31 @@ func _refresh() -> void:
 	queue_redraw()
 
 
-func _strip_layout() -> void:
-	var width := header_width()
-	strip_items = WikiPageStrip.items(page_data)
-	strip_key = _strip_key()
-	var built := WikiPageStrip.layout(f_bold, width, strip_items)
-	strip_rects = built["rects"]
-	strip_short = bool(built["short"])
-
-
-func _strip_key() -> String:
-	if f_bold == null:
-		return ""
-	return "%s|%d|%d" % [str(page_data.get("title", "")),
-		int(round(header_width())), strip_items.size()]
-
-
-func header_width() -> float:
-	return WikiHeader.metrics(design_vp(), is_compact(), touch, false)["width"]
+func _strip_sync() -> void:
+	var width: float = float(WikiHeader.metrics(design_vp(), is_compact(), touch, false)["width"])
+	strip.rebuild(page_data, f_bold, width)
 
 
 func click(id: String) -> void:
-	if interest.click(id):
-		return
-	if id == "back":
-		back()
-	elif id == "close":
-		close()
-	elif id.begins_with("crumb:"):
-		nav.truncate_to(int(id.substr(6)))
-		_refresh()
-	elif id.begins_with("interest:"):
-		interest_toggled.emit(id.substr(9))
+	if input != null:
+		input.click(id)
 
 
 func tap(p: Vector2) -> bool:
-	if body == null:
-		return false
-	var target: Dictionary = body.hit(p)
-	if target.is_empty():
-		return false
-	push(str(target.get("page", "")), str(target.get("id", "")))
-	return true
+	return input.tap(p) if input != null else false
 
 
-func scroll_by(delta: float, _dx: float = 0.0) -> void:
-	if body != null:
-		body.scroll_by(delta)
+func scroll_by(delta: float, dx: float = 0.0) -> void:
+	if input != null:
+		input.scroll_by(delta, dx)
 
 
 func key(code: int) -> bool:
-	if interest.is_open() and (code == KEY_ESCAPE or code == KEY_BACKSPACE):
-		interest.close()
-		queue_redraw()
-		return true
-	if code == KEY_ESCAPE or code == KEY_BACKSPACE or code == KEY_LEFT:
-		back()
-	elif code == KEY_UP or code == KEY_W:
-		scroll_by(-120.0)
-	elif code == KEY_DOWN or code == KEY_S:
-		scroll_by(120.0)
-	elif code == KEY_PAGEUP:
-		scroll_page(-1.0)
-	elif code == KEY_PAGEDOWN:
-		scroll_page(1.0)
-	elif code == KEY_HOME:
-		scroll_to(0.0)
-	elif code == KEY_END:
-		scroll_to(INF)
-	else:
-		return false
-	return true
+	return input.key(code) if input != null else false
 
-func scroll_page(direction: float) -> void:
-	if body != null:
-		body.scroll_by(direction * body.size.y * 0.9)
-
-func scroll_to(at: float) -> void:
-	if body != null:
-		body.scroll_to(at)
 
 func button_at(p: Vector2) -> String:
-	for b in buttons:
-		if (b["rect"] as Rect2).has_point(p):
-			return str(b["id"])
-	return ""
+	return input.button_at(p) if input != null else ""
 
 
 func design_vp() -> Vector2:
@@ -214,7 +152,7 @@ func is_compact() -> bool:
 
 
 func body_rect(vp: Vector2) -> Rect2:
-	return WikiHeader.body_rect(vp, is_compact(), touch, not strip_items.is_empty())
+	return WikiHeader.body_rect(vp, is_compact(), touch, not strip.chips.is_empty())
 
 
 func _draw() -> void:
@@ -231,6 +169,7 @@ func _process(d: float) -> void:
 		body.mouse = mouse
 		body.position = box.position
 		body.size = box.size
-		if strip_key != "" and strip_key != _strip_key():
-			_strip_layout()
+		var width: float = float(WikiHeader.metrics(design_vp(), is_compact(), touch, false)["width"])
+		if strip.stale(page_data, width):
+			_strip_sync()
 	queue_redraw()
