@@ -119,6 +119,9 @@ screens:
       # plus the club long-press menu they raise (#310).
       - scripts/ui/league_start_sheet.gd
       - scripts/ui/league_extra.gd
+      - scripts/ui/league_stats_sheet.gd
+      - scripts/ui/league_interest_sheet.gd
+      - scripts/ui/league_field_focus.gd
       - scripts/ui/league_system.gd
       - scripts/ui/league_system_actions.gd
       - scripts/ui/interest_menu.gd
