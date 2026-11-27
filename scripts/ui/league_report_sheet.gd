@@ -15,6 +15,11 @@ extends RefCounted
 ## `draw_*` paints exactly those rects.
 
 const HEADER := 58.0
+## The club caption's own line above each column, and the first event row's top
+## below it (#320): the caption is painted, not laid out, so the rows must leave
+## it a band — otherwise the first event shares its line.
+const CAPTION_Y := HEADER + 72.0
+const EVENTS_TOP := HEADER + 84.0
 ## The ▶ hit target beside a goal: thumb-sized, never hover-only.
 const PLAY_W := 44.0
 const PLAY_H := 26.0
@@ -88,9 +93,10 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 			goal += 1
 		numbered.append({"event": e, "goal": ordinal})
 	# Each column keeps its own cursor: a goal's commentary line makes that
-	# column taller without pushing the other side's rows down.
+	# column taller without pushing the other side's rows down. The first row
+	# starts below the club captions' band, not on it (#320).
 	var places := columns(vp)
-	var cursors := {"home": y, "away": y}
+	var cursors := {"home": EVENTS_TOP, "away": EVENTS_TOP}
 	for item in numbered:
 		var e: Dictionary = item["event"]
 		var side := LeagueRoundup.side_of(report["fixture"], e)
@@ -158,7 +164,7 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 			var club_id := str(fx.get(pair[1], ""))
 			var caption: String = LeagueColumns.fit_name(str(fx.get(pair[2], "")), bold, 10,
 				float(places["w"]))
-			InterestNames.run(c, names, club_id, caption, Vector2(x, HEADER + 72.0), 10,
+			InterestNames.run(c, names, club_id, caption, Vector2(x, CAPTION_Y), 10,
 				LeagueInterestMark.ink(interest, club_id), bold)
 	for item in items:
 		var rect: Rect2 = item["rect"]
