@@ -140,6 +140,33 @@ func test_new_league_opens_the_wizard_and_takes_the_setup() -> void:
 	assert_not_null(LeagueSeason.active, "no season is active")
 	assert_eq(str(LeagueSeason.active.state()["advance_mode"]), "every_day", "the save did not keep its advance mode")
 
+func test_a_phone_new_league_presses_create_on_its_pinned_bar() -> void:
+	var saved: float = screen().ui_scale if screen() != null else 1.0
+	game.menus.open_menu()
+	press(door("new_league").get_center())
+	assert_eq(screen().mode, LeagueScreen.MODE_WIZARD, "the wizard did not open on a phone")
+	_phone_scale()
+	var create := Rect2()
+	for item in screen().buttons:
+		if str(item["id"]) == "create":
+			create = item["rect"]
+			assert_true(bool(item.get("pinned", false)),
+				"a phone's CREATE SEASON was left to scroll away")
+	assert_gt(create.size.y, 0.0, "the phone wizard laid out no CREATE SEASON")
+	assert_lte(create.end.y, screen().design_vp().y + 0.01,
+		"a phone's CREATE SEASON sits below the fold")
+	assert_gte(create.position.y, screen().body.position.y + screen().body.size.y,
+		"the scrolling list runs under CREATE SEASON")
+	assert_true(screen().body.more_below(), "the clipped sheet drew no cue that it continues")
+	assert_eq(screen().button_at(create.get_center()), "create",
+		"a press on the pinned door reached nothing")
+	press_id("create")
+	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "the pinned CREATE SEASON started no season")
+	assert_not_null(LeagueSeason.active, "the pinned door created no save")
+	screen().ui_scale = saved
+	screen().refresh()
+
+
 func test_the_hub_plans_and_toggles_a_fixture() -> void:
 	var plan: Array = screen().current_view()["plan"]
 	assert_gte(plan.size(), 1, "the hub does not list the matchday")
