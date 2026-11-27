@@ -31,6 +31,11 @@ var menu_layer: InterestLayer = null
 var nav := WikiNav.new()
 var page_data: Dictionary = {}
 
+var strip_items: Array = []
+var strip_rects: Array = []
+var strip_short := false
+var strip_key := ""
+
 var f_bold: FontFile
 var f_med: FontFile
 var f_body: FontFile
@@ -102,6 +107,8 @@ func crumb_pages() -> Array:
 func _refresh() -> void:
 	var top := current()
 	page_data = WikiModel.page(str(top.get("page", WikiModel.LEAGUE)), str(top.get("id", "")))
+	strip_items = WikiPageStrip.items(page_data)
+	_strip_layout()
 	if body != null:
 		var box := body_rect(design_vp())
 		body.touch = touch
@@ -110,6 +117,26 @@ func _refresh() -> void:
 		body.set_page(page_data, is_compact())
 		body.followed = WikiInterest.followed_set(LeagueSeason.active)
 	queue_redraw()
+
+
+func _strip_layout() -> void:
+	var width := header_width()
+	strip_items = WikiPageStrip.items(page_data)
+	strip_key = _strip_key()
+	var built := WikiPageStrip.layout(f_bold, width, strip_items)
+	strip_rects = built["rects"]
+	strip_short = bool(built["short"])
+
+
+func _strip_key() -> String:
+	if f_bold == null:
+		return ""
+	return "%s|%d|%d" % [str(page_data.get("title", "")),
+		int(round(header_width())), strip_items.size()]
+
+
+func header_width() -> float:
+	return WikiHeader.metrics(design_vp(), is_compact(), touch, false)["width"]
 
 
 func click(id: String) -> void:
@@ -187,7 +214,7 @@ func is_compact() -> bool:
 
 
 func body_rect(vp: Vector2) -> Rect2:
-	return WikiHeader.body_rect(vp, is_compact())
+	return WikiHeader.body_rect(vp, is_compact(), touch, not strip_items.is_empty())
 
 
 func _draw() -> void:
@@ -204,4 +231,6 @@ func _process(d: float) -> void:
 		body.mouse = mouse
 		body.position = box.position
 		body.size = box.size
+		if strip_key != "" and strip_key != _strip_key():
+			_strip_layout()
 	queue_redraw()

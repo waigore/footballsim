@@ -192,9 +192,10 @@ func test_a_tap_outside_the_sheet_is_ignored() -> void:
 	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
 	await get_tree().process_frame
 	var screen := _screen()
-	var header: Vector2 = screen.body.position + Vector2(60.0, -20.0)
-	_click(header)
+	var blank := Vector2(screen.design_vp().x * 0.5, screen.body.position.y - 22.0)
+	_click(blank)
 	assert_eq(screen.stack.size(), 1, "a tap in the header opened a page")
+	assert_true(game.wiki_host.is_open(), "a tap in the header closed the sheet")
 	game.wiki_host.close()
 
 
