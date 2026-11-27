@@ -5,6 +5,8 @@ const PATHS: Array[String] = [
 	"res://scripts/sim/match_engine_play.gd",
 	"res://scripts/sim/strongest_xi.gd",
 	"res://scripts/sim/match_engine_clock.gd",
+	"res://scripts/sim/match_engine_snapshot.gd",
+
 	"res://scripts/sim/goal_vignette_ai.gd",
 	"res://scripts/sim/match_engine_duels.gd",
 	"res://scripts/ui/sheet_pointer.gd",
