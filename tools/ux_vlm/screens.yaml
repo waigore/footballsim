@@ -155,6 +155,7 @@ screens:
       - scripts/ui/wiki_body.gd
       - scripts/ui/wiki_chrome.gd
       - scripts/ui/wiki_model.gd
+      - scripts/ui/wiki_manager.gd
       - scripts/ui/wiki_absence.gd
       - scripts/ui/wiki_ledger.gd
       - scripts/ui/wiki_competitions.gd
