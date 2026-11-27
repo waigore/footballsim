@@ -49,7 +49,8 @@ static func body_rect(vp: Vector2, compact: bool, touch := false, has_strip := f
 static func paint(screen: WikiScreen) -> void:
 	var vp: Vector2 = screen.design_vp()
 	var compact: bool = screen.is_compact()
-	var chips: Array = screen.strip_items
+	var strip: WikiPageStrip = screen.strip
+	var chips: Array = strip.chips
 	var trail: Array = screen.crumb_pages()
 	var followed: Dictionary = screen.body.followed if screen.body != null else {}
 	var m := metrics(vp, compact, screen.touch, not chips.is_empty())
@@ -83,9 +84,9 @@ static func paint(screen: WikiScreen) -> void:
 			(back_rect.position.y + back_rect.size.y * 0.5) + 4.0, trail)
 		if not chips.is_empty():
 			var band := Vector2(origin_x, float(m["strip_y"]))
-			WikiPageStrip.paint(screen, screen.f_bold, band, screen.strip_rects, chips,
-				followed, screen.mouse, screen.strip_short)
-			for door in WikiPageStrip.doors(band, screen.strip_rects, chips):
+			WikiPageStrip.paint(screen, screen.f_bold, band, strip.rects, chips,
+				followed, screen.mouse, strip.short)
+			for door in WikiPageStrip.doors(band, strip.rects, chips):
 				screen._add(str(door["id"]), door["rect"])
 	else:
 		_title_block(screen, 24.0, m, accent)

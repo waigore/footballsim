@@ -48,7 +48,7 @@ func _pose(vp: Vector2, name: String) -> void:
 			shown += 1
 	print("POSE %s design=%s header=%.1f body=%.1f club_rows=%d strip=%d" % [
 		name, str(screen.design_vp()), screen.body.position.y, screen.body.size.y, shown,
-		screen.strip_rects.size()])
+		screen.strip.rects.size()])
 	await _capture(name)
 	scene.wiki_host.close()
 	await _frames(2)
