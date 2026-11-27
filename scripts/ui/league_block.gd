@@ -24,6 +24,21 @@ const TIGHT_BASE := 32.0
 const TIGHT_LINE := 14.0
 const GUTTER := 16.0
 const INSET := 10.0
+## A pending row's kick-off time prints from the row's left edge, and the clubs
+## start this far past its ink.
+const TIME_X := 8.0
+const TIME_GAP := 8.0
+
+## Where the clubs start on a pending row (#309). A season with no kick-off time
+## to print — the real-fixture calendar stores none — starts them on the block's
+## own inset, the x this block puts its home name at, so a whistle moves neither
+## name sideways. A time that is printed is measured, never guessed at.
+static func names_x(rect: Rect2, kick: String, font: Font, time_size: int = 10) -> float:
+	var inset := rect.position.x + INSET
+	if kick == "":
+		return inset
+	var after := rect.position.x + TIME_X + InterestNames.width(font, kick, time_size) + TIME_GAP
+	return maxf(inset, after)
 
 ## The two columns a block prints in, from the row it sits in.
 static func columns(rect: Rect2) -> Dictionary:

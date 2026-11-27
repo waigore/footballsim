@@ -37,8 +37,11 @@ static func paint_fixture(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dic
 	var line_y := rect.position.y + LINE
 	var time := str(fx.get("kickoff_time", ""))
 	if time != "":
-		UiChrome.text(c, Vector2(x + 8.0, line_y), time, 10, UiChrome.C_DIM, med)
-	x += 60.0
+		UiChrome.text(c, Vector2(x + LeagueBlock.TIME_X, line_y), time, 10, UiChrome.C_DIM, med)
+	# A season with no kick-off time — the real-fixture calendar stores none —
+	# starts its clubs on the block's inset, so the whistle that swaps this row
+	# for the result block moves no name sideways (#309).
+	x = LeagueBlock.names_x(rect, time, med, 10)
 	var room := maxf((rect.end.x - 96.0 - x) * 0.46, 60.0)
 	var home_name: String = LeagueColumns.fit_name(str(fx.get("home_name", "")), bold, 13, room)
 	x += InterestNames.run(c, names, str(fx.get("home_club_id", "")), home_name,

@@ -963,6 +963,54 @@ func test_the_plan_rows_and_side_table_carry_the_shortlist_mark() -> void:
 	var rail := LeagueSideTable.places(box)
 	assert_eq((side[0]["places"] as Dictionary), rail, "the rows disagree about the rail")
 
+## #309: a real-fixture season stores no kick-off time, so the planner's row had
+## nothing to print yet still advanced past the empty slot, leaving a blank
+## gutter before the clubs. With no time, the row starts its names on the inset
+## the result block uses, so the whistle moves nothing sideways.
+func test_a_pending_row_with_no_kick_off_clears_no_gutter() -> void:
+	var med: Font = UiChrome.fonts()["med"]
+	var row := Rect2(24.0, 80.0, 600.0, LeagueChrome.ROW_H)
+	var inset: float = row.position.x + LeagueBlock.INSET
+	assert_almost_eq(LeagueBlock.names_x(row, "", med), inset, 0.01,
+		"a row with no kick-off time did not start on the block's inset")
+	var timed: float = LeagueBlock.names_x(row, "15:00", med)
+	assert_almost_eq(timed, row.position.x + LeagueBlock.TIME_X
+		+ InterestNames.width(med, "15:00", 10) + LeagueBlock.TIME_GAP, 0.01,
+		"a printed kick-off was not measured")
+	# The paint agrees with the geometry, and a played row replaces the pending
+	# one at the same x.
+	var pending := _fixture(1)
+	pending["kickoff_time"] = ""
+	var played := _fixture(2)
+	played["status"] = "played"
+	played["home_goals"] = 2
+	played["away_goals"] = 0
+	var probe := _PlanRowProbe.new()
+	probe.fixtures = [pending, played]
+	add_child(probe)
+	await get_tree().process_frame
+	assert_eq(probe.strips.size(), 4, "the probe painted no club strips")
+	assert_almost_eq((probe.strips[0] as Rect2).position.x, inset, 0.01,
+		"the pending row's clubs start inside a blank gutter")
+	assert_almost_eq((probe.strips[2] as Rect2).position.x, (probe.strips[0] as Rect2).position.x,
+		0.01, "the clubs jump sideways when the row becomes a result")
+	probe.queue_free()
+
+## A tiny canvas item the engine really paints, so both row grammars run under a
+## frame rather than outside `_draw`.
+class _PlanRowProbe extends Control:
+	var fixtures: Array = []
+	var strips: Array = []
+
+	func _draw() -> void:
+		var names := InterestNames.new()
+		var row := Rect2(24.0, 80.0, 600.0, LeagueChrome.ROW_H)
+		for fx in fixtures:
+			LeaguePlanRows.paint_fixture(self, row, fx, UiChrome.fonts(), {}, names,
+				UiChrome.C_TEXT, UiChrome.C_TEXT)
+		for zone in names.zones:
+			strips.append(zone["rect"])
+
 ## The paint path is one frame re-entering the `_draw` call it arrived from
 ## (see `LeagueCalendarView._draw_body`); headless it is a straight call.
 func test_the_calendar_paint_band_reuses_the_draw_call() -> void:
