@@ -11,6 +11,12 @@ const CELL_H_TALL := 34.0
 
 const CELL_GAP := 2.0
 
+const LEGEND := "FIXTURES PLAYED / TOTAL"
+
+const LEGEND_SHORT := "PLAYED / TOTAL"
+
+const LEGEND_SIZE := 10
+
 
 static func cell_pitch(vp: Vector2, touch: bool) -> float:
 	var base: float = CELL_H if vp.y < COMPACT_H else CELL_H_TALL
@@ -36,6 +42,29 @@ var cache := {}
 var hints := DateHints.new()
 
 var names := InterestNames.new()
+
+
+static func legend_rect(vp: Vector2, view: Dictionary, fonts: Dictionary) -> Dictionary:
+	if not _month_has_fixtures(view):
+		return {}
+	var bold: Font = fonts["bold"]
+	var label: String = LeagueMonth.label(str(view.get("month", "")))
+	var left: float = 24.0 + UiChrome.text_width(bold, label, 13) + 12.0
+	var right: float = month_door_rects(vp, bool(view.get("touch", false)))[0].position.x - 12.0
+	var room: float = right - left
+	for text in [LEGEND, LEGEND_SHORT]:
+		var width: float = UiChrome.text_width(bold, str(text), LEGEND_SIZE)
+		if width <= room:
+			return {"text": str(text), "rect": Rect2(left, HEADER + 13.0, width, 12.0)}
+	return {}
+
+
+static func _month_has_fixtures(view: Dictionary) -> bool:
+	var days: Dictionary = view.get("days", {})
+	for date in days:
+		if int((days[date] as Dictionary).get("n", 0)) > 0:
+			return true
+	return false
 
 func layout(vp: Vector2, view: Dictionary) -> Array:
 	var touch := bool(view.get("touch", false))
@@ -99,6 +128,11 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 		bool(view.get("touch", false)))
 	UiChrome.text(c, Vector2(24.0, HEADER + 25.0), LeagueMonth.label(str(view.get("month", ""))),
 		13, UiChrome.C_TEXT, fonts["bold"])
+	var legend := legend_rect(vp, view, fonts)
+	if not legend.is_empty():
+		var rect: Rect2 = legend["rect"]
+		UiChrome.text(c, Vector2(rect.position.x, rect.end.y), str(legend["text"]),
+			LEGEND_SIZE, UiChrome.C_DIM, fonts["bold"])
 
 func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	_paint_band(c, _draw_body.bind(vp, fonts, items, view))

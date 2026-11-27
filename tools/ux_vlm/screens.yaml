@@ -148,7 +148,7 @@ screens:
       - scripts/ui/league_calendar_view.gd
       - scripts/ui/league_month.gd
       - scripts/ui/league_plan_rows.gd
-    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-calendar-1600.jpg
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261128-desk-l-calendar-1600.png
   - id: encyclopedia
     title: Encyclopedia
     kind: browse
