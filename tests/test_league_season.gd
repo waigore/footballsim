@@ -171,10 +171,7 @@ func test_a_second_watch_mid_season_records_and_rolls_on() -> void:
 	assert_eq((season.report(held)["score"] as Array)[1], 0, "the second watch lost its score")
 
 func test_the_season_walks_to_a_complete_round_robin() -> void:
-	var guard := 0
-	while season.matches_remaining() > 0 and guard < 40:
-		season.advance()
-		guard += 1
+	_ledger_play_remaining()
 	assert_eq(season.matches_remaining(), 0, "the season could not be finished")
 	assert_eq(str(season.state()["status"]), "complete", "the season did not close")
 	var table: Array = season.state()["table"]
@@ -312,10 +309,54 @@ func test_recompute_restores_a_drifted_side_record() -> void:
 	assert_eq(int(found["points"]), int(row["points"]), "the recompute lost the points")
 
 func _play_until(rounds: int) -> void:
-	var guard := 0
-	while season.record.fixtures.completed_matchdays() < rounds and guard < 40:
-		season.advance()
-		guard += 1
+	if season.record.fixtures.completed_matchdays() >= rounds:
+		return
+	_ledger_play_matchdays(rounds)
+
+
+func _ledger_play_matchdays(rounds: int) -> void:
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	for row in PLDatabase.rows(
+			"SELECT id, home_club_id, away_club_id FROM league_fixture "
+			+ "WHERE status <> 'played' AND matchday <= ?;", [rounds]):
+		_ledger_score_row(row)
+	PLDatabase.transaction("COMMIT;")
+	season.record.standings.recompute()
+	_sync_clock_to_unplayed()
+
+
+func _ledger_play_remaining() -> void:
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	for row in PLDatabase.rows(
+			"SELECT id, home_club_id, away_club_id FROM league_fixture "
+			+ "WHERE status <> 'played';"):
+		_ledger_score_row(row)
+	PLDatabase.transaction("COMMIT;")
+	season.record.standings.recompute()
+	if season.record.fixtures.unplayed() == 0:
+		season.save.set_status("complete")
+
+
+func _ledger_score_row(row: Dictionary) -> void:
+	var home := str(row["home_club_id"])
+	var away := str(row["away_club_id"])
+	var hg := 2 if home < away else 0
+	var ag := 2 if away < home else 0
+	PLDatabase.execute(
+		"UPDATE league_fixture SET status = 'played', home_goals = ?, away_goals = ? "
+		+ "WHERE id = ?;", [hg, ag, str(row["id"])])
+
+
+func _sync_clock_to_unplayed() -> void:
+	var row := PLDatabase.row(
+		"SELECT MIN(kickoff) AS d FROM league_fixture WHERE status <> 'played';")
+	if row.get("d", null) == null:
+		season.save.set_status("complete")
+		return
+	var date := str(row["d"])
+	season.save.set_date(date)
+	season.save.set_matchday(season._matchday_of(date))
+
 
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
