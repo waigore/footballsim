@@ -118,8 +118,10 @@ func meta(p: HudPaint, c: CanvasItem, engine, game, touch: bool, mouse: Vector2,
 	var btn := Rect2(x + 12, y + 68, 262, 20)
 	var hovered := btn.has_point(mouse)
 	p.panel(c, UiChrome.C_PANEL_LIGHT if hovered else Color(0.05, 0.07, 0.09, 0.92), btn, 5, Color(1, 1, 1, 0.12 if hovered else 0.05))
-
-
+	var ink: Color = UiChrome.C_TEXT if hovered else Color(0.85, 0.90, 0.92)
+	var cap_y: float = btn.position.y + btn.size.y * 0.5 + 4.0
+	p.text(c, Vector2(btn.position.x + 10.0, cap_y), "CHANGE TEAMS", 11, ink, f_bold)
+	p.text_r(c, btn.end.x - 10.0, cap_y, "T", 10, UiChrome.C_DIM, f_med)
 	p.add_button("teams", btn, "CHANGE TEAMS", "T")
 
 
