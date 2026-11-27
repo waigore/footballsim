@@ -260,6 +260,46 @@ func test_the_picker_asks_for_a_decided_match_only_when_chosen() -> void:
 		assert_lte(last.end.y, vp.y - 128.0, "the winner control reaches into the doors")
 
 
+func test_a_phone_picker_lays_its_chips_and_pills_for_a_finger() -> void:
+	var rows: int = 1 + PLCompetitions.active().size()
+	for vp in [Vector2(914, 411), Vector2(640, 360), Vector2(411, 914)]:
+		var chips: Array = LeagueChrome.picker_chip_rects(vp, rows, true)
+		assert_eq(chips.size(), rows, "the phone chip row lost a competition at %s" % vp)
+		for i in range(chips.size()):
+			var r: Rect2 = chips[i]
+			assert_gte(r.size.y, UiChrome.TAP_H, "a phone chip is under a finger at %s" % vp)
+			if i > 0:
+				assert_gte(r.position.x, (chips[i - 1] as Rect2).end.x,
+					"two phone chips overlap at %s" % vp)
+		var head: Dictionary = LeagueChrome.picker_header(vp, true)
+		var band: Rect2 = LeagueChrome.picker_chips_band(vp, true)
+		assert_gt(band.position.y, float(head["wordmark_y"]) + 6.0,
+			"the phone chips sit on the wordmark at %s" % vp)
+		var back := Rect2(24.0, 12.0, 116.0, 44.0)
+		var league := Rect2(vp.x - 24.0 - 138.0, 12.0, 138.0, 44.0)
+		assert_false(band.intersects(back), "the MENU door covers the phone chips at %s" % vp)
+		assert_false(band.intersects(league), "the LEAGUE door covers the phone chips at %s" % vp)
+		var card_top: float = maxf(vp.y * 0.42 - minf(vp.y * 0.32, 250.0) * 0.5,
+			float(head["rule_y"]) + 6.0)
+		assert_lt(band.end.y, card_top, "the phone chips reach the club cards at %s" % vp)
+		var card_bottom: float = card_top + minf(vp.y * 0.32, 250.0)
+		var pills: Array = LeagueChrome.winner_rects(vp, card_bottom, true)
+		for spec in pills:
+			assert_gte((spec["rect"] as Rect2).size.y, UiChrome.TAP_H,
+				"the %s pill is under a finger at %s" % [spec["id"], vp])
+		var doors: Array = LeagueChrome.picker_doors(vp, card_bottom, true)
+		for pill in pills:
+			for door in doors:
+				assert_false((pill["rect"] as Rect2).intersects(door["rect"] as Rect2),
+					"the %s door sits on the %s pill at %s" % [door["id"], pill["id"], vp])
+		for door in doors:
+			var d: Rect2 = door["rect"]
+			assert_gte(d.size.y, UiChrome.TAP_H, "a picker door is under a finger at %s" % vp)
+			assert_gte(d.position.y, LeagueChrome.winner_bottom(card_bottom, true),
+				"a picker door rose into the pills at %s" % vp)
+			assert_lte(d.end.y, vp.y, "a picker door runs off the sheet at %s" % vp)
+
+
 func test_the_picker_doors_never_cover_the_winner_control() -> void:
 	for vp in [Vector2(1600, 900), Vector2(1280, 800), Vector2(1024, 600),
 			Vector2(913, 411), Vector2(800, 480), Vector2(640, 360), Vector2(640, 300),

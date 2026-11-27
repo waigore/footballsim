@@ -16,14 +16,15 @@ static func league_chips(sheet: Control, vp: Vector2) -> void:
 	var rows: Array = LeagueChrome.competition_rows()
 	if rows.size() < 2:
 		return
-	var rects: Array = LeagueChrome.picker_chip_rects(vp, rows.size())
+	var touch := bool(sheet.touch)
+	var rects: Array = LeagueChrome.picker_chip_rects(vp, rows.size(), touch)
 	for i in range(rows.size()):
 		var row: Dictionary = rows[i]
 		var chip: Rect2 = rects[i]
 		var on: bool = str(row["id"]) == str(sheet.league_filter)
 		sheet.rect(sheet.C_GOLD.darkened(0.1) if on else sheet.C_PANEL, chip, 6,
 			sheet.C_GOLD if on else Color(1, 1, 1, 0.10))
-		sheet.text_c(chip.get_center().x, chip.position.y + 16.0,
+		sheet.text_c(chip.get_center().x, chip.position.y + chip.size.y * 0.5 + 4.0,
 			LeagueChrome.competition_chip_label(row, chip.size.x), 10,
 			Color(0.06, 0.06, 0.05) if on else sheet.C_DIM, sheet.f_bold)
 		sheet._add_button("league:" + str(row["id"]), chip)
@@ -46,8 +47,8 @@ static func card(sheet: Control, r: Rect2, t: Dictionary, side: int) -> void:
 	var label: String = "HOME" if side == 0 else "AWAY"
 	sheet.text_c(cx, r.position.y - 10, label, 11, sheet.C_DIM, sheet.f_bold)
 
-static func doors(sheet: Control, vp: Vector2, card_bottom: float) -> void:
-	for door in LeagueChrome.picker_doors(vp, card_bottom):
+static func doors(sheet: Control, vp: Vector2, card_bottom: float, finger := false) -> void:
+	for door in LeagueChrome.picker_doors(vp, card_bottom, finger):
 		var r: Rect2 = door["rect"]
 		var hovered: bool = r.has_point(sheet.mouse as Vector2)
 		if str(door["id"]) == "confirm":
@@ -66,7 +67,6 @@ static func doors(sheet: Control, vp: Vector2, card_bottom: float) -> void:
 		sheet._add_button(str(door["id"]), r)
 
 static func chrome_doors(sheet: Control, vp: Vector2) -> void:
-
 	var back: Rect2 = sheet.back_rect(vp)
 	var back_hover: bool = back.has_point(sheet.mouse as Vector2)
 	sheet.rect(sheet.C_PANEL_LIGHT if back_hover else sheet.C_PANEL, back, 8,
@@ -86,6 +86,16 @@ static func chrome_doors(sheet: Control, vp: Vector2) -> void:
 		sheet.C_TEXT if league_hover else sheet.C_DIM, sheet.f_bold)
 	sheet._add_button("league", league_btn)
 
+static func _draw_clubs_lane(sheet: Control, vp: Vector2) -> void:
+	var lane_l: float = sheet.back_rect(vp).end.x + 16.0
+	var lane_r: float = vp.x - 24.0 - 138.0 - 16.0
+	var room: float = lane_r - lane_l
+	if room < 80.0:
+		return
+	var fit: String = LeagueColumns.fit_name(LeagueChrome.picker_clubs_line(sheet), sheet.f_med, 10, room)
+	sheet.text_c(vp.x * 0.5, 40.0, fit, 10, sheet.C_GOLD, sheet.f_med)
+
+
 static func paint(sheet: Control) -> void:
 	var vp: Vector2 = sheet.design_vp()
 	sheet.buttons.clear()
@@ -94,9 +104,12 @@ static func paint(sheet: Control) -> void:
 	sheet.draw_rect(Rect2(0, vp.y - 3, vp.x, 3), Color(0, 0, 0, 0.5))
 
 
-	var head: Dictionary = LeagueChrome.picker_header(vp)
+	var head: Dictionary = LeagueChrome.picker_header(vp, bool(sheet.touch))
+	var finger := bool(head["tap"])
 	UiChrome.wordmark_c(sheet, vp.x * 0.5, float(head["wordmark_y"]), 12, sheet.f_bold)
 	UiChrome.rule(sheet, vp.x * 0.5, float(head["rule_y"]), float(head["rule_w"]))
+	if finger:
+		_draw_clubs_lane(sheet, vp)
 	if bool(head["title"]):
 		UiChrome.text_c(sheet, vp.x * 0.5, float(head["title_y"]), "SELECT FIXTURE",
 			int(head["title_size"]), sheet.C_TEXT, sheet.f_bold)
@@ -106,6 +119,8 @@ static func paint(sheet: Control) -> void:
 	var card_h := minf(vp.y * 0.32, 250.0)
 	var gap := clampf(vp.x * 0.14, 130.0, 220.0)
 	var card_y := vp.y * 0.42 - card_h * 0.5
+	if finger:
+		card_y = maxf(card_y, float(head["rule_y"]) + 6.0)
 	var home_rect := Rect2(vp.x * 0.5 - gap * 0.5 - card_w, card_y, card_w, card_h)
 	var away_rect := Rect2(vp.x * 0.5 + gap * 0.5, card_y, card_w, card_h)
 
@@ -139,15 +154,17 @@ static func paint(sheet: Control) -> void:
 	if venue != "":
 		sheet.text_c(vp.x * 0.5, ay + arrow_s + 22.0, venue, 10, sheet.C_DIM, sheet.f_med)
 
-	LeagueChrome.winner_control(sheet, vp, card_y + card_h, str(sheet.winner_mode), sheet.f_bold)
+	LeagueChrome.winner_control(sheet, vp, card_y + card_h, str(sheet.winner_mode), sheet.f_bold,
+		finger)
 
 
-	doors(sheet, vp, card_y + card_h)
+	doors(sheet, vp, card_y + card_h, finger)
 
 
-	for spec in LeagueChrome.picker_hints(sheet, bool(sheet.touch), bool(sheet.back_to_menu)):
-		sheet.text_c(vp.x * 0.5, vp.y + float(spec[0]), str(spec[1]), int(spec[2]),
-			spec[3] as Color, sheet.f_med)
+	if not finger:
+		for spec in LeagueChrome.picker_hints(sheet, bool(sheet.touch), bool(sheet.back_to_menu)):
+			sheet.text_c(vp.x * 0.5, vp.y + float(spec[0]), str(spec[1]), int(spec[2]),
+				spec[3] as Color, sheet.f_med)
 
 	chrome_doors(sheet, vp)
 # gd-tools: no cover end

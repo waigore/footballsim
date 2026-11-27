@@ -50,7 +50,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		"rect": Rect2(vp.x - 24.0 - 132.0, HEADER + 8.0, 28.0, 24.0)})
 	items.append({"id": "month:1", "kind": "chip", "label": ">", "pinned": true,
 		"rect": Rect2(vp.x - 24.0 - 28.0, HEADER + 8.0, 28.0, 24.0)})
-	items.append(LeagueExtra.back_item())
+	items.append(LeagueExtra.back_item(bool(view.get("touch", false))))
 	return items
 
 
@@ -68,7 +68,8 @@ func _paint_band(c: CanvasItem, body: Callable) -> void:
 
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	LeagueExtra.header(c, vp, fonts, "CALENDAR")
+	LeagueExtra.header(c, vp, fonts, "CALENDAR", "", 0.0, true,
+		bool(view.get("touch", false)))
 	UiChrome.text(c, Vector2(24.0, HEADER + 25.0), LeagueMonth.label(str(view.get("month", ""))),
 		13, UiChrome.C_TEXT, fonts["bold"])
 

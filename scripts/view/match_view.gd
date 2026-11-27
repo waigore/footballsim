@@ -57,6 +57,7 @@ func sync_overlays(hud_layer: CanvasLayer, dev: DevCapture) -> void:
 	if game.sel_layer != null:
 		game.sel_layer.transform = frame
 		game.selector.ui_scale = game.chrome_scale
+		game.selector.touch = game.touch
 	if game.wiki_host != null:
 		game.wiki_host.sync_scale()
 	if game.prematch != null:

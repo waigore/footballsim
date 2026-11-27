@@ -22,8 +22,13 @@ static func paint(screen: WikiScreen) -> void:
 	var x := 24.0
 	var compact: bool = screen.is_compact()
 	var title_y := 92.0 if compact else 108.0
-	var back_rect := Rect2(x, 8.0 if compact else 10.0, 104, 30.0 if compact else 34.0)
-	var close_rect := Rect2(vp.x - 68.0, back_rect.position.y, 44, back_rect.size.y)
+	var back_h: float = 30.0 if compact else 34.0
+	var back_y: float = 8.0 if compact else 10.0
+	if screen.touch:
+		back_h = UiChrome.TAP_H
+		back_y = 8.0
+	var back_rect := Rect2(x, back_y, 104, back_h)
+	var close_rect := Rect2(vp.x - 68.0, back_rect.position.y, maxf(44.0, back_h), back_h)
 	WikiChrome.button(screen, screen.f_bold, back_rect, "‹  BACK", back_rect.has_point(screen.mouse))
 	screen._add("back", back_rect)
 	WikiChrome.button(screen, screen.f_bold, close_rect, "✕", close_rect.has_point(screen.mouse))

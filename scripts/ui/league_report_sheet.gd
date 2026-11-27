@@ -36,11 +36,12 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 
 
-	items.append(LeagueExtra.back_item())
+	var touch := bool(view.get("touch", false))
+	items.append(LeagueExtra.back_item(touch))
 	var roundup: Array = view.get("roundup", [])
 	if not roundup.is_empty():
 		items.append({"id": "continue", "kind": "button", "label": "CONTINUE", "primary": true,
-			"pinned": true, "rect": LeagueExtra.primary_rect(vp)})
+			"pinned": true, "rect": LeagueExtra.primary_rect(vp, 140.0, touch)})
 	var y := HEADER + 70.0
 	var mixed := false
 	if roundup.size() > 1:
@@ -109,7 +110,8 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 		caption = FixtureCalendar.day_label(date) if date != "" else date
 
 		right = LeagueExtra.primary_rect(vp).size.x + 12.0
-	LeagueExtra.header(c, vp, fonts, kicker, caption, right)
+	LeagueExtra.header(c, vp, fonts, kicker, caption, right, true,
+		bool(view.get("touch", false)))
 
 func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()

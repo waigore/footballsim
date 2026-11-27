@@ -70,7 +70,8 @@ static func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 		hints: DateHints) -> void:
 	var date := str(view.get("date", ""))
 	var label := FixtureCalendar.day_label(date)
-	LeagueExtra.header(c, vp, fonts, "LEAGUE TABLE", caption(view, label))
+	LeagueExtra.header(c, vp, fonts, "LEAGUE TABLE", caption(view, label), 0.0, true,
+		bool(view.get("touch", false)))
 	if date != "":
 		hints.add(DateHints.strip_right(fonts["bold"], label, vp.x - 24.0, 34.0, 10), date)
 	var spot := legend_rect(vp)

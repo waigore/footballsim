@@ -63,25 +63,32 @@ static func interest_view(state: Dictionary) -> Dictionary:
 	return LeagueInterestMark.set_of(state.get("interests", []))
 
 
-func _plan_lane(vp: Vector2) -> Dictionary:
+func _plan_lane(vp: Vector2, touch := false, can_suggest := false) -> Dictionary:
 	var top: float = HEADER + (14.0 if not compact(vp) else 8.0)
-	return {"left": 24.0, "right": vp.x - 24.0, "top": top + 24.0, "chrome_top": top}
+	var suggest_h: float = UiChrome.tap_h(20.0, touch)
+	var drop: float = 24.0
+	if touch:
+		drop = 2.0 + suggest_h + 8.0 if can_suggest else 16.0
+	return {"left": 24.0, "right": vp.x - 24.0, "top": top + drop, "chrome_top": top,
+		"suggest_h": suggest_h}
 
 func hub_layout(vp: Vector2, state: Dictionary) -> Array:
-	var lane := _plan_lane(vp)
+	var touch := bool(state.get("touch", false))
+	var can_suggest := bool(state.get("can_suggest", false))
+	var lane := _plan_lane(vp, touch, can_suggest)
 	var top := float(lane["chrome_top"])
 	var interest := interest_view(state)
 	var items: Array = LeaguePlanSheet.layout(state.get("plan", []), interest,
-		float(lane["left"]), float(lane["right"]), float(lane["top"]))
-	if bool(state.get("can_suggest", false)):
+		float(lane["left"]), float(lane["right"]), float(lane["top"]), touch)
+	if can_suggest:
 		var left_w: float = float(lane["right"]) - 24.0
 		items.append({"id": "suggest", "kind": "chip", "label": "SUGGEST WATCHES",
-			"rect": Rect2(24.0 + left_w - 150.0, top + 2.0, 150.0, 20.0)})
+			"rect": Rect2(24.0 + left_w - 150.0, top + 2.0, 150.0, float(lane["suggest_h"]))})
 
 
-	items.append(LeagueExtra.back_item())
+	items.append(LeagueExtra.back_item(touch))
 	items.append({"id": "continue", "kind": "button", "label": "CONTINUE", "primary": true,
-		"pinned": true, "rect": LeagueExtra.primary_rect(vp)})
+		"pinned": true, "rect": LeagueExtra.primary_rect(vp, 140.0, touch)})
 	return items
 
 # gd-tools: no cover start
@@ -95,7 +102,8 @@ func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dicti
 
 
 	var right: float = LeagueExtra.primary_rect(vp).size.x + 12.0
-	var band := LeagueExtra.header(c, vp, fonts, HUB_TITLE, caption, right, false)
+	var band := LeagueExtra.header(c, vp, fonts, HUB_TITLE, caption, right, false,
+		bool(state.get("touch", false)))
 	if date != "" and str(band["caption"]) != "":
 		var rect: Rect2 = band["caption_rect"]
 		hints_out.add(Rect2(rect.position.x, 24.0, DateHints.width(bold, label, 10), 14.0), date)
@@ -104,7 +112,7 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		state: Dictionary) -> void:
 	hints.clear()
 	names.clear()
-	var lane := _plan_lane(vp)
+	var lane := _plan_lane(vp, bool(state.get("touch", false)))
 
 
 	var plan_items: Array = []

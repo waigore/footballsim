@@ -84,6 +84,24 @@ func test_the_teams_door_opens_the_sheet_and_back_closes_it() -> void:
 	game.selector.click("back")
 	assert_false(game.select_open, "back did not close the sheet")
 
+func test_the_phone_picker_has_no_target_under_a_finger() -> void:
+	game.open_select()
+	var sheet = game.selector
+	sheet.touch = true
+	sheet.queue_redraw()
+	await get_tree().process_frame
+	var doors := 0
+	for b in sheet.buttons:
+		var id := str(b["id"])
+		if id.begins_with("league:") or id.begins_with("win:"):
+			assert_gte((b["rect"] as Rect2).size.y, UiChrome.TAP_H,
+				"%s is under a finger on the phone" % id)
+			doors += 1
+	assert_gte(doors, 3, "the phone picker drew no league or winner doors")
+	sheet.click("back")
+	assert_false(game.select_open, "back did not close the phone picker")
+
+
 func test_the_phone_bar_has_a_menu_door() -> void:
 	game.hud.queue_redraw()
 	await get_tree().process_frame

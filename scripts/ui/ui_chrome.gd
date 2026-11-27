@@ -26,6 +26,13 @@ const RISE := 5.0
 const HINT_DROP := 14.0
 
 
+const TAP_H := 44.0
+
+
+static func tap_h(base: float, touch: bool) -> float:
+	return maxf(base, TAP_H) if touch else base
+
+
 static func button(c: CanvasItem, cache: Dictionary, r: Rect2, label: String, font: Font,
 		primary: bool, size: int = -1, hint: String = "", enabled: bool = true) -> void:
 	var px: int = size if size > 0 else (15 if primary else 12)

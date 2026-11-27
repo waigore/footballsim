@@ -120,6 +120,24 @@ func test_the_back_door_and_the_close_door() -> void:
 	assert_false(wiki.is_open(), "the close door did not close the sheet")
 	assert_eq(closed[0], 2, "the close door did not signal the host")
 
+func test_a_phone_header_lays_its_doors_for_a_finger() -> void:
+	var was: bool = wiki.touch
+	wiki.touch = true
+	wiki.open(WikiModel.LEAGUE, "")
+	await get_tree().process_frame
+	var back := Rect2()
+	var close := Rect2()
+	for b in wiki.buttons:
+		if str(b["id"]) == "back":
+			back = b["rect"]
+		elif str(b["id"]) == "close":
+			close = b["rect"]
+	assert_gte(back.size.y, UiChrome.TAP_H, "the phone's BACK is under a finger")
+	assert_gte(close.size.y, UiChrome.TAP_H, "the phone's close door is under a finger")
+	assert_lte(back.end.x, close.position.x, "the phone's header doors overlap")
+	wiki.touch = was
+
+
 func test_the_german_hubs_browse_on_desktop_and_phone() -> void:
 	for phone in [false, true]:
 		wiki.touch = phone

@@ -48,7 +48,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		"rect": Rect2(x, y, w, ROW_H)})
 	y += ROW_H + ROW_GAP
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": LeagueExtra.back_rect()})
+		"rect": LeagueExtra.back_rect(bool(view.get("touch", false)))})
 	return items
 
 # gd-tools: no cover start
@@ -63,7 +63,8 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 		parts.append(str(view.get("name", "")))
 	if label != "":
 		parts.append(label)
-	LeagueExtra.header(c, vp, fonts, "SYSTEM", " · ".join(PackedStringArray(parts)))
+	LeagueExtra.header(c, vp, fonts, "SYSTEM", " · ".join(PackedStringArray(parts)), 0.0, true,
+		bool(view.get("touch", false)))
 	if date != "":
 		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 34.0, 10), date)
 
