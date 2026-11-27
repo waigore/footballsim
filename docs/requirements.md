@@ -34,9 +34,9 @@ Score with [`rubric.md`](rubric.md). **Rules SoT:** [wiki](https://github.com/wa
 ## P3 — Modular architecture (SOLID; `arch-lint`)
 
 - **REQ-P3-01** (**S**) — One domain/module; ≤400/≤25 (allowlist ≤5). Extend (**O**); honor (**L**).
-- **REQ-P3-02** (**I**) — Narrow APIs/signals; no undeclared autoloads.
-- **REQ-P3-03** (**D**) — Sim/rules without visual nodes; view reads state, emits intents.
-- **REQ-P3-04** — Changed `scripts/rules/**` (or sim core) ships `tests/`.
+- **REQ-P3-02** (**I**) — Narrow APIs/signals; autoloads declared + consumer-scoped.
+- **REQ-P3-03** (**D**) — Sim/data RefCounted-only; no load of ui/view/scenes; view reactive.
+- **REQ-P3-04** — Changed `scripts/sim/**` (or rules) ships `tests/`.
 - **REQ-P3-05** — Platform diffs only in `scripts/platform/**`.
 
 ## P4 — Performance & latency
@@ -62,4 +62,4 @@ P1 = look; P4 = latency; P5 = agency.
 
 ## Non-goals
 
-Club-manager career mode; licensed data beyond the shipped 2026-27 PL/LL/BL/BL2 snapshots ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01)); photoreal/3D primary; desktop-only mobile.
+Club-manager career; licensed data beyond shipped English pyramid, La Liga and German pair ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01)); photoreal/3D primary; desktop-only mobile.

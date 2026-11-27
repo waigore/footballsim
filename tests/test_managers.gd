@@ -189,6 +189,112 @@ func test_push_falls_back_without_a_manager() -> void:
 	eng.manager = null
 	assert_eq(eng.push_of(p), Attrs.role_push(p.role), "push_of did not fall back without a manager")
 
+# ------------------------------------------------------- the patience lever --
+
+
+## The profile's `patience` is what the wiki says it is: how long the manager
+## waits between tactical changes (Match AI). It sits on top of the seven-minute
+## law floor, the league's neutral value sits exactly on that floor, and a
+## patient hand measurably changes less often than an impatient one.
+
+func test_patience_sets_the_wait_above_the_legal_floor() -> void:
+	# The floor itself: no manager may act inside seven minutes, and the
+	# league's neutral profile buys exactly the floor — that is what keeps a
+	# default side's decisions bit-identical.
+	assert_eq(MatchCadence.tactics_gap({"patience": MatchCadence.NEUTRAL_PATIENCE}),
+		MatchCadence.MIN_GAP, "the neutral profile did not sit on the seven-minute floor")
+	assert_eq(MatchCadence.tactics_gap({}), MatchCadence.MIN_GAP,
+		"a profile without a patience value did not read as neutral")
+	# A less patient manager cannot legally act sooner, so the floor holds it.
+	for low in [0.0, 0.20, 0.40]:
+		assert_eq(MatchCadence.tactics_gap({"patience": low}), MatchCadence.MIN_GAP,
+			"patience %.2f went below the seven-minute law floor" % low)
+	# A patient hand waits longer, monotonically.
+	var waits: Array = []
+	for p in [0.52, 0.56, 0.60, 0.66, 1.0]:
+		waits.append(MatchCadence.tactics_gap({"patience": p}))
+	for i in range(1, waits.size()):
+		assert_gt(float(waits[i]), float(waits[i - 1]),
+			"more patience did not buy more wait: %s" % str(waits))
+	# The shipped spread is worth a visible difference without being silly.
+	var patient: float = MatchCadence.tactics_gap({"patience": 0.66})
+	assert_between(patient, MatchCadence.MIN_GAP * 1.3, MatchCadence.MIN_GAP * 1.6,
+		"the most patient shipped profile's wait is outside the fitted band")
+
+func test_the_patience_lever_reaches_the_dugout() -> void:
+	# The floor is enforced against the manager's own profile, not a constant:
+	# a change inside the patient wait is refused, and one past it is allowed.
+	var eng := MatchEngine.new(4101)
+	eng.phase = "play"
+	eng.clock = 3000.0
+	eng.manager.profiles[0]["patience"] = 0.66
+	eng.manager.last_change[0] = 3000.0 - 450.0
+	var quiet := 0
+	for i in range(200):
+		if MatchManagerTactics.consider(eng.manager, 0, "chasing", 0.9):
+			quiet += 1
+	assert_eq(quiet, 0, "a patient manager acted inside his own wait (450s of 596s)")
+	eng.manager.last_change[0] = 3000.0 - 620.0
+	var acted := false
+	for i in range(200):
+		if MatchManagerTactics.consider(eng.manager, 0, "chasing", 0.9):
+			acted = true
+			break
+	assert_true(acted, "a patient manager never acted once his wait had passed")
+
+func test_the_default_side_keeps_its_shipped_wait() -> void:
+	# Every shipped club at or below the neutral value waits exactly the old
+	# flat seven minutes, so the change cannot have moved those matches; only a
+	# more patient manager differs.
+	var impatient := 0
+	for id in TeamData.team_ids():
+		var prof: Dictionary = ManagerData.profile(id)
+		var gap: float = MatchCadence.tactics_gap(prof)
+		if float(prof.get("patience", 0.52)) <= MatchCadence.NEUTRAL_PATIENCE:
+			assert_eq(gap, MatchCadence.MIN_GAP, "%s does not wait the shipped seven minutes" % id)
+			impatient += 1
+		else:
+			assert_gt(gap, MatchCadence.MIN_GAP, "%s's patience bought no extra wait" % id)
+	assert_gte(impatient, 8, "almost no shipped club still waits the flat seven minutes")
+
+func test_a_patient_manager_changes_less_often_than_an_impatient_one() -> void:
+	# The lever's whole point: over the same late-match cluster, the patient
+	# dugout acts less. Timelines are seeded, so this is a fixed reading.
+	var patient := 0
+	var impatient := 0
+	for i in range(12):
+		var tl := _timeline(700 + i, 18)
+		var a := MatchEngine.new(700 + i)
+		a.phase = "play"
+		a.manager.profiles[0]["patience"] = 0.10
+		a.manager.profiles[1]["patience"] = 0.10
+		var b := MatchEngine.new(700 + i)
+		b.phase = "play"
+		b.manager.profiles[0]["patience"] = 0.95
+		b.manager.profiles[1]["patience"] = 0.95
+		var counts_a: Array = _count_both(a, tl)
+		var counts_b: Array = _count_both(b, tl)
+		impatient += int(counts_a[0]) + int(counts_a[1])
+		patient += int(counts_b[0]) + int(counts_b[1])
+	assert_lt(patient, impatient,
+		"the patience lever does not change how often a manager acts (%d vs %d)" % [patient, impatient])
+
+## Both sides' tactics counts after replaying one timeline.
+func _count_both(eng, timeline: Array) -> Array:
+	var goals := [0, 0]
+	for ev in timeline:
+		eng.clock = float(ev["minute"]) * 60.0
+		var t: int = int(ev["team"])
+		if str(ev["kind"]) == "goal":
+			goals[t] += 1
+			eng.score[0] = int(goals[0])
+			eng.score[1] = int(goals[1])
+			eng.manager.on_event("goal", {"team": t})
+		else:
+			eng.manager.on_event("card", {"team": t, "red": bool(ev["red"])})
+		eng.manager.tick(60.0)
+	return [int(eng.manager.changes[0]), int(eng.manager.changes[1])]
+
 # ------------------------------------------------------------------------
 
 
@@ -270,7 +376,7 @@ func test_manager_picks_the_change_not_the_clock() -> void:
 	tired.stamina = 0.30
 	var made := false
 	for i in range(400):
-		if eng.manager._consider_subs(0, false, 0.5):
+		if MatchManagerSubs.consider(eng.manager, 0, false, 0.5):
 			made = true
 			break
 	assert_true(made, "the manager never used a change")

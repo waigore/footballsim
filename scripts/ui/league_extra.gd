@@ -12,6 +12,15 @@ const HEADER := 58.0
 const ROW_H := 34.0
 const GAP := 6.0
 const FIELD_H := 38.0
+## The month stepper's cell widths (#281): one arrow, the readout it holds and
+## the air between the cells and between the group and the stat chips.
+const STEP_W := 34.0
+const STEP_H := 28.0
+const STEP_GAP := 4.0
+const STEP_AFTER := 24.0
+## The stat chips beside the stepper: GOALS and ASSISTS, and the air between.
+const STAT_W := [72.0, 78.0]
+const STAT_GAP := 8.0
 
 var cache := {}
 ## Dates this sheet painted, read by the screen's weekday overlay (#99).
@@ -46,10 +55,12 @@ static var header_cache := {}
 ## lane between BACK and whatever door owns the right corner (#180). A title too
 ## long for the lane is shortened with an ellipsis; the caption only rides what
 ## the title leaves, and is dropped when that is too narrow to read.
+## `caps` is the kicker's own convention: every sheet's title is upper case
+## except the hub's, which names the pose in title case (#323).
 static func header_band(vp: Vector2, bold: Font, title: String, caption: String = "",
-		right: float = 0.0) -> Dictionary:
+		right: float = 0.0, caps: bool = true) -> Dictionary:
 	var lane_end: float = vp.x - 24.0 - right
-	var label: String = title.to_upper()
+	var label: String = title.to_upper() if caps else title
 	var room: float = lane_end - TITLE_X
 	var shown: String = "" if room <= 0.0 else LeagueColumns.fit_name(label, bold, TITLE_SIZE, room)
 	var title_w: float = UiChrome.text_width(bold, shown, TITLE_SIZE)
@@ -72,15 +83,17 @@ static func header_band(vp: Vector2, bold: Font, title: String, caption: String 
 ## in the gold kicker position, and an optional right-hand caption. Continue is
 ## the only control that ever shares the row, and the hub adds it itself.
 ## `right` reserves room for a door in the corner; the title and caption are
-## fitted inside what it leaves (#180). Returns the band it painted, so a date
-## caption can register its hint on the strip it really occupies.
+## fitted inside what it leaves (#180). `caps` keeps the kicker's upper case,
+## which every sheet uses except the hub's own title case (#323). Returns the
+## band it painted, so a date caption can register its hint on the strip it
+## really occupies.
 static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
-		caption: String = "", right: float = 0.0) -> Dictionary:
+		caption: String = "", right: float = 0.0, caps: bool = true) -> Dictionary:
 	var bold: Font = fonts["bold"]
 	var rect := back_rect()
 	UiChrome.panel(c, header_cache, rect, UiChrome.C_PANEL_LIGHT, 7)
 	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 21.0, "BACK", 12, UiChrome.C_TEXT, bold)
-	var band := header_band(vp, bold, title, caption, right)
+	var band := header_band(vp, bold, title, caption, right, caps)
 	UiChrome.text(c, Vector2(TITLE_X, 36.0), str(band["title"]), TITLE_SIZE, UiChrome.C_GOLD, bold)
 	if str(band["caption"]) != "":
 		UiChrome.text_r(c, vp.x - 24.0 - right, 34.0, str(band["caption"]), 10, UiChrome.C_DIM, bold)
@@ -107,20 +120,22 @@ func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(x, y, cw, 30.0)})
 		x += cw + gap
 	y += 40.0
-	# Month filter: the report list narrows to one month, or reads them all.
-	items.append({"id": "statsmonth:-1", "kind": "chip", "label": "<",
-		"rect": Rect2(24.0, y, 34.0, 28.0)})
-	items.append({"id": "", "kind": "caption", "label": _month_label(str(filters.get("month", ""))),
-		"rect": Rect2(64.0, y, 130.0, 28.0)})
-	items.append({"id": "statsmonth:1", "kind": "chip", "label": ">",
-		"rect": Rect2(200.0, y, 34.0, 28.0)})
+	# Month filter: the report list narrows to one month, or reads them all. The
+	# two chevrons and the month they change are laid as one stepper (#281): the
+	# readout is measured on the font it paints with, so the forward arrow always
+	# hugs the words it changes, and the group is visibly apart from the stat
+	# chips beside it.
+	var month_label: String = _month_label(str(filters.get("month", "")))
+	var step := month_stepper(vp, y, month_label, UiChrome.fonts()["bold"])
+	items.append_array(step)
+	var stat_x: float = (step[2]["rect"] as Rect2).end.x + STEP_AFTER
 	# Leader stat door: goals or assists, default all actives.
 	items.append({"id": "statsstat:goals", "kind": "chip", "label": "GOALS",
 		"selected": str(filters.get("stat", "goals")) == "goals",
-		"rect": Rect2(250.0, y, 72.0, 28.0)})
+		"rect": Rect2(stat_x, y, float(STAT_W[0]), STEP_H)})
 	items.append({"id": "statsstat:assists", "kind": "chip", "label": "ASSISTS",
 		"selected": str(filters.get("stat", "goals")) == "assists",
-		"rect": Rect2(328.0, y, 78.0, 28.0)})
+		"rect": Rect2(stat_x + float(STAT_W[0]) + STAT_GAP, y, float(STAT_W[1]), STEP_H)})
 	y += 38.0
 	items.append({"id": "statsteam", "kind": "field", "value": str(filters.get("team", "")),
 		"rect": Rect2(24.0, y, vp.x - 48.0, FIELD_H)})
@@ -152,6 +167,23 @@ func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": "", "kind": "leader", "row": leaders[i], "rank": i + 1,
 			"rect": Rect2(24.0, y + float(i) * 24.0, vp.x - 48.0, 23.0)})
 	return items
+
+## The month label and both chevrons as one control (#281): `[<] [AUGUST 2026]
+## [>]`, the readout measured on the bold font at the size it paints, so the
+## forward arrow always sits just past the words it changes instead of floating
+## toward the GOALS chip. Every pos/stat id keeps its own rect for the press.
+static func month_stepper(vp: Vector2, y: float, label: String, bold: Font) -> Array:
+	var stat_w: float = float(STAT_W[0]) + STAT_GAP + float(STAT_W[1])
+	var room: float = vp.x - 48.0 - STEP_W * 2.0 - STEP_GAP * 2.0 - STEP_AFTER - stat_w
+	var read_w: float = clampf(UiChrome.text_width(bold, label, 10) + 20.0, 72.0, maxf(room, 72.0))
+	var prev := Rect2(24.0, y, STEP_W, STEP_H)
+	var read := Rect2(prev.end.x + STEP_GAP, y, read_w, STEP_H)
+	var next := Rect2(read.end.x + STEP_GAP, y, STEP_W, STEP_H)
+	return [
+		{"id": "statsmonth:-1", "kind": "chip", "label": "<", "rect": prev},
+		{"id": "", "kind": "stepper", "label": label, "rect": read},
+		{"id": "statsmonth:1", "kind": "chip", "label": ">", "rect": next},
+	]
 
 ## A league group's heading on a mixed day: the competition name, its gameweek,
 ## and a rule line so two groups never blur into one list (#189).
@@ -200,6 +232,12 @@ func draw_stats_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 				UiChrome.C_GOLD if on else UiChrome.C_BORDER, 1)
 			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 19.0,
 				str(item["label"]), 10, Color(0.06, 0.06, 0.05) if on else UiChrome.C_SOFT, bold)
+		elif kind == "stepper":
+			# The month readout, painted on its own cell between the two arrows so
+			# the three read as one control (#281).
+			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_BORDER, 1)
+			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 19.0,
+				str(item["label"]), 10, UiChrome.C_SOFT, bold)
 		elif kind == "field":
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_GOLD, 1)
 			var typed := str(item["value"])

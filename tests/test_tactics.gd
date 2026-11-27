@@ -33,7 +33,7 @@ func test_formation_change_reslots_the_engine() -> void:
 	for p in eng.players:
 		if p.team == 0:
 			before[p.role] = p.base
-	eng.manager._apply(0, {"formation": "4-4-2"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"formation": "4-4-2"}, "test")
 	var moved := 0
 	for p in eng.players:
 		if p.team == 0 and p.base.distance_to(before[p.role]) > 0.001:
@@ -44,7 +44,7 @@ func test_formation_change_reslots_the_engine() -> void:
 func test_mentality_moves_the_style() -> void:
 	var eng := MatchEngine.new(32)
 	var base: Dictionary = eng.style_of(0).duplicate(true)
-	eng.manager._apply(0, {"mentality": "attacking"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"mentality": "attacking"}, "test")
 	var live: Dictionary = eng.style_of(0)
 	assert_gt(float(live["line"]), float(base["line"]), "attacking mentality did not raise the line")
 	assert_gt(float(live["press"]), float(base["press"]), "attacking mentality did not raise the press")
@@ -60,7 +60,7 @@ func test_change_labels_read_like_football() -> void:
 
 func test_tactics_snapshot_round_trip() -> void:
 	var eng := MatchEngine.new(33)
-	eng.manager._apply(0, {"mentality": "positive", "formation": "4-3-3", "corner": "short", "roles": {"ST": "support"}}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"mentality": "positive", "formation": "4-3-3", "corner": "short", "roles": {"ST": "support"}}, "test")
 	var snap: Dictionary = eng.to_dict()
 	var other := MatchEngine.new(34)
 	other.from_dict(snap)
@@ -72,12 +72,12 @@ func test_tactics_snapshot_round_trip() -> void:
 
 func test_set_piece_routine_reaches_the_pitch() -> void:
 	var eng := MatchEngine.new(35)
-	eng.manager._apply(0, {"corner": "near_post"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"corner": "near_post"}, "test")
 	var near: float = eng._corner_aim(0)
-	eng.manager._apply(0, {"corner": "far_post"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"corner": "far_post"}, "test")
 	var far: float = eng._corner_aim(0)
 	assert_lt(near, far, "the corner routine does not change the aim")
-	eng.manager._apply(0, {"free_kick": "direct"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"free_kick": "direct"}, "test")
 	assert_eq(eng.manager.tactics_for(0).free_kick_routine(), "direct", "free-kick routine not stored")
 
 func test_every_lever_and_description() -> void:
@@ -120,7 +120,7 @@ func test_restart_patience_honours_time_wasting() -> void:
 			taker = p
 			break
 	var plain: float = MatchRestarts.patience(eng, taker, "throw_in", 0)
-	eng.manager._apply(0, {"time_wasting": 0.9}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"time_wasting": 0.9}, "test")
 	var managed: float = MatchRestarts.patience(eng, taker, "throw_in", 0)
 	assert_gt(managed, plain, "time-wasting did not buy the leader more patience")
 
@@ -128,20 +128,20 @@ func test_corner_and_free_kick_routines_execute() -> void:
 	var eng := MatchEngine.new(37)
 	eng.phase = "play"
 	eng.clock = 2000.0
-	eng.manager._apply(0, {"corner": "short"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"corner": "short"}, "test")
 	assert_eq(eng._corner_aim(0), eng.W * 0.5, "short corner routine not aimed short")
 	eng._start_restart("corner", 0, Vector2(eng.L - 0.5, 0.5))
 	eng._execute_restart()
 	assert_eq(eng.phase, "play", "a short corner did not put the ball back in play")
-	eng.manager._apply(0, {"corner": "far_post"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"corner": "far_post"}, "test")
 	eng._start_restart("corner", 0, Vector2(eng.L - 0.5, 0.5))
 	eng._execute_restart()
 	assert_eq(eng.phase, "play", "a far-post corner did not put the ball back in play")
-	eng.manager._apply(0, {"free_kick": "direct"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"free_kick": "direct"}, "test")
 	eng._start_restart("free_kick", 0, Vector2(eng.L - 24.0, eng.W * 0.5))
 	eng._execute_restart()
 	assert_eq(eng.phase, "play", "a direct free kick did not put the ball back in play")
-	eng.manager._apply(0, {"free_kick": "worked"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"free_kick": "worked"}, "test")
 	eng._start_restart("free_kick", 0, Vector2(eng.L - 40.0, 8.0))
 	eng._execute_restart()
 	assert_eq(eng.phase, "play", "a worked free kick did not put the ball back in play")
@@ -192,7 +192,7 @@ func test_formation_change_moves_targets() -> void:
 	for p in eng.players:
 		if p.team == 0:
 			before[p.id] = p.target
-	eng.manager._apply(0, {"formation": "3-5-2"}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"formation": "3-5-2"}, "test")
 	eng.brain._update_shapes()
 	var moved := 0
 	for p in eng.players:
@@ -217,7 +217,7 @@ func test_role_duty_moves_the_push() -> void:
 func test_press_change_reaches_the_live_style() -> void:
 	var eng := _scene(54)
 	var before: float = float(eng.style_of(0)["press"])
-	eng.manager._apply(0, {"press_delta": 0.15}, "test")
+	MatchManagerTactics.apply(eng.manager, 0, {"press_delta": 0.15}, "test")
 	assert_gt(float(eng.style_of(0)["press"]), before, "pressing change never reached MatchAI's style")
 
 func _outfield(eng, t: int):
@@ -243,3 +243,90 @@ func test_tempo_changes_pass_speed() -> void:
 		slow_total += slow.ball.vel.length()
 		fast_total += fast.ball.vel.length()
 	assert_gt(fast_total, slow_total, "tempo does not change how fast the ball travels")
+
+## The `marking` instruction is the defending side's own (wiki Live tactics:
+## `zonal` / `man`, "man-marking radius (30 m vs 26 m)"). Two defects are pinned:
+## the band used to be read off the side holding the ball, and the assignment a
+## defender was handed was never read by the shape at all.
+func test_marking_band_belongs_to_the_defending_side() -> void:
+	assert_almost_eq(MatchMarking.band({"marking": "zonal"}), 26.0, 0.0001, "zonal band drifted")
+	assert_almost_eq(MatchMarking.band({"marking": "man"}), 30.0, 0.0001, "man band drifted")
+	assert_almost_eq(MatchMarking.band({}), 26.0, 0.0001, "an unset instruction must mark like the default")
+	# Team 1 does the marking. Telling team 0 to mark tight must not widen team
+	# 1's reach; telling team 1 to mark tight must.
+	var on_holder := _marks_in_band(0)
+	var on_marker := _marks_in_band(1)
+	var nobody := _marks_in_band(-1)
+	assert_eq(on_holder, nobody, "the marking band follows the side holding the ball, not the side marking")
+	assert_gt(on_marker, nobody, "telling the marking side to mark tight bought it no reach")
+
+func test_man_marking_covers_the_man_it_picks_up() -> void:
+	var zonal := _marks_in_band(-1)
+	var man := _marks_in_band(1)
+	assert_gt(man, zonal, "man marking picked up no one extra in the 26-30 m band")
+	assert_gt(_target_drift(), 0.0, "the extra assignment never moved a defender onto his man")
+
+## How many defenders team 1 marks up in the 26-30 m band the two instructions
+## disagree about. `holder` names the side given the `man` instruction: -1 for
+## neither, so the default is measured too. Outside this band both instructions
+## reach, or neither does, so only here can they be told apart.
+func _marks_in_band(holder: int) -> int:
+	var total := 0
+	for gap in [26.5, 28.0, 29.5]:
+		for ay in [0.46, 0.54, 0.62]:
+			total += _marked_count(_marking_scene(gap, ay, holder), 1)
+	return total
+
+## Cells whose defender ends up somewhere else once team 1 marks tight.
+func _target_drift() -> int:
+	var drifted := 0
+	for gap in [26.5, 28.0, 29.5]:
+		for ay in [0.46, 0.54, 0.62]:
+			var z := _marking_scene(gap, ay, -1)
+			var m := _marking_scene(gap, ay, 1)
+			z.brain._update_shapes()
+			m.brain._update_shapes()
+			if _side_back(z, 1).target.distance_to(_side_back(m, 1).target) > 0.05:
+				drifted += 1
+	return drifted
+
+## Team 1's right centre-back stands `gap` metres from a home striker who has
+## dropped goal-side of the ball, with the ball beyond the pair: the picture
+## where a defender may legally step out to a man.
+func _marking_scene(gap: float, ay: float, holder: int) -> MatchEngine:
+	var eng := _scene(56)
+	for p in eng.players:
+		if p.sent_off or p.is_gk:
+			continue
+		p.pos = Vector2(eng.L * 0.02 if p.team == 1 else eng.L * 0.98, 1.0 + float(p.id % 66))
+	var own: Vector2 = eng.own_goal_pos(1)
+	var dir: float = 1.0 if own.x < eng.L * 0.5 else -1.0
+	var runner = _side_striker(eng, 0)
+	runner.pos = own + Vector2(dir * 36.0, eng.W * ay - eng.W * 0.5)
+	_side_back(eng, 1).pos = runner.pos - Vector2(dir * gap, 0.0)
+	eng.ball.pos = own + Vector2(dir * 46.0, 0.0)
+	if holder >= 0:
+		var t: Tactics = eng.manager.tactics_for(holder)
+		t.opposition["marking"] = "man"
+		eng.live_style[holder] = t.style()
+	eng.brain._assign_marks()
+	return eng
+
+func _side_striker(eng: MatchEngine, team: int):
+	for p in eng.players:
+		if p.team == team and p.role == "ST":
+			return p
+	return null
+
+func _side_back(eng: MatchEngine, team: int):
+	for p in eng.players:
+		if p.team == team and p.role == "RCB":
+			return p
+	return null
+
+func _marked_count(eng: MatchEngine, team: int) -> int:
+	var n := 0
+	for p in eng.players:
+		if p.team == team and p.mark_id >= 0:
+			n += 1
+	return n

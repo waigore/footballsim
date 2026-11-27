@@ -107,39 +107,9 @@ static func _aggregate(legs: Array, top_club: String) -> Dictionary:
 			second += int(leg["home_goals"])
 	return {"top": top, "second": second}
 
-## A level aggregate is settled on penalties. The lane reuses the match engine's
-## shootout shape: five kicks each, then sudden death, from the same seed.
+## A level aggregate is settled on penalties, by the shared shootout lane.
 static func _shootout(seed: int, top_club: String, second_club: String) -> Vector2i:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = seed + 7717
-	var score := [0, 0]
-	var taken := [0, 0]
-	var round_no := 0
-	while true:
-		var side: int = round_no % 2
-		var conversion := _conversion(side, top_club, second_club)
-		if rng.randf() <= conversion:
-			score[side] = int(score[side]) + 1
-		taken[side] = int(taken[side]) + 1
-		round_no += 1
-		if taken[0] < 5 or taken[1] < 5:
-			if int(score[0]) > int(score[1]) + (5 - int(taken[1])):
-				break
-			if int(score[1]) > int(score[0]) + (5 - int(taken[0])):
-				break
-		elif taken[0] == taken[1] and int(score[0]) != int(score[1]):
-			break
-	return Vector2i(int(score[0]), int(score[1]))
-
-## A club's best takers, read the same way the match engine reads them.
-static func _conversion(side: int, top_club: String, second_club: String) -> float:
-	var club := top_club if side == 0 else second_club
-	var team := TeamData.get_team(club)
-	var best := 0.0
-	for p in team.get("starters", []):
-		var attrs: Dictionary = p.get("attr", {})
-		best = maxf(best, float(attrs.get("sho", 50)) * 1.4 + float(attrs.get("ovr", 50)))
-	return clampf(0.60 + best / 260.0 * 0.30, 0.55, 0.92)
+	return LeagueShootout.settle(seed, top_club, second_club)
 
 static func _club_name(club_id: String) -> String:
 	var club := PLRepository.shared().club(club_id)

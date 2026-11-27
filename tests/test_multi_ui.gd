@@ -4,13 +4,27 @@ extends GdToolsTest
 ## league and allows a cross-league friendly, the hub groups a mixed day, the
 ## TABLES sheet tabs per league, STATS filters reports and leaders, and the
 ## podium frames one block per competition.
+##
+## One PL+LL season covers the month-step and advance-mode chrome so coverage
+## does not rebuild two calendars for the same filters.
+
+var SAVE_DIR := TestScratch.dir("saves_test_multi_ui")
+var season: LeagueSeason = null
 
 func before_all() -> void:
 	PLDatabase.cache_dir = TestScratch.dir("cache_test_multi_ui")
+	LeagueSave.dir = SAVE_DIR
+	TestScratch.clear(SAVE_DIR)
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
+	season = LeagueSeason.create("Shared World", "generated", "fixture_days", 9101, ["PL", "LL"])
 
 func after_all() -> void:
+	if season != null:
+		season.close()
+		season = null
+	TestScratch.clear(SAVE_DIR)
+	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
@@ -22,7 +36,7 @@ func test_the_picker_filters_by_league_and_mixes_sides() -> void:
 	for id in picker.ids:
 		assert_true(str(id).begins_with("LL-"), "%s is not a La Liga club" % id)
 	picker.set_league("")
-	assert_eq(picker.ids.size(), 76, "the ALL filter is not every competition")
+	assert_eq(picker.ids.size(), 172, "the ALL filter is not every competition")
 	picker.set_league("BL")
 	assert_eq(picker.ids.size(), 18, "the Bundesliga filter is not one league")
 	picker.set_league("BL2")
@@ -153,6 +167,37 @@ func test_stats_filters_reports_and_leaders() -> void:
 				"the assists chart printed another stat")
 	assert_eq(leaders, 1, "the leader chart row is missing")
 
+## #279: the picker's footer legend is derived from the chips it draws: key 1
+## names ALL and every league takes the key its own chip sits at, so the legend
+## can never advertise fewer keys than the sheet answers (or call key 1 a league).
+func test_the_picker_legend_names_every_league_key() -> void:
+	var rows := LeagueChrome.competition_rows()
+	assert_eq(rows.size(), 1 + PLCompetitions.active().size(), "the chip list lost a league")
+	assert_eq(str(rows[0]["short_name"]), "ALL", "the first chip is not ALL")
+	var legend := LeagueChrome.picker_league_keys(rows)
+	assert_true(legend.begins_with("1  ALL"), "key 1 is not named as ALL: %s" % legend)
+	for i in range(rows.size()):
+		assert_true(legend.contains("%d  %s" % [i + 1, str(rows[i]["short_name"])]),
+			"key %d is not advertised: %s" % [i + 1, legend])
+	assert_false(legend.contains("/"), "the legend still prints a bare key range: %s" % legend)
+	assert_eq(LeagueChrome.picker_league_keys([{"id": "", "short_name": "ALL"}]), "",
+		"a sheet with no league chips advertised keys")
+	assert_false(LeagueChrome.league_key_row(KEY_1, rows).is_empty(),
+		"key 1 names no chip")
+	assert_eq(str(LeagueChrome.league_key_row(KEY_1, rows)["id"]), "", "key 1 is not ALL")
+	assert_true(LeagueChrome.league_key_row(KEY_1, []).is_empty(),
+		"a key with no chips still named one")
+	assert_true(LeagueChrome.league_key_row(KEY_1 + 2, rows.slice(0, 2)).is_empty(),
+		"a key past the last chip named one")
+	assert_true(LeagueChrome.league_key_row(KEY_0, rows).is_empty(), "key 0 named a chip")
+	var picker = load("res://scripts/ui/team_select.gd").new()
+	assert_true(picker.key(KEY_1), "key 1 is not taken")
+	assert_eq(picker.league_filter, "", "key 1 did not select ALL")
+	for i in range(1, rows.size()):
+		assert_true(picker.key(KEY_1 + i), "key %d is not taken" % (i + 1))
+		assert_eq(picker.league_filter, str(rows[i]["id"]), "key %d selects the wrong chip" % (i + 1))
+	picker.free()
+
 func test_the_podium_frames_one_block_per_league() -> void:
 	var book := LeagueBook.new()
 	var one := {"champion": {"club": "A", "points": 1}, "runner_up": {"club": "B", "points": 0},
@@ -195,8 +240,7 @@ func test_the_stats_doors_write_their_filter() -> void:
 	assert_eq(str(screen.stats_filter["month"]), "", "a month was invented with no season")
 
 func test_the_month_door_steps_from_the_clock() -> void:
-	var season := LeagueSeason.create("Month World", "generated", "fixture_days", 9101, ["PL"])
-	assert_not_null(season, "the month season was not created")
+	assert_not_null(season, "the shared season was not created")
 	var screen := FakeStats.new()
 	screen.season = season
 	screen.stats_filter = {"league": "", "month": "", "team": "", "stat": "goals"}
@@ -205,7 +249,6 @@ func test_the_month_door_steps_from_the_clock() -> void:
 	var base := date.substr(0, 7)
 	assert_eq(str(screen.stats_filter["month"]), LeagueMonth.shift(base, 1),
 		"the month door did not step once from the clock")
-	season.close()
 
 func test_the_wizard_league_toggle_keeps_one_on() -> void:
 	var screen := FakeWizard.new()
@@ -220,8 +263,10 @@ func test_the_wizard_league_toggle_keeps_one_on() -> void:
 	assert_eq(screen.wizard["competitions"], ["LL"], "an empty id changed the set")
 
 func test_the_system_sheet_can_switch_the_advance_mode() -> void:
-	var season := LeagueSeason.create("Advance World", "generated", "fixture_days", 9102, ["PL", "LL"])
-	assert_not_null(season, "the advance season was not created")
+	assert_not_null(season, "the shared season was not created")
+	# Leave the shared save on fixture_days so later suites (or a re-run) start clean.
+	if season.save.advance_mode() != "fixture_days":
+		season.set_advance_mode("fixture_days")
 	var screen := FakeSys.new()
 	screen.season = season
 	screen.sys = {"status": "", "error": ""}
@@ -230,7 +275,6 @@ func test_the_system_sheet_can_switch_the_advance_mode() -> void:
 	assert_true(str(screen.sys["status"]).begins_with("ADVANCE:"), "the switch was silent")
 	LeagueSystemActions.toggle_advance(screen)
 	assert_eq(season.save.advance_mode(), "fixture_days", "the clock policy did not switch back")
-	season.close()
 
 class FakeStats:
 	var stats_filter := {}

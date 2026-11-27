@@ -13,12 +13,14 @@ Shipped (wiki domains playable; DRs accepted):
 | Match lifecycle, open play, restarts | `scripts/sim/`; wiki Match |
 | Added time, injuries, handball, official | DR-20261122-03 |
 | Live tactics + IFAB substitutions | DR-20261122-05; MatchAI |
+| Extra time + pens when a winner is required | DR-20261126-12 |
 | Poisson / Dixon–Coles outcomes | `poisson_model.gd`; DR-20261122-04 |
 | Physics↔Poisson finishing + level/gradient | DR-20261124-08; [#33](https://github.com/waigore/footballsim/issues/33) closed |
 | Poisson λ on the last-10 PL scoring envelope | DR-20261125-19; [#172](https://github.com/waigore/footballsim/issues/172) |
-| PL 2026-27 snapshot + encyclopedia | `data/`; DR-20261123-01 / 05 |
+| Engine λ, keeper dive, openness (n=96 on λ) | DR-20261126-07/08; [#192](https://github.com/waigore/footballsim/issues/192) closed |
+| PL + English pyramid + LL + German pair | `data/`; DR-20261123-01 / 13 / 17 |
 | Season saves, calendar, Continue/watch | `league_season.gd`; DR-20261124-01 / 06 |
-| Two leagues in one seed/save; league-scoped table, stats, calendar, encyclopedia | DR-20261126-01 / 10; [#185](https://github.com/waigore/footballsim/issues/185) |
+| Multi-league save; play-offs; German Relegation | DR-20261126-10 / 14 / 17; [#185](https://github.com/waigore/footballsim/issues/185) |
 | System sheet (Quick Save / Save As / Load / Quit) | DR-20261124-07 |
 | Per-goal report playback packs | DR-20261124-04 |
 | Non-match type / viewport scale | DR-20261124-03 |
@@ -30,20 +32,18 @@ Shipped (wiki domains playable; DRs accepted):
 | Teams of Interest: followed club's games stay on Watch | `league_interest.gd`; DR-20261125-09; [#104](https://github.com/waigore/footballsim/issues/104) |
 | Shape pass shares one ball path per pass | DR-20261125-11 |
 | Encyclopedia competition hubs + index | `pl_competitions.gd`; DR-20261126-01; [#190](https://github.com/waigore/footballsim/issues/190) |
-| Engine λ, keeper dive, openness | DR-20261126-07/08; [#213](https://github.com/waigore/footballsim/pull/213)/[#221](https://github.com/waigore/footballsim/pull/221)/[#225](https://github.com/waigore/footballsim/pull/225); [#192](https://github.com/waigore/footballsim/issues/192) |
 | One competition per match; places as ordinals | `match_billing.gd`; DR-20261126-06; [#209](https://github.com/waigore/footballsim/issues/209), [#207](https://github.com/waigore/footballsim/issues/207) |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | The weak away side's thin chances | [#192](https://github.com/waigore/footballsim/issues/192). Level closed (n=96: goals +6/−2, +5/−5% of λ; DR-20261126-08). Dominated side gets 5–6 shots/match — creation, not pricing |
-| 2 | Native match hot loop | DR-20261123-02 future tightening under the 120 s budget. Shape-pass shared (DR-20261125-11); tick still GDScript |
+| 1 | Native match hot loop | DR-20261123-02 future tightening under the 120 s budget. Shape-pass shared (DR-20261125-11); tick still GDScript |
 
 ## Next pick
 
-**The weak away side's thin chances** — dominated sides take 5–6 shots/match vs
-λ's 6–7; level on λ (n=96). Needs creation design, not a price cut.
+**Native match hot loop** — optional P4 tightening while headless matches sit inside
+the 120 s census budget; no open rules residual after #192.
 
 ## Out of scope / blocked
 
@@ -53,6 +53,6 @@ Shipped (wiki domains playable; DRs accepted):
 | Cups, transfers, finances, training, second season in one save, mid-season seed refresh of a save | Season Out of scope (v1); DR-20261124-01 |
 | VAR; weather on the pitch; referee outcome bias | Match playable-slice Out |
 | Concussion subs; extra injury stoppage beyond the added-time formula | Substitutions Out of scope; DR-20261122-05 |
-| Licensed data beyond the shipped PL + La Liga + Bundesliga + 2. Bundesliga snapshots | requirements Non-goals; DR-20261123-01 |
+| Licensed data beyond the shipped English pyramid (PL–National League), La Liga and German pair snapshots | requirements Non-goals; DR-20261123-01 |
 | Match HUD under the non-match type rule | DR-20261124-03 |
 | Photoreal / 3D primary | requirements Non-goals |

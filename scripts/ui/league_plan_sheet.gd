@@ -7,8 +7,9 @@ extends RefCounted
 ## It was half of `LeagueSheet`'s body — three row grammars sharing one paint
 ## method behind a kind switch, and the live file in the league UI. Split out,
 ## this sheet owns the plan and its rows, and the hub keeps the pose: the chrome,
-## the chips and the doors. On a mixed day the rows group under a league heading
-## (#189), so two leagues never read as one interleaved list.
+## the chips and the doors. Every league group opens with its own heading (#189),
+## whether the day holds one league or several (#323), so the reader always knows
+## which competition — and which gameweek of it — the fixtures below belong to.
 ##
 ## Same contract as the other sheets: `layout()` turns the plan into rows with
 ## rects, `draw()` paints exactly those rects. Geometry is the hub's payload, so
@@ -22,18 +23,21 @@ var names := InterestNames.new()
 ## Lay today's plan down one column from `left` to `right`, starting at `top`,
 ## marking the clubs on the shortlist `interest`.
 ## The plan's rows carry the shortlist's mark on a followed club's game (#104),
-## so a headless test reads it from the row itself.
+## so a headless test reads it from the row itself. Every group opens with its
+## competition's heading and gameweek, a single-league day included (#323).
 static func layout(plan: Array, interest: Dictionary, left: float, right: float,
 		top: float) -> Array:
 	var items: Array = []
 	var y := top
 	var last_comp := ""
-	var multi := _leagues(plan) > 1
 	for fx in plan:
-		# A new league on a mixed day opens its own group: the hub reads one
-		# league's fixtures, then the other's, never one interleaved list.
+		# A new league opens its own group: the hub reads one league's fixtures,
+		# then the other's, never one interleaved list — and a day that holds one
+		# league still says which league, and which of its rounds, it is.
 		var comp := str(fx.get("competition_id", ""))
-		if multi and comp != last_comp:
+		# A fixture with no competition names no group: there is nothing to head
+		# it with, and the plan never invents one.
+		if comp != "" and comp != last_comp:
 			last_comp = comp
 			items.append({"id": "", "kind": "league_head",
 				"rect": Rect2(left, y, right - left, 18.0),
@@ -60,14 +64,6 @@ static func layout(plan: Array, interest: Dictionary, left: float, right: float,
 				"rect": chip, "fixture": fx, "followed": followed})
 		y += h + LeagueChrome.ROW_GAP
 	return items
-
-## How many competitions a day's plan spans: a heading is only worth its line
-## when the list really holds two leagues.
-static func _leagues(plan: Array) -> int:
-	var ids := {}
-	for fx in plan:
-		ids[str((fx as Dictionary).get("competition_id", ""))] = true
-	return ids.size()
 
 # gd-tools: no cover start
 

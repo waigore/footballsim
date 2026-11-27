@@ -124,6 +124,63 @@ func test_a_wide_carrier_crosses_or_passes_into_the_box() -> void:
 	eng.brain.on_ball.decide(p)
 	assert_ne(eng.ball.owner_id, p.id, "a wide carrier kept the ball instead of playing it in")
 
+## The Live tactics page says `crossing` sets "cross preference and cross
+## accuracy". The accuracy half has always been read in `pass_ball`; this pins
+## the preference half, which used to be a flat constant, so the lever moves a
+## side's on-ball choice and not only the ball's error.
+func test_the_crossing_lever_moves_the_choice_to_cross() -> void:
+	# The pull is added to every candidate's score, so it decides between a cross
+	# and the same ball played short; a lever that never moves it is the bug this
+	# pins. Low lever: the cross is worth nothing. High lever: plainly worth more.
+	var low: float = MatchAIPlanning.cross_pull({"crossing": 0.0})
+	var mid: float = MatchAIPlanning.cross_pull({"crossing": 0.5})
+	var high: float = MatchAIPlanning.cross_pull({"crossing": 1.0})
+	assert_lt(low, mid, "a side told not to cross still valued the cross as much")
+	assert_gt(high, mid, "a side told to cross did not value the cross more")
+	assert_gt(high - low, 0.90,
+		"the crossing lever's whole range barely moves the cross (%0.2f)" % (high - low))
+	# The shipped clubs run 0.48–0.60. At that spread the lever has to be worth
+	# something — a preference that cannot separate the league's own sides is not
+	# a preference. Measured: this spread decides the close calls in the staged
+	# wide-carrier sweep.
+	var weakest: float = MatchAIPlanning.cross_pull({"crossing": 0.48})
+	var strongest: float = MatchAIPlanning.cross_pull({"crossing": 0.60})
+	assert_gt(strongest - weakest, 0.15,
+		"the shipped clubs' own crossing spread is worth nothing (%0.2f)" % (strongest - weakest))
+
+## At the league's default lever (0.5) the cross is worth exactly what the flat
+## constant used to be, so a default side plays the match it always played.
+func test_the_default_crossing_level_keeps_the_old_pull() -> void:
+	assert_almost_eq(MatchAIPlanning.cross_pull({"crossing": 0.5}), 0.28, 0.0001,
+		"the default crossing level no longer reproduces the shipped cross pull")
+	# A style with no lever at all (a bare fixture, a save written before the
+	# field existed) reads the default, never zero.
+	assert_almost_eq(MatchAIPlanning.cross_pull({}), 0.28, 0.0001,
+		"a style without a crossing lever did not fall back to the default")
+
+## The staged wide carrier still plays the ball in, so the lever never strands a
+## cross the geometry asks for at a low setting.
+func test_a_wide_carrier_still_plays_the_ball_in_at_a_low_lever() -> void:
+	var eng := _scene(652)
+	_clear_opponents(eng, 0)
+	var p = _outfield(eng, 0)
+	p.pos = eng.to_world(0, Vector2(0.75, 0.12))
+	var mate = null
+	for q in eng.players:
+		if q.team == 0 and q.id != p.id and not q.is_gk:
+			mate = q
+			break
+	mate.pos = eng.to_world(0, Vector2(0.92, 0.5))
+	eng.ball.pos = p.pos
+	eng.ball.owner_id = p.id
+	eng.ball.vel = Vector2.ZERO
+	var style: Dictionary = eng.style_of(0).duplicate()
+	style["crossing"] = 0.0
+	eng.live_style[0] = style
+	eng.brain.on_ball.reset_state()
+	var choice: Dictionary = eng.brain.on_ball._best_pass(p, style)
+	assert_false((choice["mate"] as Object) == null, "a low lever stranded the wide carrier")
+
 func test_a_crowded_own_box_clears() -> void:
 	var eng := _scene(66)
 	var p = _outfield(eng, 0)

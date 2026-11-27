@@ -1,8 +1,9 @@
 extends Node2D
 
 ## Playback controller + scene assembly: the engine, the snapshot ring, the
-## camera and the input bindings. Design-space arithmetic and the sheet routing
-## live in MatchView / MatchInput so the scene stays inside its P3 size budget.
+## camera and the input bindings. Arena build, the clock loop, design-space
+## arithmetic and sheet routing live in MatchScene / MatchPlayback / MatchView /
+## MatchInput so the scene stays inside its P3 size budget.
 
 const W := 68.0
 const L := 105.0
@@ -50,6 +51,8 @@ var audio: MatchAudio = null
 var camera: MatchCamera = null
 var view: MatchView = null
 var input: MatchInput = null
+## Live clock loop: ticks, half-time waits, highlight windows and event juice.
+var playback: MatchPlayback = null
 var fixture: FixtureSheet = null
 var batch_abort := false
 var hud_scale := 1.0
@@ -87,8 +90,9 @@ var billing: MatchBilling = MatchBilling.new()
 var result_hold := false
 
 func _ready() -> void:
-	build_scene()
-	setup_audio()
+	MatchScene.build(self)
+	audio = MatchAudio.new(self)
+	audio.setup()
 	highlights = HighlightDirector.new(self)
 	fixture_arg_given = fixture.parse_args()
 	new_match(seeded)
@@ -103,69 +107,8 @@ func _ready() -> void:
 	_sync_overlay_scale()
 	menus.pose(dev)
 
-func setup_audio() -> void:
-	audio = MatchAudio.new(self)
-	audio.setup()
-
-func build_scene() -> void:
-	arena = Node2D.new()
-	arena.name = "Arena"
-	add_child(arena)
-	pitch = Node2D.new()
-	pitch.set_script(load("res://scripts/view/pitch_view.gd"))
-	arena.add_child(pitch)
-	actors = Node2D.new()
-	actors.set_script(load("res://scripts/view/actor_layer.gd"))
-	arena.add_child(actors)
-	cam = Camera2D.new()
-	cam.position = Vector2(L * 0.5, W * 0.5)
-	cam.enabled = true
-	arena.add_child(cam)
-	cam.make_current()
-	hud_layer = CanvasLayer.new()
-	hud_layer.layer = 10
-	add_child(hud_layer)
-	hud = Control.new()
-	hud.set_script(load("res://scripts/ui/hud.gd"))
-	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
-	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hud_layer.add_child(hud)
-	hud.game = self
-	touch = OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
-	camera = MatchCamera.new(self)
-	view = MatchView.new(self)
-	input = MatchInput.new(self)
-	fixture = FixtureSheet.new(self)
-	_sync_overlay_scale()
-	camera.fit()
-	actors.game = self
-
-## Handhelds read the match overlay at one density point per design unit; the
-## non-match chrome (menus, settings, league and encyclopedia sheets) has its
-## own scale. Each layer keeps its own transform; MatchView owns the numbers and
-## the scene hands back the overlay layer it created.
 func _sync_overlay_scale() -> void:
-	var scales: Dictionary = view.overlay_scale(hud_layer, dev)
-	hud_scale = float(scales["hud"])
-	touch = bool(scales["touch"])
-	chrome_scale = float(scales["chrome"])
-	token_scale = float(scales["token"])
-	actors.token_scale = token_scale
-	hud.ui_scale = hud_scale
-	hud.touch = touch
-	hud_layer.transform = Transform2D.IDENTITY.scaled(Vector2(hud_scale, hud_scale))
-	var frame := Transform2D.IDENTITY.scaled(Vector2(chrome_scale, chrome_scale))
-	if sel_layer != null:
-		sel_layer.transform = frame
-		selector.ui_scale = chrome_scale
-	if wiki_host != null:
-		wiki_host.sync_scale()
-	if prematch != null:
-		prematch.sync(frame, chrome_scale, touch)
-	if menus != null:
-		menus.sync(frame, chrome_scale, touch)
-	if camera != null:
-		camera.fit()
+	view.sync_overlays(hud_layer, dev)
 
 func new_match(seed: int) -> void:
 	if replay != null:
@@ -221,46 +164,7 @@ func _input(event: InputEvent) -> void:
 	input.handle(event)
 
 func _click(p: Vector2) -> void:
-	var b: String = view.button_at(p)
-	if b == "pause":
-		paused = not paused
-	elif b == "speed":
-		_cycle_speed()
-	elif b == "mode":
-		_toggle_mode()
-	elif b == "skip":
-		_skip()
-	elif b == "camera":
-		camera_follow = not camera_follow
-	elif b == "teams":
-		open_select()
-	elif b == "menu":
-		menus.open_menu()
-	elif b == "league":
-		wiki_host.open_page(WikiModel.LEAGUE, "")
-	elif b == "team_0":
-		wiki_host.open_page(WikiModel.TEAM, str(engine.teams[0]["id"]))
-	elif b == "team_1":
-		wiki_host.open_page(WikiModel.TEAM, str(engine.teams[1]["id"]))
-	elif b == "profile":
-		var tracked = engine.by_id.get(focus_id, null)
-		if tracked != null and str(tracked.key) != "":
-			wiki_host.open_page(WikiModel.PLAYER, str(tracked.key))
-	elif b == "manager_card":
-		hud.manager_card.dismiss()
-	elif b == "restart":
-		new_match(seeded + randi_range(0, 9999))
-	if b != "":
-		return
-
-	hover_id = view.pick(p)
-	focus_id = -1 if hover_id < 0 or focus_id == hover_id else hover_id
-	actors.focus_id = focus_id
-
-func _cycle_speed() -> void:
-	var opts := [1.0, 2.0, 4.0, 8.0]
-	var idx := opts.find(speed)
-	speed = opts[(idx + 1) % opts.size()]
+	input.click(p)
 
 func _toggle_mode() -> void:
 	set_mode(Prefs.next_mode(mode))
@@ -273,97 +177,18 @@ func set_mode(next: String) -> void:
 		menus.save_mode(mode)
 
 func _skip() -> void:
-	if replay != null:
-		# Skip inside a stored clip ends it and hands the report back.
-		replay.finish(true)
-		replay = null
-		return
-	if mode != "full":
-		if in_highlight:
-			_end_highlight()
-		elif fast_mode:
-			_advance_ticks(60 * 10)
-	else:
-		_advance_ticks(60 * 10)
+	playback.skip()
 
 # ------------------------------------------------------------------ loop ----
 
 func _process(delta: float) -> void:
-	elapsed_real += delta
-	match_time += delta
-	dev.tick(self, delta)
-	if prematch != null and prematch.is_open():
-		return
-	if wiki_host != null and wiki_host.is_open():
-		return
-	if menus != null and menus.active():
-		return
-	if select_open:
-		return
-	var zm: float = zoom_scale * (2.6 if camera_follow else (1.10 if in_highlight else 1.0))
-	cam.zoom = cam.zoom.lerp(Vector2(base_zoom * zm, base_zoom * zm), clampf(delta * 3.0, 0.0, 1.0))
-	if camera != null:
-		camera.update(delta)
-	_apply_camera(false)
-	if not dev.apply_hover(self):
-		view.hover(mouse)
-
-	if replay != null:
-		# A stored clip owns the broadcast until it ends: the pack drives the
-		# bodies, so nothing here may tick the engine.
-		if replay.step(delta):
-			replay = null
-		return
-	if engine.phase == "full_time":
-		if not result_recorded:
-			result_recorded = PLSimStats.record_match(engine)
-		return
-	if engine.phase == "half_time" or engine.phase == "et_break":
-		if half_time_timer < 0.0:
-			half_time_timer = 4.0
-		half_time_timer -= delta
-		if half_time_timer <= 0.0 and not paused:
-			engine.resume_after_break() if engine.phase == "et_break" else engine.begin_second_half()
-			half_time_timer = -1.0
-			highlights.restart()
-		return
-	if paused:
-		return
-
-	_advance_ticks(view.ticks_this_frame(delta))
-	_post_tick()
+	playback.tick(delta)
 
 func _advance_ticks(n: int) -> void:
-	var budget := Time.get_ticks_usec() + 9000
-	for i in range(n):
-		var stopped: bool = engine.phase in ["half_time", "et_break", "full_time"]
-		if stopped or batch_abort:
-			batch_abort = false
-			break
-		engine.tick()
-		highlights.sample()
-		if Time.get_ticks_usec() > budget and i > 2:
-			break
+	playback.advance_ticks(n)
 
 func _post_tick() -> void:
-	replay_banner = maxf(0.0, replay_banner - get_process_delta_time())
-	if in_highlight:
-		if engine.clock > highlight_until:
-			_end_highlight()
-	elif mode != "full":
-		fast_mode = true
-	if camera != null:
-		camera.update_target()
-	_apply_camera(false)
-
-func _end_highlight() -> void:
-	in_highlight = false
-	highlight_until = -1.0
-	if mode != "full":
-		fast_mode = true
-
-func _snapshot() -> void:
-	highlights.snapshot()
+	playback.post_tick()
 
 ## Play one stored goal clip on the broadcast. The league hands the pack back
 ## with `on_done`, which puts its report sheet back on screen when the clip ends.
@@ -376,23 +201,10 @@ func play_goal_clip(pack: Dictionary, on_done := Callable()) -> void:
 		on_done.call()
 
 func _on_engine_event(e: Dictionary) -> void:
-	var kind: String = e.get("type", "")
-	if kind == "goal":
-		last_event_notice = 3.0
-		audio.play("goal_roar", -4.0)
-		audio.play("whistle", -12.0, 0.98)
-	elif kind == "save":
-		audio.play("ooh", -9.0)
-	elif kind in ["foul", "offside", "half_time", "full_time", "kickoff", "extra_time",
-			"extra_time_break", "shootout_start", "shootout_end"]:
-		audio.play("whistle", -14.0, randf_range(0.97, 1.03))
-	elif kind == "miss" or kind == "penalty_missed":
-		audio.play("ooh", -12.0)
-	highlights.on_event(e)
+	playback.on_engine_event(e)
 
 # ---------------------------------------------------------------- camera ----
 
 func _apply_camera(snap_zoom: bool) -> void:
 	if camera != null:
 		camera.apply(snap_zoom)
-

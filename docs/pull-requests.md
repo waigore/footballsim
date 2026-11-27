@@ -2,8 +2,8 @@
 
 Base rules for opening and landing PRs (humans and agents).
 
-**Tooling:** use [`gh`](https://cli.github.com/) for all GitHub PR operations.  
-**Gate docs:** map player/rules changes to [`requirements.md`](requirements.md) (`REQ-*`) and [`rubric.md`](rubric.md) (`RUB-*`).
+**Tooling:** [`gh`](https://cli.github.com/) for all GitHub PR ops.  
+**Gate docs:** map rules changes to [`requirements.md`](requirements.md) / [`rubric.md`](rubric.md).
 
 ## Principles
 
@@ -18,19 +18,31 @@ Base rules for opening and landing PRs (humans and agents).
 
 | Check | Workflow | Meaning |
 |-------|----------|---------|
-| `tests` | [CI](../.github/workflows/ci.yml) | **Tier 1:** impacted suites + **80% patch** on PRs; no-op if no code paths / no `project.godot`; `main` push skips |
+| `tests` | [CI](../.github/workflows/ci.yml) | Tier 1: impacted suites + 80% patch; no-op if no code / no project; `main` push skips |
 | `build` | [CI](../.github/workflows/ci.yml) | Headless import/compile; else no-op |
-| `e2e-smoke` | [CI](../.github/workflows/ci.yml) | Needs `build`; smoke script when present; else no-op |
+| `e2e-smoke` | [CI](../.github/workflows/ci.yml) | Needs `build`; smoke when present; else no-op |
 | `docs-lint` | [CI](../.github/workflows/ci.yml) | Docs ≤ 500 words — always |
 | `arch-lint` | [CI](../.github/workflows/ci.yml) | P3 + static P1 (2D/icons/hover) — always |
 | `skills-isolation` | [CI](../.github/workflows/ci.yml) | PR-only: fail if code **and** skills both change |
 | `ai-bench-report` | [CI](../.github/workflows/ci.yml) | PR AI paths: hills report ≥ baseline; else no-op |
+| `ux-vlm` | [CI](../.github/workflows/ci.yml) | UI paths: desktop wiki shots in body; VLM rubrics; no-op if no UI |
 
-Code paths (`tests`/`build`/`e2e-smoke`/`skills-isolation`): `scenes/`, `scripts/`, `ui/`, `autoload/`, `tests/`, `addons/`, `project.godot`, `icon.svg` (+ `tools/e2e_smoke.gd`, `tools/smoke/**` for build/smoke). Skills: `.agents/skills/`, `.cursor/skills/`, `.opencode/skill/`, `.grok/skills/`. Docs-only and skills-only OK.
+Code paths: `scenes/`, `scripts/`, `ui/`, `autoload/`, `tests/`, `addons/`, `project.godot`, `icon.svg` (+ `tools/e2e_smoke.gd`, `tools/smoke/**`). Skills: `.agents/skills/`, `.cursor/skills/`, `.opencode/skill/`, `.grok/skills/`. Docs-only / skills-only OK.
 
-**Tier 2** ([ci-tier2](../.github/workflows/tier2.yml)): every **8h** on `main` — full suite + overall 80% when project exists. Not a PR check. Sticky `ci-tier2` → fix-tests agent.
+**UI paths (`ux-vlm`):** `scenes/`, `ui/`, `scripts/ui/`, `assets/ui/`, `fonts/`. On change, one desktop wiki URL per affected screen (max 10):
 
-Budgets ([testing.md](testing.md)): PR `tests` **≤5 min**; smoke **≤4 min**. Merge: **squash only**; delete branches; auto-merge on.
+```markdown
+## UX screenshots
+| screen | url |
+|--------|-----|
+| league-hub | https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/… |
+```
+
+Missing links or VLM fail → fail (no sticky). Rubrics: [wiki](https://github.com/waigore/footballsim/wiki/ux-visual-rubrics); YAML `tools/ux_vlm/`.
+
+**Tier 2** ([ci-tier2](../.github/workflows/tier2.yml)): every **8h** — full suite + 80% + catalogue UX VLM. Not a PR check. Sticky `ci-tier2` → fix-tests agent.
+
+Budgets ([testing.md](testing.md)): `tests` ≤5 min; smoke ≤4 min; `ux-vlm` ≤1 min/10. Squash only; delete branches; auto-merge on.
 
 ### Respecting checks
 
@@ -59,7 +71,7 @@ EOF
 )"
 ```
 
-Prefer draft until reviewable. Title/body say **why**; cite `REQ-*` / `RUB-*` when relevant.
+Prefer draft until reviewable. Title/body say **why**; cite `REQ-*`/`RUB-*` when relevant.
 
 **While open:** `gh pr checks` · `gh pr view` · `gh pr comment`. Push fixes; avoid force-push unless rewriting a private draft.
 
@@ -75,5 +87,5 @@ Never merge to `main` outside a PR that satisfied the ruleset checks.
 
 - [ ] Maps to a pillar (`P1`–`P5`) or is docs/tooling-only
 - [ ] Opened/updated with `gh`
-- [ ] Checks green (`skills-isolation`, `ai-bench-report` if AI)
+- [ ] Checks green (`skills-isolation`, `ai-bench-report`, `ux-vlm` as needed)
 - [ ] Branch current with `main`; squash / `--auto` — no bypass

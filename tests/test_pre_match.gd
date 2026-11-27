@@ -265,6 +265,69 @@ func test_the_picker_asks_for_a_decided_match_only_when_chosen() -> void:
 		assert_lte(last.end.x, vp.x - 8.0, "the winner control runs off the sheet")
 		assert_lte(last.end.y, vp.y - 128.0, "the winner control reaches into the doors")
 
+## The KICK OFF and RANDOM doors are placed against the winner control, never
+## over it. At 640x360 and 640x300 the fixed door position covered both chips,
+## so a short handset could not reach the choice it was being offered.
+func test_the_picker_doors_never_cover_the_winner_control() -> void:
+	for vp in [Vector2(1600, 900), Vector2(1280, 800), Vector2(1024, 600),
+			Vector2(913, 411), Vector2(800, 480), Vector2(640, 360), Vector2(640, 300),
+			Vector2(411, 914), Vector2(375, 812)]:
+		var card_bottom: float = vp.y * 0.42
+		var chips: Array = LeagueChrome.winner_rects(vp, card_bottom)
+		var doors: Array = LeagueChrome.picker_doors(vp, card_bottom)
+		assert_eq(doors.size(), 2, "the picker lost a door at %s" % vp)
+		for chip in chips:
+			for door in doors:
+				assert_false((chip["rect"] as Rect2).intersects(door["rect"] as Rect2),
+					"%s sits under the %s door at %s" % [chip["id"], door["id"], vp])
+		for door in doors:
+			var r: Rect2 = door["rect"]
+			assert_gte(r.size.y, 50.0, "a picker door shrank to fit at %s" % vp)
+			assert_gte(r.position.y, LeagueChrome.winner_bottom(card_bottom),
+				"a picker door rose into the control at %s" % vp)
+			assert_lte(r.end.x, vp.x, "a picker door runs off the sheet at %s" % vp)
+
+## #266: the league chips and the sheet's heading never share a band. On a phone
+## the heading is dropped so the chips keep their place under the rule; a roomy
+## sheet keeps the heading and the chips ride above the rule, clear of its ink.
+func test_the_picker_chips_never_cut_through_the_heading() -> void:
+	for vp in [Vector2(1600, 900), Vector2(1280, 720), Vector2(1096, 493),
+			Vector2(914, 411), Vector2(640, 360), Vector2(411, 914)]:
+		var head: Dictionary = LeagueChrome.picker_header(vp)
+		var band: Rect2 = LeagueChrome.picker_chips_band(vp)
+		var bold: FontFile = load("res://fonts/BarlowCondensed-SemiBold.ttf")
+		# The heading's own ink: what the font reports for the string it paints.
+		if bool(head["title"]):
+			var size := int(head["title_size"])
+			var ink_h: float = bold.get_ascent(size) - bold.get_ascent(size) * 0.28
+			var title_rect := Rect2(0.0, float(head["title_y"]) - ink_h, vp.x, ink_h)
+			assert_false(title_rect.intersects(band),
+				"the SELECT FIXTURE heading shares a band with the chips at %s" % vp)
+		# Either way the chips clear the wordmark above and the cards below.
+		assert_gt(band.position.y, float(head["wordmark_y"]) + 6.0,
+			"the chips sit on the wordmark at %s" % vp)
+		var card_top: float = vp.y * 0.42 - minf(vp.y * 0.32, 250.0) * 0.5
+		assert_lt(band.end.y, card_top, "the chips reach the club cards at %s" % vp)
+		assert_eq(band.size.y, LeagueChrome.PICKER_CHIP_H, "the chip band changed height at %s" % vp)
+
+## The chip row a press lands on is the row the sheet paints: both come from
+## `picker_chip_rects`, and every chip's centre answers its own door (#266).
+func test_every_painted_chip_answers_a_press() -> void:
+	for vp in [Vector2(1600, 900), Vector2(1096, 493), Vector2(914, 411), Vector2(640, 360)]:
+		var rows: int = 1 + PLCompetitions.active().size()
+		var rects: Array = LeagueChrome.picker_chip_rects(vp, rows)
+		assert_eq(rects.size(), rows, "the chip row lost a competition at %s" % vp)
+		var band: Rect2 = LeagueChrome.picker_chips_band(vp)
+		for i in range(rects.size()):
+			var r: Rect2 = rects[i]
+			assert_gte(r.position.y, band.position.y - 0.5, "a chip rose out of its band at %s" % vp)
+			assert_lte(r.end.y, band.end.y + 0.5, "a chip fell out of its band at %s" % vp)
+			assert_gte(r.size.x, 40.0, "a chip shrank below a readable width at %s" % vp)
+			assert_lte(r.end.x, vp.x - 24.0 + 0.5, "a chip ran off the sheet at %s" % vp)
+			if i > 0:
+				assert_gte(r.position.x, (rects[i - 1] as Rect2).end.x,
+					"two chips overlap, so one press answers two doors at %s" % vp)
+
 func test_the_picker_hands_a_decided_match_to_the_engine() -> void:
 	var game := StubGame.new()
 	game.selector = StubSelector.new()

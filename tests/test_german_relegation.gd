@@ -3,10 +3,20 @@ extends GdToolsTest
 ## The German season end (#240): the 16th-vs-3rd Relegation plays two legs, a
 ## level aggregate goes to penalties, and the membership swap moves the right
 ## clubs between the two tiers in the save. No second season starts.
+##
+## One finished German pair is built in `before_all` and snapshotted; each test
+## that needs a pristine save restores that file instead of recreating the
+## calendar. Create-determinism still pays for one extra build against the
+## cached tie.
 
 var SAVE_DIR := TestScratch.dir("saves_test_german_relegation")
 var CACHE_DIR := TestScratch.dir("cache_test_german_relegation")
 const SEED := 5150
+const PRISTINE := "_pristine.sqlite"
+
+var season: LeagueSeason = null
+var slug := ""
+var expected_tie: Dictionary = {}
 
 func before_all() -> void:
 	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
@@ -15,8 +25,16 @@ func before_all() -> void:
 	_clean()
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
+	season = _build_finished(SEED)
+	assert_not_null(season, "the German season was not created")
+	slug = season.save.slug
+	expected_tie = LeagueRelegation.build(season)
+	_snapshot()
 
 func after_all() -> void:
+	if season != null:
+		season.close()
+		season = null
 	_clean()
 	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR
@@ -32,10 +50,10 @@ func _clean() -> void:
 
 ## A finished German pair: every fixture played, with the top-flight table
 ## ordered by points so places 16-18 are known.
-func _finished(seed: int) -> LeagueSeason:
-	var season := LeagueSeason.create("German Relegation", "generated", "fixture_days", seed,
+func _build_finished(seed: int) -> LeagueSeason:
+	var built := LeagueSeason.create("German Relegation", "generated", "fixture_days", seed,
 		["BL", "BL2"])
-	if season == null:
+	if built == null:
 		return null
 	var scored := {}
 	for i in range(18):
@@ -45,18 +63,49 @@ func _finished(seed: int) -> LeagueSeason:
 		var comp := str(row["competition_id"])
 		var home := str(row["home_club_id"])
 		var away := str(row["away_club_id"])
-		var table := season.record.standings.table(comp)
+		var table := built.record.standings.table(comp)
 		var home_place := _place(table, home, scored, comp)
 		var away_place := _place(table, away, scored, comp)
 		var hg := 2 if home_place < away_place else 0
 		var ag := 2 if away_place < home_place else 0
 		PLDatabase.execute("UPDATE league_fixture SET status = 'played', home_goals = ?, "
 			+ "away_goals = ? WHERE id = ?;", [hg, ag, str(row["id"])])
-	season.record.standings.recompute()
+	built.record.standings.recompute()
 	# A played-out calendar is what the clock leaves behind: the next step finds
 	# no unplayed date and marks the save complete (no second season).
-	if season.record.fixtures.unplayed() == 0:
-		season.save.set_status("complete")
+	if built.record.fixtures.unplayed() == 0:
+		built.save.set_status("complete")
+	return built
+
+## Keep a byte-for-byte copy of the finished save so a swap can be rewound without
+## rebuilding the calendar.
+func _snapshot() -> void:
+	if season == null or season.save == null:
+		return
+	season.save.ensure_open()
+	PLDatabase.close()
+	var bytes := FileAccess.get_file_as_bytes(season.save.path)
+	var out := FileAccess.open(SAVE_DIR.path_join(PRISTINE), FileAccess.WRITE)
+	if out != null and not bytes.is_empty():
+		out.store_buffer(bytes)
+		out.close()
+	season.save.ensure_open()
+
+## Restore the finished pair and reopen it. Mutating tests (summary / apply) each
+## get a pristine file this way.
+func _fresh() -> LeagueSeason:
+	if season != null:
+		season.close()
+		season = null
+	PLDatabase.close()
+	var bytes := FileAccess.get_file_as_bytes(SAVE_DIR.path_join(PRISTINE))
+	var dest := SAVE_DIR.path_join(slug + LeagueSave.EXT)
+	var out := FileAccess.open(dest, FileAccess.WRITE)
+	assert_true(out != null and not bytes.is_empty(), "the pristine German save was missing")
+	out.store_buffer(bytes)
+	out.close()
+	season = LeagueSeason.open(slug)
+	assert_not_null(season, "the pristine German save did not reopen")
 	return season
 
 ## The table moves by one goal a place: the club seeded higher keeps it.
@@ -67,10 +116,9 @@ func _place(table: Array, club_id: String, scored: Dictionary, comp: String) -> 
 	return 99
 
 func test_the_tie_is_the_sixteenth_against_the_third() -> void:
-	var season := _finished(SEED)
-	assert_not_null(season, "the German season was not created")
-	assert_eq(season.record.fixtures.unplayed(), 0, "the season is not played out")
-	var tie := LeagueRelegation.build(season)
+	var current := _fresh()
+	assert_eq(current.record.fixtures.unplayed(), 0, "the season is not played out")
+	var tie := LeagueRelegation.build(current)
 	assert_false(tie.is_empty(), "a finished German pair has no Relegation")
 	assert_true(str(tie["top_club_id"]).begins_with("BL-"), "the tie is not the top-flight club")
 	assert_true(str(tie["second_club_id"]).begins_with("BL2-"),
@@ -85,18 +133,17 @@ func test_the_tie_is_the_sixteenth_against_the_third() -> void:
 		"the second leg is not at the second-tier club")
 	assert_true(str(tie["winner_club_id"]) != "", "the tie named no winner")
 	assert_true(str(tie["text"]).contains("—"), "the tie has no reading")
-	season.close()
 
 func test_the_same_seed_settles_the_same_tie() -> void:
-	var a := _finished(SEED)
-	var tie_a := LeagueRelegation.build(a)
-	a.close()
-	var b := _finished(SEED)
-	var tie_b := LeagueRelegation.build(b)
-	b.close()
-	assert_eq(str(tie_a["top_club_id"]), str(tie_b["top_club_id"]), "the tie moved between runs")
-	assert_eq(tie_a["legs"], tie_b["legs"], "the legs differ for one seed")
-	assert_eq(str(tie_a["winner_club_id"]), str(tie_b["winner_club_id"]),
+	# One extra create against the cached tie: create + settle stay deterministic
+	# without rebuilding the calendar for every other assert.
+	var again := _build_finished(SEED)
+	assert_not_null(again, "the second German season was not created")
+	var tie := LeagueRelegation.build(again)
+	again.close()
+	assert_eq(str(tie["top_club_id"]), str(expected_tie["top_club_id"]), "the tie moved between runs")
+	assert_eq(tie["legs"], expected_tie["legs"], "the legs differ for one seed")
+	assert_eq(str(tie["winner_club_id"]), str(expected_tie["winner_club_id"]),
 		"the winner differs for one seed")
 
 func test_a_level_aggregate_goes_to_penalties() -> void:
@@ -110,9 +157,9 @@ func test_a_level_aggregate_goes_to_penalties() -> void:
 	assert_ne(pens.x, pens.y, "a shootout finished level")
 
 func test_the_movers_are_two_up_and_three_down() -> void:
-	var season := _finished(SEED)
-	var tie := LeagueRelegation.build(season)
-	var movers := LeaguePromotion.movers(season, tie)
+	var current := _fresh()
+	var tie := LeagueRelegation.build(current)
+	var movers := LeaguePromotion.movers(current, tie)
 	assert_false(movers.is_empty(), "a finished German pair has no movers")
 	var up: Array = movers["to_top"]
 	var down: Array = movers["to_second"]
@@ -122,14 +169,13 @@ func test_the_movers_are_two_up_and_three_down() -> void:
 		assert_true(str(club_id).begins_with("BL"), "%s is not a German club" % club_id)
 	for club_id in down:
 		assert_true(str(club_id).begins_with("BL"), "%s is not a German club" % club_id)
-	var table: Array = season.record.standings.table("BL2")
+	var table: Array = current.record.standings.table("BL2")
 	assert_true(up.has(str((table[0] as Dictionary)["club_id"])), "the 2.BL winner does not go up")
 	assert_true(up.has(str((table[1] as Dictionary)["club_id"])), "2.BL's second does not go up")
-	season.close()
 
 func test_the_swap_moves_the_clubs_in_the_save() -> void:
-	var season := _finished(SEED)
-	var summary := season.summary()
+	var current := _fresh()
+	var summary := current.summary()
 	assert_false(summary.is_empty(), "a finished German pair has no podium")
 	var tie: Dictionary = summary.get("relegation", {})
 	assert_false(tie.is_empty(), "the podium lost the Relegation")
@@ -143,16 +189,15 @@ func test_the_swap_moves_the_clubs_in_the_save() -> void:
 			"%s did not move down in the save" % club_id)
 	# No second season: the clock is where the finished calendar left it and the
 	# save still reports the season it played.
-	assert_eq(season.save.status(), "complete", "the save is not marked complete")
-	var again := season.summary()
+	assert_eq(current.save.status(), "complete", "the save is not marked complete")
+	var again := current.summary()
 	assert_false(again.is_empty(), "reopening the podium lost the season")
 	assert_eq(str((again["competitions"] as Array)[0]["id"]), "BL",
 		"the podium's order changed after the swap")
-	season.close()
 
 func test_the_podium_reads_the_german_bands() -> void:
-	var season := _finished(SEED)
-	var summary := season.summary()
+	var current := _fresh()
+	var summary := current.summary()
 	var sections: Array = summary["competitions"]
 	assert_eq(sections.size(), 2, "the podium is not one section per German tier")
 	var top: Dictionary = sections[0]
@@ -165,7 +210,6 @@ func test_the_podium_reads_the_german_bands() -> void:
 	assert_eq((lower["relegated"] as Array).size(), 2, "the 2. Bundesliga drops two")
 	assert_eq(int((lower["rules"] as Dictionary).get("promotion_places", 0)), 2,
 		"the second tier lost its promotion places")
-	season.close()
 
 func test_the_table_bands_mark_promotion_and_the_playoff() -> void:
 	var bl := LeagueRules.template("BL")
@@ -188,8 +232,8 @@ func test_the_table_bands_mark_promotion_and_the_playoff() -> void:
 	assert_eq(LeagueRules.zone_label("playoff"), "PLO", "the playoff band has no label")
 
 func test_the_club_page_follows_the_swapped_membership() -> void:
-	var season := _finished(SEED)
-	var summary := season.summary()
+	var current := _fresh()
+	var summary := current.summary()
 	var movers: Dictionary = summary["promotion"]
 	var up: Array = movers["to_top"]
 	var down: Array = movers["to_second"]
@@ -204,7 +248,6 @@ func test_the_club_page_follows_the_swapped_membership() -> void:
 	# The competitions still carry 18 clubs each: two out, two in.
 	assert_eq(int(PLCompetitions.clubs("BL")), 18, "the Bundesliga lost or gained a club")
 	assert_eq(int(PLCompetitions.clubs("BL2")), 18, "the 2. Bundesliga lost or gained a club")
-	season.close()
 
 func _links_league(page: Dictionary, competition_id: String) -> bool:
 	for block in page.get("blocks", []):
@@ -227,15 +270,14 @@ func test_a_tie_between_the_tiers_is_only_for_a_german_pair() -> void:
 	english.close()
 
 func test_the_tie_is_applied_only_once() -> void:
-	var season := _finished(SEED)
-	var tie := LeagueRelegation.build(season)
-	var movers := LeaguePromotion.movers(season, tie)
-	assert_true(LeaguePromotion.apply(season, movers), "the first swap did not apply")
-	assert_true(LeaguePromotion.apply(season, movers), "a second swap reported failure")
+	var current := _fresh()
+	var tie := LeagueRelegation.build(current)
+	var movers := LeaguePromotion.movers(current, tie)
+	assert_true(LeaguePromotion.apply(current, movers), "the first swap did not apply")
+	assert_true(LeaguePromotion.apply(current, movers), "a second swap reported failure")
 	var first_top: Array = movers["to_top"].duplicate()
-	var still := LeaguePromotion.movers(season, tie)
+	var still := LeaguePromotion.movers(current, tie)
 	for club_id in first_top:
 		assert_eq(str(LeagueLedger.competition_of(str(club_id))), "BL",
 			"%s moved twice" % club_id)
 	assert_eq(int(still["to_top"].size()), first_top.size(), "the movers changed on a re-apply")
-	season.close()

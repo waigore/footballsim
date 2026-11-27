@@ -250,7 +250,49 @@ func test_resume_is_offered_only_while_a_match_waits() -> void:
 	assert_true(game.hud_layer.visible, "Resume did not bring the HUD back")
 	assert_false(game.menus.shell.music.wanted, "menu music kept playing after Resume")
 
-# ------------------------------------------------------------ presentation --
+# ------------------------------------------------------------ #277 resume ---
+
+## #277: with a match waiting, the menu's gold door and its advertised key lead
+## back into that match, not out to the fixture picker.
+func test_a_waiting_match_makes_resume_the_gold_door() -> void:
+	game.match_started = true
+	game.menus.open_menu()
+	assert_eq(str(MenuScreen.door_ids(true)[0]), "resume", "Resume is not the leading door")
+	assert_eq(MenuScreen.primary_id(true), "resume", "the waiting menu did not make Resume primary")
+	assert_eq(MenuScreen.primary_id(false), "start", "a cold start lost Start Sim's gold")
+	assert_eq(str(MenuScreen.door_hints(true)["resume"]), "ENTER", "Resume does not carry the confirm key")
+	assert_eq(str(MenuScreen.door_hints(true)["start"]), "T", "Start Sim has no keyboard path beside Resume")
+	assert_true(MenuScreen.footer_hint(true, false).begins_with("ENTER  RESUME MATCH"),
+		"the footer still advertises the wrong door: %s" % MenuScreen.footer_hint(true, false))
+	assert_true(MenuScreen.footer_hint(false, false).begins_with("ENTER  START SIM"),
+		"a cold start's footer stopped naming Start Sim")
+
+func test_enter_returns_to_the_waiting_match() -> void:
+	game.match_started = true
+	game.paused = true
+	game.menus.open_menu()
+	assert_true(game.menus.shell.key(KEY_ENTER), "Enter was not taken by the menu")
+	assert_false(game.select_open, "Enter opened the fixture picker over a waiting match")
+	assert_false(game.menus.active(), "Enter left the menu up")
+	assert_false(game.paused, "Enter did not unpause the waiting match")
+	assert_true(game.hud_layer.visible, "Enter resumed without the match HUD")
+
+## The other door still has a key: `T` reaches Start Sim, the broadcast's own
+## teams key.
+func test_start_sim_keeps_a_key_beside_resume() -> void:
+	game.match_started = true
+	game.menus.open_menu()
+	assert_true(game.menus.shell.key(KEY_T), "T did not press Start Sim")
+	assert_true(game.select_open, "T did not open fixture setup")
+	assert_false(game.menus.active(), "the menu stayed over fixture setup")
+	game._close_select()
+	# A cold start keeps Enter on Start Sim, exactly as before.
+	game.match_started = false
+	game.menus.open_menu()
+	assert_true(game.menus.shell.key(KEY_ENTER), "Enter did not start from a cold-start menu")
+	assert_true(game.select_open, "a cold-start Enter did not open fixture setup")
+	game._close_select()
+
 
 func test_the_still_track_always_covers_the_screen() -> void:
 	var size := Vector2(1600, 900)
@@ -334,7 +376,7 @@ func test_the_settings_bar_drags_and_steps() -> void:
 	game.menus.shell.set_volume(0.7)
 
 func test_keyboard_walks_every_sheet() -> void:
-	game.menus.open_menu()
+	game.menus.shell.open_menu(false)
 	game.menus.shell.set_volume(0.5)
 	assert_true(game.menus.shell.key(KEY_S), "S did not open settings")
 	assert_eq(game.menus.shell.screen, AppShell.SCREEN_SETTINGS, "S did not land on settings")
