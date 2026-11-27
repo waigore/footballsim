@@ -39,10 +39,13 @@ static func multiplier(stretch: float, layer_scale: float) -> float:
 
 ## Point the viewport's glyph atlases at that density. Returns the factor used;
 ## an engine-default density clears the override (0.0) so a desktop window keeps
-## the stock path. Safe to call on every resize: it reads the window, not state.
+## the stock path. Safe to call on every resize and every frame: it reads the
+## window, not state, and a factor that has not changed is not rewritten.
 static func apply(view: Viewport, layer_scale: float) -> float:
 	if view == null:
 		return 0.0
 	var want: float = multiplier(window_stretch(view), layer_scale)
-	view.oversampling_override = 0.0 if is_equal_approx(want, 1.0) else want
+	var value: float = 0.0 if is_equal_approx(want, 1.0) else want
+	if not is_equal_approx(view.oversampling_override, value):
+		view.oversampling_override = value
 	return want
