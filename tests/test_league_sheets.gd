@@ -1115,6 +1115,41 @@ func test_a_portrait_phone_pans_to_the_last_table_column() -> void:
 	assert_lte((last["rect"] as Rect2).end.x, vp.x + 0.5, "the last column is still off the window")
 	body.free()
 
+## #312: an empty PLAYED MATCHDAYS list says why it is empty — a season with
+## nothing played yet names that, and only a played season emptied by the
+## filters gets the filters blamed — and an empty LEADERS chart leaves no bare
+## heading behind.
+func test_the_stats_empty_state_names_the_season_not_the_filters() -> void:
+	var sheet := LeagueExtra.new()
+	var vp := Vector2(1280, 720)
+	var unplayed: Array = sheet.stats_layout(vp, {"name": "S", "reports": [],
+		"played": 0, "leaders": [],
+		"filters": {"league": "", "month": "", "team": "", "stat": "goals"}})
+	assert_eq(_note(unplayed), "No matchday has been played yet.",
+		"an unplayed season blamed the filters")
+	assert_false(_has_caption(unplayed, "LEADERS"), "an empty LEADERS chart printed a bare heading")
+	var filtered: Array = sheet.stats_layout(vp, {"name": "S", "reports": [],
+		"played": 20, "leaders": [],
+		"filters": {"league": "PL", "month": "", "team": "mun", "stat": "goals"}})
+	assert_eq(_note(filtered), "No matchdays match these filters.",
+		"a played season emptied by its filters lost its note")
+	var charted: Array = sheet.stats_layout(vp, {"name": "S", "reports": [],
+		"played": 20, "leaders": [{"name": "A. Scorer", "abbr": "MUN", "stat_value": 3}],
+		"filters": {"league": "", "month": "", "team": "", "stat": "goals"}})
+	assert_true(_has_caption(charted, "LEADERS  ·  GOALS"), "a chart with rows lost its caption")
+
+func _note(items: Array) -> String:
+	for item in items:
+		if str(item["kind"]) == "note":
+			return str(item["label"])
+	return ""
+
+func _has_caption(items: Array, prefix: String) -> bool:
+	for item in items:
+		if str(item["kind"]) == "caption" and str(item["label"]).begins_with(prefix):
+			return true
+	return false
+
 func _item(items: Array, id: String) -> Dictionary:
 	for item in items:
 		if str(item["id"]) == id:
