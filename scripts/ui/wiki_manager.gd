@@ -17,7 +17,7 @@ const LEVER_LABELS := {
 static func page(club_id: String) -> Dictionary:
 	var club := WikiModel.repo().club(club_id)
 	if club.is_empty():
-		return WikiModel.league_page()
+		return WikiLeague.page()
 	var prof := ManagerData.profile(club_id)
 	var board := Tactics.from_team(club, prof)
 	var out := {
