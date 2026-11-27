@@ -16,7 +16,7 @@ func open_wizard() -> void:
 	screen.mode = LeagueScreen.MODE_WIZARD
 	screen.delete.clear()
 	screen.nav.clear()
-	screen.wizard = {"name": "League %d" % (screen.saves.size() + 1),
+	screen.wizard = {"name": LeagueStartSheet.SAVE_NAME,
 		"calendar_mode": "generated", "advance_mode": "fixture_days",
 		"competitions": ["PL"], "error": ""}
 	screen.visible = true

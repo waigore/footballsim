@@ -135,8 +135,11 @@ func test_new_league_opens_the_wizard_and_takes_the_setup() -> void:
 	assert_eq(str(screen().wizard["calendar_mode"]), "real", "the fixture mode was not taken")
 	press_id("adv:every_day")
 	assert_eq(str(screen().wizard["advance_mode"]), "every_day", "the advance mode was not taken")
-	for i in range(12):
+	# Clear whatever the wizard opened on (#323's default is `My League Sim`),
+	# then type our own name.
+	for i in range(str(screen().wizard["name"]).length() + 2):
 		screen().key(KEY_BACKSPACE)
+	assert_eq(str(screen().wizard["name"]), "", "the wizard's default name did not clear")
 	screen().key(KEY_A)
 	screen().key(KEY_B)
 	assert_eq(str(screen().wizard["name"]), "AB", "typing did not reach the name")

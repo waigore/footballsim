@@ -17,6 +17,12 @@ extends RefCounted
 const HEADER := LeagueChrome.HEADER
 const BAR_H := LeagueChrome.BAR_H
 
+## The name a New League opens on (#323). It used to be `League 1`, which reads
+## as the English third tier the wizard also offers — a save called that looked
+## like a League One season. A save already named `League 1` keeps its name: this
+## is only the field's opening text, never a rename.
+const SAVE_NAME := "My League Sim"
+
 var cache := {}
 ## Dates this sheet painted, with the strip each one occupies (#99).
 var hints := DateHints.new()
@@ -182,7 +188,7 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_GOLD, 1)
 			var value := str(item["value"])
 			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
-				value if value != "" else "League 1", 15, UiChrome.C_TEXT, bold)
+				value if value != "" else SAVE_NAME, 15, UiChrome.C_TEXT, bold)
 			LeagueFieldFocus.caret(c, rect, value, bold, 15, live)
 		elif kind == "choice":
 			var chosen := bool(item["selected"])
