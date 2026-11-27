@@ -146,7 +146,7 @@ static func status_label(status: String) -> String:
 func draw_wizard_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
 	LeagueExtra.header(c, vp, fonts, "NEW LEAGUE", "GOD-MODE SEASON SETUP", 0.0, true,
-		bool(view.get("touch", false)))
+		bool(view.get("touch", false)), false)
 	if str(view.get("error", "")) != "":
 		UiChrome.text(c, Vector2(24.0, vp.y - BAR_H - 10.0), str(view["error"]), 12, UiChrome.C_DANGER, fonts["med"])
 
@@ -193,7 +193,7 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 func draw_load_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, _view: Dictionary,
 		_hints: DateHints) -> void:
 	LeagueExtra.header(c, vp, fonts, "LOAD LEAGUE", "NAMED SEASONS", 0.0, true,
-		bool(_view.get("touch", false)))
+		bool(_view.get("touch", false)), false)
 
 func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()

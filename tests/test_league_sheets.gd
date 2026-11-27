@@ -907,6 +907,72 @@ func test_the_results_sheet_adds_the_hubs_continue_beside_back() -> void:
 	assert_eq(_item_rect(single, "continue"), Rect2(), "a single match report gained CONTINUE")
 
 
+func test_a_phone_header_hangs_the_drawer_door_beside_back() -> void:
+	var bold: Font = UiChrome.fonts()["bold"]
+	var sheet := LeagueSheet.new()
+	for vp in [Vector2(913, 411), Vector2(640, 360), Vector2(1280, 720)]:
+		var state := _state([_fixture(1)], _table())
+		var cont := _item_rect(sheet.hub_layout(vp, state), "continue")
+		var band := LeagueExtra.header_band(vp, bold, LeagueSheet.HUB_TITLE,
+			LeagueSheet.hub_caption(state), cont.size.x + 12.0, false, true)
+		var door := LeagueExtra.nav_rect(vp)
+		assert_false(door == Rect2(), "no header lane for the drawer door at %s" % vp)
+		assert_almost_eq(door.position.x, LeagueExtra.back_rect(true).end.x + LeagueExtra.NAV_GAP, 0.01,
+			"the drawer door left BACK's shoulder at %s" % vp)
+		assert_gte(door.size.x, 44.0, "the drawer door is narrower than a finger at %s" % vp)
+		assert_lte(door.end.x, cont.position.x, "the drawer door sits under CONTINUE at %s" % vp)
+		var title: Rect2 = band["title_rect"]
+		assert_gte(title.position.x, door.end.x, "the title sits on the drawer door at %s" % vp)
+		assert_lte(title.end.x, cont.position.x, "the title runs under CONTINUE at %s" % vp)
+		assert_eq(str(band["title"]), LeagueSheet.HUB_TITLE,
+			"a phone header with room for its title lost it at %s" % vp)
+		var strip: Rect2 = band["caption_rect"]
+		if strip != Rect2():
+			assert_lte(strip.end.x, cont.position.x - 12.0, "the caption runs under CONTINUE at %s" % vp)
+			assert_gte(strip.position.x, title.end.x, "the caption is painted through the title at %s" % vp)
+
+	var desk := LeagueExtra.header_band(Vector2(1600, 900), bold, LeagueSheet.HUB_TITLE, "", 152.0)
+	assert_almost_eq((desk["title_rect"] as Rect2).position.x, LeagueExtra.TITLE_X, 0.01,
+		"the desktop title lane moved")
+	var desk_hub := LeagueExtra.header_band(Vector2(1600, 900), bold, LeagueSheet.HUB_TITLE, "",
+		152.0, false, false)
+	assert_almost_eq((desk_hub["title_rect"] as Rect2).position.x, LeagueExtra.TITLE_X, 0.01,
+		"a desktop header made room for a door it does not paint")
+
+
+func test_a_header_that_cannot_hold_its_title_shortens_or_drops_it() -> void:
+	var bold: Font = UiChrome.fonts()["bold"]
+	for vp in [Vector2(411, 914), Vector2(375, 812), Vector2(320, 480)]:
+		var door := LeagueExtra.nav_rect(vp)
+		assert_false(door == Rect2(), "a narrow sheet lost the drawer door at %s" % vp)
+		var cont := LeagueExtra.primary_rect(vp, 140.0, true)
+		assert_lte(door.end.x, cont.position.x, "the drawer door sits under CONTINUE at %s" % vp)
+		var band := LeagueExtra.header_band(vp, bold, LeagueSheet.HUB_TITLE,
+			LeagueSheet.hub_caption(_state([_fixture(1)], _table())), cont.size.x + 12.0, false, true)
+		var title: Rect2 = band["title_rect"]
+		assert_gte(title.position.x, door.end.x, "the title starts on the drawer door at %s" % vp)
+		assert_lte(title.end.x, cont.position.x, "the title runs under CONTINUE at %s" % vp)
+		var drawn := str(band["title"])
+		assert_true(drawn == "" or drawn.begins_with("Today"),
+			"a narrow header drew neither its page name nor nothing at %s: '%s'" % [vp, drawn])
+		if drawn.length() > 1:
+			assert_true(drawn == LeagueSheet.HUB_TITLE or drawn.ends_with("…"),
+				"a narrow header lost its name instead of being shortened at %s" % vp)
+		assert_eq(str(band["caption"]), "", "a caption was drawn without a title at %s" % vp)
+
+
+func test_a_phone_header_never_lays_a_row_under_the_drawer_door() -> void:
+	var panel := LeaguePanel.new()
+	panel.touch = true
+	var vp := Vector2(913, 411)
+	var door := panel.tab_rect(vp)
+	assert_almost_eq(door.end.y, LeagueExtra.nav_rect(vp).end.y, 0.01,
+		"the painted door and the answer box disagree")
+	assert_lte(door.end.y, LeagueChrome.HEADER, "the door reached into the body")
+	assert_gte(LeagueBody.TOP, door.end.y, "the body starts above the drawer door")
+	assert_eq(LeagueBody.TOP, LeagueChrome.HEADER, "the body top left the header band")
+
+
 func test_the_header_title_and_caption_clear_the_header_doors() -> void:
 	var bold: Font = UiChrome.fonts()["bold"]
 	var long_name := "MANCHESTER DERBY LEAGUE"

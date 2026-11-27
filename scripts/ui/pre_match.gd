@@ -173,7 +173,7 @@ func _draw_header(vp: Vector2, fonts: Dictionary) -> void:
 	var line := ""
 	if room >= 60.0:
 		line = LeagueColumns.fit_name(kicker, bold, 10, room)
-	LeagueExtra.header(self, vp, fonts, "PRE-MATCH", line, right, true, touch)
+	LeagueExtra.header(self, vp, fonts, "PRE-MATCH", line, right, true, touch, false)
 
 
 static func strip_line(team: Dictionary, position: int, form: String) -> String:

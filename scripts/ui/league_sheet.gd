@@ -101,7 +101,7 @@ func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dicti
 	var bold: Font = fonts["bold"]
 
 
-	var right: float = LeagueExtra.primary_rect(vp).size.x + 12.0
+	var right: float = LeagueExtra.primary_rect(vp, 140.0, bool(state.get("touch", false))).size.x + 12.0
 	var band := LeagueExtra.header(c, vp, fonts, HUB_TITLE, caption, right, false,
 		bool(state.get("touch", false)))
 	if date != "" and str(band["caption"]) != "":

@@ -109,7 +109,8 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 		kicker = "RESULTS"
 		caption = FixtureCalendar.day_label(date) if date != "" else date
 
-		right = LeagueExtra.primary_rect(vp).size.x + 12.0
+		right = LeagueExtra.primary_rect(vp, 140.0,
+			bool(view.get("touch", false))).size.x + 12.0
 	LeagueExtra.header(c, vp, fonts, kicker, caption, right, true,
 		bool(view.get("touch", false)))
 

@@ -77,6 +77,9 @@ func panel_rect(vp: Vector2) -> Rect2:
 
 func tab_rect(vp: Vector2) -> Rect2:
 	if touch:
+		var door: Rect2 = LeagueExtra.nav_rect(vp)
+		if door.size.x > 0.0:
+			return door
 		return Rect2(TAB_INSET, vp.y * 0.5 - TAP_DOOR * 0.5, TAP_DOOR, TAP_DOOR)
 	return Rect2(-2.0, vp.y * 0.5 - TAB_H * 0.5, TAB_W, TAB_H)
 
@@ -151,11 +154,11 @@ func _draw_tab(c: CanvasItem, vp: Vector2, fonts: Dictionary) -> void:
 	var rect := tab_rect(vp)
 	if touch:
 		UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 7, Color(0.96, 0.78, 0.30, 0.55), 1)
+		var rules: float = rect.position.y + rect.size.y * 0.26
 		for i in range(3):
 			c.draw_rect(Rect2(rect.position.x + (rect.size.x - 22.0) * 0.5,
-				rect.position.y + rect.size.y * 0.30 + float(i) * 7.0, 22.0, 2.0),
-				UiChrome.C_GOLD)
-		UiChrome.text_c(c, rect.get_center().x, rect.end.y - 10.0, "NAV", 10, UiChrome.C_GOLD,
+				rules + float(i) * 6.0, 22.0, 2.0), UiChrome.C_GOLD)
+		UiChrome.text_c(c, rect.get_center().x, rect.end.y - 7.0, "NAV", 9, UiChrome.C_GOLD,
 			fonts.get("bold", null))
 		return
 	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, Color(0.96, 0.78, 0.30, 0.35), 1)
