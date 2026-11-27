@@ -660,7 +660,7 @@ domain = "hud_chrome"
 # the Esc key takes, read through the real main.gd. It rides the router domain
 # with the surfaces it walks.
 [[rules]]
-match = "scripts/ui/back_press.gd*"
+match = "scripts/back_press.gd*"
 domain = "match_input"
 
 [[rules]]
