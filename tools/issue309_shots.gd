@@ -69,6 +69,14 @@ func _initialize() -> void:
 		var name := "issue309_hub_played_%d" % size.x
 		await _shot(name)
 		_measure(league, tag + " played", name, "played")
+	# The plan row scripts also map to the calendar screen, so its gallery image
+	# is shot from this same run: the hub's calendar with the played day selected.
+	await _pose(Vector2i(1600, 900))
+	league.screen.click("calendar")
+	await _frames(4)
+	await _shot("issue309_calendar_1600")
+	league.screen.click("back")
+	await _frames(2)
 	print("EXIT season=", season.save.slug)
 	quit()
 
