@@ -40,7 +40,7 @@ Code paths: `scenes/`, `scripts/`, `ui/`, `autoload/`, `tests/`, `addons/`, `pro
 
 Missing links or VLM fail → fail (no sticky). Rubrics: [wiki](https://github.com/waigore/footballsim/wiki/ux-visual-rubrics); YAML `tools/ux_vlm/`.
 
-**Tier 2** ([ci-tier2](../.github/workflows/tier2.yml)): every **8h** — full suite + 80% + catalogue UX VLM. Not a PR check. Sticky `ci-tier2` → fix-tests agent.
+**Tier 2** ([ci-tier2](../.github/workflows/tier2.yml)): every **8h** — full suite + 90% + catalogue UX VLM. Not a PR check. Sticky `ci-tier2`+`todo` → fix-tests.
 
 Budgets ([testing.md](testing.md)): `tests` ≤5 min; smoke ≤4 min; `ux-vlm` ≤1 min/10. Squash only; delete branches; auto-merge on.
 
