@@ -32,8 +32,13 @@ const ROW_H := 22.0
 ## finger covers two clubs and the wrong one opens (#204). A desktop sheet keeps
 ## its dense reading untouched.
 const TAP_ROW_H := 49.0
-## Room for the place number before the club name.
-const POS_W := 22.0
+## Room for the place number before the club name: the zone band at the row's
+## edge, the air beside it, and then the digits. Both readings share the compact
+## strip's indents, so a full-sheet place number never lands on its band (#308).
+const POS_W := LeagueColumns.CLUB_INDENT
+## The zone band a filled place paints at the row's own left edge. Geometry, not
+## just paint: the place number has to clear it (#308).
+const ZONE_BAND_W := 4.0
 ## The club column never collapses; a name wider than it is shortened instead.
 const CLUB_MIN := 150.0
 ## The league tabs above the column band: one chip per active competition.
@@ -178,13 +183,16 @@ func _min_row_w(reading: String) -> float:
 
 ## Column rails for a row at this width. Compact keeps `LeagueColumns`, the
 ## measured layout #71 settled; the full sheet walks the columns from the club
-## column's right edge so the whole record fits a phone in landscape.
+## column's right edge so the whole record fits a phone in landscape. Its left
+## edge is the compact strip's own: the place number indented clear of the zone
+## band the row paints, then the club name after it (#308).
 func _places(row: Rect2) -> Dictionary:
 	if mode == COMPACT:
 		return LeagueColumns.of(row, COMPACT_COLS)
+	var pos_x := row.position.x + LeagueColumns.POS_INDENT
 	var club_x := row.position.x + POS_W
 	var club_w := row.size.x - POS_W - float(numeric(FULL_COLS)) * (NUM_W + NUM_GAP)
-	var out := {"pos_x": row.position.x, "club_x": club_x, "club_w": club_w, "cols": []}
+	var out := {"pos_x": pos_x, "club_x": club_x, "club_w": club_w, "cols": []}
 	var x := club_x + club_w
 	for col in FULL_COLS:
 		if bool(col["num"]):
@@ -294,7 +302,7 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
 	var row: Dictionary = item["row"]
 	var band := str(item["zone"])
 	if band != "":
-		c.draw_rect(Rect2(rect.position.x, rect.position.y + 2.0, 4.0, rect.size.y - 4.0),
+		c.draw_rect(Rect2(rect.position.x, rect.position.y + 2.0, ZONE_BAND_W, rect.size.y - 4.0),
 			LeagueChrome.zone_color(band))
 	var places: Dictionary = item["places"]
 	var y := rect.position.y + rect.size.y * 0.5 + 4.0
