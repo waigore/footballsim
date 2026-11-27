@@ -21,6 +21,10 @@ func _draw() -> void:
 		return
 	hold.vp = screen.design_vp()
 	hold.menu.mouse = screen.mouse if screen is Control else Vector2(-1000, -1000)
+
+
+	var device = screen.get("touch")
+	hold.menu.touch = device != null and bool(device)
 	hold.menu.draw(self, hold.vp, UiChrome.fonts())
 
 # gd-tools: no cover end

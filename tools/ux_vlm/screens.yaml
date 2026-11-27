@@ -76,6 +76,19 @@ screens:
       - scripts/ui/hud_managers.gd
       - scripts/ui/hud_player_card.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-l-hud-1600.jpg
+  - id: match-hud-hidden
+    title: Match HUD hidden
+    kind: overlay
+    scripts:
+      - scripts/ui/hud.gd
+      - scripts/ui/hud_chrome.gd
+      - scripts/ui/hud_layout.gd
+      - scripts/ui/hud_paint.gd
+      - scripts/ui/hud_roster_band.gd
+      - scripts/ui/hud_top_band.gd
+      - scripts/ui/hud_controls_band.gd
+      - scripts/ui/hud_banners_band.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261127-l-hud-hidden-1600.png
   - id: league-hub
     title: League hub
     kind: flow
@@ -99,9 +112,14 @@ screens:
       # The settled day's reading rides the same surface (#326).
       - scripts/ui/league_report_sheet.gd
       # The season's other sheets ride the same surface: its front door (New
-      # League / Load) and the drawer's own readings (Stats, Interest).
+      # League / Load) and the drawer's own readings (Stats, Interest, System),
+      # plus the club long-press menu they raise (#310).
       - scripts/ui/league_start_sheet.gd
       - scripts/ui/league_extra.gd
+      - scripts/ui/league_system.gd
+      - scripts/ui/league_system_actions.gd
+      - scripts/ui/interest_menu.gd
+      - scripts/ui/interest_layer.gd
       # Season-complete podium paint rides the same surface (#240/#260).
       - scripts/ui/league_podium_sheet.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-l-hub-1600.jpg

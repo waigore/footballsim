@@ -190,6 +190,15 @@ func test_every_press_is_answered_by_the_open_menu() -> void:
 	assert_eq(menu.hit(menu.door_rect(vp).get_center(), vp), "", "a closed menu answered a press")
 
 
+func test_the_footer_names_the_pointer_that_dismisses() -> void:
+	var menu := InterestMenu.new()
+	assert_eq(menu.close_hint(), "CLICK ELSEWHERE TO CLOSE",
+		"a desktop card still told the player to tap")
+	menu.touch = true
+	assert_eq(menu.close_hint(), "TAP ELSEWHERE TO CLOSE",
+		"a phone card stopped naming the finger")
+
+
 func test_strips_name_the_club_under_a_point() -> void:
 	var names := InterestNames.new()
 	names.add(Rect2(10, 10, 40, 20), "MUN")

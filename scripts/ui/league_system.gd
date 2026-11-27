@@ -39,9 +39,12 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		y += ROW_H + ROW_GAP
 
 	var mode := str(view.get("advance_mode", "fixture_days"))
+
+
+	var verb: String = "tap" if bool(view.get("touch", false)) else "click"
 	items.append({"id": "sys:advance", "kind": "row",
 		"label": "ADVANCE: %s" % ("FIXTURE DAYS" if mode == "fixture_days" else "EVERY DAY"),
-		"hint": "tap to switch to %s" % ("every day" if mode == "fixture_days" else "fixture days"),
+		"hint": "%s to switch to %s" % [verb, "every day" if mode == "fixture_days" else "fixture days"],
 		"rect": Rect2(x, y, w, ROW_H)})
 	y += ROW_H + ROW_GAP
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,

@@ -148,12 +148,7 @@ func _draw() -> void:
 
 	banners_band.chrome_hidden = not hud_visible and slide <= 0.0
 	var lift: float = 1.0 - slide
-
-
-	if slide > 0.0:
-		chrome.alpha = slide
-		roster_band.world_labels(p, self, engine, game, f_bold)
-		chrome.alpha = 1.0
+	roster_band.world_labels(p, self, engine, game, f_bold)
 	if lift < 1.0:
 
 

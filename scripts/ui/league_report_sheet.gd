@@ -4,6 +4,10 @@ extends RefCounted
 
 const HEADER := 58.0
 
+
+const CAPTION_Y := HEADER + 72.0
+const EVENTS_TOP := HEADER + 84.0
+
 const PLAY_W := 44.0
 const PLAY_H := 26.0
 const GUTTER := 16.0
@@ -75,7 +79,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 
 
 	var places := columns(vp)
-	var cursors := {"home": y, "away": y}
+	var cursors := {"home": EVENTS_TOP, "away": EVENTS_TOP}
 	for item in numbered:
 		var e: Dictionary = item["event"]
 		var side := LeagueRoundup.side_of(report["fixture"], e)
@@ -143,7 +147,7 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 			var club_id := str(fx.get(pair[1], ""))
 			var caption: String = LeagueColumns.fit_name(str(fx.get(pair[2], "")), bold, 10,
 				float(places["w"]))
-			InterestNames.run(c, names, club_id, caption, Vector2(x, HEADER + 72.0), 10,
+			InterestNames.run(c, names, club_id, caption, Vector2(x, CAPTION_Y), 10,
 				LeagueInterestMark.ink(interest, club_id), bold)
 	for item in items:
 		var rect: Rect2 = item["rect"]

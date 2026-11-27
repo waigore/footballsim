@@ -25,6 +25,9 @@ static func view(screen) -> Dictionary:
 		"advance_mode": str(state.get("advance_mode", "fixture_days")),
 
 		"focus": str(screen.focus.kind),
+
+
+		"touch": bool(screen.touch),
 	}
 
 static func act(screen, id: String) -> void:
