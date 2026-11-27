@@ -1,6 +1,21 @@
 extends GdToolsTest
 
 
+var CACHE_DIR := TestScratch.dir("cache_test_kicking")
+
+
+func before_all() -> void:
+	PLDatabase.cache_dir = CACHE_DIR
+	PLDatabase.reset()
+	PLRepository.shared().invalidate()
+
+
+func after_all() -> void:
+	PLDatabase.cache_dir = PLDatabase.CACHE_DIR
+	PLDatabase.reset()
+	PLRepository.shared().invalidate()
+
+
 func _staged(level, seed_in: int = 4242) -> Dictionary:
 	var eng := MatchEngine.new(seed_in, "MUN", "MCI")
 	eng.phase = "play"

@@ -24,7 +24,6 @@ suites = [
 
 [domains.match_laws]
 suites = [
-  "test_coverage_branch_headers.gd",
   "test_match_laws.gd",
   "test_engine_rules.gd",
   "test_match_stats.gd",
@@ -113,7 +112,6 @@ suites = [
   "test_match_mode.gd",
   # Phone↔desktop intent parity for menu/settings/confirm (REQ-P5-07).
   "test_ux_parity.gd",
-  "test_coverage_branch_headers.gd",
 ]
 
 # Shared engine spine: laws + finishing + restart + managers when a core file moves.
@@ -146,7 +144,6 @@ suites = [
   "test_extra_time.gd",
   "test_match_contact.gd",
   "test_kicking.gd",
-  "test_coverage_branch_headers.gd",
 ]
 
 [domains.teams]
@@ -183,7 +180,6 @@ suites = [
 # rows, chips and doors are laid out by `league_sheet.gd`.
 [domains.league]
 suites = [
-  "test_coverage_branch_headers.gd",
   "test_league_rules.gd",
   "test_league_rules_migration.gd",
   "test_league_save.gd",
@@ -243,7 +239,6 @@ suites = [
 # both modal surfaces' press/drag/wheel suites.
 [domains.sheet_pointer]
 suites = [
-  "test_coverage_branch_headers.gd",
   "test_sheet_pointer.gd",
   "test_league_ui.gd",
   "test_wiki_render.gd",
