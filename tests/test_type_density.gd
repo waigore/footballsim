@@ -38,6 +38,20 @@ func test_a_headless_run_uses_the_stock_path() -> void:
 	add_child(host)
 	var view: Viewport = host.get_viewport()
 	assert_almost_eq(TypeDensity.window_stretch(view), 1.0, 0.001, "a headless run invented a stretch")
+	assert_almost_eq(TypeDensity.window_stretch(null), 1.0, 0.001, "a missing viewport invented a stretch")
+	assert_almost_eq(TypeDensity.apply(null, 2.19), 0.0, 0.001, "a missing viewport was given a density")
+	host.queue_free()
+
+func test_a_viewport_with_no_size_reports_no_stretch() -> void:
+	# A viewport that has not been laid out yet (a zero visible rect or window)
+	# must read as the stock density instead of dividing by zero.
+	var host := Node2D.new()
+	add_child(host)
+	var view: Viewport = host.get_viewport()
+	var before: float = view.oversampling_override
+	assert_almost_eq(TypeDensity.apply(view, 2.0), 2.0, 0.001, "an unlaid viewport lost its layer scale")
+	view.oversampling_override = before
+	host.queue_free()
 
 func test_applying_the_density_moves_and_clears_the_viewport_override() -> void:
 	var host := Node2D.new()
