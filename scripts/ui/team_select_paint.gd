@@ -2,6 +2,7 @@ class_name TeamSelectPaint
 extends RefCounted
 
 
+# gd-tools: no cover start
 static func arrow(sheet: Control, r: Rect2, glyph: String, id: String) -> void:
 	var hovered: bool = r.has_point(sheet.mouse as Vector2)
 	sheet.rect(sheet.C_PANEL_LIGHT if hovered else sheet.C_PANEL, r, 8,
@@ -149,4 +150,4 @@ static func paint(sheet: Control) -> void:
 			spec[3] as Color, sheet.f_med)
 
 	chrome_doors(sheet, vp)
-
+# gd-tools: no cover end

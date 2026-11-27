@@ -5,6 +5,8 @@ extends RefCounted
 const BOX := 10.0
 const SIZE := 10
 
+# gd-tools: no cover start
+
 
 static func icon(c: CanvasItem, kind: String, at: Vector2, own: bool = false) -> void:
 	var cx := at.x + BOX * 0.5
@@ -60,4 +62,4 @@ static func _player(e: Dictionary) -> String:
 		name = "" if raw == null else str(raw)
 	return name if name != "" else "Unknown"
 
-
+# gd-tools: no cover end

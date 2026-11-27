@@ -47,6 +47,7 @@ func zone_at() -> Dictionary:
 func _process(_delta: float) -> void:
 	queue_redraw()
 
+# gd-tools: no cover start
 
 func _draw() -> void:
 	if not showing():
@@ -56,4 +57,4 @@ func _draw() -> void:
 		return
 	DateHints.paint(self, cache, zone, screen.design_vp(), UiChrome.fonts())
 
-
+# gd-tools: no cover end

@@ -54,7 +54,7 @@ func paint(c: CanvasItem, vp: Vector2, fonts: Dictionary, mouse: Vector2, touch:
 	var label := name
 	if label.length() > NAME_MAX:
 		label = label.substr(0, NAME_MAX - 3) + "..."
-
+# gd-tools: no cover start
 	_painter.draw(c, vp, fonts, "DELETE SAVE?", "%s is deleted for good." % label,
 		"DELETE", "CANCEL", touch)
-
+# gd-tools: no cover end

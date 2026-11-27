@@ -19,7 +19,7 @@ Godot 4 football world sim for **desktop** (Windows, macOS, Linux) and **mobile*
 
 Root and `docs/` Markdown **≤ 500 words** (fenced code excluded). CI `docs-lint` (`python tools/lint_docs_words.py`). Prefer tables/bullets; long mechanics → wiki.
 
-**No `.gd` comments** in `scripts/`, `tests/`, `playtests/` (`#` / `##` / `//` / `/* */`). Wiki is SoT. CI `no-comments-lint` (`python tools/lint_no_comments.py`). `tools/` and YAML unrestricted.
+**No `.gd` comments** in `scripts/`/`tests/`/`playtests/` (`#`/`##`/`//`/`/* */`); wiki is SoT. CI `no-comments-lint`. Only `# gd-tools: no cover start|end` allowed. `tools/`+YAML free.
 
 ## Stack
 

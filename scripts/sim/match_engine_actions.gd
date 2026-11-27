@@ -1,6 +1,4 @@
 extends "res://scripts/sim/match_engine_duels.gd"
-
-
 func _try_control(p, d: float) -> void:
 	var speed = ball.vel.length()
 	var q = Attrs.first_touch_quality(p)
@@ -12,7 +10,6 @@ func _try_control(p, d: float) -> void:
 	if rng.randf() > chance:
 		if verbose:
 			_vlog("MISCONTROL %s (speed %.1f chance %.2f)" % [p.name, speed, chance])
-
 		var ang = rng.randf_range(-1.2, 1.2)
 		ball.vel = (p.facing.rotated(ang) * rng.randf_range(2.0, 5.0))
 		ball.last_touch_id = p.id
@@ -22,20 +19,16 @@ func _try_control(p, d: float) -> void:
 	_claim_ball(p)
 	if speed > 11.0 and p.team == possession_team:
 		p.stats["touches"] += 1
-
-
 func _claim_ball(p) -> void:
 	var intercepted: bool = p.team != ball.last_touch_team and ball.last_touch_team >= 0 \
 		and ball.shot_team < 0 and ball.assist_id >= 0 and ball.last_touch_id == ball.assist_id \
 		and ball.vel.length() >= MatchStats.INTERCEPTION_SPEED \
 		and clock - ball.assist_time <= MatchStats.INTERCEPTION_WINDOW
-
 	if ball.assist_id >= 0 and ball.last_touch_team == p.team and p.id != ball.assist_id:
 		var passer = by_id.get(ball.assist_id, null)
 		if passer != null:
 			passer.stats["passes_ok"] += 1
 			stats[p.team]["passes_ok"] += 1
-
 	if p.team != ball.last_touch_team:
 		ball.assist_id = -1
 		ball.shot_team = -1
@@ -63,13 +56,10 @@ func _claim_ball(p) -> void:
 	if possession_team != p.team:
 		possession_team = p.team
 		possession_loose = false
-
-
 	for q in players:
 		q.offside_flag = false
 	if p.mark_id >= 0:
 		p.mark_id = -1
-
 func _gk_claim(gk, d: float) -> void:
 	var speed = ball.vel.length()
 	var handle = Attrs.gk_handling(gk)
@@ -102,7 +92,6 @@ func _gk_claim(gk, d: float) -> void:
 		gk.action_t = 0.8
 		gk.state = "gk_hold"
 	else:
-
 		var away = Vector2(teams[gk.team]["dir"], 0.85 * (1.0 if ball.pos.y < W * 0.5 else -1.0)).normalized()
 		away = away.rotated(rng.randf_range(-0.35, 0.35))
 		ball.vel = away.rotated(rng.randf_range(-0.5, 0.5)) * rng.randf_range(6.0, 11.0)
@@ -116,7 +105,6 @@ func _gk_claim(gk, d: float) -> void:
 			stats[gk.team]["saves"] += 1
 			_emit("save", Commentary.save(rng, gk.name, _shot_credit(gk), "parry", ball.shot_xg), gk.team, gk)
 			_flash(0.8)
-
 func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, kind: String = "pass") -> void:
 	if p == null:
 		return
@@ -163,7 +151,6 @@ func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, 
 	stats[p.team]["passes"] += 1
 	possession_team = p.team
 	_mark_offside_at_pass(p)
-
 	if receiver == null:
 		receiver = _nearest_teammate_to(aim, p.team, false, p.id)
 	if receiver != null:
@@ -178,7 +165,6 @@ func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, 
 		_add_involvement(p, "pass", "Through ball", p.pos)
 	else:
 		_add_involvement(p, "pass", "Pass %dm" % int(dist), p.pos)
-
 func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String = "shot") -> void:
 	var goal: Vector2 = target_goal_pos(p.team)
 	var dist: float = p.pos.distance_to(goal)
@@ -186,29 +172,20 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	var sigma = Attrs.shot_sigma_deg(p, dist, pressure) / home_factor(p)
 	if kind == "penalty":
 		sigma *= 0.30
-
 	var gkk = _gk_of(1 - p.team)
 	var xg_est: float = expected_goals(p.pos, aim_y, p.team)
 	var aim = Vector2(goal.x, goal.y + aim_y)
 	var ang = atan2(aim.y - p.pos.y, aim.x - p.pos.x) + deg_to_rad(rng.randf_range(-sigma, sigma))
 	var speed = Attrs.shot_speed(p, power) * rng.randf_range(0.94, 1.06)
 	var dir = Vector2(cos(ang), sin(ang))
-
-
 	var tg0: float = (goal.x - p.pos.x) / maxf(absf(dir.x), 0.05) * signf(goal.x - p.pos.x)
 	var y_cross: float = p.pos.y + dir.y * absf(tg0)
 	var on_target: bool = tg0 > 0.0 and absf(y_cross - goal.y) < GOAL_W * 0.5 and aim_z < GOAL_H
-
-
 	ball.planned_goal = false
 	ball.planned_save = false
-
-
 	var frame_aim := ""
 	var ty: float = goal.y + aim_y
 	if kind != "penalty" and rng.randf() < clampf(FINISH_EFFICIENCY * xg_est, 0.02, 0.92):
-
-
 		var side := 1.0 if rng.randf() < 0.5 else -1.0
 		ty = goal.y + side * minf(GOAL_W * 0.5 - 0.12, rng.randf_range(2.1, 3.45))
 		ang = atan2(ty - p.pos.y, goal.x - p.pos.x)
@@ -227,8 +204,6 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 		dir = Vector2(cos(ang), sin(ang))
 		ball.planned_save = true
 	elif on_target and gkk != null:
-
-
 		ang = atan2(gkk.pos.y - p.pos.y, goal.x - p.pos.x)
 		dir = Vector2(cos(ang), sin(ang))
 		speed *= 0.97
@@ -254,7 +229,6 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	ball.shot_time = clock
 	ball.shot_saved = false
 	ball.assist_id = -1
-
 	var tg: float = (goal.x - p.pos.x) / maxf(absf(dir.x * speed), 0.1) * signf(goal.x - p.pos.x)
 	if tg > 0.0:
 		var y_at: float = p.pos.y + dir.y * speed * tg
@@ -294,22 +268,17 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 		_vlog("SHOT %s dist=%.1f role=%s near_def=%d mindef=%.1f goalside=%d gkdist_goal=%.1f press=%.2f" % [p.name, dist, p.role, near_def, min_def, goal_side_def, _gkdbg.pos.distance_to(gpos) if _gkdbg else -1, pressure])
 	_flash(0.7)
 	brain.on_shot(p)
-
 func expected_goals(pos: Vector2, aim_y: float, team: int) -> float:
 	var goal: Vector2 = target_goal_pos(team)
 	var d: float = pos.distance_to(goal)
 	var ang: float = opponent_goal_angle_for(pos, goal)
 	var xg: float = exp(-0.125 * d) * (0.22 + ang * 0.55)
 	xg *= 1.0 - clampf((absf(aim_y) - 1.0) * 0.06, 0.0, 0.25)
-
-
 	return clampf(xg * XG_SCALE * float(xg_form[team]), 0.006, 0.86)
-
 func opponent_goal_angle_for(pos: Vector2, goal: Vector2) -> float:
 	var dx = absf(goal.x - pos.x)
 	var half = GOAL_W * 0.5
 	return clampf(atan2(half, maxf(dx, 0.4)) / 0.9, 0.0, 1.0)
-
 func clear_ball(p, point: Vector2) -> void:
 	var dist: float = p.pos.distance_to(point)
 	ball.vz = sqrt(2.0 * 9.81 * clampf(dist * 0.22, 4.0, 11.0))
@@ -321,8 +290,6 @@ func clear_ball(p, point: Vector2) -> void:
 	ball.last_touch_team = p.team
 	ball.planned_goal = false
 	ball.planned_save = false
-
-
 	ball.assist_id = -1
 	p.has_ball = false
 	p.cooldown = 0.35
@@ -330,8 +297,6 @@ func clear_ball(p, point: Vector2) -> void:
 	_emit("clearance", Commentary.clearance(rng, p.name, false), p.team, p)
 	_add_involvement(p, "clearance", "Clearance", p.pos)
 	ball_kicked.emit(0.7)
-
-
 func would_be_offside(receiver) -> bool:
 	var t: int = receiver.team
 	var ax_ball: float = attacking_x(t, ball.pos)
@@ -341,7 +306,6 @@ func would_be_offside(receiver) -> bool:
 	var line: float = xs[1]
 	var ax: float = attacking_x(t, receiver.pos)
 	return ax > ax_ball + 0.35 and ax > L * 0.5 and ax > line + 0.45
-
 func _mark_offside_at_pass(p) -> void:
 	if phase != "play":
 		return

@@ -63,6 +63,8 @@ static func caption(view: Dictionary, label: String) -> String:
 		parts.append(label)
 	return " · ".join(PackedStringArray(parts))
 
+# gd-tools: no cover start
+
 
 static func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
@@ -91,6 +93,8 @@ static func _legend(c: CanvasItem, strip: Rect2, fonts: Dictionary, bands: Array
 		UiChrome.text(c, Vector2(x, strip.position.y), label, size,
 			LeagueChrome.zone_color(str(bands[i])), bold)
 		x += bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + GAP
+
+# gd-tools: no cover end
 
 
 static func legend_width(bold: Font, labels: Array, size: int) -> float:

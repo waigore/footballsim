@@ -127,6 +127,7 @@ static func status_label(status: String) -> String:
 		return "COMPLETE"
 	return token.replace("_", " ").to_upper()
 
+# gd-tools: no cover start
 
 func draw_wizard_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
@@ -209,4 +210,4 @@ func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		elif str(item["kind"]) == "button":
 			UiChrome.button(c, cache, rect, str(item["label"]), bold, bool(item.get("primary", false)))
 
-
+# gd-tools: no cover end

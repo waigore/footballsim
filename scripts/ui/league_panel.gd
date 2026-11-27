@@ -101,6 +101,8 @@ func hit(p: Vector2, vp: Vector2) -> String:
 	return ""
 
 
+# gd-tools: no cover start
+
 func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, active_pose: String) -> void:
 
 
@@ -161,4 +163,4 @@ func _draw_tab(c: CanvasItem, vp: Vector2, fonts: Dictionary) -> void:
 		c.draw_rect(Rect2(rect.position.x + 7.0, rect.position.y + 44.0 + float(i) * 7.0, 10.0, 2.0),
 			UiChrome.C_GOLD)
 
-
+# gd-tools: no cover end

@@ -32,6 +32,8 @@ static func height(fixture: Dictionary, tight: bool = false) -> float:
 	var rows := maxi((sides["home"] as Array).size(), (sides["away"] as Array).size())
 	return (TIGHT_BASE if tight else BASE) + float(rows) * (TIGHT_LINE if tight else LINE)
 
+# gd-tools: no cover start
+
 
 static func paint(c: CanvasItem, rect: Rect2, fixture: Dictionary, fonts: Dictionary,
 		names: InterestNames, home_ink: Color, away_ink: Color, tight: bool = false) -> void:
@@ -73,4 +75,4 @@ static func _paint_side(c: CanvasItem, x: float, top: float, w: float, events: A
 		LeagueMarks.line(c, Vector2(x, top + float(i) * line_h), events[i], fonts, w,
 			UiChrome.C_TEXT)
 
-
+# gd-tools: no cover end

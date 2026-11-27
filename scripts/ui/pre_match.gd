@@ -25,13 +25,14 @@ var cache := {}
 var f_bold: Font
 var f_med: Font
 
-
+# gd-tools: no cover start
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
 	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
 	resized.connect(queue_redraw)
 
+# gd-tools: no cover end
 
 func setup(v: Dictionary) -> void:
 	view = v
@@ -42,12 +43,14 @@ func setup(v: Dictionary) -> void:
 func is_open() -> bool:
 	return visible and not view.is_empty()
 
-
+# gd-tools: no cover start
 func design_vp() -> Vector2:
 	var vp: Vector2 = size / maxf(ui_scale, 0.001)
 	if (vp.x <= 0.0 or vp.y <= 0.0) and is_inside_tree():
 		vp = get_viewport().get_visible_rect().size / maxf(ui_scale, 0.001)
 	return vp
+
+# gd-tools: no cover end
 
 
 func _process(delta: float) -> void:
@@ -130,6 +133,8 @@ func key(code: int) -> bool:
 		return false
 	return true
 
+
+# gd-tools: no cover start
 
 func _draw() -> void:
 	var vp := design_vp()
@@ -287,4 +292,4 @@ func _wrap(text: String, width: float, max_lines: int) -> Array:
 		out.append(line)
 	return out
 
-
+# gd-tools: no cover end

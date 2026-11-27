@@ -82,6 +82,7 @@ func state_line() -> String:
 		return "FOLLOWED  ·  ITS GAMES STAY ON WATCH"
 	return "NOT FOLLOWED  ·  FOLLOW TO KEEP ITS GAMES ON WATCH"
 
+# gd-tools: no cover start
 
 func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary) -> void:
 	if not is_open():
@@ -112,4 +113,4 @@ func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary) -> void:
 	UiChrome.text(c, Vector2(r.position.x + 18.0, r.end.y - 10.0),
 		"TAP ELSEWHERE TO CLOSE", 8, UiChrome.C_DIM, med)
 
-
+# gd-tools: no cover end

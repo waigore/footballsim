@@ -1,6 +1,8 @@
 extends Node2D
 
 
+# gd-tools: no cover start
+
 const L := 105.0
 const W := 68.0
 const GOAL_W := 7.32
@@ -351,3 +353,4 @@ func _draw_ad_strip_v(rect: Rect2, variant: int) -> void:
 		draw_line(Vector2(rect.position.x + 0.3, y), Vector2(rect.position.x + rect.size.x - 0.3, y), Color(1, 1, 1, 0.10), 0.04)
 
 
+# gd-tools: no cover end

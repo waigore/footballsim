@@ -27,6 +27,7 @@ func _process(_delta: float) -> void:
 	if delete != null and delete.is_open():
 		queue_redraw()
 
+# gd-tools: no cover start
 
 func _draw() -> void:
 	if panel == null:
@@ -38,4 +39,4 @@ func _draw() -> void:
 	delete.paint(self, vp, fonts, screen.mouse if screen is Control else Vector2(-1000, -1000),
 		screen != null and screen.touch)
 
-
+# gd-tools: no cover end

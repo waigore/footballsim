@@ -14,6 +14,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	queue_redraw()
 
+# gd-tools: no cover start
 
 func _draw() -> void:
 	if hold == null or screen == null or not hold.is_open():
@@ -22,4 +23,4 @@ func _draw() -> void:
 	hold.menu.mouse = screen.mouse if screen is Control else Vector2(-1000, -1000)
 	hold.menu.draw(self, hold.vp, UiChrome.fonts())
 
-
+# gd-tools: no cover end

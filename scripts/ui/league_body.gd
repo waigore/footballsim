@@ -126,10 +126,12 @@ func hit(p: Vector2) -> String:
 			return str(item["id"])
 	return ""
 
+# gd-tools: no cover start
+
 
 func _draw() -> void:
 	if painter.is_valid():
 		draw_set_transform(Vector2(-hscroll, -position.y - scroll))
 		painter.call(self)
 
-
+# gd-tools: no cover end

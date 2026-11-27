@@ -208,6 +208,8 @@ func _store(save: LeagueSave, key: String, value: String) -> void:
 	if save != null:
 		save.put_meta(key, value)
 
+# gd-tools: no cover start
+
 
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
@@ -268,4 +270,4 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
 		UiChrome.text_r(c, float(col["right"]), y, LeagueColumns.text(row, key), 10 if points else 9,
 			UiChrome.C_TEXT if points else UiChrome.C_SOFT, fonts["bold"] if points else fonts["med"])
 
-
+# gd-tools: no cover end

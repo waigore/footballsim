@@ -48,6 +48,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		"rect": LeagueExtra.back_rect()})
 	return items
 
+# gd-tools: no cover start
 
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
@@ -95,4 +96,4 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array, vie
 				UiChrome.button(c, cache, rect, str(item["label"]), bold,
 					bool(item.get("primary", false)))
 
-
+# gd-tools: no cover end

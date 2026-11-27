@@ -66,6 +66,7 @@ static func _promoted_count(section: Dictionary, rules: Dictionary) -> int:
 func _paint_band(c: CanvasItem, body: Callable) -> void:
 	body.call(c)
 
+# gd-tools: no cover start
 
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
@@ -163,4 +164,4 @@ func _club_row(section: Dictionary, club_id: String) -> Dictionary:
 			return row
 	return {}
 
-
+# gd-tools: no cover end

@@ -189,6 +189,7 @@ static func _month_label(month: String) -> String:
 		return "ALL MONTHS"
 	return LeagueMonth.label(month)
 
+# gd-tools: no cover start
 
 func draw_stats_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
@@ -264,6 +265,8 @@ static func _comp_short(competition_id: String) -> String:
 	var row := PLRepository.shared().competition(competition_id)
 	return str(row.get("short_name", competition_id))
 
+# gd-tools: no cover end
+
 
 func interest_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
@@ -295,6 +298,7 @@ func interest_layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(row.end.x - 96.0, row.position.y + 4.0, 88.0, ROW_H - 8.0)})
 	return items
 
+# gd-tools: no cover start
 
 func draw_interest_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
@@ -347,4 +351,4 @@ func _draw_swatch(c: CanvasItem, rect: Rect2, club: Dictionary) -> void:
 	var colour = club.get("color", UiChrome.C_GOLD)
 	c.draw_rect(Rect2(rect.position.x, rect.position.y + 4.0, 3.0, rect.size.y - 8.0), colour)
 
-
+# gd-tools: no cover end

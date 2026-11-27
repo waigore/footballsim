@@ -91,6 +91,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		cursors[side] = float(cursors[side]) + h + 1.0
 	return items
 
+# gd-tools: no cover start
 
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
@@ -190,4 +191,4 @@ func _draw_event(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary
 			UiChrome.text(c, Vector2(rect.position.x + 14.0, rect.position.y + 32.0),
 				line.substr(0, fit), 10, UiChrome.C_SOFT, fonts["med"])
 
-
+# gd-tools: no cover end

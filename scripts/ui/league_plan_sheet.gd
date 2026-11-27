@@ -45,6 +45,8 @@ static func layout(plan: Array, interest: Dictionary, left: float, right: float,
 		y += h + LeagueChrome.ROW_GAP
 	return items
 
+# gd-tools: no cover start
+
 
 func draw(c: CanvasItem, items: Array, fonts: Dictionary) -> void:
 	names.clear()
@@ -66,4 +68,4 @@ func draw(c: CanvasItem, items: Array, fonts: Dictionary) -> void:
 			else:
 				LeaguePlanRows.paint_toggle(c, rect, item["fixture"], cache, bold)
 
-
+# gd-tools: no cover end

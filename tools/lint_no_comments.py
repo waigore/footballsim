@@ -12,6 +12,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCOPE_DIRS = ("scripts", "tests", "playtests")
+# Coverage tooling markers only (docs/testing.md). Not documentation comments.
+ALLOWED_HASH_LINES = frozenset(
+    {
+        "# gd-tools: no cover start",
+        "# gd-tools: no cover end",
+    }
+)
 
 
 def iter_gd() -> list[Path]:
@@ -22,6 +29,16 @@ def iter_gd() -> list[Path]:
             continue
         files.extend(sorted(root.rglob("*.gd")))
     return files
+
+
+def _line_at(text: str, i: int) -> str:
+    start = i
+    while start > 0 and text[start - 1] != "\n":
+        start -= 1
+    end = i
+    while end < len(text) and text[end] != "\n":
+        end += 1
+    return text[start:end]
 
 
 def find_comments(text: str) -> list[tuple[int, int, str]]:
@@ -94,6 +111,12 @@ def find_comments(text: str) -> list[tuple[int, int, str]]:
             continue
 
         if ch == "#":
+            whole = _line_at(text, i).strip()
+            if whole in ALLOWED_HASH_LINES:
+                while i < n and text[i] != "\n":
+                    advance(text[i])
+                    i += 1
+                continue
             kind = "##" if i + 1 < n and text[i + 1] == "#" else "#"
             hits.append((line, col, kind))
             while i < n and text[i] != "\n":

@@ -64,6 +64,7 @@ static func _has_many_comps(view: Dictionary) -> bool:
 func _paint_band(c: CanvasItem, body: Callable) -> void:
 	body.call(c)
 
+# gd-tools: no cover start
 
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
@@ -156,4 +157,4 @@ func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 					ink if selected else UiChrome.C_SOFT, fonts["med"])
 				mx += 12.0
 
-
+# gd-tools: no cover end

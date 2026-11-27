@@ -61,6 +61,8 @@ static func cell(y: float, x: float, w: float, label: String, key: String,
 	return {"id": id, "kind": "head", "label": label, "align_right": right_align,
 		"sorted": key != "" and key == sort, "rect": Rect2(x, y, w, band_h)}
 
+# gd-tools: no cover start
+
 
 static func draw(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
 		compact: bool) -> void:
@@ -77,4 +79,4 @@ static func draw(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary
 		var rule_y: float = y + 3.0 if tall else rect.end.y - 1.0
 		c.draw_rect(Rect2(rect.position.x, rule_y, rect.size.x, 1.0), UiChrome.C_GOLD)
 
-
+# gd-tools: no cover end

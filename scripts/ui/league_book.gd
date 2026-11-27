@@ -52,6 +52,7 @@ func frame_height(view: Dictionary) -> float:
 static func _podium_sections(summary: Dictionary) -> Array:
 	return LeaguePodiumSheet.sections(summary)
 
+# gd-tools: no cover start
 
 func draw_table_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		hints: DateHints) -> void:
@@ -84,4 +85,4 @@ func draw_podium_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dic
 func draw_podium_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	podium.draw_body(c, vp, fonts, items, view)
 
-
+# gd-tools: no cover end

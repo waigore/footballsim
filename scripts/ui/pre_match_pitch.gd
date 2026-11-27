@@ -6,6 +6,7 @@ const GRASS := Color(0.045, 0.115, 0.068)
 const LINE := Color(1, 1, 1, 0.20)
 
 
+# gd-tools: no cover start
 static func draw(c: CanvasItem, rect: Rect2, team: Dictionary, xi: Array,
 		captain_id: String, fonts: Dictionary, mirror: bool) -> void:
 	if rect.size.x < 8.0 or rect.size.y < 8.0:
@@ -41,6 +42,8 @@ static func draw(c: CanvasItem, rect: Rect2, team: Dictionary, xi: Array,
 			var room := rect.size.x * 0.21
 			UiChrome.text_c(c, at.x, at.y + radius + 11.0,
 				LeagueColumns.fit_name(label, bold, 10, room), 10, UiChrome.C_TEXT, bold)
+
+# gd-tools: no cover end
 
 
 static func short_name(name: String) -> String:

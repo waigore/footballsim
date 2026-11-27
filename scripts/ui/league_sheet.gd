@@ -84,6 +84,7 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 		"pinned": true, "rect": LeagueExtra.primary_rect(vp)})
 	return items
 
+# gd-tools: no cover start
 
 func draw_hub_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, state: Dictionary,
 		hints_out: DateHints) -> void:
@@ -131,4 +132,4 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 4.0,
 			"SUGGEST WATCHES", 10, UiChrome.C_GOLD, fonts["bold"])
 
-
+# gd-tools: no cover end

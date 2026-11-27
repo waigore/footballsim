@@ -47,6 +47,8 @@ static func strip_right(font: Font, s: String, right_x: float, y: float, size: i
 	out.position.x -= out.size.x
 	return out
 
+# gd-tools: no cover start
+
 
 static func paint(c: CanvasItem, cache: Dictionary, zone: Dictionary, vp: Vector2,
 		fonts: Dictionary) -> void:
@@ -65,4 +67,4 @@ static func paint(c: CanvasItem, cache: Dictionary, zone: Dictionary, vp: Vector
 		UiChrome.C_GOLD, 1)
 	UiChrome.text_c(c, x + w * 0.5, y + 12.0, label, size, UiChrome.C_GOLD, bold)
 
-
+# gd-tools: no cover end

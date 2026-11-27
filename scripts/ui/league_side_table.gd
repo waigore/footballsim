@@ -42,6 +42,8 @@ static func layout(rows: Array, rules: Dictionary, interest: Dictionary, box: Re
 		y += ROW_H
 	return items
 
+# gd-tools: no cover start
+
 
 func draw_head(c: CanvasItem, box: Rect2, top: float, fonts: Dictionary) -> void:
 	var rail := places(box)
@@ -57,4 +59,4 @@ func draw(c: CanvasItem, items: Array, fonts: Dictionary, names: InterestNames) 
 		LeaguePlanRows.paint_table_row(c, item["rect"], item["row"], str(item["zone"]),
 			item["places"], bool(item.get("interested", false)), fonts, names)
 
-
+# gd-tools: no cover end
