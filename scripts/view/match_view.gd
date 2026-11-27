@@ -29,6 +29,20 @@ func overlay_scale(hud_layer: CanvasLayer, dev) -> Dictionary:
 	}
 
 
+func visible_scale() -> float:
+	if game.menus != null and game.menus.active():
+		return game.chrome_scale
+	if game.wiki_host != null and game.wiki_host.is_open():
+		return game.chrome_scale
+	if game.prematch != null and game.prematch.is_open():
+		return game.chrome_scale
+	return game.hud_scale
+
+
+func sync_type_density() -> void:
+	TypeDensity.apply(game.get_viewport(), visible_scale())
+
+
 func sync_overlays(hud_layer: CanvasLayer, dev: DevCapture) -> void:
 	var scales: Dictionary = overlay_scale(hud_layer, dev)
 	game.hud_scale = float(scales["hud"])
@@ -51,6 +65,7 @@ func sync_overlays(hud_layer: CanvasLayer, dev: DevCapture) -> void:
 		game.menus.sync(frame, game.chrome_scale, game.touch)
 	if game.camera != null:
 		game.camera.fit()
+	sync_type_density()
 
 
 func design(p: Vector2, scale := -1.0) -> Vector2:
