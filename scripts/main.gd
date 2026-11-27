@@ -83,6 +83,8 @@ var billing: MatchBilling = MatchBilling.new()
 
 var result_hold := false
 
+var back_stamp := -100000
+
 func _ready() -> void:
 	MatchScene.build(self)
 	audio = MatchAudio.new(self)
@@ -148,6 +150,16 @@ func _on_fixture_confirmed(h: String, a: String) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		_sync_overlay_scale()
+	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		back_press()
+
+
+func back_press() -> void:
+	var now := Time.get_ticks_msec()
+	if not BackPress.allowed(back_stamp, now):
+		return
+	back_stamp = now
+	BackPress.press(self)
 
 
 func _input(event: InputEvent) -> void:
