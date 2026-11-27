@@ -202,6 +202,16 @@ func test_every_press_is_answered_by_the_open_menu() -> void:
 	menu.close()
 	assert_eq(menu.hit(menu.door_rect(vp).get_center(), vp), "", "a closed menu answered a press")
 
+## #310: the footer names the pointer that dismisses the card — a mouse clicks
+## elsewhere, a finger taps — the same split the league's other chrome makes.
+func test_the_footer_names_the_pointer_that_dismisses() -> void:
+	var menu := InterestMenu.new()
+	assert_eq(menu.close_hint(), "CLICK ELSEWHERE TO CLOSE",
+		"a desktop card still told the player to tap")
+	menu.touch = true
+	assert_eq(menu.close_hint(), "TAP ELSEWHERE TO CLOSE",
+		"a phone card stopped naming the finger")
+
 # -------------------------------------------------------------- the strips ---
 
 func test_strips_name_the_club_under_a_point() -> void:

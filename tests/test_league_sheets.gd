@@ -1148,6 +1148,23 @@ func test_the_report_columns_start_below_their_club_captions() -> void:
 			"two cards at the same minute shared a row at %s" % vp)
 		assert_gte(float(away[1]) - float(away[0]), LeagueReportSheet.ROW_H,
 			"two card rows crowd each other at %s" % vp)
+## #310: the System sheet's ADVANCE row names the pointer that will press it — a
+## desktop sheet says CLICK, a phone sheet keeps TAP — and it still names the
+## mode the press switches to.
+func test_the_system_advance_hint_names_the_pointer() -> void:
+	var sheet := LeagueSystemSheet.new()
+	for pair in [[false, "click to switch to every day"], [true, "tap to switch to every day"]]:
+		var items: Array = sheet.layout(Vector2(1280, 720), {
+			"date": "2026-08-15", "name": "S", "advance_mode": "fixture_days",
+			"touch": bool(pair[0]),
+		})
+		assert_eq(str(_item(items, "sys:advance").get("hint", "")), str(pair[1]),
+			"the ADVANCE hint names the wrong pointer (touch=%s)" % pair[0])
+	var mirrored: Array = sheet.layout(Vector2(1280, 720), {
+		"date": "2026-08-15", "advance_mode": "every_day", "touch": false,
+	})
+	assert_eq(str(_item(mirrored, "sys:advance").get("hint", "")),
+		"click to switch to fixture days", "the hint does not name the mode it switches to")
 ## #312: an empty PLAYED MATCHDAYS list says why it is empty — a season with
 ## nothing played yet names that, and only a played season emptied by the
 ## filters gets the filters blamed — and an empty LEADERS chart leaves no bare
