@@ -1,7 +1,7 @@
 name: CI tier 2
 
-# Full unit suite + overall 80% coverage + full-catalogue UX VLM.
-# Does not block PR merge. Sticky GitHub issue (label ci-tier2) for agents.
+# Full unit suite + overall 90% coverage + full-catalogue UX VLM.
+# Does not block PR merge. Sticky GitHub issue (labels ci-tier2 + todo) for agents.
 # Until project.godot exists, the suite job no-ops successfully.
 
 on:
@@ -68,7 +68,7 @@ jobs:
         run: |
           set -euo pipefail
           gd-tools test --coverage --parallel 4 --timeout 600 --junit-xml .gd-tools/results.xml
-          gd-tools coverage show --min 80
+          gd-tools coverage show --min 90
 
       - name: Skip complete
         if: steps.project.outputs.ready != 'true'
@@ -177,7 +177,7 @@ jobs:
           Scheduled tier-2 gate failed on \`main\`.
 
           **Run:** ${RUN_URL}
-          **Jobs:** tests-full (full suite + 80% coverage), census, ux-vlm-catalogue
+          **Jobs:** tests-full (full suite + 90% coverage), census, ux-vlm-catalogue
           ${ux_block}
 
           The **fix-tests** agent should clear suite/coverage failures; for UX
@@ -191,6 +191,7 @@ jobs:
           if [ -n "$open" ]; then
             issue=$(printf '%s\n' "$open" | head -n1)
             gh issue comment "$issue" --body "$body"
+            gh issue edit "$issue" --add-label ci-tier2 --add-label todo
             extras=$(printf '%s\n' "$open" | tail -n +2)
             for dup in $extras; do
               gh issue close "$dup" --reason "not planned" \
@@ -201,6 +202,7 @@ jobs:
             url=$(gh issue create \
               --title "CI tier 2: gate failed on main" \
               --label ci-tier2 \
+              --label todo \
               --body "$body")
             echo "Opened sticky issue: ${url}"
           fi

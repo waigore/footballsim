@@ -23,7 +23,7 @@ Root and `docs/` Markdown **≤ 500 words** (fenced code excluded). CI `docs-lin
 
 - Engine: Godot 4.7.x · GDScript (typed where practical)
 - Scenes: `.tscn` + scripts; logic in scripts / sim modules, composition in scenes
-- Tests: [`gd-tools`](https://github.com/mansyar/gd-tools) (`GdToolsTest`); PR **tier 1** impacted suites + **80% patch** coverage (**≤5 min**); **tier 2** every 8h full suite + overall 80%; e2e smoke **≤4 min** — see [`docs/testing.md`](docs/testing.md). Until `project.godot` exists, Godot CI jobs no-op.
+- Tests: [`gd-tools`](https://github.com/mansyar/gd-tools) (`GdToolsTest`); PR **tier 1** impacted suites + **80% patch** coverage (**≤5 min**); **tier 2** every 8h full suite + overall 90%; e2e smoke **≤4 min** — see [`docs/testing.md`](docs/testing.md). Until `project.godot` exists, Godot CI jobs no-op.
 
 ## Layout
 
