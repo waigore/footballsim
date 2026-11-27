@@ -1,27 +1,10 @@
 class_name MatchManager
 extends RefCounted
 
-## In-match AI managers: the man in the dugout, not the pitch brain.
-##
-## Event-driven by design. Goals, cards, injuries and half-time feed urgency;
-## fatigue and a chasing game are polled on a slow timer. Each side may change
-## tactics at most three times (about 2–3 in a normal game) and must leave a
-## gap between changes, so the touchline tinkers rather than thrashes. How long
-## that gap is — the law's seven minutes stretched by the manager's own
-## `patience` — lives in `MatchCadence`.
-##
-## Lever maps and apply live in `MatchManagerTactics`; bench picks and the
-## injury forced change live in `MatchManagerSubs`. This file keeps the
-## triggers, state and showcase so it stays under the method ceiling
-## (RUB-P3-01).
-##
-## Substitutions are a separate budget: IFAB five changes in three windows
-## (half-time free), chosen by the manager from fatigue, cards and game state.
-## All rolls use the match RNG, so a seed always produces the same decisions.
 
 const TACTICS_CAP := 3
-const EARLIEST := 900.0         # no touchline panic inside the first fifteen minutes
-const EVAL_INTERVAL := 120.0    # fatigue / chasing poll (not per tick)
+const EARLIEST := 900.0
+const EVAL_INTERVAL := 120.0
 const ACT_SCALE := 0.45
 
 var e = null
@@ -47,9 +30,7 @@ func tactics_for(t: int) -> Tactics:
 func manager_name(t: int) -> String:
 	return str(profiles[t].get("name", "The manager"))
 
-# ------------------------------------------------------------------ triggers --
 
-## Slow poll for the triggers that are not events: tired legs and a chase.
 func tick(dt: float) -> void:
 	eval_timer -= dt
 	if eval_timer > 0.0:
@@ -86,7 +67,7 @@ func on_event(kind: String, data: Dictionary) -> void:
 		"opponent_tactics":
 			MatchManagerTactics.consider(self, int(data.get("team", 0)), "opponent_change", 0.18)
 
-## Every dead ball is a legal moment for a change. Cheap: a roll, not a scan.
+
 func on_stoppage(_kind: String, _team: int) -> void:
 	for t in range(2):
 		MatchManagerSubs.consider(self, t, false, 0.0)
@@ -102,9 +83,7 @@ func on_second_half() -> void:
 func replace_injured(p) -> bool:
 	return MatchManagerSubs.replace_injured(self, p)
 
-## Capture/showcase: force one tactics change or one change from the bench so
-## a screenshot run can prove the overlay without waiting for a real trigger.
-## `--managerstactics` switches the showcase to the tactics card.
+
 func demo() -> void:
 	if e == null:
 		return
@@ -120,7 +99,6 @@ func demo() -> void:
 	if off != null:
 		MatchManagerSubs.do_sub(self, 0, off, false, "demo")
 
-# -------------------------------------------------------------------- state --
 
 func _margin(t: int) -> int:
 	return int(e.score[t]) - int(e.score[1 - t])

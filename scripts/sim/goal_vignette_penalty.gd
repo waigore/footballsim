@@ -1,21 +1,14 @@
 class_name GoalVignettePenalty
 extends RefCounted
 
-## A tagged penalty's picture (#171): the taker alone over the ball at the spot,
-## the keeper on his line, everyone else held outside the area and behind the
-## ball. The sim's ordinary pass is pushed out of reach, so the taker's strike
-## at `strike_at` is its next decision; the net still decides whether the ball
-## crosses the line, and the clip keeps the report's scorer, minute and score.
 
 const L := 105.0
 const W := 68.0
 const CENTRE := W * 0.5
-## Metres from the goal line to the spot.
+
 const SPOT := 11.0
 
-## Lay the sim out as a spot kick. `sim` is `GoalVignette.Sim`: its bodies,
-## carrier, ball and decision clocks are written here rather than branching in
-## the build-up code every clip pays for.
+
 static func lay_out(sim, shooter: int, keeper: int, rng: RandomNumberGenerator) -> void:
 	sim.carrier = shooter
 	sim.pass_at = 1e9
@@ -29,8 +22,8 @@ static func lay_out(sim, shooter: int, keeper: int, rng: RandomNumberGenerator) 
 	taker.base = spot
 	sim.ball = Vector3(spot.x, spot.y, 0.11)
 	sim.owner = shooter
-	# Both sides wait outside the box, spread along the edge so the picture
-	# still reads as a match, and the keeper stands on his line.
+
+
 	for i in range(sim.bodies.size()):
 		if i == shooter or i == keeper:
 			continue

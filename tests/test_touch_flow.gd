@@ -1,24 +1,20 @@
 extends GdToolsTest
 
-## The play scene driven the way a phone drives it: the overlay hit-tests in
-## design space, a tap on a token opens its card, and the fixture sheet has a
-## way out that does not need an Escape key.
 
 var game = null
 
 func before_all() -> void:
-	# Loaded by path rather than through the scene's ext_resource: coverage
-	# instrumentation only sees the script a test loads itself.
+
+
 	game = Node2D.new()
 	game.set_script(load("res://scripts/main.gd"))
 	add_child(game)
-	# The match HUD's show/hide choice lives in the player's prefs file (#158);
-	# a test run must not inherit whatever the developer's last launch chose.
+
+
 	game.menus.shell.prefs_path = TestScratch.file("test_touch_flow_prefs.cfg")
 	game.menus.restore_hud()
-	# Force the handheld overlay, landing the design height on a phone's, so the
-	# point-to-design conversion is exercised rather than the identity. The test
-	# viewport is square, so the scale comes from its height.
+
+
 	game.dev.ui_scale = game.get_viewport_rect().size.y / 411.0
 	game._sync_overlay_scale()
 	game._on_fixture_confirmed("MUN", "MCI")
@@ -77,7 +73,7 @@ func test_the_teams_door_opens_the_sheet_and_back_closes_it() -> void:
 	assert_gt(door.size.x, 0.0, "the phone bar has no teams door")
 	_tap(door.position + door.size * 0.5)
 	assert_true(game.select_open, "the teams door did not open the fixture sheet")
-	# Draw the sheet once: its rows and its back door are built in _draw.
+
 	game.selector.queue_redraw()
 	await get_tree().process_frame
 	assert_gt(game.selector.buttons.size(), 4, "the sheet drew no doors")

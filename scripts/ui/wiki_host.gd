@@ -1,21 +1,17 @@
 class_name WikiHost
 extends RefCounted
 
-## Owns the encyclopedia layer for the play scene: building the sheet, pausing
-## the broadcast (or the fixture picker) underneath it, restoring whichever was
-## showing on the way out, and forwarding pointer/key input in design space.
-## main.gd only has to say "open this page".
 
 const LAYER := 30
 
 var game = null
 var screen = null
 var layer: CanvasLayer = null
-## The drag/wheel/click grammar the sheet shares with the league surface.
+
 var pointer: SheetPointer = null
 var from_select := false
-## The encyclopedia was opened from inside a league season: closing it puts the
-## season sheet back exactly where it was, not the match chrome.
+
+
 var from_league := false
 var was_paused := false
 
@@ -36,20 +32,18 @@ func build() -> void:
 	screen.closed.connect(_on_screen_closed)
 	screen.interest_toggled.connect(_on_interest_toggled)
 	pointer = SheetPointer.new(screen)
-	# The same pointer grammar watches for a hold (#107).
+
 	pointer.hold = screen.interest
 	layer.visible = false
 
 func is_open() -> bool:
 	return screen != null and screen.is_open()
 
-## Open a page over the broadcast, or over the fixture picker when that is what
-## the player is looking at. Either way the surface underneath comes back.
+
 func open_page(page: String, id: String) -> void:
 	_open(page, id, bool(game.select_open), false)
 
-## A league season opened the page: closing it hands the season sheet back
-## instead of the match chrome, so a club row is a look-up, not an exit.
+
 func open_page_over_league(page: String, id: String) -> void:
 	_open(page, id, false, true)
 
@@ -75,9 +69,7 @@ func _open(page: String, id: String, over_select: bool, over_league: bool) -> vo
 	screen.visible = true
 	screen.open(page, id)
 
-## The team page's follow door (#104): the open season owns the shortlist, so the
-## page only names the club and repaints once the rule has moved. With no season
-## open there is nothing to follow and the door is not drawn at all.
+
 func _on_interest_toggled(club_id: String) -> void:
 	var season = LeagueSeason.active
 	if season == null or club_id == "":
@@ -86,7 +78,7 @@ func _on_interest_toggled(club_id: String) -> void:
 	if screen != null:
 		screen.queue_redraw()
 
-## Ask the sheet to close; it emits `closed` and the surface comes back.
+
 func close() -> void:
 	if screen != null:
 		screen.close()
@@ -95,7 +87,7 @@ func _on_screen_closed() -> void:
 	if layer != null:
 		layer.visible = false
 	if from_league:
-		# The season never left: paint it again under the pointer, paused.
+
 		from_league = false
 		from_select = false
 		if game.menus != null and game.menus.league != null:
@@ -120,20 +112,16 @@ func sync_scale() -> void:
 	screen.ui_scale = game.chrome_scale
 	screen.touch = game.touch
 
-## The sheet does its own hit testing; this only converts pointers to design
-## space and hands them to the shared grammar. Wheel notches, macOS trackpad pan
-## gestures, drags and keys all move the body; a press that never travels commits
-## as a click or a tap on release.
+
 func handle_input(event: InputEvent) -> void:
 	if screen == null or pointer == null:
 		return
-	# Only a pointer event carries a window position; keys and pan gestures do
-	# not need one, and reading `position` off a key would be a runtime error.
+
+
 	var point: Vector2 = _point(event) if event is InputEventMouse else Vector2.ZERO
 	pointer.handle(event, point)
 
-## A fresh page starts with no pointer history: a press belongs to the sheet that
-## was on screen when it happened.
+
 func reset_pointer() -> void:
 	if pointer != null:
 		pointer.reset()

@@ -1,13 +1,5 @@
 extends GdToolsTest
 
-## The German season end (#240): the 16th-vs-3rd Relegation plays two legs, a
-## level aggregate goes to penalties, and the membership swap moves the right
-## clubs between the two tiers in the save. No second season starts.
-##
-## One finished German pair is built in `before_all` and snapshotted; each test
-## that needs a pristine save restores that file instead of recreating the
-## calendar. Create-determinism still pays for one extra build against the
-## cached tie.
 
 var SAVE_DIR := TestScratch.dir("saves_test_german_relegation")
 var CACHE_DIR := TestScratch.dir("cache_test_german_relegation")
@@ -48,8 +40,7 @@ func _clean() -> void:
 		if name.ends_with(".sqlite"):
 			DirAccess.remove_absolute(SAVE_DIR.path_join(name))
 
-## A finished German pair: every fixture played, with the top-flight table
-## ordered by points so places 16-18 are known.
+
 func _build_finished(seed: int) -> LeagueSeason:
 	var built := LeagueSeason.create("German Relegation", "generated", "fixture_days", seed,
 		["BL", "BL2"])
@@ -71,14 +62,13 @@ func _build_finished(seed: int) -> LeagueSeason:
 		PLDatabase.execute("UPDATE league_fixture SET status = 'played', home_goals = ?, "
 			+ "away_goals = ? WHERE id = ?;", [hg, ag, str(row["id"])])
 	built.record.standings.recompute()
-	# A played-out calendar is what the clock leaves behind: the next step finds
-	# no unplayed date and marks the save complete (no second season).
+
+
 	if built.record.fixtures.unplayed() == 0:
 		built.save.set_status("complete")
 	return built
 
-## Keep a byte-for-byte copy of the finished save so a swap can be rewound without
-## rebuilding the calendar.
+
 func _snapshot() -> void:
 	if season == null or season.save == null:
 		return
@@ -91,8 +81,7 @@ func _snapshot() -> void:
 		out.close()
 	season.save.ensure_open()
 
-## Restore the finished pair and reopen it. Mutating tests (summary / apply) each
-## get a pristine file this way.
+
 func _fresh() -> LeagueSeason:
 	if season != null:
 		season.close()
@@ -108,7 +97,7 @@ func _fresh() -> LeagueSeason:
 	assert_not_null(season, "the pristine German save did not reopen")
 	return season
 
-## The table moves by one goal a place: the club seeded higher keeps it.
+
 func _place(table: Array, club_id: String, scored: Dictionary, comp: String) -> int:
 	for i in range(table.size()):
 		if str((table[i] as Dictionary)["club_id"]) == club_id:
@@ -135,8 +124,8 @@ func test_the_tie_is_the_sixteenth_against_the_third() -> void:
 	assert_true(str(tie["text"]).contains("—"), "the tie has no reading")
 
 func test_the_same_seed_settles_the_same_tie() -> void:
-	# One extra create against the cached tie: create + settle stay deterministic
-	# without rebuilding the calendar for every other assert.
+
+
 	var again := _build_finished(SEED)
 	assert_not_null(again, "the second German season was not created")
 	var tie := LeagueRelegation.build(again)
@@ -147,7 +136,7 @@ func test_the_same_seed_settles_the_same_tie() -> void:
 		"the winner differs for one seed")
 
 func test_a_level_aggregate_goes_to_penalties() -> void:
-	# Force both legs to 0-0 by stubbing the pair on a hand-built tie.
+
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242
 	var top := int(LeagueRelegation._shootout(4242, "BL-FCB", "BL2-BSC").x)
@@ -187,8 +176,8 @@ func test_the_swap_moves_the_clubs_in_the_save() -> void:
 	for club_id in movers["to_second"]:
 		assert_eq(str(LeagueLedger.competition_of(str(club_id))), "BL2",
 			"%s did not move down in the save" % club_id)
-	# No second season: the clock is where the finished calendar left it and the
-	# save still reports the season it played.
+
+
 	assert_eq(current.save.status(), "complete", "the save is not marked complete")
 	var again := current.summary()
 	assert_false(again.is_empty(), "reopening the podium lost the season")
@@ -245,7 +234,7 @@ func test_the_club_page_follows_the_swapped_membership() -> void:
 	var relegated := WikiModel.page(WikiModel.TEAM, str(down[0]))
 	assert_true(_links_league(relegated, "BL2"),
 		"the relegated club's page does not link the 2. Bundesliga")
-	# The competitions still carry 18 clubs each: two out, two in.
+
 	assert_eq(int(PLCompetitions.clubs("BL")), 18, "the Bundesliga lost or gained a club")
 	assert_eq(int(PLCompetitions.clubs("BL2")), 18, "the 2. Bundesliga lost or gained a club")
 

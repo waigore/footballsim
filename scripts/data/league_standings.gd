@@ -1,18 +1,6 @@
 class_name LeagueStandings
 extends RefCounted
 
-## The standings side of the season ledger: the live table, the per-result move
-## and the repair path an older save takes when it opens.
-##
-## Every aggregate a row keeps — the official set plus the home and away splits
-## the full table reads (#73) — is listed once here, so the zero row, the single
-## result write, the recompute write and its bindings can never drift apart.
-## Split out of `LeagueRecord` so the table keeps one concern; both talk to the
-## same bound save, minutes after `LeagueFixtures` installed the calendar.
-##
-## One table per active competition, keyed by `competition_id`. A club belongs to
-## exactly one domestic league, so the club id alone finds its row; every league-
-## wide read filters on the competition and reads that competition's rules.
 
 const TABLE_FIELDS := [
 	"played", "won", "drawn", "lost", "gf", "ga", "points",
@@ -25,9 +13,7 @@ var save: LeagueSave = null
 func _init(owner: LeagueSave) -> void:
 	save = owner
 
-## Move one club's row by a result. The overall columns and that club's own side
-## columns move in the same statement, so a full table and the official order
-## are always one ledger (#73).
+
 func apply(club_id: String, goals_for: int, goals_against: int, rules: Dictionary,
 		side: String) -> void:
 	save.ensure_open()
@@ -54,10 +40,7 @@ func apply(club_id: String, goals_for: int, goals_against: int, rules: Dictionar
 		],
 	)
 
-## Rebuild every live table from every played fixture. The per-match path moves
-## rows incrementally; this is the repair/import path and the one an older save
-## takes when it opens (#73), so overall and home/away always agree again. Each
-## competition is tallied with its own regulations.
+
 func recompute() -> void:
 	save.ensure_open()
 	var rules_by := save.rules_by
@@ -130,9 +113,7 @@ func _tally(acc: Dictionary, club_id: String, goals_for: int, goals_against: int
 		s["lost"] += 1
 		s[p + "lost"] += 1
 
-## Standings with the club labels the table screen draws and a 1-based position.
-## One competition's when an id is given; otherwise every active league, each
-## numbered from one (the encyclopedia's multi-league index).
+
 func table(competition_id: String = "") -> Array:
 	save.ensure_open()
 	var sql := (

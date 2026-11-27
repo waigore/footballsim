@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Named league saves: one self-contained SQLite file per season, copied from
-## the shipped seed, carrying its own regulations and reading through the game's
-## data layer — while single-match mode keeps its cached seed.
 
 var SAVE_DIR := TestScratch.dir("saves_test_issue58")
 var CACHE_DIR := TestScratch.dir("cache_test_issue58")
@@ -104,9 +101,7 @@ func test_closing_returns_to_the_single_match_cache() -> void:
 	assert_eq(PLDatabase.current_path(), cache, "single-match mode is not on the cached seed")
 	assert_eq(PLRepository.shared().table("PL").size(), 20, "the seed table did not come back")
 
-# ------------------------------------------------------ system saves (#109) ---
 
-## Quick Save stamps the save without moving the season off its own file.
 func test_quick_save_stamps_the_live_save() -> void:
 	var save := LeagueSave.create("Quick Save", LeagueRules.defaults())
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
@@ -117,8 +112,7 @@ func test_quick_save_stamps_the_live_save() -> void:
 	assert_eq(PLDatabase.current_path(), save.path, "Quick Save left the save's own file")
 	assert_eq(save.current_date(), "2027-03-04", "Quick Save lost the clock")
 
-## Save As writes a named copy that reopens on its own, and leaves play on the
-## season's own file so a copy never becomes the live save.
+
 func test_save_as_writes_a_named_copy_and_keeps_the_original_live() -> void:
 	var save := LeagueSave.create("Origin", LeagueRules.defaults())
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
@@ -137,16 +131,15 @@ func test_save_as_writes_a_named_copy_and_keeps_the_original_live() -> void:
 		slugs.append(str(entry["slug"]))
 	assert_true(slugs.has(slug), "the copy is not in the load list")
 	assert_true(slugs.has(save.slug), "the original left the load list")
-	# Play carries on against the original after the copy: a later write must not
-	# land in the snapshot.
+
+
 	copy.close()
 	assert_true(save.ensure_open(), "the original could not be rebound")
 	save.set_date("2027-05-06")
 	assert_eq(LeagueSave.open(slug).current_date(), "2027-04-05",
 		"writing the original changed the snapshot")
 
-## A copy named after the save itself rewrites in place instead of making a
-## second file with the same name.
+
 func test_save_as_with_the_seasons_own_name_rewrites_in_place() -> void:
 	var save := LeagueSave.create("Same Name", LeagueRules.defaults())
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
@@ -155,7 +148,7 @@ func test_save_as_with_the_seasons_own_name_rewrites_in_place() -> void:
 	assert_eq(LeagueSaveCatalog.list().size(), before, "naming the save wrote a second file")
 	assert_true(str(save.read_meta().get("saved_at", "")) != "", "the rewrite was not stamped")
 
-## An empty name writes nothing and reports it, so the sheet can refuse.
+
 func test_save_as_refuses_an_empty_name() -> void:
 	var save := LeagueSave.create("Refused Copy", LeagueRules.defaults())
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
@@ -163,7 +156,6 @@ func test_save_as_refuses_an_empty_name() -> void:
 	assert_eq(save.write_copy("   "), "", "an empty name was written")
 	assert_eq(LeagueSaveCatalog.list().size(), before, "an empty name made a file")
 
-# --------------------------------------------------- home/away table (#73) ---
 
 func _columns(table: String = "league_table") -> Dictionary:
 	var out := {}
@@ -179,8 +171,7 @@ func test_the_league_table_keeps_home_and_away_aggregates() -> void:
 	for column in LeagueSaveSchema.SIDE_COLUMNS:
 		assert_true(columns.has(column), "the table is missing %s" % column)
 
-## A save written before the home/away columns existed gets them on open; the
-## season then rebuilds them from the played fixtures, so nothing is lost.
+
 func test_an_older_save_gains_the_side_columns_when_it_opens() -> void:
 	var save := LeagueSave.create("Old Table", LeagueRules.defaults())
 	PLDatabase.execute("DROP TABLE league_table;")
@@ -201,8 +192,7 @@ func test_an_older_save_gains_the_side_columns_when_it_opens() -> void:
 	assert_eq(int(row["home_played"]), 0, "a migrated row should start on zero")
 	assert_eq(int(row["away_ga"]), 0, "a migrated row should start on zero")
 
-## #171: a report's penalty tag belongs to the save, not the session. Reopening
-## the file still marks the spot kick, and an open-play goal stays unmarked.
+
 func test_a_report_keeps_its_penalty_tag_across_a_reopen() -> void:
 	var save := LeagueSave.create("Penalty Tags", LeagueRules.defaults())
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
@@ -221,8 +211,7 @@ func test_a_report_keeps_its_penalty_tag_across_a_reopen() -> void:
 	assert_eq(int(rows[0].get("penalty", 0)), 1, "the penalty tag did not survive the save")
 	assert_eq(int(rows[1].get("penalty", 0)), 0, "an open-play goal was saved as a penalty")
 
-## A save written before penalties were tagged gets the column on open; its
-## existing report rows stay open-play goals.
+
 func test_an_older_save_gains_the_penalty_columns_when_it_opens() -> void:
 	var save := LeagueSave.create("Old Events", LeagueRules.defaults())
 	PLDatabase.execute("DROP TABLE match_event;")
@@ -248,8 +237,7 @@ func test_an_older_save_gains_the_penalty_columns_when_it_opens() -> void:
 	assert_true(_columns("match_event").has("penalty"), "opening an older save did not add the tag")
 	assert_true(_columns("goal_highlight").has("penalty"), "opening an older save did not add the clip tag")
 
-## The table reading belongs to one save: two seasons remember different modes
-## and sorts, and a save that was never changed has none.
+
 func test_table_choices_belong_to_their_own_save() -> void:
 	var first := LeagueSave.create("Reading One", LeagueRules.defaults())
 	assert_true(first.put_meta("table_mode", "full"), "the save took no mode")

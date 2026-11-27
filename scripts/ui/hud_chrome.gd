@@ -1,17 +1,11 @@
 class_name HudChrome
 extends RefCounted
 
-## Drawing surface shared by every broadcast-overlay band: cached style boxes,
-## the three text alignments, and the door list the overlay turns into taps.
-## Split out of hud.gd so each band is its own module (RUB-P3-01).
 
 const BORDER := Color(1, 1, 1, 0.085)
 
-## Every door the overlay drew this frame, in draw order.
+
 var buttons: Array = []
-## Multiplies the alpha of every string drawn through this surface (#158): the
-## pitch's token numbers fade with the chrome instead of sliding with a band.
-var alpha := 1.0
 var _panel_cache := {}
 
 func _style(fill: Color, radius: int, border: Color, width: int) -> StyleBoxFlat:
@@ -30,9 +24,6 @@ func panel(c: CanvasItem, fill: Color, r: Rect2, radius: int = 10, border: Color
 	c.draw_style_box(_style(fill, radius, border, 1), r)
 
 func text(c: CanvasItem, pos: Vector2, s: String, size: int, color: Color, font: Font, outline: int = 0, outline_col: Color = Color(0, 0, 0, 0.5)) -> void:
-	if alpha < 1.0:
-		color = Color(color.r, color.g, color.b, color.a * alpha)
-		outline_col = Color(outline_col.r, outline_col.g, outline_col.b, outline_col.a * alpha)
 	if outline > 0:
 		c.draw_string_outline(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, outline, outline_col)
 	c.draw_string(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
@@ -48,7 +39,7 @@ func text_r(c: CanvasItem, right_x: float, y: float, s: String, size: int, color
 func add_button(id: String, r: Rect2, label: String, hint: String) -> void:
 	buttons.append({"id": id, "rect": r, "label": label, "hint": hint})
 
-## First door under a design-space point, or "" when the pointer is on the pitch.
+
 func button_at(p: Vector2) -> String:
 	for b in buttons:
 		if (b["rect"] as Rect2).has_point(p):

@@ -1,15 +1,7 @@
 class_name LeagueView
 extends RefCounted
 
-## What one league pose shows: the season clock, the day's fixtures, the table,
-## the report on screen or the System dialog's own state, turned into the plain
-## dictionary the sheet layouts read.
-##
-## Split out of the modal screen so the screen stays inside its size budget. The
-## builder works on the screen's own fields, exactly like `LeagueCalendar`, so the
-## screen and its tests keep reading the same state they always did.
 
-## Panel destination (LeaguePanel.pose) for each pose on screen.
 static func pose_names() -> Dictionary:
 	return {
 		LeagueScreen.MODE_HUB: "fixtures", LeagueScreen.MODE_TABLE: "table",
@@ -18,9 +10,7 @@ static func pose_names() -> Dictionary:
 		LeagueScreen.MODE_REPORT: "fixtures", LeagueScreen.MODE_PODIUM: "stats",
 	}
 
-## The sheet that owns a pose, in a fixed order: its name on the screen, the
-## layout it answers, the body it paints and the chrome it paints around it. One
-## table, read by `pose`, so the screen never decodes a dispatch of its own.
+
 static func sheets() -> Dictionary:
 	return {
 		LeagueScreen.MODE_HUB: ["hub", "hub_layout", "draw_hub_body", "draw_hub_chrome"],
@@ -37,12 +27,11 @@ static func sheets() -> Dictionary:
 			"draw_interest_chrome"],
 	}
 
-## The dispatch of one pose: `[sheet, layout, body, chrome]`, empty for a mode
-## no sheet owns.
+
 static func pose(mode: String) -> Array:
 	return sheets().get(mode, [])
 
-## The panel's reading for a pose, or "" when the panel has no door for it.
+
 static func panel_reading(mode: String) -> String:
 	return str(pose_names().get(mode, ""))
 
@@ -51,7 +40,7 @@ static func build(screen) -> Dictionary:
 	if mode == LeagueScreen.MODE_WIZARD or mode == LeagueScreen.MODE_LOAD:
 		if mode == LeagueScreen.MODE_LOAD:
 			return {"saves": screen.saves}
-		# The wizard's own state, plus where the keyboard is (#201).
+
 		var wiz: Dictionary = screen.wizard.duplicate()
 		wiz["focus"] = str(screen.focus.kind)
 		return wiz
@@ -60,8 +49,8 @@ static func build(screen) -> Dictionary:
 	var state: Dictionary = season.state() if season != null else {"rules": rules}
 	if mode == LeagueScreen.MODE_SYSTEM:
 		return LeagueSystemActions.view(screen)
-	# The panel's two new readings (#103): Stats holds the played matchdays and
-	# the podium door; Teams of Interest reads the shortlist and its search.
+
+
 	if mode == LeagueScreen.MODE_STATS:
 		var days: Array = []
 		if season != null:
@@ -86,14 +75,17 @@ static func build(screen) -> Dictionary:
 						"leagues": leagues})
 		return {"name": state.get("name", ""), "complete": bool(state.get("complete", false)),
 			"reports": days, "interests": state.get("interests", []),
+
+
+			"played": int(state.get("played", 0)),
 			"competitions": state.get("competitions", []), "filters": screen.stats_filter,
 			"leaders": _leaders(season, screen.stats_filter)}
 	if mode == LeagueScreen.MODE_INTEREST:
 		var marked: Array = state.get("interests", []) if season != null else []
 		return {"query": screen.interest_query, "clubs": LeagueClubs.rows(marked),
 			"results": LeagueClubs.search(screen.interest_query, marked),
-			# Where the on-screen keyboard is (#201), so the search field can
-			# paint its caret only while it owns the keyboard.
+
+
 			"focus": str(screen.focus.kind)}
 	if mode == LeagueScreen.MODE_TABLE:
 		var tab := str(screen.book.table.league_tab)
@@ -107,8 +99,8 @@ static func build(screen) -> Dictionary:
 			"competitions": comps, "league_tab": tab,
 			"name": state.get("name", ""), "date": state.get("date", ""),
 			"interests": state.get("interests", []),
-			# A touch sheet lays thumb-sized rows and headers (#204); a desktop
-			# sheet keeps its dense reading, so the pose carries the device.
+
+
 			"touch": bool(screen.touch)}
 	if mode == LeagueScreen.MODE_CALENDAR:
 		return {"month": screen.month, "day": screen.day, "days": screen.days_cache,
@@ -129,8 +121,8 @@ static func build(screen) -> Dictionary:
 		return {"summary": state.get("summary", {}), "name": state.get("name", ""),
 			"table": state.get("table", []), "rules": state.get("rules", rules)}
 	var view: Dictionary = state.duplicate()
-	# The sheet's own pose carries the device (#278): a caption names the verb of
-	# the pointer that will read it.
+
+
 	view["touch"] = bool(screen.touch)
 	if season != null:
 		view["plan"] = season.plan()
@@ -148,8 +140,7 @@ static func _has_comp(comps: Array, competition_id: String) -> bool:
 			return true
 	return false
 
-## The STATS team filter is a typed query: a fixture qualifies when either side
-## matches it. An empty query matches every side.
+
 static func _team_matches(season, fx: Dictionary, query: String) -> bool:
 	var q := query.strip_edges().to_lower()
 	if q == "":
@@ -161,8 +152,7 @@ static func _team_matches(season, fx: Dictionary, query: String) -> bool:
 			return true
 	return false
 
-## The leader chart the STATS sheet draws: goals or assists, one league or all
-## actives, and the same team query as the report list.
+
 static func _leaders(season, filters: Dictionary) -> Array:
 	if season == null:
 		return []

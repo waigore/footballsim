@@ -1,18 +1,6 @@
 class_name LeagueFixtures
 extends RefCounted
 
-## The calendar side of the season ledger: which fixtures are due, which are
-## played, and the watch and suggestion flags the planner writes on them.
-##
-## One fixture table per save, shared by every active competition and keyed by
-## `competition_id`. Read by the season clock, the calendar screen and the
-## planner. Split out of `LeagueRecord` so the calendar and the standings keep
-## one concern each; every reader talks to the same bound save, so a fixture
-## moved here is still the one a result lands on.
-##
-## Every league-wide read takes an optional competition id: no argument means
-## every active league (the hub's shared clock), an id means one league's
-## calendar. A club id is always unambiguous, so a per-club read needs neither.
 
 const SELECT := (
 	"SELECT f.*, h.name AS home_name, h.abbr AS home_abbr, h.color AS home_color, "
@@ -26,9 +14,7 @@ var save: LeagueSave = null
 func _init(owner: LeagueSave) -> void:
 	save = owner
 
-## Fill one competition's empty share of a save: every fixture pending and every
-## club of that competition on zero. `set_clock` moves the shared clock to the
-## competition's first fixture date — the first league installed owns day one.
+
 func install(fixtures: Array, competition_id: String, set_clock: bool = true) -> bool:
 	if save == null or fixtures.is_empty() or competition_id == "":
 		return false
@@ -60,8 +46,7 @@ func install(fixtures: Array, competition_id: String, set_clock: bool = true) ->
 	PLDatabase.transaction("COMMIT;")
 	return true
 
-## Wipe every league's ledger: the create path's first step before each
-## competition installs its own calendar.
+
 func clear() -> void:
 	if save == null or not save.ensure_open():
 		return
@@ -71,7 +56,7 @@ func clear() -> void:
 		PLDatabase.execute("DELETE FROM %s;" % table)
 	PLDatabase.transaction("COMMIT;")
 
-## Fixture rows with club labels. `matchday` < 1 returns the whole calendar.
+
 func all(matchday: int = -1, competition_id: String = "") -> Array:
 	save.ensure_open()
 	var sql := SELECT
@@ -93,8 +78,7 @@ func one(fixture_id: String) -> Dictionary:
 	var rows := PLDatabase.rows(SELECT + "WHERE f.id = ?;", [fixture_id])
 	return rows[0] if not rows.is_empty() else {}
 
-## The fixtures on one date, grouped in the save's competition order: what the
-## hub and the calendar read. An empty competition id reads every active league.
+
 func on(date: String, competition_id: String = "") -> Array:
 	save.ensure_open()
 	var sql := SELECT + "WHERE f.kickoff = ?"
@@ -106,8 +90,7 @@ func on(date: String, competition_id: String = "") -> Array:
 	var rows := PLDatabase.rows(sql, bindings)
 	return _in_save_order(rows)
 
-## A save's active leagues in the order the player chose them, so the hub reads
-## PL before La Liga on a mixed day whatever the ids sort like.
+
 func _in_save_order(rows: Array) -> Array:
 	if save == null or save.actives.is_empty():
 		return rows
@@ -127,8 +110,7 @@ func _in_save_order(rows: Array) -> Array:
 	)
 	return rows
 
-## A club's last `limit` played fixtures, newest first: the pre-match form line
-## and anything else that reads recent results (#157).
+
 func recent(club_id: String, limit: int = 5) -> Array:
 	save.ensure_open()
 	if club_id == "":
@@ -137,8 +119,7 @@ func recent(club_id: String, limit: int = 5) -> Array:
 		SELECT + "WHERE f.status = 'played' AND (f.home_club_id = ? OR f.away_club_id = ?) "
 		+ "ORDER BY f.kickoff DESC, f.kickoff_time DESC LIMIT ?;", [club_id, club_id, limit])
 
-## Unplayed fixtures due on or before `date`: the season clock never runs past
-## a watched fixture waiting for its match.
+
 func pending_upto(date: String, competition_id: String = "") -> Array:
 	save.ensure_open()
 	var sql := SELECT + "WHERE f.status <> 'played' AND f.kickoff <= ?"
@@ -183,8 +164,7 @@ static func _comp_suffix(competition_id: String) -> String:
 static func _comp_bindings(competition_id: String) -> Array:
 	return [] if competition_id == "" else [competition_id]
 
-## The next date with a pending fixture, strictly after `after`. Across every
-## active league when no competition is named: one shared clock.
+
 func next_date(after: String, competition_id: String = "") -> String:
 	save.ensure_open()
 	var row := PLDatabase.row(
@@ -212,7 +192,7 @@ func suggest(fixture_ids: Array) -> void:
 	for id in fixture_ids:
 		PLDatabase.execute("UPDATE league_fixture SET suggested = 1 WHERE id = ?;", [str(id)])
 
-## The competitions this save's calendar holds, in the save's own order.
+
 func competition_ids() -> Array:
 	save.ensure_open()
 	var out: Array = []
@@ -223,10 +203,7 @@ func competition_ids() -> Array:
 	)
 	return out
 
-## How many gameweeks are fully played: the "after five rounds" trigger for
-## suggested watches. Rounds never complete out of order, so the first round
-## with a pending fixture ends the streak. Per competition: each league's own
-## table one to six is what its suggestions read.
+
 func completed_matchdays(competition_id: String = "") -> int:
 	save.ensure_open()
 	var row := PLDatabase.row(

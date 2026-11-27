@@ -1,8 +1,5 @@
 extends "res://scripts/sim/match_engine_presentation.gd"
 
-## Physical duels and what they lead to: the header at goal, the tackle, the
-## foul and its card, the handball that sends play to the spot. They sit under
-## the ball actions so the same chain calls them and one finishing rule applies.
 
 func _best_outlet(p):
 	var best = null
@@ -18,7 +15,6 @@ func _best_outlet(p):
 			best = q
 	return best
 
-# ----------------------------------------------------------------- actions --
 
 func _stats_shot(p, xg: float, kind: String) -> void:
 	p.stats["shots"] += 1
@@ -38,9 +34,8 @@ func _header(p) -> void:
 	ball.assist_id = -1
 	ball.planned_goal = false
 	ball.planned_save = false
-	# A header at goal is a chance like any other: it converts with its own xG,
-	# and one that will not convert is kept out. A lofted ball that happens to
-	# drop in must not be a free goal the model never priced.
+
+
 	if (p.team == possession_team or attacking) and to_goal.length() < 18.0 \
 			and absf(to_goal.x) > absf(to_goal.y) * 0.3:
 		var hxg: float = 0.18 * float(xg_form[p.team])
@@ -60,13 +55,11 @@ func _header(p) -> void:
 		_stats_shot(p, hxg, "header")
 		stats[p.team]["xg"] += hxg
 	elif p.team == possession_team or attacking:
-		# Cushion it to a teammate.
 		var mate = _best_outlet(p)
 		var tp: Vector2 = mate.pos if mate != null else p.pos + Vector2(teams[p.team]["dir"] * 8.0, 0.0)
 		ball.vel = (tp - ball.pos).normalized() * 9.0
 		ball.vz = 1.0
 	else:
-		# Defensive clearance
 		var away = Vector2(teams[p.team]["dir"] * 24.0, rng.randf_range(-14.0, 14.0))
 		ball.vel = away.normalized() * rng.randf_range(10.0, 16.0)
 		ball.vz = 5.5
@@ -87,9 +80,8 @@ func _attempt_tackle(d, carrier) -> void:
 	var speed_adv: float = clampf((carrier.vel.length() - d.vel.length()) / 8.0, -1.0, 1.0)
 	var chance: float = 0.10 + def * 0.50 - dri * 0.30 + (1.0 - dist / 1.9) * 0.22 + align * 0.10 - maxf(0.0, speed_adv) * 0.14
 	chance += 0.020 if d.team == home_team else -0.015
-	# How hard this side goes in: the club's own `aggression` bar (wiki Live
-	# tactics). Zero at the league's neutral value, so a default side is
-	# unchanged; an aggressive side wins a little more of the same challenge.
+
+
 	chance += MatchContact.tackle_bonus(style_of(d.team))
 	chance = clampf(chance, 0.04, 0.60)
 	if rng.randf() < chance:
@@ -117,8 +109,8 @@ func _attempt_tackle(d, carrier) -> void:
 			foul_p += 0.02
 		if in_penalty_box(carrier.pos, d.team):
 			foul_p *= 0.40
-		# The same bar widens the other half of the duel: a side that goes in
-		# harder misses harder too, so aggression is a style and not a free win.
+
+
 		foul_p *= MatchContact.foul_multiplier(style_of(d.team))
 		if rng.randf() < foul_p:
 			_award_foul(d, carrier)
@@ -127,7 +119,7 @@ func _award_foul(fouler, victim) -> void:
 	var box = in_penalty_box(victim.pos, fouler.team)
 	stats[fouler.team]["fouls"] += 1
 	fouler.stats["fouls"] += 1
-	# Card decision.
+
 	var dogso = false
 	var ax = attacking_x(victim.team, victim.pos)
 	if ax > L * 0.62 and not box:
@@ -161,12 +153,11 @@ func _award_foul(fouler, victim) -> void:
 		_emit("foul", Commentary.foul(rng, fouler.name, victim.name, false), victim.team, victim)
 		_start_restart("free_kick", victim.team, spot, 2.6)
 	_flash(0.4)
-	# A bad challenge can take the victim off as well.
+
 	if rng.randf() < 0.05:
 		_injure(victim)
 
-## The ball struck an arm in the flight path. Restart to the attacking side:
-## a penalty inside the box, a free kick anywhere else.
+
 func _award_handball(q) -> void:
 	var box: bool = in_penalty_box(q.pos, q.team)
 	var attack: int = 1 - q.team
@@ -202,7 +193,7 @@ func _send_off_or_book(p, card: String) -> void:
 		_emit("card", line, p.team, p)
 		_remove_body(p)
 	stoppage_events += 1
-	# A card changes the picture: the dugouts weigh a response.
+
 	manager.on_event("card", {"team": p.team, "red": card != "yellow"})
 
 func _remove_body(p) -> void:

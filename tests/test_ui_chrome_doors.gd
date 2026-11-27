@@ -1,10 +1,5 @@
 extends GdToolsTest
 
-## One door grammar for every non-match sheet: the season sheets, the System
-## dialog, the fixture picker and the encyclopedia all paint their buttons
-## through `UiChrome.button` / `UiChrome.chip`. This suite presses the screens
-## the grammar paints and checks they still answer, so a shared paint never
-## costs a door its press.
 
 var SAVE_DIR := TestScratch.dir("saves_test_ui_chrome_doors")
 var CACHE_DIR := TestScratch.dir("cache_test_ui_chrome_doors")
@@ -40,7 +35,7 @@ func after_all() -> void:
 func screen():
 	return game.menus.league.screen
 
-## A season on the hub, created fresh so a case never inherits another's save.
+
 func _season(name: String) -> LeagueSeason:
 	var season := LeagueSeason.create(name, "generated", "fixture_days", 11)
 	assert_not_null(season, "could not create %s: %s" % [name, LeagueSave.last_error])
@@ -56,7 +51,7 @@ func _leave() -> void:
 	LeagueSystemActions.unload(screen())
 	LeagueSave.close()
 
-## The calendar's month chips keep their own door ids on the pinned rail.
+
 func test_the_calendar_month_chips_still_turn_the_page() -> void:
 	var season := _season("Chrome Doors")
 	screen().click("calendar")
@@ -77,13 +72,11 @@ func test_the_calendar_month_chips_still_turn_the_page() -> void:
 	assert_not_null(season, "the season went away while reading the calendar")
 	_leave()
 
-## The report's ▶ is a real touch target beside a stored goal.
+
 func test_a_report_goal_plays_its_stored_clip() -> void:
 	var season := _season("Chrome Play")
-	# One settled matchday is enough for the hub to have a played fixture to
-	# read back; settling the whole 380-fixture calendar cost ~2 s a run.
-	# `report()` already reads a settled fixture's ledger, so the id alone is
-	# enough to reopen the report.
+
+
 	var settled: Array = season.advance().get("played", [])
 	assert_false(settled.is_empty(), "the season could not settle its first matchday")
 	var opened := settled[0] as Dictionary
@@ -99,13 +92,13 @@ func test_a_report_goal_plays_its_stored_clip() -> void:
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "BACK did not return to the hub")
 	_leave()
 
-## The fixture picker's KICK OFF keeps its press through the shared grammar.
+
 func test_the_fixture_picker_keeps_its_doors() -> void:
 	game.open_select(true)
 	var picker = game.selector
 	if picker == null:
 		return
-	# The doors are built in _draw: draw the sheet once before pressing it.
+
 	picker.queue_redraw()
 	await get_tree().process_frame
 	var ids: Array = []

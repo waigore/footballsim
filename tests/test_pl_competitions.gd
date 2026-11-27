@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Competitions in one database: the shipped seed carries the Premier League,
-## La Liga and the German pair, and each gets its own hub, table, club index and
-## fixtures — with no page hard-coded to "the" league (#190, parent #185, #239).
 
 var CACHE_DIR := TestScratch.dir("cache_test_competitions")
 
@@ -26,7 +23,7 @@ func test_the_seed_carries_every_competition() -> void:
 	assert_has(ids, "LL", "the seed's La Liga is missing")
 	assert_has(ids, "BL", "the seed's Bundesliga is missing")
 	assert_has(ids, "BL2", "the seed's 2. Bundesliga is missing")
-	# The English pyramid below the Premier League (#259).
+
 	for cid in ["CH", "L1", "L2", "NL"]:
 		assert_has(ids, cid, "the seed's English tier %s is missing" % cid)
 		assert_eq(int(PLCompetitions.clubs(cid)), 24, "%s club count is wrong" % cid)
@@ -109,16 +106,14 @@ func test_an_unknown_competition_is_rejected() -> void:
 	assert_eq(WikiModel.label(WikiModel.LEAGUE, ""), "PREMIER LEAGUE",
 		"the crumb numbers the wrong league")
 
-# ------------------------------------------------------------------ helpers ---
 
-## The chips block carrying the competition index: a hub opens with it.
 func _chips(page: Dictionary) -> Array:
 	for block in page.get("blocks", []):
 		if str(block.get("k", "")) == "chips":
 			return block.get("items", [])
 	return []
 
-## True when the competition index holds a chip for `text` that opens `id`.
+
 func _chip_target(items: Array, text: String, id: String) -> bool:
 	for item in items:
 		if str(item.get("text", "")) != text:

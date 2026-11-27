@@ -1,13 +1,6 @@
 class_name PLDatabase
 extends RefCounted
 
-## One SQLite connection to the cached Premier League seed.
-##
-## The shipped seed (`res://data/pl_seed.sqlite`) is read-only inside the
-## export; the game runs against a copy in the user cache so in-sim stats can be
-## written on every platform. The copy is named after the seed's `db_version`,
-## so bumping the version in the snapshot both flushes old in-sim stats and
-## replaces a stale cached database on first use.
 
 const SEED_PATH := "res://data/pl_seed.sqlite"
 const CACHE_DIR := "user://cache"
@@ -18,11 +11,11 @@ static var _db: SQLite = null
 static var _open_path := ""
 static var _version := -1
 
-## Cache directory this run uses (tests point it at a scratch folder).
+
 static func cache_directory() -> String:
 	return cache_dir
 
-## Seed version stamped in the shipped database, or -1 when the asset is gone.
+
 static func seed_version() -> int:
 	if _version >= 0:
 		return _version
@@ -30,8 +23,8 @@ static func seed_version() -> int:
 		push_error("Premier League seed is missing: %s" % SEED_PATH)
 		return -1
 	DirAccess.make_dir_recursive_absolute(cache_directory())
-	# Parallel test workers share one user cache; a fixed probe name races
-	# (one process truncates or deletes while another queries metadata).
+
+
 	var probe := cache_directory().path_join("_seed_probe_%d.sqlite" % OS.get_process_id())
 	var out := FileAccess.open(probe, FileAccess.WRITE)
 	if out == null:
@@ -56,8 +49,7 @@ static func seed_version() -> int:
 static func cache_path() -> String:
 	return cache_directory().path_join("%s%d.sqlite" % [CACHE_PREFIX, maxi(seed_version(), 0)])
 
-## Copy the seed into the cache when it is missing, leave a current copy alone,
-## and delete copies made from older seeds: their in-sim stats are stale.
+
 static func ensure_cache() -> String:
 	var version := seed_version()
 	if version < 0:
@@ -69,8 +61,8 @@ static func ensure_cache() -> String:
 		if name.begins_with(CACHE_PREFIX) and name != target_name:
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(cache_directory().path_join(name)))
 	if not FileAccess.file_exists(target):
-		# Write aside, then rename, so a peer opening the final path never
-		# sees an empty file mid-copy under --parallel.
+
+
 		var tmp := cache_directory().path_join("_seed_copy_%d.sqlite" % OS.get_process_id())
 		var out := FileAccess.open(tmp, FileAccess.WRITE)
 		if out == null:
@@ -90,8 +82,7 @@ static func ensure_cache() -> String:
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
 	return target
 
-## Live connection, opened on first use. Null on failure so callers can show an
-## empty state instead of crashing the match.
+
 static func get_db() -> SQLite:
 	if _db != null:
 		return _db
@@ -115,9 +106,7 @@ static func close() -> void:
 	_open_path = ""
 	_version = -1
 
-## Bind the static connection to another SQLite file: a league save owns its
-## whole universe, so the engine, repository and encyclopedia read the save
-## while it is active. `reset()` returns to the cached seed.
+
 static func open_path(path: String) -> bool:
 	if path == "" or not FileAccess.file_exists(path):
 		push_error("save database is missing: %s" % path)
@@ -134,8 +123,6 @@ static func open_path(path: String) -> bool:
 	return true
 
 
-## Rows of a SELECT as plain dictionaries. The addon hands back StringName
-## keys, so each key is copied to a String once and callers stay simple.
 static func rows(sql: String, bindings: Array = []) -> Array:
 	var db := get_db()
 	if db == null:
@@ -156,8 +143,7 @@ static func row(sql: String, bindings: Array = []) -> Dictionary:
 	var found := rows(sql, bindings)
 	return found[0] if not found.is_empty() else {}
 
-## Write path for in-sim stats: one statement per call, wrapped by the caller in
-## a transaction so the match never pays for a round trip per player.
+
 static func execute(sql: String, bindings: Array = []) -> bool:
 	var db := get_db()
 	if db == null:
@@ -170,7 +156,7 @@ static func execute(sql: String, bindings: Array = []) -> bool:
 static func transaction(sql: String) -> bool:
 	return execute(sql)
 
-## Test hook: forget the connection and the cached seed version.
+
 static func reset() -> void:
 	close()
 	_version = -1

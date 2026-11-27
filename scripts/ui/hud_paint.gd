@@ -1,22 +1,19 @@
 class_name HudPaint
 extends RefCounted
 
-## One overlay frame's paint scope: the overlay's shared drawing surface plus the
-## design viewport it paints into, so a band module calls `p.text(...)` /
-## `p.panel(...)` and never reaches into the overlay node.
 
 const BORDER := HudChrome.BORDER
 
 var ink: HudChrome = null
 var vp := Vector2(1600, 900)
-## Followed club ids as a set (#107): a followed club's name paints gold.
+
 var followed := {}
 
 func _init(surface: HudChrome, viewport_size: Vector2) -> void:
 	ink = surface
 	vp = viewport_size
 
-## Handheld metrics: the phone layout every band switches on.
+
 func compact() -> bool:
 	return HudLayout.is_compact(vp)
 

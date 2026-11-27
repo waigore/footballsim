@@ -1,30 +1,19 @@
 class_name LeagueReport
 extends RefCounted
 
-## The report side of the season ledger: the score a fixture carries and the
-## event rows, player lines and top-scorer chart a match leaves behind.
-##
-## Split out of `LeagueRecord` so results and their readings keep one concern.
-## Writes are batched — one statement per fixture for its events and one for the
-## twenty-two player lines — so a whole matchday costs a handful of round trips,
-## not hundreds, and re-settling a fixture cannot stack a second set of events.
 
 var save: LeagueSave = null
-## The goal clips stored beside the ledger's reports (see `LeagueClips`).
+
 var clips: LeagueClips = null
-## Event rows per fixture, read once while the ledger stays put: a hub repaint
-## asks for the same day again and again (a resize, a toggle), and a played
-## report never changes until the fixture is settled again.
+
+
 var memo := {}
 
 func _init(owner: LeagueSave) -> void:
 	save = owner
 	clips = LeagueClips.new(owner)
 
-## Store one result. Callers that already hold the fixture pass the two club ids
-## so the statement needs no lookup; the table rows then move by the same delta.
-## A competition id reads that league's regulations, so a result pays whatever
-## the league it belongs to says a win is worth.
+
 func save_result(fixture_id: String, home_goals: int, away_goals: int,
 		home_club_id: String = "", away_club_id: String = "",
 		standings: LeagueStandings = null, competition_id: String = "") -> bool:
@@ -83,19 +72,15 @@ func events(fixture_id: String) -> Array:
 		+ "ORDER BY e.minute, e.id;",
 		[fixture_id],
 	)
-	# The rows are a reading, not a copy: every painter treats them as read-only.
+
 	memo[fixture_id] = rows
 	return rows
 
-## Add one player's match line to the season totals (apps, goals, assists,
-## cards). Called for the XI of an auto-simmed side and for every player a
-## watched match actually used.
+
 func add_player_line(player_id: String, club_id: String, line: Dictionary) -> void:
 	add_player_lines([{"player_id": player_id, "club_id": club_id, "line": line}])
 
-## One statement for a whole squad's match lines. Each line carries the
-## competition its club plays in, read once from the save so a leader board can
-## be scoped to one league without joining every time.
+
 func add_player_lines(rows: Array) -> void:
 	save.ensure_open()
 	var values: Array = []

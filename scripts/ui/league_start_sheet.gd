@@ -1,39 +1,18 @@
 class_name LeagueStartSheet
 extends RefCounted
 
-## The season's front door: the New League wizard and the Load library — the
-## two sheets that start a season or resume one, as opposed to playing it.
-##
-## They were poses inside `LeagueSheet`, which is the season hub; the hub was
-## carrying three screens, and its own pose shared a file with the field, choice
-## and save-row grammar of the front door. Split out, the hub keeps only the hub
-## and this sheet owns the screens a player meets before a season is on.
-##
-## Same contract as the other sheets: `layout()` turns state into rows and chips
-## with rects (so a headless test can press them), and `draw_*` paints exactly
-## those rects. No sim calls happen here; BACK and the header band come from
-## `LeagueExtra`, like every other league sheet.
 
 const HEADER := LeagueChrome.HEADER
 const BAR_H := LeagueChrome.BAR_H
 
-## The name a New League opens on (#323). It used to be `League 1`, which reads
-## as the English third tier the wizard also offers — a save called that looked
-## like a League One season. A save already named `League 1` keeps its name: this
-## is only the field's opening text, never a rename.
+
 const SAVE_NAME := "My League Sim"
 
 var cache := {}
-## Dates this sheet painted, with the strip each one occupies (#99).
+
 var hints := DateHints.new()
 
-# ---------------------------------------------------------------- wizard ---
 
-## The wizard's league choices, grouped by country (#261): every league its own
-## toggle, listed under the country it plays in, the graph's country order first
-## and each country's tiers top flight first. A competition the graph does not
-## know still appears under the seed's own country, so a new league never
-## vanishes from the wizard.
 static func _league_groups(comps: Array) -> Array:
 	var by_country := {}
 	var seen: Array = []
@@ -76,10 +55,8 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append({"id": "name", "kind": "field", "label": "NAME",
 		"rect": Rect2(24.0, y, w, 38.0), "value": str(view.get("name", ""))})
 	y += 66.0
-	# Leagues: at least one, every other one a toggle (#185/#189). Each country
-	# is a headed group and every tier under it is its own toggle, so a lower
-	# tier can be asked for without hiding the tiers above it (#261). The
-	# calendar and the clock choices below are shared by whatever set is picked.
+
+
 	items.append({"id": "", "kind": "caption", "label": "LEAGUES",
 		"rect": Rect2(24.0, y - 8.0, w, 10.0)})
 	var chosen: Array = view.get("competitions", ["PL"])
@@ -114,14 +91,13 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append(LeagueExtra.back_item())
 	return items
 
-# ------------------------------------------------------------------ load ---
 
 func load_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 	var saves: Array = view.get("saves", [])
 	var w := minf(620.0, vp.x - 48.0)
 	var y := HEADER + 26.0
-	# Every save is laid out; the body scrolls a library longer than one screen (REQ-P5-08).
+
 	for i in range(saves.size()):
 		var save: Dictionary = saves[i]
 		var row := Rect2(24.0, y, w, 40.0)
@@ -133,7 +109,7 @@ func load_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append(LeagueExtra.back_item())
 	return items
 
-## The active-league badge on a load row: short names joined with a plus.
+
 static func _league_badge(csv: String) -> String:
 	var names: Array = []
 	for cid in csv.split(",", false):
@@ -142,9 +118,7 @@ static func _league_badge(csv: String) -> String:
 		names.append(PLRepository.shared().competition_name(str(cid)))
 	return " + ".join(PackedStringArray(names)) if not names.is_empty() else "PL"
 
-## The save row's status in player words (#280): the store keeps `in_progress`,
-## the sheet never prints it. An unknown token still reads as words, never as a
-## raw key with its underscore.
+
 static func status_label(status: String) -> String:
 	var token := status.strip_edges()
 	if token == "in_progress":
@@ -170,7 +144,7 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 		var kind := str(item["kind"])
 		var id := str(item["id"])
 		if kind == "country":
-			# A country header: its name over a hairline, the tiers below it.
+
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 10.0), str(item["label"]),
 				10, UiChrome.C_GOLD, bold)
 			c.draw_rect(Rect2(rect.position.x, rect.position.y + 14.0, rect.size.x, 1.0),
@@ -200,7 +174,6 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 		elif kind == "button":
 			UiChrome.button(c, cache, rect, str(item["label"]), bold, bool(item.get("primary", false)))
 
-# ------------------------------------------------------------------ load ---
 
 func draw_load_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, _view: Dictionary,
 		_hints: DateHints) -> void:

@@ -1,10 +1,5 @@
 extends "res://scripts/sim/match_engine_squad.gd"
 
-## Pitch geometry over live match state: attacking frames, box tests, the
-## goal-mouth angle and the per-tick offside list. One layer up from the squad
-## so callers (AI, actions, HUD) inherit it without squad reads depending on
-## geometry. Positions do not move inside a tick, so the offside cache reads
-## once per tick.
 
 func attacking_dir(t: int) -> int:
 	return teams[t]["dir"]
@@ -38,7 +33,7 @@ func is_attacking_third(t: int, pos: Vector2) -> bool:
 	return ax > L * 0.66
 
 func opponent_goal_angle(p) -> float:
-	# 0..1: how much of the goal mouth is visible from the player's position.
+
 	var g = target_goal_pos(p.team)
 	var to_goal = g - p.pos
 	if to_goal.length() < 0.001:
@@ -48,11 +43,7 @@ func opponent_goal_angle(p) -> float:
 	var angles = absf(atan2(half_w, maxf(dx, 0.4)))
 	return clampf(angles / 0.9, 0.0, 1.0)
 
-# ------------------------------------------------------------- offside cache --
 
-# Sorted descending attacking-x per side, cached per sim tick. Several AI
-# reads (offside line, would-be-offside) want the same list within one tick
-# and positions do not move inside a tick.
 var _offside_xs := [[], []]
 var _offside_xs_tick := [-1, -1]
 var _offside_xs_rev := [-1, -1]

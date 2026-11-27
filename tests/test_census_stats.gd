@@ -1,10 +1,5 @@
 extends GdToolsTest
 
-## Census statistics and plumbing: the reducers the tier-2 Poisson-agreement
-## suites assert on, the sampling-aware tolerance that keeps a 10% agreement
-## target from being read as a 10% pass/fail band at census n (the relative sd
-## of S² is ~27% at n = 32, so a literal band would fail a correct engine nearly
-## always), and the shard/results plumbing that lets CI split the grid.
 
 var RESULTS_DIR := TestScratch.dir("census_test_results")
 
@@ -35,7 +30,7 @@ func test_relative_gap_is_symmetric() -> void:
 	assert_almost_eq(CensusLib.rel_gap(0.9, 1.0), 0.1, 0.0001, "under-shoot gap wrong")
 
 func test_sampling_sd_matches_the_poisson_moment() -> void:
-	# sd(S²) = sqrt([3λ² + λ − λ²(n−3)/(n−1)] / n) for Poisson(λ) draws.
+
 	var lam := 1.58
 	var n := 32
 	var expected := sqrt((3.0 * lam * lam + lam - lam * lam * 29.0 / 31.0) / 32.0)
@@ -45,14 +40,14 @@ func test_sampling_sd_matches_the_poisson_moment() -> void:
 	assert_eq(CensusLib.variance_sampling_sd(lam, 1), 0.0, "one match has no variance estimate")
 
 func test_tolerance_widens_by_the_sampling_allowance() -> void:
-	# The gate must never be tighter than the calibration target itself.
+
 	assert_gt(CensusLib.variance_tolerance(1.58, 32), CensusLib.VAR_TARGET,
 		"tolerance did not include the sampling allowance")
-	# At census n the relative sd of S² is ~29% for λ = 1.58, so the band lands
-	# near 10% + 1.96·29% ≈ 67%.
+
+
 	var band := CensusLib.variance_tolerance(1.58, 32)
 	assert_between(band, 0.64, 0.70, "n=32 band is not the 95% Poisson allowance")
-	# A stronger anchor (λ = 3.67) is relatively less noisy at the same n.
+
 	assert_lt(CensusLib.variance_tolerance(3.67, 32), band,
 		"a higher rate should carry a tighter relative band")
 
@@ -75,9 +70,9 @@ func test_shards_partition_the_fixed_grid() -> void:
 			assert_false(seen.has(i), "grid index %d is in two shards" % i)
 			seen[i] = true
 	assert_eq(seen.size(), n, "the shards do not cover the whole grid")
-	# Interleaved, so every shard sees the whole seed spread.
+
 	assert_eq(CensusLib.shard_indices(n, 0, shards)[1], 4, "shard indices are not interleaved")
-	# A single shard is the whole grid, which is how a local run behaves.
+
 	assert_eq(CensusLib.shard_indices(n, 0, 1).size(), n, "one shard must hold the grid")
 
 func test_seed_grid_is_fixed_and_strided() -> void:
@@ -98,7 +93,7 @@ func test_rows_round_trip_and_pool_dedupes() -> void:
 	var back := CensusLib.read_rows(RESULTS_DIR)
 	assert_eq(back.size(), 2, "rows did not round-trip through JSONL")
 	assert_eq(int(back[0]["seed"]), 7000, "the seed did not survive the round trip")
-	# A re-run shard writing the same seeds must not double-count them.
+
 	CensusLib.write_rows(RESULTS_DIR, "mci_mci", 2, rows)
 	var pooled := CensusLib.pool_by_anchor(CensusLib.read_rows(RESULTS_DIR))
 	assert_eq(pooled["mci_mci"].size(), 2, "pooling double-counted a re-run shard")

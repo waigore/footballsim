@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Every door into the encyclopedia, driven through main.gd: the fixture sheet,
-## the in-match control bar, the scoreboard club chrome and the tracked player
-## card — plus the full-time hook that writes the match into the seed.
 
 var game = null
 

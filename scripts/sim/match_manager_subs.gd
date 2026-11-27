@@ -1,11 +1,7 @@
 class_name MatchManagerSubs
 extends RefCounted
 
-## Bench changes: candidate pick, the act roll, the forced injury change.
-## Split from `MatchManager` so the dugout orchestration stays under the
-## method ceiling (RUB-P3-01), beside `MatchManagerTactics` and `MatchCadence`.
 
-## No changes before half-time unless forced.
 const EARLIEST := 2700.0
 const MIN_GAP := 200.0
 
@@ -33,8 +29,6 @@ static func consider(m: MatchManager, t: int, at_half_time: bool, urgency: float
 	return do_sub(m, t, off, at_half_time, reason)
 
 
-## The manager's pick: the most tired run-out outfielder, with a nudge toward
-## defenders when the side is chasing and toward booked players.
 static func candidate(m: MatchManager, t: int):
 	var best = null
 	var best_score := 0.0
@@ -66,8 +60,6 @@ static func do_sub(m: MatchManager, t: int, off: Variant, at_half_time: bool, re
 	return ok
 
 
-## A forced change: the injured player leaves and the manager picks his
-## replacement. Returns false when the change cannot be made (play on short).
 static func replace_injured(m: MatchManager, p: Variant) -> bool:
 	if p == null or p.sent_off:
 		return false

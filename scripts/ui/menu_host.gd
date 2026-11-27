@@ -1,20 +1,14 @@
 class_name MenuHost
 extends RefCounted
 
-## Owns the menu shell layer and the scene-side glue: show/hide the match
-## chrome, keep the match paused, forward input while a sheet is up, and hand
-## Start/Resume back to the scene. Kept out of main.gd so that file stays inside
-## its P3 size ratchet.
 
 var game = null
 var layer: CanvasLayer = null
 var shell: AppShell = null
-## The god-mode league surface: New/Setup, Load and the season hub.
+
 var league: LeagueHost = null
 
-## The shell sits under the season surface (`LeagueHost.LAYER`), so a season
-## sheet can own the screen — except the quit confirmation, which must draw
-## over the sheet that raised it and answer before it (#123).
+
 const SHEET_LAYER := 30
 const CONFIRM_LAYER := 40
 
@@ -35,9 +29,8 @@ func attach(main_node) -> void:
 	shell.hud_visibility_changed.connect(_on_hud_choice)
 	shell.match_mode_changed.connect(_on_match_mode)
 	shell.visible = false
-	# The match HUD's show/hide choice lives in the same prefs file (#158): the
-	# overlay hands its toggles here to be written, and the settings switch comes
-	# back as a signal. Restore the saved choice before the first frame.
+
+
 	if game.hud != null:
 		game.hud.on_hud_changed = _persist_hud
 	restore_hud()
@@ -46,9 +39,7 @@ func attach(main_node) -> void:
 	league.attach(main_node)
 	league.build()
 
-## Put the overlay in the state the prefs file asks for, without animating: the
-## restore happens before anything is on screen, and a switch from the settings
-## sheet arrives while the overlay is hidden under the shell.
+
 func restore_hud() -> void:
 	if game != null and game.hud != null and shell != null:
 		game.hud.set_hud_visible(Prefs.load_hud(shell.prefs_path), true)
@@ -57,20 +48,17 @@ func _on_hud_choice(on: bool) -> void:
 	if game != null and game.hud != null:
 		game.hud.set_hud_visible(on, true)
 
-## The saved match view comes back with the same instant restore the HUD choice
-## gets: the broadcast opens in the mode the player left it in (#164).
+
 func restore_mode() -> void:
 	if game != null and game.view != null and shell != null:
 		game.view.set_mode(Prefs.load_mode(shell.prefs_path))
 
-## A settings choice applies to the match behind the sheet at once. It was saved
-## by the sheet, so the write is not repeated here.
+
 func _on_match_mode(mode: String) -> void:
 	if game != null and game.view != null:
 		game.view.set_mode(mode)
 
-## Persist the broadcast's own mode choice (the bar door or `H`) and keep the
-## settings sheet's row in step, without re-emitting the signal.
+
 func save_mode(mode: String) -> void:
 	if shell == null:
 		return
@@ -80,8 +68,7 @@ func save_mode(mode: String) -> void:
 func _persist_hud(on: bool) -> void:
 	Prefs.save_hud(on, shell.prefs_path if shell != null else Prefs.PATH)
 
-## Keep the shell above the season surface while the quit confirmation is the
-## sheet on screen, and back under it the moment it is dismissed.
+
 func _restack() -> void:
 	if layer == null or shell == null:
 		return
@@ -93,8 +80,7 @@ func active() -> bool:
 func league_active() -> bool:
 	return league != null and league.is_open()
 
-## A watched fixture's full-time card is up: no sheet is on screen, but the
-## season still owns input until the player dismisses it (#124).
+
 func league_holding() -> bool:
 	return league != null and league.is_holding()
 
@@ -103,8 +89,8 @@ func open_league_menu() -> void:
 		league.open_wizard()
 
 func open_menu() -> void:
-	# MENU while a season fixture is being watched hands the season back: the
-	# rest of the match plays out at max speed and is saved (#100).
+
+
 	if league != null and league.watch != null and league.watch.leave():
 		return
 	if game.wiki_host != null and game.wiki_host.is_open():
@@ -133,8 +119,7 @@ func close(keep_music: bool = false) -> void:
 	if shell != null:
 		shell.close(keep_music)
 
-## Pose the shell for a cold start (or a dev/evidence run). A normal launch
-## opens the menu; `--home/--away` still goes straight to the match.
+
 func pose(dev) -> void:
 	if dev.open_settings:
 		open_settings()
@@ -158,16 +143,13 @@ func sync(frame: Transform2D, scale: float, touch: bool) -> void:
 	shell.touch = touch
 	shell.queue_redraw()
 
-## Swallow every event while a sheet is up: nothing may reach the paused match.
-## The scene reports pointer positions in window space; the shell reads its own
-## design space, so the host divides by the chrome scale it handed the layer.
+
 func handle_input(event: InputEvent, screen_point: Vector2) -> bool:
 	if not active():
 		return false
 	var design_point: Vector2 = screen_point / maxf(shell.ui_scale, 0.001)
-	# The quit confirmation is the top modal on screen: it answers before the
-	# season surface underneath, so QUIT raised from a season sheet is never
-	# trapped behind it (#123).
+
+
 	if shell != null and shell.screen == AppShell.SCREEN_CONFIRM:
 		if event is InputEventMouse:
 			shell.handle_input(event, design_point)

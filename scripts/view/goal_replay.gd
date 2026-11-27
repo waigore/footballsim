@@ -1,16 +1,7 @@
 class_name GoalReplay
 extends RefCounted
 
-## Plays one stored goal clip in the broadcast viewer.
-##
-## The clip is playback-only (see `GoalHighlight`): positions and the ball, no
-## squad state. So the replay does not tick the engine — it binds the pack's
-## player keys onto a freshly built squad for the same two clubs and writes each
-## interpolated pose straight onto those bodies. Everything else the viewer
-## already does (pitch, tokens, camera, clock, score, pause, speed) then works
-## unchanged, which is what "reuse Highlights playback" means in practice.
 
-## Screen seconds per match second at 1×. A ten-second clip reads in ten.
 const RATE := 1.0
 
 var host = null
@@ -24,8 +15,7 @@ var length := 0.0
 var goal_shown := false
 var on_done := Callable()
 
-## Build the viewer for one clip and show its first pose. Returns null when the
-## pack is unusable so the caller can keep the report on screen.
+
 static func open(host_in, clip: Dictionary, done := Callable()) -> GoalReplay:
 	if clip.is_empty() or host_in == null:
 		return null
@@ -52,8 +42,7 @@ static func open(host_in, clip: Dictionary, done := Callable()) -> GoalReplay:
 	replay.apply(true)
 	return replay
 
-## Advance the clock and write the pose. Returns true once the clip has ended,
-## so the host can drop the replay and hand control back.
+
 func step(delta: float) -> bool:
 	if host == null or engine == null:
 		return true
@@ -65,7 +54,7 @@ func step(delta: float) -> bool:
 		return true
 	return false
 
-## End the clip now (skip, or the host rebuilt its match).
+
 func finish(notify: bool = true) -> void:
 	if host != null:
 		host.replay_banner = 0.0
@@ -75,7 +64,7 @@ func finish(notify: bool = true) -> void:
 	if notify and done.is_valid():
 		done.call()
 
-## Write the interpolated pose for the current time onto the squad.
+
 func apply(first: bool) -> void:
 	if engine == null:
 		return
@@ -86,8 +75,8 @@ func apply(first: bool) -> void:
 	var alpha := clampf((t - float(a.get("t", 0.0))) / span, 0.0, 1.0)
 	var pose := GoalHighlight.blend(a, b, alpha)
 	var flat: Array = pose.get("p", [])
-	# Seconds between the two frames: the pose stores no velocities, so speed is
-	# read back out of the spacing. Tokens use it for dust and the facing tick.
+
+
 	var dt := maxf(span, 0.001)
 	for i in range(keys.size()):
 		var player = bound.get(str(keys[i]), null)
@@ -118,7 +107,7 @@ func apply(first: bool) -> void:
 	if int(a.get("g", 0)) == 1 and not goal_shown:
 		goal_shown = true
 		_show_line(a)
-	# The official follows play instead of standing at kick-off.
+
 	engine.referee.pos = engine.referee.pos.lerp(bp + Vector2(-9.0, 7.0), 0.12)
 	engine.referee.facing = (bp - engine.referee.pos).normalized()
 
@@ -127,7 +116,7 @@ func set_score(home: int, away: int) -> void:
 	engine.teams[0]["score"] = home
 	engine.teams[1]["score"] = away
 
-## Put the stored commentary line in the ticker, so the clip narrates itself.
+
 func _show_line(frame: Dictionary) -> void:
 	var text := str(pack.get("commentary", ""))
 	if text == "":
@@ -138,7 +127,7 @@ func _show_line(frame: Dictionary) -> void:
 		"pos": Vector2.ZERO,
 	}]
 
-## Index of the frame pair bracketing `at_seconds`.
+
 func _frame_index(at_seconds: float) -> int:
 	var lo := 0
 	var hi := frames.size() - 1

@@ -1,18 +1,7 @@
 class_name LeagueSaveSchema
 extends RefCounted
 
-## The save file's schema and its migration path, split out of `LeagueSave` so
-## the storage class stays inside its size budget. Every statement is
-## `IF NOT EXISTS`, so `migrate()` is both the create path and the upgrade for a
-## save written by an older build (goal clips, the multi-league columns).
-##
-## A save written before multi-league has a single `league_rules` row with an
-## `id` column and no `competition_id`; `migrate()` lifts it under the save's one
-## competition, and `backfill()` stamps that league on every match row.
 
-## Side aggregates added after the first season saves shipped (#73). A save
-## written before them gets the columns on open; the season then rebuilds every
-## row from its played fixtures.
 const SIDE_COLUMNS := [
 	"home_played", "home_won", "home_drawn", "home_lost", "home_gf", "home_ga",
 	"away_played", "away_won", "away_drawn", "away_lost", "away_gf", "away_ga",
@@ -77,8 +66,7 @@ const INDEXES := [
 	"CREATE INDEX IF NOT EXISTS goal_highlight_fixture_idx ON goal_highlight (fixture_id);",
 ]
 
-## Which competitions the save runs, read from the DB alone (before any object
-## exists): the save's own rows, or the one league an old save shipped with.
+
 static func active_from_disk() -> Array:
 	var out: Array = []
 	for row in PLDatabase.rows(
@@ -88,7 +76,7 @@ static func active_from_disk() -> Array:
 		return out
 	return hint()
 
-## The competition a save written before multi-league belongs to.
+
 static func hint() -> Array:
 	var row := PLDatabase.row("SELECT value FROM save_meta WHERE key = 'competitions';")
 	if not row.is_empty() and str(row.get("value", "")) != "":
@@ -104,8 +92,7 @@ static func hint() -> Array:
 	var comp := PLDatabase.row("SELECT id FROM competition ORDER BY rowid LIMIT 1;")
 	return [str(comp.get("id", "PL"))] if not comp.is_empty() else ["PL"]
 
-## Only competitions the bound seed actually carries can be active, in the
-## order asked, and never none.
+
 static func valid(wanted: Array) -> Array:
 	var known: Array = []
 	for row in PLDatabase.rows("SELECT id FROM competition ORDER BY rowid;"):
@@ -119,9 +106,7 @@ static func valid(wanted: Array) -> Array:
 		out.append("PL" if known.has("PL") or known.is_empty() else str(known[0]))
 	return out
 
-## Lay every season table onto whichever file is bound, then lift the rules row.
-## The columns come before the indexes: an old save has no `competition_id` yet,
-## and an index on a missing column would fail the migration.
+
 static func migrate() -> void:
 	for sql in TABLES:
 		PLDatabase.execute(sql)
@@ -135,10 +120,7 @@ static func migrate() -> void:
 		PLDatabase.execute(sql)
 	LeagueRules.migrate(owner)
 
-## Bring a save written before a later column up to the current schema. Adding a
-## column leaves every existing row on the default: the home/away aggregates are
-## rebuilt from played fixtures when the season opens, and a report written
-## before penalties were tagged simply has no spot kicks to mark.
+
 static func ensure_schema(save: LeagueSave) -> void:
 	if not save.ensure_open():
 		return
@@ -147,8 +129,8 @@ static func ensure_schema(save: LeagueSave) -> void:
 	for table in ["league_fixture", "league_table", "league_player_stat"]:
 		add_column(table, "competition_id", "TEXT NOT NULL DEFAULT ''")
 		backfill(table, str(save.actives[0]) if not save.actives.is_empty() else "")
-	# #171: a synthetic report tags its converted penalties, and the flag has to
-	# survive the save so a reopened report still reads (PEN).
+
+
 	add_column("match_event", "penalty")
 	add_column("goal_highlight", "penalty")
 	for cid in save.actives:
@@ -157,7 +139,7 @@ static func ensure_schema(save: LeagueSave) -> void:
 			+ "ON CONFLICT(competition_id) DO UPDATE SET active = 1;",
 			[str(cid), save.actives.find(cid)])
 
-## Add one column if the table does not have it yet.
+
 static func add_column(table: String, column: String,
 		spec: String = "INTEGER NOT NULL DEFAULT 0") -> void:
 	var have := {}
@@ -167,8 +149,7 @@ static func add_column(table: String, column: String,
 		return
 	PLDatabase.execute("ALTER TABLE %s ADD COLUMN %s %s;" % [table, column, spec])
 
-## A save written before multi-league has no competition on its rows: give them
-## the save's one league so every later read filters correctly.
+
 static func backfill(table: String, competition_id: String) -> void:
 	if competition_id == "":
 		return

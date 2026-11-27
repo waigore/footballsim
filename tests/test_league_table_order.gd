@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## The table's order (#72/#74): the player's column and direction, the reading
-## each is legal in, and the save's own memory of both. Split out of the sheet
-## suite with `LeagueTableSort`, which is the module that now owns them.
 
 func _table(rows: int = 20) -> Array:
 	var out: Array = []
@@ -17,8 +14,7 @@ func _table(rows: int = 20) -> Array:
 		})
 	return out
 
-## Sorting is the player's order; the `#` column and the zone bands stay the
-## league's official place, so a sorted table never lies about the standings.
+
 func test_sorting_orders_the_rows_but_keeps_the_official_place() -> void:
 	var rows: Array = _table()
 	rows[0]["points"] = 10
@@ -49,9 +45,7 @@ func test_sorting_orders_the_rows_but_keeps_the_official_place() -> void:
 			ascending.append(int((item["row"] as Dictionary)["points"]))
 	assert_eq(ascending[0], 0, "the low side did not come first when reversed")
 
-## A sort is only worth honouring in a reading that shows the column: the
-## compact strip keeps the player's full-table sort stored for when they come
-## back to it, but lists the official order while it is hidden.
+
 func test_a_hidden_sort_column_leaves_the_compact_strip_in_place() -> void:
 	var rows: Array = _table()
 	rows[0]["home_gf"] = 3
@@ -82,7 +76,7 @@ func test_attach_clears_a_reading_without_a_save() -> void:
 	assert_eq(view.mode, "", "a table with no save kept a reading")
 	assert_eq(view.order.key, "", "a table with no save kept a sort")
 	assert_eq(view.order.dir, -1, "a table with no save kept a direction")
-	# The order answers for itself too, and spares a one-row list any work.
+
 	var order := LeagueTableSort.new()
 	order.attach(null)
 	order.press("points", null)

@@ -1,16 +1,12 @@
 class_name GoalVignetteCast
 extends RefCounted
 
-## Who is in an AUTO clip and where they start: one seeded Body per player, the
-## sides in the attacking frame, and the report's own men on the ball and at the
-## strike. Formation slots are laid out here too, since the AI reads them as the
-## home a body returns to.
 
 const L := GoalVignette.L
 const W := GoalVignette.W
 const CENTRE := GoalVignette.CENTRE
 
-## One body: steering mirrors the engine's — a desired velocity, capped by pace.
+
 class Body:
 	var pos := Vector2.ZERO
 	var vel := Vector2.ZERO
@@ -40,8 +36,7 @@ class Body:
 		pos.x = clampf(pos.x, -2.0, L + 2.0)
 		pos.y = clampf(pos.y, 1.0, W - 1.0)
 
-## Fill `sim.bodies` and the sim's own slots: shooter, carrier, keeper, the ball
-## at the carrier's feet and the seeded run, pass and strike clocks.
+
 static func dress(sim: GoalVignette.Sim, sides: Dictionary, goal: Dictionary,
 		scoring_home: bool) -> void:
 	var attack_xi: Array = sides.get("home" if scoring_home else "away", [])
@@ -50,7 +45,7 @@ static func dress(sim: GoalVignette.Sim, sides: Dictionary, goal: Dictionary,
 	var defend_at := attack_xi.size() if scoring_home else 0
 	var rng := sim.rng
 	sim.bodies.resize(attack_xi.size() + defend_xi.size())
-	# The chance is building: one side pushes up, the other drops toward goal.
+
 	for i in range(attack_xi.size()):
 		var b := Body.new()
 		b.base = formation(str(attack_xi[i].get("role", "")), i, attack_xi.size())
@@ -76,22 +71,22 @@ static func dress(sim: GoalVignette.Sim, sides: Dictionary, goal: Dictionary,
 	var scorer := str(goal.get("player_id", ""))
 	sim.shooter = attack_at + maxi(find(attack_xi, scorer), 0)
 	sim.carrier = attack_at + passer(attack_xi, str(goal.get("assist_id", "")), scorer)
-	# Seeded decisions: the run, the pass, the strike, the corner.
+
 	sim.meet = Vector2(78.0 + rng.randf() * 5.0, CENTRE + rng.randf_range(-8.0, 8.0))
 	sim.carry_to = Vector2(70.0 + rng.randf() * 4.0, lerpf(CENTRE, sim.meet.y, 0.55))
 	sim.strike_from = Vector2(minf(sim.meet.x + 6.0, L - 17.0),
 		sim.meet.y + rng.randf_range(-2.0, 2.0))
 	sim.pass_at = 2.3 + rng.randf() * 0.6
 	sim.strike_at = 5.0 + rng.randf() * 0.7
-	# The carrier opens with the ball at his feet, in his own half of the
-	# attacking picture: the report's assist is the man on the ball.
+
+
 	var c: Body = sim.bodies[sim.carrier]
 	c.pos = Vector2(62.0 + rng.randf() * 5.0, CENTRE + rng.randf_range(-7.0, 7.0))
 	c.base = c.pos
 	sim.ball = Vector3(c.pos.x, c.pos.y, 0.11)
 	sim.owner = sim.carrier
 
-## Formation slot in the attacking frame: keepers deep, the front line in the box.
+
 static func formation(role: String, index: int, total: int) -> Vector2:
 	var line := 3
 	if role == "GK":
@@ -106,7 +101,7 @@ static func formation(role: String, index: int, total: int) -> Vector2:
 	var y := CENTRE + (float(index) / float(per) - 0.5) * float(spread[line])
 	return Vector2(float(xs[line]), clampf(y, 3.0, W - 3.0))
 
-## The XI slot holding a player id; -1 when he is not in it.
+
 static func find(xi: Array, player_id: String) -> int:
 	if player_id == "":
 		return -1
@@ -115,7 +110,7 @@ static func find(xi: Array, player_id: String) -> int:
 			return i
 	return -1
 
-## The final ball's man: the recorded assist, else the most advanced teammate.
+
 static func passer(xi: Array, assist_id: String, scorer_id: String) -> int:
 	var found := find(xi, assist_id)
 	if found >= 0:

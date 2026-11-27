@@ -1,13 +1,6 @@
 extends GdToolsTest
 
-## The cold-start shell driven headlessly: menu → fixture setup → back, quit
-## confirm, settings with a persisted volume, HUD doors, and the menu-only BGM
-## contract. The scene is the real main.gd, the same way test_touch_flow drives
-## the phone overlay.
 
-## The design viewports the menu has to stay navigable at: desktop, a tablet, the
-## playtest's landscape handset (913x411 dp), a short 720p handset, and two
-## portrait phones.
 const HANDSETS := [
 	Vector2(1600, 900), Vector2(1280, 800), Vector2(1024, 600),
 	Vector2(913, 411), Vector2(800, 480), Vector2(640, 360), Vector2(640, 300),
@@ -25,8 +18,8 @@ func before_all() -> void:
 	game.menus.shell.prefs_path = PREFS
 	if FileAccess.file_exists(PREFS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
-	# The HUD's show/hide choice is read from the same file (#158): restore it
-	# from the suite's own copy, not the developer's last launch.
+
+
 	game.menus.restore_hud()
 	game.menus.open_menu()
 
@@ -55,7 +48,6 @@ func key(code: int) -> void:
 	ev.pressed = true
 	game._input(ev)
 
-# ------------------------------------------------------------- cold start ---
 
 func test_cold_start_opens_the_main_menu() -> void:
 	game.menus.open_menu()
@@ -76,9 +68,7 @@ func test_the_menu_doors_are_tappable_and_inside_the_screen() -> void:
 			assert_lte(r.end.x, size.x, "a door runs off the right edge at %s" % size)
 			assert_lte(r.end.y, size.y, "a door runs off the bottom at %s" % size)
 
-## #199: the title block and the door column are placed by one layout at every
-## window size, so the wordmark and its tagline are never painted under the
-## first door — the fault the phone playtest caught.
+
 func test_the_title_block_never_crosses_the_door_column() -> void:
 	var bold: Font = UiChrome.fonts()["bold"]
 	for size in HANDSETS:
@@ -107,8 +97,7 @@ func test_the_title_block_never_crosses_the_door_column() -> void:
 				size.x - 2.0 * clampf(size.x * 0.07, 24.0, 96.0) + 0.01,
 				"the wordmark runs off the sheet at %s" % size)
 
-## A landscape handset is where the fault showed: the tagline has to read on
-## both door counts, not just the five-door menu.
+
 func test_a_landscape_phone_keeps_the_tagline_over_the_doors() -> void:
 	var bold: Font = UiChrome.fonts()["bold"]
 	for size in [Vector2(1024, 600), Vector2(913, 411), Vector2(800, 480)]:
@@ -118,9 +107,7 @@ func test_a_landscape_phone_keeps_the_tagline_over_the_doors() -> void:
 			assert_true(bool(title["tagline"]),
 				"the phone menu lost its tagline at %s (6 doors: %s)" % [size, doors])
 
-## Order of sacrifice on a window with no room for both: the doors keep their tap
-## size, the wordmark shrinks, the tagline goes first, and only a window shorter
-## than any handset gives the wordmark up entirely.
+
 func test_a_short_window_gives_up_the_wordmark_only_at_the_last() -> void:
 	var bold: Font = UiChrome.fonts()["bold"]
 	var short_phone: Dictionary = MenuScreen.layout(Vector2(640, 360), true, bold)["title"]
@@ -150,7 +137,7 @@ func test_start_sim_opens_the_fixture_sheet_and_back_returns_to_the_menu() -> vo
 func test_kick_off_opens_the_briefing_then_closes_the_shell_and_stops_the_music() -> void:
 	game.open_select(true)
 	game._on_fixture_confirmed("ARS", "LIV")
-	# #157: KICK OFF opens the pre-match briefing; the match starts from it.
+
 	assert_true(TestBriefing.is_open(game), "KICK OFF skipped the pre-match briefing")
 	assert_true(TestBriefing.kick(game), "the briefing's KICK OFF did not start the match")
 	assert_false(game.menus.active(), "the shell stayed up after kick-off")
@@ -160,7 +147,6 @@ func test_kick_off_opens_the_briefing_then_closes_the_shell_and_stops_the_music(
 	assert_false(game.menus.shell.music.wanted, "menu music is still wanted under the match")
 	assert_eq(game.home_id, "ARS", "the confirmed home side did not take")
 
-# -------------------------------------------------------------- quit paths ---
 
 func test_escape_on_the_match_raises_a_confirm_and_cancel_returns() -> void:
 	game.menus.close()
@@ -188,7 +174,6 @@ func test_escape_on_the_menu_asks_before_quitting() -> void:
 	key(KEY_ESCAPE)
 	assert_eq(game.menus.shell.screen, AppShell.SCREEN_MENU, "the second Esc did not cancel")
 
-# --------------------------------------------------------------- settings ---
 
 func test_settings_volume_applies_immediately_and_persists() -> void:
 	game.menus.open_menu()
@@ -219,7 +204,6 @@ func test_zero_volume_is_silent_music_but_a_real_setting() -> void:
 	assert_almost_eq(game.menus.shell.volume, 1.0, 0.0001, "an over-loud value was not clamped")
 	game.menus.shell.set_volume(0.7)
 
-# ------------------------------------------------------------ HUD doors -----
 
 func test_the_hud_menu_door_returns_to_the_menu() -> void:
 	game.menus.close()
@@ -250,10 +234,7 @@ func test_resume_is_offered_only_while_a_match_waits() -> void:
 	assert_true(game.hud_layer.visible, "Resume did not bring the HUD back")
 	assert_false(game.menus.shell.music.wanted, "menu music kept playing after Resume")
 
-# ------------------------------------------------------------ #277 resume ---
 
-## #277: with a match waiting, the menu's gold door and its advertised key lead
-## back into that match, not out to the fixture picker.
 func test_a_waiting_match_makes_resume_the_gold_door() -> void:
 	game.match_started = true
 	game.menus.open_menu()
@@ -277,8 +258,7 @@ func test_enter_returns_to_the_waiting_match() -> void:
 	assert_false(game.paused, "Enter did not unpause the waiting match")
 	assert_true(game.hud_layer.visible, "Enter resumed without the match HUD")
 
-## The other door still has a key: `T` reaches Start Sim, the broadcast's own
-## teams key.
+
 func test_start_sim_keeps_a_key_beside_resume() -> void:
 	game.match_started = true
 	game.menus.open_menu()
@@ -286,7 +266,7 @@ func test_start_sim_keeps_a_key_beside_resume() -> void:
 	assert_true(game.select_open, "T did not open fixture setup")
 	assert_false(game.menus.active(), "the menu stayed over fixture setup")
 	game._close_select()
-	# A cold start keeps Enter on Start Sim, exactly as before.
+
 	game.match_started = false
 	game.menus.open_menu()
 	assert_true(game.menus.shell.key(KEY_ENTER), "Enter did not start from a cold-start menu")
@@ -340,7 +320,6 @@ func test_the_dev_flags_pose_the_shell() -> void:
 	assert_true(cap.open_settings, "--settings did not parse")
 	assert_true(cap.open_confirm, "--quit-confirm did not parse")
 
-# ---------------------------------------------------- input-surface sweep ---
 
 func _mouse_press(p: Vector2) -> void:
 	var ev := InputEventMouseButton.new()
