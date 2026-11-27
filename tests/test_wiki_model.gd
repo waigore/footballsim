@@ -95,6 +95,18 @@ func test_layout_fits_a_page_into_rows() -> void:
 	var compact := WikiBody.layout(page["blocks"], 800.0, true)
 	assert_gte(float(compact["height"]), float(desktop["height"]) * 0.7, "the phone layout collapsed")
 
+func test_snapshot_pages_carry_no_availability_status() -> void:
+	assert_eq(WikiAbsence.statuses("MUN").size(), 0, "the snapshot claims an open season")
+	var page := WikiModel.page(WikiModel.TEAM, "MUN")
+	var cols: Array = []
+	for block in page["blocks"]:
+		if str(block["k"]) == "table" and (block["cols"] as Array).has("OVR"):
+			cols = block["cols"]
+	assert_false(cols.has("STATUS"), "the snapshot squad carries a status column")
+	assert_false(_flatten(WikiModel.page(WikiModel.PLAYER, "MUN-s-lammens")).contains("STATUS"),
+		"a snapshot player page shows availability")
+
+
 func _kinds(page: Dictionary) -> Array:
 	var out: Array = []
 	for block in page["blocks"]:

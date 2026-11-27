@@ -94,6 +94,93 @@ func test_closing_the_season_returns_the_snapshot_pages() -> void:
 	assert_not_null(season, "the save could not be reopened")
 
 
+func test_a_club_page_marks_an_injured_player_with_his_return_day() -> void:
+	_clear_absences()
+	var club_id := str(first["home_club_id"])
+	var id := str(TeamData.get_team(club_id)["starters"][0]["id"])
+	SeasonAvailability.injure(id, club_id, "2026-08-15", "muscle", 21, 1.0)
+	var page := WikiModel.page(WikiModel.TEAM, club_id)
+	var rows := _squad_rows(page)
+	assert_gte(rows.size(), 18, "the squad table is missing")
+	var status := ""
+	var other := ""
+	for row in rows:
+		var cells: Array = row["cells"]
+		assert_eq(cells.size(), 5, "a squad row is missing the status cell")
+		if str((row["target"] as Dictionary).get("id", "")) == id:
+			status = str(cells[4])
+		elif other == "":
+			other = str(cells[4])
+	assert_eq(status, "INJ  ·  BACK 5/SEP/2026", "the injured row does not read like a calendar")
+	assert_eq(other, "", "a fit player carries a status")
+	var xi := StrongestXI.pick(TeamData.get_team(club_id))
+	for p in xi:
+		assert_ne(str(p["id"]), id, "the injured player is still in the XI")
+	_clear_absences()
+
+func test_a_ban_reads_back_from_the_fixture_that_ends_it() -> void:
+	_clear_absences()
+	var club_id := str(first["home_club_id"])
+	var id := str(TeamData.get_team(club_id)["starters"][1]["id"])
+	SeasonAvailability.suspend(id, club_id, 2, "red", "2026-08-15")
+	var upcoming := PLRepository.shared().upcoming(club_id, 3)
+	assert_gte(upcoming.size(), 3, "the season has too few fixtures left to read a ban")
+	var want := "BAN  ·  BACK " + FixtureCalendar.day_label(str(upcoming[2]["kickoff"]))
+	var status := ""
+	for row in _squad_rows(WikiModel.page(WikiModel.TEAM, club_id)):
+		if str((row["target"] as Dictionary).get("id", "")) == id:
+			status = str(row["cells"][4])
+	assert_eq(status, want, "the ban does not name the fixture it is served by")
+	var profile := WikiModel.page(WikiModel.PLAYER, id)
+	var shown := ""
+	for block in profile["blocks"]:
+		if str(block["k"]) != "kv":
+			continue
+		for item in block["items"]:
+			if str(item[0]) == "STATUS":
+				shown = str(item[1])
+	assert_eq(shown, want, "the player page disagrees with the squad row")
+	_clear_absences()
+
+func test_a_fit_player_page_says_nothing_about_availability() -> void:
+	_clear_absences()
+	var club_id := str(first["home_club_id"])
+	var rows := _squad_rows(WikiModel.page(WikiModel.TEAM, club_id))
+	assert_eq((rows[0]["cells"] as Array).size(), 4, "an available squad carries a status column")
+	var target: Dictionary = rows[0]["target"]
+	var profile := WikiModel.page(WikiModel.PLAYER, str(target["id"]))
+	var text := _flatten(profile)
+	assert_false(text.contains("STATUS"), "a fit player shows a status")
+	assert_false(text.contains("BACK"), "a fit player promises a return")
+
+func test_the_return_wording_never_shows_a_day_count() -> void:
+	var today := WikiAbsence.season_day()
+	assert_ne(today, "", "the open season has no day")
+	var derived := FixtureCalendar.day_label(FixtureCalendar.add_days(today, 10))
+	assert_eq(WikiAbsence.injury_return({"kind": "injury", "due_on": "", "days_left": 10}),
+		"BACK " + derived, "an injury without a due date has no return day")
+	assert_eq(WikiAbsence.injury_return({"kind": "injury", "due_on": "", "days_left": 0}), "",
+		"an injury with no day and no date promises a return")
+	assert_eq(WikiAbsence.status({"kind": "injury", "due_on": "", "days_left": 0}, ""), "INJ",
+		"a body with no known return loses its kind")
+	assert_eq(WikiAbsence.status({"kind": "suspension", "matches_left": 0}, ""), "BAN",
+		"a served ban still reads as out")
+	var club_id := str(first["home_club_id"])
+	assert_eq(WikiAbsence.ban_return(club_id, 400), "BACK AFTER SEASON",
+		"a ban past the calendar names a fixture that never comes")
+	assert_eq(WikiAbsence.status({"kind": "injury", "due_on": "2026-09-05"}, club_id),
+		"INJ  ·  BACK 5/SEP/2026", "the return wording is not the league's date form")
+
+func _clear_absences() -> void:
+	PLDatabase.execute("DELETE FROM league_absence;")
+
+func _squad_rows(page: Dictionary) -> Array:
+	for block in page["blocks"]:
+		if str(block["k"]) == "table" and (block["cols"] as Array).has("OVR"):
+			return block["rows"]
+	return []
+
+
 func _rows_below(page: Dictionary, section: String) -> Array:
 	var seen := false
 	for block in page["blocks"]:
