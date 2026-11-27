@@ -183,3 +183,44 @@ func test_the_full_table_pans_sideways_on_a_portrait_phone() -> void:
 	body.pan_by(Vector2(-1.0e7, 0.0))
 	assert_eq(body.hscroll, 0.0, "the pan ran past the first column")
 	body.free()
+
+## #308: both readings paint a zone band at the row's own left edge, so the place
+## number has to start on the panel beside it — never on top of it. Ranks 1–6 are
+## the rows a player reads first, and the full sheet is where they read them.
+func test_the_place_number_clears_the_zone_band_in_the_full_reading() -> void:
+	var med: Font = load("res://fonts/BarlowCondensed-Medium.ttf")
+	var digit_w: float = med.get_string_size("20", HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+	for vp in [Vector2(1600, 900), Vector2(3024, 1648), Vector2(913, 411),
+			Vector2(873, 393), Vector2(360, 780)]:
+		var view := LeagueTableView.new()
+		view.mode = LeagueTableView.FULL
+		var banded := 0
+		for item in view.layout(vp, {"table": _table(), "rules": LeagueRules.defaults()}):
+			if str(item["kind"]) != "table_row":
+				continue
+			var rect: Rect2 = item["rect"]
+			var places: Dictionary = item["places"]
+			var band_w: float = LeagueTableView.ZONE_BAND_W
+			# The band is painted at the row's left edge whatever the reading: the
+			# place ink starts after it, and the digits still fit before the club.
+			assert_gte(float(places["pos_x"]), rect.position.x + band_w,
+				"the place number lands on the zone band at %s" % vp)
+			assert_lte(float(places["pos_x"]) + digit_w, float(places["club_x"]),
+				"the place number runs into the club name at %s" % vp)
+			if str(item["zone"]) != "":
+				banded += 1
+		assert_gte(banded, 6, "the zone bands left the full table at %s" % vp)
+		# The header `#` caption and its door stay on the digits' rail, and clear of
+		# the `CLUB` cell it sits beside.
+		var hash_cell := {}
+		var club_cell := {}
+		for item in view.layout(vp, {"table": _table(), "rules": LeagueRules.defaults()}):
+			if str(item["kind"]) != "head":
+				continue
+			if str(item["label"]) == "#":
+				hash_cell = item
+			elif str(item["label"]) == "CLUB":
+				club_cell = item
+		assert_false(hash_cell.is_empty(), "the full table lost its place caption at %s" % vp)
+		assert_lte((hash_cell["rect"] as Rect2).end.x, (club_cell["rect"] as Rect2).position.x,
+			"the place caption runs over the club caption at %s" % vp)
