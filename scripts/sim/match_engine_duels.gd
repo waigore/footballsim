@@ -33,22 +33,29 @@ func _header(p) -> void:
 	ball.shot_team = -1
 	ball.assist_id = -1
 	ball.planned_goal = false
-	ball.planned_save = false
 
 
 	if (p.team == possession_team or attacking) and to_goal.length() < 18.0 \
 			and absf(to_goal.x) > absf(to_goal.y) * 0.3:
 		var hxg: float = 0.18 * float(xg_form[p.team])
+		var gkk = _gk_of(1 - p.team)
 		var side := 1.0 if rng.randf() < 0.5 else -1.0
 		var ty: float = goal.y + side * minf(GOAL_W * 0.5 - 0.15, rng.randf_range(1.9, 3.2))
-		if rng.randf() < clampf(hxg, 0.02, 0.86):
-			ball.vel = (Vector2(goal.x, ty) - p.pos).normalized() * rng.randf_range(14.0, 18.0)
+		var wing: float = goal.y + side * (GOAL_W * 0.5 + rng.randf_range(0.30, 1.20))
+		var speed: float = rng.randf_range(14.0, 18.0)
+		var split := _shot_split(hxg, line_save_chance(gkk, 1 - p.team, ty, speed))
+		var roll: float = rng.randf()
+		if roll < float(split[0]):
+			ball.vel = (Vector2(goal.x, ty) - p.pos).normalized() * speed
 			ball.planned_goal = true
+			p.stats["on_target"] += 1
+			stats[p.team]["on_target"] += 1
+		elif roll < float(split[0]) + float(split[1]):
+			ball.vel = (Vector2(goal.x, ty) - p.pos).normalized() * speed * 0.94
+			p.stats["on_target"] += 1
+			stats[p.team]["on_target"] += 1
 		else:
-			var gkk = _gk_of(1 - p.team)
-			var at_keeper: Vector2 = Vector2(goal.x, gkk.pos.y) if gkk != null else Vector2(goal.x, goal.y)
-			ball.vel = (at_keeper - p.pos).normalized() * rng.randf_range(11.0, 15.0)
-			ball.planned_save = true
+			ball.vel = (Vector2(goal.x, wing) - p.pos).normalized() * speed * 0.94
 		ball.vz = 0.4
 		ball.z = maxf(ball.z, 1.1)
 		_emit("header", Commentary.shot(rng, p.name, to_goal.length(), hxg, pressure_on(p), "header"), p.team, p)

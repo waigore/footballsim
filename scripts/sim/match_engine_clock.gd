@@ -236,7 +236,7 @@ func to_dict() -> Dictionary:
 			"last_touch_team": ball.last_touch_team, "last_kick_id": ball.last_kick_id,
 			"assist_id": ball.assist_id, "assist_time": ball.assist_time,
 			"shot_team": ball.shot_team, "shot_time": ball.shot_time, "shot_saved": ball.shot_saved,
-			"planned_goal": ball.planned_goal, "planned_save": ball.planned_save, "loose_t": ball.loose_t,
+			"planned_goal": ball.planned_goal, "loose_t": ball.loose_t,
 			"shot_xg": ball.shot_xg},
 		"players": ps, "stats": stats.duplicate(true), "events": events.duplicate(true),
 		"referee": {"pos": referee.pos, "vel": referee.vel, "whistle": referee.whistle,
@@ -284,7 +284,6 @@ func from_dict(d: Dictionary) -> void:
 	ball.shot_time = b.get("shot_time", -10.0)
 	ball.shot_saved = b.get("shot_saved", false)
 	ball.planned_goal = bool(b.get("planned_goal", false))
-	ball.planned_save = bool(b.get("planned_save", false))
 	ball.shot_xg = b.get("shot_xg", 0.0)
 	ball.loose_t = b.get("loose_t", 0.0)
 	var r: Dictionary = d.get("referee", {})

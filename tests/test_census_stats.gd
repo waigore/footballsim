@@ -112,5 +112,39 @@ func test_summarise_reports_the_gate_numbers() -> void:
 	assert_eq(int(s["slowest_ms"]), 800, "the timer gate read the wrong match")
 	assert_almost_eq(s["tol_home"], CensusLib.variance_tolerance(s["lambda_home"], 4), 0.0001,
 		"the band was not sized from the pooled n")
+	assert_almost_eq(s["xg_gap_home"], 1.1 / 2.4, 0.0001, "the goals↔xG gap read the wrong side")
+	assert_almost_eq(s["xg_gap_away"], 0.3 / 0.7, 0.0001, "the goals↔xG gap read the wrong side")
+	assert_gt(s["xg_tol_home"], CensusLib.GOAL_TARGET, "the xG band dropped its sampling allowance")
 	var line := CensusLib.summary_line(s)
 	assert_true(line.begins_with("CENSUS mci_ips n=4"), "the summary line is not readable")
+	assert_true(line.contains("xG 2.40-0.70"), "the summary line lost the xG column")
+
+func test_goals_tolerance_carries_the_target_and_the_allowance() -> void:
+	assert_almost_eq(CensusLib.goals_tolerance(2.75, 0.0, 32), CensusLib.GOAL_TARGET, 0.0001,
+		"a noiseless cell must read the 10% target")
+	var noisy := CensusLib.goals_tolerance(2.75, 1.6, 32)
+	var tighter := CensusLib.goals_tolerance(2.75, 1.6, 128)
+	assert_gt(noisy, CensusLib.GOAL_TARGET, "the band dropped the sampling allowance")
+	assert_lt(tighter, noisy, "more matches must tighten the xG band")
+	assert_eq(CensusLib.goals_tolerance(0.0, 1.0, 32), CensusLib.GOAL_TARGET, "a zero xG cell drifted")
+	assert_eq(CensusLib.goals_tolerance(2.0, 1.0, 1), 1.0, "one match cannot size a band")
+
+func test_pooled_xg_reads_every_side_and_the_blank_rate() -> void:
+	var by_anchor := {
+		"mci_ips": [
+			{"home_goals": 3, "away_goals": 0, "xg_home": 2.8, "xg_away": 0.4},
+			{"home_goals": 2, "away_goals": 1, "xg_home": 2.6, "xg_away": 0.5},
+		],
+		"mci_mci": [
+			{"home_goals": 0, "away_goals": 2, "xg_home": 2.2, "xg_away": 1.2},
+			{"home_goals": 1, "away_goals": 1, "xg_home": 1.4, "xg_away": 1.1},
+		],
+	}
+	var xg := CensusLib.xg_pooled(by_anchor)
+	assert_eq(int(xg["n"]), 8, "pooling missed a side")
+	assert_almost_eq(xg["goals"], 1.25, 0.0001, "pooled goals drifted")
+	assert_almost_eq(xg["xg"], 1.525, 0.0001, "pooled xG drifted")
+	assert_almost_eq(xg["gap"], 0.275 / 1.525, 0.0001, "pooled gap drifted")
+	assert_eq(int(xg["high_xg"]), 3, "the blank read counted the wrong sides")
+	assert_almost_eq(xg["blank_rate"], 1.0 / 3.0, 0.0001, "one blank in three high-xG sides")
+	assert_gt(xg["tol"], CensusLib.GOAL_TARGET, "the pooled band dropped its allowance")

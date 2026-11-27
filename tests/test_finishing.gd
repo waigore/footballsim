@@ -19,29 +19,60 @@ func _clear_box(e: MatchEngine) -> void:
 			q.pos = Vector2(e.L * 0.5, 4.0)
 			q.vel = Vector2.ZERO
 
-func test_conversion_probability_tracks_expected_goals() -> void:
+func _park_keeper(e: MatchEngine, at: Vector2) -> void:
+	var gk = e._gk_of(1)
+	gk.pos = at
+	gk.cooldown = 0.0
+
+func test_the_split_prices_every_shot_at_its_displayed_xg() -> void:
+	var e := _eng(10)
+	for xg in [0.006, 0.02, 0.05, 0.11, 0.3, 0.6, 0.86]:
+		for save in [0.18, 0.5, 0.8, 0.95, 0.985]:
+			var split: Array = e._shot_split(xg, save)
+			var planned: float = float(split[0])
+			var residual: float = float(split[1])
+			var priced: float = planned + residual * (1.0 - save)
+			assert_almost_eq(priced, xg, 0.0001,
+				"chance %.3f against a %.2f save priced %.3f" % [xg, save, priced])
+			assert_between(planned, 0.0, 1.0, "planned share left the unit interval")
+			assert_between(residual, 0.0, 1.0, "residual share left the unit interval")
+			assert_lte(planned + residual, 1.0, "the shot shares added up past one")
+
+func test_the_split_keeps_unconverted_shots_on_target() -> void:
 	var e := _eng(11)
+	var split: Array = e._shot_split(0.12, 0.9)
+	assert_between(float(split[1]), 0.2, 0.45,
+		"a %.2f xG chance left %.2f of its shots as live on-target threats" % [0.12, split[1]])
+	assert_between(float(split[0]) + float(split[1]), 0.25, 0.55,
+		"the on-target share %.2f is outside the census family" % (float(split[0]) + float(split[1])))
+
+func test_one_expected_goal_is_recorded_per_shot() -> void:
+	var e := _eng(12)
 	var p = _striker(e)
 	var goal: Vector2 = e.target_goal_pos(0)
-	p.pos = goal + Vector2(-9.0, 0.0)
+	p.pos = goal + Vector2(-10.0, 0.0)
 	_clear_box(e)
-	var planned := 0
 	var xg_sum := 0.0
-	var n := 400
+	var on_target := 0
+	var n := 200
 	for i in range(n):
 		e.rng.seed = 5000 + i
-		var xg: float = e.expected_goals(p.pos, 0.0, 0)
-		xg_sum += xg
+		var before: float = float(e.stats[0]["xg"])
+		var shots: int = int(e.stats[0]["shots"])
+		xg_sum += e.expected_goals(p.pos, 0.0, 0)
 		e.shoot_ball(p, 0.0, 0.5, 1.0)
-		if e.ball.planned_goal:
-			planned += 1
-	var observed := float(planned) / float(n)
-	var chance: float = xg_sum / float(n) * e.FINISH_EFFICIENCY
-	assert_almost_eq(observed, chance, 0.05, "conversion %.3f does not track calibrated xG %.3f" % [observed, chance])
-	assert_gt(chance, 0.03, "fixture is not a real chance")
+		assert_eq(int(e.stats[0]["shots"]), shots + 1, "the shot was counted twice")
+		var added: float = float(e.stats[0]["xg"]) - before
+		assert_almost_eq(added, e.expected_goals(p.pos, 0.0, 0), 0.0001,
+			"the shot recorded %.3f xG against a %.3f chance" % [added, e.expected_goals(p.pos, 0.0, 0)])
+		if int(e.stats[0]["on_target"]) > on_target:
+			on_target += 1
+	assert_between(float(on_target) / float(n), 0.20, 0.60,
+		"%.0f%% of a 10 m chance was on target" % (100.0 * float(on_target) / float(n)))
+	assert_gt(xg_sum / float(n), 0.03, "fixture is not a real chance")
 
 func test_low_quality_chance_converts_rarely() -> void:
-	var e := _eng(12)
+	var e := _eng(13)
 	var p = _striker(e)
 	var goal: Vector2 = e.target_goal_pos(0)
 	p.pos = goal + Vector2(-30.0, 14.0)
@@ -59,11 +90,10 @@ func test_low_quality_chance_converts_rarely() -> void:
 	assert_gt(xg_sum / float(n), 0.0, "xG was not recorded for a long shot")
 
 func test_converted_shot_beats_the_line_save() -> void:
-	var e := _eng(13)
+	var e := _eng(14)
 	e.teams[0]["dir"] = 1
 	e.teams[1]["dir"] = -1
-	var gk = e._gk_of(1)
-	gk.pos = Vector2(e.L - 1.0, 34.0)
+	_park_keeper(e, Vector2(e.L - 1.0, 34.0))
 	e.ball.owner_id = -1
 	e.ball.planned_goal = true
 	e.ball.shot_team = 0
@@ -74,36 +104,80 @@ func test_converted_shot_beats_the_line_save() -> void:
 	e.tick()
 	assert_eq(int(e.score[0]), 1, "a converted shot was still saved on the line")
 
-func test_unconverted_shot_is_stopped_at_the_line() -> void:
-	var e := _eng(14)
+func test_an_unconverted_shot_can_still_beat_the_keeper() -> void:
+	var e := _eng(20)
 	e.teams[0]["dir"] = 1
 	e.teams[1]["dir"] = -1
-	var gk = e._gk_of(1)
-	gk.pos = Vector2(e.L - 1.0, 34.0)
-	e.ball.owner_id = -1
-	e.ball.planned_goal = false
-	e.ball.shot_team = 0
-	e.ball.pos = Vector2(e.L - 0.2, 34.0)
-	e.ball.vel = Vector2(40.0, 0.0)
-	e.ball.z = 0.4
-	e.ball.vz = 0.0
+	_park_keeper(e, Vector2(e.L - 1.0, 24.0))
 	var goals := 0
-	for i in range(20):
-		e.ball.pos = Vector2(e.L - 0.2, 34.0)
-		e.ball.vel = Vector2(40.0, 0.0)
-		e.ball.owner_id = -1
-		e.ball.shot_team = 0
-		e.ball.planned_goal = false
+	for i in range(40):
+		e.score[0] = 0
 		e.phase = "play"
-		e.rng.seed = 700 + i
-		var before: int = int(e.score[0])
-		e.tick()
-		if int(e.score[0]) > before:
+		e.ball.owner_id = -1
+		e.ball.planned_goal = false
+		e.ball.shot_team = 0
+		e.ball.shot_time = e.clock
+		e.ball.pos = Vector2(e.L, 37.0)
+		e.ball.vel = Vector2(40.0, 0.0)
+		e.ball.z = 0.4
+		e.ball.vz = 0.0
+		e.rng.seed = 1700 + i
+		e._check_rules()
+		if int(e.score[0]) > 0:
 			goals += 1
-	assert_lte(goals, 4, "the goal-line save let too many unconverted shots through")
+	assert_eq(goals, 40, "an on-target shot beat by an out-of-position keeper was still saved")
+
+func test_a_keeper_in_position_saves_a_live_on_target_shot() -> void:
+	var e := _eng(21)
+	e.teams[0]["dir"] = 1
+	e.teams[1]["dir"] = -1
+	_park_keeper(e, Vector2(e.L - 1.0, 37.0))
+	var goals := 0
+	var saves := 0
+	for i in range(40):
+		e.score[0] = 0
+		e.phase = "play"
+		e.ball.owner_id = -1
+		e.ball.planned_goal = false
+		e.ball.shot_team = 0
+		e.ball.shot_time = e.clock
+		e.ball.pos = Vector2(e.L, 37.0)
+		e.ball.vel = Vector2(40.0, 0.0)
+		e.ball.z = 0.4
+		e.ball.vz = 0.0
+		e.rng.seed = 1900 + i
+		e._check_rules()
+		if int(e.score[0]) > 0:
+			goals += 1
+		if e.phase == "play":
+			saves += 1
+	assert_gt(saves, 30, "a keeper on the shot line let too many live shots through")
+	assert_lt(goals, 10, "the goal line ignored a keeper standing on the shot")
+
+func test_unconverted_shots_are_not_all_steered_at_the_keeper() -> void:
+	var e := _eng(15)
+	var p = _striker(e)
+	var goal: Vector2 = e.target_goal_pos(0)
+	p.pos = goal + Vector2(-12.0, 4.0)
+	_clear_box(e)
+	_park_keeper(e, goal + Vector2(-0.6, 0.0))
+	var spread := 0.0
+	var live := 0
+	var n := 300
+	for i in range(n):
+		e.rng.seed = 3000 + i
+		e.shoot_ball(p, 2.4, 0.6, 1.0)
+		if e.ball.planned_goal:
+			continue
+		live += 1
+		var dir: Vector2 = e.ball.vel.normalized()
+		spread += absf((goal.x - p.pos.x) * dir.y / maxf(absf(dir.x), 0.01))
+	assert_gt(live, n / 2, "almost every shot was a planned goal")
+	assert_gt(spread / float(maxi(live, 1)), 1.5,
+		"unconverted shots were steered back at the keeper")
 
 func test_a_new_touch_clears_the_planned_flag() -> void:
-	var e := _eng(15)
+	var e := _eng(16)
 	var p = _striker(e)
 	e.ball.planned_goal = true
 	e._claim_ball(p)
@@ -112,8 +186,40 @@ func test_a_new_touch_clears_the_planned_flag() -> void:
 	e.pass_ball(p, p.pos + Vector2(8.0, 0.0))
 	assert_false(e.ball.planned_goal, "a pass kept the planned-goal flag")
 
+func test_a_penalty_counts_one_shot_and_one_xg() -> void:
+	var e := _eng(17)
+	var p = _striker(e)
+	var goal: Vector2 = e.target_goal_pos(0)
+	p.pos = goal + Vector2(-11.0, 0.0)
+	e._start_restart("penalty", 0, p.pos)
+	var shots: int = int(e.stats[0]["shots"])
+	var xg: float = float(e.stats[0]["xg"])
+	var on_target: int = int(e.stats[0]["on_target"])
+	e._execute_restart()
+	assert_eq(int(e.stats[0]["shots"]), shots + 1, "the penalty was counted as two shots")
+	assert_gte(int(e.stats[0]["on_target"]), on_target, "the penalty never counted as on target")
+	var taker = e.by_id.get(e.ball.last_touch_id, null)
+	assert_true(taker != null, "the penalty left no taker on the ball")
+	var added: float = float(e.stats[0]["xg"]) - xg
+	assert_almost_eq(added, e.penalty_conversion(taker), 0.0001,
+		"the penalty carried %.3f xG against a %.3f conversion" % [added, e.penalty_conversion(taker)])
+
+func test_a_penalty_nearly_always_scores() -> void:
+	var e := _eng(18)
+	var p = _striker(e)
+	var goal: Vector2 = e.target_goal_pos(0)
+	p.pos = goal + Vector2(-11.0, 0.0)
+	var scored := 0
+	var n := 200
+	for i in range(n):
+		e.rng.seed = 6100 + i
+		var split: Array = e._shot_split(e.penalty_conversion(p), 0.9)
+		if e.rng.randf() < float(split[0]) + float(split[1]) * 0.1:
+			scored += 1
+	assert_gt(float(scored) / float(n), 0.6, "a penalty scored less than six times in ten")
+
 func test_shot_records_expected_goals() -> void:
-	var e := _eng(16)
+	var e := _eng(19)
 	var p = _striker(e)
 	var goal: Vector2 = e.target_goal_pos(0)
 	p.pos = goal + Vector2(-10.0, 0.0)
@@ -121,7 +227,7 @@ func test_shot_records_expected_goals() -> void:
 	e.shoot_ball(p, 0.0, 0.5, 1.0)
 	assert_eq(int(e.stats[0]["shots"]), 1, "the shot was not counted")
 	assert_gt(float(e.stats[0]["xg"]), 0.0, "no xG was accumulated")
-	assert_eq(int(e.stats[0]["on_target"]), 1, "a corner-placed shot should be on target")
+	assert_lte(int(e.stats[0]["on_target"]), 1, "one shot was counted on target twice")
 
 
 func test_chance_quality_tracks_the_defence_faced() -> void:

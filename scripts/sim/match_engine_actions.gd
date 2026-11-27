@@ -47,7 +47,6 @@ func _claim_ball(p) -> void:
 	ball.last_touch_id = p.id
 	ball.last_touch_team = p.team
 	ball.planned_goal = false
-	ball.planned_save = false
 	p.has_ball = true
 	p.action_t = maxf(p.action_t, 0.14)
 	p.stats["touches"] += 1
@@ -82,7 +81,6 @@ func _gk_claim(gk, d: float) -> void:
 		gk.has_ball = true
 		ball.last_touch_time = clock
 		ball.planned_goal = false
-		ball.planned_save = false
 		if was_shot:
 			ball.shot_saved = true
 			gk.stats["saves"] += 1
@@ -143,7 +141,6 @@ func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, 
 	ball.assist_time = clock
 	ball.shot_team = -1
 	ball.planned_goal = false
-	ball.planned_save = false
 	p.has_ball = false
 	p.cooldown = 0.22
 	p.state = "pass"
@@ -173,41 +170,32 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	if kind == "penalty":
 		sigma *= 0.30
 	var gkk = _gk_of(1 - p.team)
-	var xg_est: float = expected_goals(p.pos, aim_y, p.team)
-	var aim = Vector2(goal.x, goal.y + aim_y)
-	var ang = atan2(aim.y - p.pos.y, aim.x - p.pos.x) + deg_to_rad(rng.randf_range(-sigma, sigma))
+	var xg: float = penalty_conversion(p) if kind == "penalty" else expected_goals(p.pos, aim_y, p.team)
+	var side := 1.0 if rng.randf() < 0.5 else -1.0
+	var corner: float = goal.y + side * minf(GOAL_W * 0.5 - 0.12, rng.randf_range(2.1, 3.45))
+	var framed_y: float = goal.y + clampf(aim_y, -GOAL_W * 0.5 + 0.30, GOAL_W * 0.5 - 0.30)
 	var speed = Attrs.shot_speed(p, power) * rng.randf_range(0.94, 1.06)
+	var frame_aim := ""
+	ball.planned_goal = false
+	var split := _shot_split(xg, line_save_chance(gkk, 1 - p.team, corner, speed))
+	var roll: float = rng.randf()
+	if roll < float(split[0]):
+		framed_y = corner
+		ball.planned_goal = true
+	elif roll < float(split[0]) + float(split[1]):
+		framed_y = corner
+		speed *= 0.97
+	elif gkk != null and rng.randf() < MatchStats.WOODWORK_P:
+		frame_aim = "bar" if rng.randf() < 0.25 else "post"
+		if frame_aim == "bar":
+			framed_y = goal.y + side * rng.randf_range(0.6, GOAL_W * 0.5 - 0.2)
+		else:
+			framed_y = goal.y + side * (GOAL_W * 0.5 + 0.07)
+	else:
+		framed_y = goal.y + side * (GOAL_W * 0.5 + rng.randf_range(0.30, 1.60))
+	var ang = atan2(framed_y - p.pos.y, goal.x - p.pos.x) + deg_to_rad(rng.randf_range(-sigma, sigma))
 	var dir = Vector2(cos(ang), sin(ang))
 	var tg0: float = (goal.x - p.pos.x) / maxf(absf(dir.x), 0.05) * signf(goal.x - p.pos.x)
-	var y_cross: float = p.pos.y + dir.y * absf(tg0)
-	var on_target: bool = tg0 > 0.0 and absf(y_cross - goal.y) < GOAL_W * 0.5 and aim_z < GOAL_H
-	ball.planned_goal = false
-	ball.planned_save = false
-	var frame_aim := ""
-	var ty: float = goal.y + aim_y
-	if kind != "penalty" and rng.randf() < clampf(FINISH_EFFICIENCY * xg_est, 0.02, 0.92):
-		var side := 1.0 if rng.randf() < 0.5 else -1.0
-		ty = goal.y + side * minf(GOAL_W * 0.5 - 0.12, rng.randf_range(2.1, 3.45))
-		ang = atan2(ty - p.pos.y, goal.x - p.pos.x)
-		dir = Vector2(cos(ang), sin(ang))
-		on_target = true
-		ball.planned_goal = true
-	elif on_target and gkk != null and rng.randf() < MatchStats.WOODWORK_P:
-		var frame_side: float = 1.0 if rng.randf() < 0.5 else -1.0
-		if rng.randf() < 0.25:
-			frame_aim = "bar"
-			ty = goal.y + frame_side * rng.randf_range(0.6, GOAL_W * 0.5 - 0.2)
-		else:
-			frame_aim = "post"
-			ty = goal.y + frame_side * (GOAL_W * 0.5 + 0.07)
-		ang = atan2(ty - p.pos.y, goal.x - p.pos.x)
-		dir = Vector2(cos(ang), sin(ang))
-		ball.planned_save = true
-	elif on_target and gkk != null:
-		ang = atan2(gkk.pos.y - p.pos.y, goal.x - p.pos.x)
-		dir = Vector2(cos(ang), sin(ang))
-		speed *= 0.97
-		ball.planned_save = true
 	var flight: float = maxf(0.12, dist / maxf(speed, 1.0))
 	var zt = clampf(aim_z + rng.randf_range(-0.35, 0.35), 0.12, 2.6)
 	if ball.planned_goal:
@@ -240,7 +228,6 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	p.cooldown = 0.45
 	p.state = "shoot"
 	p.action_t = 0.4
-	var xg = expected_goals(p.pos, aim_y, p.team)
 	ball.shot_xg = xg
 	shot_buckets[int(dist / 5)] = shot_buckets.get(int(dist / 5), 0) + 1
 	_stats_shot(p, xg, kind)
@@ -289,7 +276,6 @@ func clear_ball(p, point: Vector2) -> void:
 	ball.last_touch_id = p.id
 	ball.last_touch_team = p.team
 	ball.planned_goal = false
-	ball.planned_save = false
 	ball.assist_id = -1
 	p.has_ball = false
 	p.cooldown = 0.35
