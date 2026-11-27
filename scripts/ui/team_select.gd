@@ -167,8 +167,6 @@ func key(code: int) -> bool:
 	elif code == KEY_L:
 		browse.emit(WikiModel.LEAGUE, "")
 	elif code >= KEY_1 and code <= KEY_9:
-
-
 		var row := LeagueChrome.league_key_row(code, LeagueChrome.competition_rows())
 		if row.is_empty():
 			return false
@@ -178,7 +176,6 @@ func key(code: int) -> bool:
 	return true
 
 func button_at(p: Vector2) -> String:
-
 	if interest.is_open():
 		return interest.menu.hit(p, design_vp())
 	for b in buttons:

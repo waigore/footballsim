@@ -63,7 +63,6 @@ func settings_click(p: Vector2) -> bool:
 		if v >= 0.0:
 			shell.set_volume(v)
 	elif id == "hud":
-
 		shell.hud_visible = not shell.hud_visible
 		Prefs.save_hud(shell.hud_visible, shell.prefs_path)
 		shell.hud_visibility_changed.emit(shell.hud_visible)
@@ -128,7 +127,6 @@ func settings_key(code: int) -> bool:
 	elif code == KEY_RIGHT or code == KEY_D:
 		shell.set_volume(shell.volume + 0.1)
 	elif code >= KEY_1 and code <= KEY_3:
-
 		shell.set_match_mode(str(Prefs.MODES[code - KEY_1]))
 	else:
 		return false

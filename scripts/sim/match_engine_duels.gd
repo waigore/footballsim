@@ -39,7 +39,7 @@ func _header(p) -> void:
 	if (p.team == possession_team or attacking) and to_goal.length() < 18.0 \
 			and absf(to_goal.x) > absf(to_goal.y) * 0.3:
 		var hxg: float = 0.18 * float(xg_form[p.team])
-		var side := 1.0 if rng.randf() < 0.5 else -1.0
+		var side: float = 1.0 if rng.randf() < 0.5 else -1.0
 		var ty: float = goal.y + side * minf(GOAL_W * 0.5 - 0.15, rng.randf_range(1.9, 3.2))
 		if rng.randf() < clampf(hxg, 0.02, 0.86):
 			ball.vel = (Vector2(goal.x, ty) - p.pos).normalized() * rng.randf_range(14.0, 18.0)
@@ -55,13 +55,11 @@ func _header(p) -> void:
 		_stats_shot(p, hxg, "header")
 		stats[p.team]["xg"] += hxg
 	elif p.team == possession_team or attacking:
-
 		var mate = _best_outlet(p)
 		var tp: Vector2 = mate.pos if mate != null else p.pos + Vector2(teams[p.team]["dir"] * 8.0, 0.0)
 		ball.vel = (tp - ball.pos).normalized() * 9.0
 		ball.vz = 1.0
 	else:
-
 		var away = Vector2(teams[p.team]["dir"] * 24.0, rng.randf_range(-14.0, 14.0))
 		ball.vel = away.normalized() * rng.randf_range(10.0, 16.0)
 		ball.vz = 5.5

@@ -63,7 +63,6 @@ static func _best(pool: Array, used: Dictionary, slot: String) -> Dictionary:
 		elif str(FAMILY.get(role, role)) == str(FAMILY.get(slot, slot)):
 			score += FAMILY_BONUS
 		elif slot == "GK" or role == "GK":
-
 			continue
 		if score > best_score:
 			best_score = score

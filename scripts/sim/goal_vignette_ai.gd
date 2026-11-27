@@ -19,7 +19,6 @@ static func decide(sim: GoalVignette.Sim) -> void:
 				line = sim.dive_y if sim.t >= sim.react_at else CENTRE
 			b.target = Vector2(L - 3.0, clampf(line, CENTRE - POST, CENTRE + POST))
 		elif sim.scored:
-
 			if i == sim.shooter:
 				b.target = Vector2(88.0, 6.0 if b.pos.y < CENTRE else W - 6.0)
 			elif b.attack:
@@ -32,7 +31,6 @@ static func decide(sim: GoalVignette.Sim) -> void:
 		elif i == sim.carrier:
 			b.target = sim.carry_to
 		elif i == sim.shooter:
-
 			b.target = sim.strike_from if sim.owner == sim.shooter \
 				else Vector2(sim.ball.x, sim.ball.y)
 		elif b.attack:
