@@ -18,6 +18,9 @@ shared_paths:
   - assets/ui/**
   - scenes/**
   - ui/**
+  # The glyph atlas density every text surface in the catalogue is drawn at, so a
+  # change here moves all of them (issue #337).
+  - scripts/ui/type_density.gd
 screens:
   - id: main-menu
     title: Main menu
