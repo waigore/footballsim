@@ -93,6 +93,12 @@ def _check_cta_map(screens: list[dict]) -> None:
         "quit confirm names its live door",
     )
     _assert(_screen(screens, "match-hud")["kind"] == "overlay", "HUD is an overlay")
+    hidden = _screen(screens, "match-hud-hidden")
+    _assert(hidden["kind"] == "overlay", "the hidden HUD is an overlay")
+    _assert(
+        "scripts/ui/hud.gd" in hidden["scripts"],
+        "the hidden HUD must grade when the overlay changes",
+    )
     for browse in ("settings", "league-table", "league-calendar", "encyclopedia"):
         _assert(_screen(screens, browse)["kind"] == "browse", f"{browse} is browse")
 
@@ -210,8 +216,12 @@ def _check_validation() -> None:
 
 def main() -> int:
     rubrics, screens, shared = load_catalogue()
-    _assert(len(rubrics) >= 5, "expected ≥5 rubrics")
-    _assert(len(screens) <= 10, "catalogue must stay ≤10 for PR budget")
+    _assert(len(rubrics) >= 6, "expected ≥6 rubrics")
+    _assert(
+        any(r["id"] == "pitch-action" for r in rubrics),
+        "the pitch-action rubric is missing",
+    )
+    _assert(len(screens) <= 11, "catalogue must stay ≤11 for PR budget")
     ids = {str(s["id"]) for s in screens}
     _assert("main-menu" in ids, "main-menu missing")
     _check_cta_map(screens)

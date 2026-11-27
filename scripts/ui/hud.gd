@@ -170,12 +170,7 @@ func _draw() -> void:
 	# still answer, and a card promising its own press would be a second door.
 	banners_band.chrome_hidden = not hud_visible and slide <= 0.0
 	var lift: float = 1.0 - slide
-	# The token numbers belong to the players, not to a band: they fade with the
-	# chrome instead of sliding off with it.
-	if slide > 0.0:
-		chrome.alpha = slide
-		roster_band.world_labels(p, self, engine, game, f_bold)
-		chrome.alpha = 1.0
+	roster_band.world_labels(p, self, engine, game, f_bold)
 	if lift < 1.0:
 		# The chrome leaves in two directions (#158): the top row lifts, the
 		# bottom strip drops, and neither waits on the other.

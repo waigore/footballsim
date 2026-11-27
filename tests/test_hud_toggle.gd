@@ -226,3 +226,70 @@ func test_a_hidden_hud_plays_again_from_the_full_time_card() -> void:
 	_tap(card.get_center())
 	assert_ne(game.engine, before, "tapping the full-time card did not play again")
 	game.hud.set_hud_visible(true, true)
+
+class LabelSurface extends HudChrome:
+	var texts: Array = []
+
+	func text(c: CanvasItem, pos: Vector2, s: String, size: int, color: Color, font: Font, outline: int = 0, outline_col: Color = Color(0, 0, 0, 0.5)) -> void:
+		texts.append({"s": s, "pos": pos, "size": size, "color": color})
+
+func _paint_through(surface: HudChrome) -> void:
+	var shipped: HudChrome = game.hud.chrome
+	game.hud.chrome = surface
+	game.hud.queue_redraw()
+	await get_tree().process_frame
+	game.hud.chrome = shipped
+
+func _assert_pitch_numbers(surface: LabelSurface, when: String) -> void:
+	var p := HudPaint.new(game.hud.chrome, game.hud.design_vp())
+	var vp: Vector2 = game.hud.design_vp()
+	var checked := 0
+	for pl in game.engine.players:
+		if pl.sent_off:
+			continue
+		var sp: Vector2 = game.hud.roster_band.w2s(p, game.hud, pl.pos - Vector2(0, pl.z * 0.55))
+		if sp.x < -40.0 or sp.x > vp.x + 40.0 or sp.y < -40.0 or sp.y > vp.y + 40.0:
+			continue
+		var at_token := false
+		for t in surface.texts:
+			if str(t["s"]) != str(pl.number):
+				continue
+			var pos: Vector2 = t["pos"]
+			if absf(pos.x - sp.x) > 24.0 or absf(pos.y - sp.y) > 14.0:
+				continue
+			assert_gte(float((t["color"] as Color).a), 0.9, "%s: a shirt number painted faded" % when)
+			at_token = true
+			break
+		assert_true(at_token, "%s: the #%d shirt number left the pitch" % [when, pl.number])
+		checked += 1
+	assert_gt(checked, 0, "%s: no player token was in the frame to label" % when)
+
+func test_a_hidden_hud_keeps_the_shirt_numbers_and_surnames() -> void:
+	game.hud.set_hud_visible(false, true)
+	assert_almost_eq(game.hud.slide, 0.0, 0.001, "the hidden HUD was not fully off")
+	var labelled = null
+	for pl in game.engine.players:
+		if not pl.sent_off and pl.id != game.focus_id:
+			labelled = pl
+			break
+	assert_not_null(labelled, "the fixture had no player to label")
+	game.engine.ball.pos = labelled.pos
+	var surface := LabelSurface.new()
+	await _paint_through(surface)
+	assert_true(game.hud_layer.visible, "hiding the chrome hid the whole pitch overlay")
+	_assert_pitch_numbers(surface, "HUD hidden")
+	var surnames := 0
+	for t in surface.texts:
+		if str(t["s"]) == labelled.surname_text():
+			surnames += 1
+	assert_gt(surnames, 0, "a near-ball surname left the pitch with the HUD")
+	game.hud.set_hud_visible(true, true)
+
+func test_the_pitch_labels_do_not_fade_with_the_bands() -> void:
+	game.hud.set_hud_visible(false, true)
+	game.hud.slide = 0.5
+	var surface := LabelSurface.new()
+	await _paint_through(surface)
+	_assert_pitch_numbers(surface, "HUD half-slid")
+	game.hud.set_hud_visible(true, true)
+
