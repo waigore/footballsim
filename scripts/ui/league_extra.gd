@@ -91,9 +91,12 @@ static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
 
 
 func stats_layout(vp: Vector2, view: Dictionary) -> Array:
+	var touch := bool(view.get("touch", false))
 	var items: Array = []
-	items.append(back_item(bool(view.get("touch", false))))
+	items.append(back_item(touch))
 	var filters: Dictionary = view.get("filters", {})
+	var chip_h: float = UiChrome.tap_h(30.0, touch)
+	var step_h: float = UiChrome.tap_h(STEP_H, touch)
 	var y := HEADER + 10.0
 
 	var chips: Array = [{"id": "", "short": "ALL"}]
@@ -105,23 +108,26 @@ func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 	for chip in chips:
 		items.append({"id": "statsleague:" + str(chip["id"]), "kind": "choice",
 			"label": str(chip["short"]), "selected": str(filters.get("league", "")) == str(chip["id"]),
-			"rect": Rect2(x, y, cw, 30.0)})
+			"rect": Rect2(x, y, cw, chip_h)})
 		x += cw + gap
-	y += 40.0
+	y += chip_h + 10.0
 
 
 	var month_label: String = _month_label(str(filters.get("month", "")))
-	var step := month_stepper(vp, y, month_label, UiChrome.fonts()["bold"])
+	var step := month_stepper(vp, y, month_label, UiChrome.fonts()["bold"], touch)
 	items.append_array(step)
 	var stat_x: float = (step[2]["rect"] as Rect2).end.x + STEP_AFTER
+	if stat_x + float(STAT_W[0]) + STAT_GAP + float(STAT_W[1]) > vp.x - 24.0:
+		y += step_h + 8.0
+		stat_x = 24.0
 
 	items.append({"id": "statsstat:goals", "kind": "chip", "label": "GOALS",
 		"selected": str(filters.get("stat", "goals")) == "goals",
-		"rect": Rect2(stat_x, y, float(STAT_W[0]), STEP_H)})
+		"rect": Rect2(stat_x, y, float(STAT_W[0]), step_h)})
 	items.append({"id": "statsstat:assists", "kind": "chip", "label": "ASSISTS",
 		"selected": str(filters.get("stat", "goals")) == "assists",
-		"rect": Rect2(stat_x + float(STAT_W[0]) + STAT_GAP, y, float(STAT_W[1]), STEP_H)})
-	y += 38.0
+		"rect": Rect2(stat_x + float(STAT_W[0]) + STAT_GAP, y, float(STAT_W[1]), step_h)})
+	y += step_h + 10.0
 	items.append({"id": "statsteam", "kind": "field", "value": str(filters.get("team", "")),
 		"rect": Rect2(24.0, y, vp.x - 48.0, FIELD_H)})
 	y += FIELD_H + 12.0
@@ -163,13 +169,15 @@ func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 	return items
 
 
-static func month_stepper(vp: Vector2, y: float, label: String, bold: Font) -> Array:
+static func month_stepper(vp: Vector2, y: float, label: String, bold: Font, touch := false) -> Array:
+	var step_w: float = UiChrome.tap_h(STEP_W, touch)
+	var step_h: float = UiChrome.tap_h(STEP_H, touch)
 	var stat_w: float = float(STAT_W[0]) + STAT_GAP + float(STAT_W[1])
-	var room: float = vp.x - 48.0 - STEP_W * 2.0 - STEP_GAP * 2.0 - STEP_AFTER - stat_w
+	var room: float = vp.x - 48.0 - step_w * 2.0 - STEP_GAP * 2.0 - STEP_AFTER - stat_w
 	var read_w: float = clampf(UiChrome.text_width(bold, label, 10) + 20.0, 72.0, maxf(room, 72.0))
-	var prev := Rect2(24.0, y, STEP_W, STEP_H)
-	var read := Rect2(prev.end.x + STEP_GAP, y, read_w, STEP_H)
-	var next := Rect2(read.end.x + STEP_GAP, y, STEP_W, STEP_H)
+	var prev := Rect2(24.0, y, step_w, step_h)
+	var read := Rect2(prev.end.x + STEP_GAP, y, read_w, step_h)
+	var next := Rect2(read.end.x + STEP_GAP, y, step_w, step_h)
 	return [
 		{"id": "statsmonth:-1", "kind": "chip", "label": "<", "rect": prev},
 		{"id": "", "kind": "stepper", "label": label, "rect": read},
@@ -220,13 +228,13 @@ func draw_stats_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array
 			UiChrome.panel(c, cache, rect,
 				UiChrome.C_GOLD.darkened(0.1) if on else UiChrome.C_PANEL, 6,
 				UiChrome.C_GOLD if on else UiChrome.C_BORDER, 1)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 19.0,
+			UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 4.0,
 				str(item["label"]), 10, Color(0.06, 0.06, 0.05) if on else UiChrome.C_SOFT, bold)
 		elif kind == "stepper":
 
 
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_BORDER, 1)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 19.0,
+			UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 4.0,
 				str(item["label"]), 10, UiChrome.C_SOFT, bold)
 		elif kind == "field":
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_GOLD, 1)
@@ -280,8 +288,11 @@ static func _comp_short(competition_id: String) -> String:
 
 
 func interest_layout(vp: Vector2, view: Dictionary) -> Array:
+	var touch := bool(view.get("touch", false))
 	var items: Array = []
-	items.append(back_item(bool(view.get("touch", false))))
+	items.append(back_item(touch))
+	var row_h: float = 48.0 if touch else ROW_H
+	var door_h: float = UiChrome.tap_h(ROW_H - 8.0, touch)
 	var y := HEADER + 10.0
 	items.append({"id": "interest:search", "kind": "field", "value": str(view.get("query", "")),
 		"rect": Rect2(24.0, y, vp.x - 48.0, FIELD_H)})
@@ -290,9 +301,9 @@ func interest_layout(vp: Vector2, view: Dictionary) -> Array:
 	for i in range(results.size()):
 		var club: Dictionary = results[i]
 		items.append({"id": "interest:add:" + str(club["id"]), "kind": "result", "club": club,
-			"rect": Rect2(24.0, y + float(i) * (ROW_H + GAP), vp.x - 48.0, ROW_H)})
+			"rect": Rect2(24.0, y + float(i) * (row_h + GAP), vp.x - 48.0, row_h)})
 	if not results.is_empty():
-		y += float(results.size()) * (ROW_H + GAP) + 8.0
+		y += float(results.size()) * (row_h + GAP) + 8.0
 	items.append({"id": "", "kind": "caption", "label": "YOUR CLUBS",
 		"rect": Rect2(24.0, y, vp.x - 48.0, 20.0)})
 	y += 24.0
@@ -303,10 +314,10 @@ func interest_layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(24.0, y, vp.x - 48.0, 24.0)})
 	for i in range(clubs.size()):
 		var club: Dictionary = clubs[i]
-		var row := Rect2(24.0, y + float(i) * (ROW_H + GAP), vp.x - 48.0, ROW_H)
+		var row := Rect2(24.0, y + float(i) * (row_h + GAP), vp.x - 48.0, row_h)
 		items.append({"id": "club:" + str(club["id"]), "kind": "club", "club": club, "rect": row})
 		items.append({"id": "interest:remove:" + str(club["id"]), "kind": "remove",
-			"rect": Rect2(row.end.x - 96.0, row.position.y + 4.0, 88.0, ROW_H - 8.0)})
+			"rect": Rect2(row.end.x - 96.0, row.position.y + (row_h - door_h) * 0.5, 88.0, door_h)})
 	return items
 
 # gd-tools: no cover start
@@ -343,20 +354,20 @@ func draw_interest_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Ar
 			var club: Dictionary = item["club"]
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, Color(0.96, 0.78, 0.30, 0.35), 1)
 			_draw_swatch(c, rect, club)
-			UiChrome.text(c, Vector2(rect.position.x + 18.0, rect.position.y + 22.0),
+			UiChrome.text(c, Vector2(rect.position.x + 18.0, rect.position.y + rect.size.y * 0.5 + 5.0),
 				str(club["name"]), 13, UiChrome.C_TEXT, bold)
-			UiChrome.text_r(c, rect.end.x - 12.0, rect.position.y + 21.0, "ADD  +", 10, UiChrome.C_GOLD, bold)
+			UiChrome.text_r(c, rect.end.x - 12.0, rect.position.y + rect.size.y * 0.5 + 4.0, "ADD  +", 10, UiChrome.C_GOLD, bold)
 		elif kind == "club":
 			var club: Dictionary = item["club"]
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6)
 			_draw_swatch(c, rect, club)
-			UiChrome.text(c, Vector2(rect.position.x + 18.0, rect.position.y + 22.0),
+			UiChrome.text(c, Vector2(rect.position.x + 18.0, rect.position.y + rect.size.y * 0.5 + 5.0),
 				str(club["name"]), 13, UiChrome.C_GOLD, bold)
-			UiChrome.text(c, Vector2(rect.position.x + 18.0, rect.position.y + 33.0),
+			UiChrome.text(c, Vector2(rect.position.x + 18.0, rect.position.y + rect.size.y * 0.5 + 16.0),
 				str(club["abbr"]), 8, UiChrome.C_DIM, med)
 		elif kind == "remove":
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 5, UiChrome.C_BORDER, 1)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 18.0, "REMOVE", 9,
+			UiChrome.text_c(c, rect.get_center().x, rect.get_center().y + 1.0, "REMOVE", 9,
 				UiChrome.C_SOFT, bold)
 
 func _draw_swatch(c: CanvasItem, rect: Rect2, club: Dictionary) -> void:

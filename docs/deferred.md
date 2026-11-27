@@ -33,18 +33,17 @@ Shipped (wiki domains playable; DRs accepted):
 | Shape pass shares one ball path per pass | DR-20261125-11 |
 | Encyclopedia competition hubs + index | `pl_competitions.gd`; DR-20261126-01; [#190](https://github.com/waigore/footballsim/issues/190) |
 | One competition per match; places as ordinals | `match_billing.gd`; DR-20261126-06; [#209](https://github.com/waigore/footballsim/issues/209), [#207](https://github.com/waigore/footballsim/issues/207) |
+| Phone tap targets: every non-match control ≥44 dp | DR-20261128-02 / 03; [#369](https://github.com/waigore/footballsim/issues/369) |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Remaining phone tap targets | Stats chips, calendar cells, Interest rows, New League toggles stay under 44 dp; DR-20261128-02 |
-| 2 | Native match hot loop | DR-20261123-02 future tightening under the 120 s budget. Shape-pass shared (DR-20261125-11); tick still GDScript |
+| 1 | Native match hot loop | DR-20261123-02 future tightening under the 120 s budget. Shape-pass shared (DR-20261125-11); tick still GDScript |
 
 ## Next pick
 
-**Remaining phone tap targets** (DR-20261128-02), then the **native match hot
-loop**.
+**Native match hot loop** (DR-20261123-02).
 
 ## Out of scope / blocked
 
