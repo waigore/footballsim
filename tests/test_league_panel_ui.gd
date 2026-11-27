@@ -272,6 +272,14 @@ func test_stats_lists_reports_and_the_podium_when_available() -> void:
 	assert_eq(str(screen().report_back), "stats", "the report forgot it came from Stats")
 	press_id("back")
 	assert_eq(screen().mode, "stats", "Back did not return to Stats")
+	# #326: CONTINUE on a roundup opened from Stats leaves for Stats too, and
+	# settles nothing — the season's clock is the hub's to move.
+	press_id(day)
+	var clock := str(LeagueSeason.active.state()["date"])
+	press_id("continue")
+	assert_eq(screen().mode, "stats", "CONTINUE on the Stats roundup left Stats")
+	assert_eq(str(LeagueSeason.active.state()["date"]), clock,
+		"CONTINUE on the Stats roundup moved the clock")
 	PLDatabase.execute("UPDATE league_fixture SET home_goals = 1, away_goals = 0, status = 'played';")
 	LeagueSeason.active.record.standings.recompute()
 	LeagueSeason.active.save.set_status("complete")
@@ -287,10 +295,11 @@ func test_stats_lists_reports_and_the_podium_when_available() -> void:
 
 # ----------------------------------------------------------------- results ---
 
-## #180: RESULTS carries the hub's CONTINUE in the hub's corner, BACK stays the
-## leave control, and the press runs the hub door's season action — settle the
-## next day and show it.
-func test_results_keeps_the_hubs_continue_and_it_settles_the_next_day() -> void:
+## #326: RESULTS carries CONTINUE in the hub's corner — BACK stays the leave
+## control and CONTINUE sits top-right — but its press only leaves the reading
+## for Today's Fixtures. The day was settled by the hub's Continue, so the clock
+## already stands on the next day: no second settle, no second Results sheet.
+func test_results_continue_returns_to_todays_fixtures_without_settling() -> void:
 	new_season()
 	press_id("continue")
 	assert_eq(screen().mode, "report", "CONTINUE did not land on the day's results")
@@ -306,11 +315,25 @@ func test_results_keeps_the_hubs_continue_and_it_settles_the_next_day() -> void:
 	assert_almost_eq(cont.end.x, vp().x - 24.0, 0.5, "RESULTS CONTINUE is not top-right")
 	assert_eq(back, LeagueExtra.back_rect(), "RESULTS BACK left the header lane")
 	assert_gt(cont.position.x, back.end.x, "the two header doors sit on each other")
-	var first := _roundup_day()
+	var read := _roundup_day()
+	var clock := str(screen().season.state()["date"])
+	var settled := int(LeagueSeason.active.record.fixtures.played())
+	assert_true(clock > read, "the clock did not stand on the day after the settled one")
 	press_id("continue")
-	assert_eq(screen().mode, "report", "CONTINUE on RESULTS left the results reading")
-	assert_false(screen().roundup.is_empty(), "CONTINUE on RESULTS settled no next day")
-	assert_ne(_roundup_day(), first, "CONTINUE on RESULTS showed the same day again")
+	assert_eq(screen().mode, "hub", "CONTINUE on RESULTS did not return to Today's Fixtures")
+	assert_eq(str(screen().season.state()["date"]), clock, "CONTINUE on RESULTS moved the clock")
+	assert_eq(int(LeagueSeason.active.record.fixtures.played()), settled,
+		"CONTINUE on RESULTS settled another day")
+	assert_false((screen().current_view()["plan"] as Array).is_empty(),
+		"the next day's fixtures are not on the hub")
+	assert_eq(str(screen().current_view()["date"]), clock, "the hub named another day")
+	# The reading left the history with CONTINUE: the hub is the season's root
+	# again, so BACK cannot walk back into the Results that were just left.
+	var root_back := {}
+	for item in screen().buttons:
+		if str(item["id"]) == "back":
+			root_back = item
+	assert_true(bool(root_back.get("disabled", false)), "the Results page stayed behind BACK")
 
 func _roundup_day() -> String:
 	if screen().roundup.is_empty():

@@ -95,6 +95,9 @@ screens:
       - scripts/ui/league_sheet.gd
       - scripts/ui/league_plan_sheet.gd
       - scripts/ui/league_doors.gd
+      - scripts/ui/league_season_doors.gd
+      # The settled day's reading rides the same surface (#326).
+      - scripts/ui/league_report_sheet.gd
       # The season's other sheets ride the same surface: its front door (New
       # League / Load) and the drawer's own readings (Stats, Interest).
       - scripts/ui/league_start_sheet.gd
