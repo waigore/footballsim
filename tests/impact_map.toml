@@ -384,6 +384,11 @@ domain = "match_engine"
 match = "scripts/sim/match_ai.gd*"
 domain = "match_engine"
 
+# Off-ball shape, press and marks: still the brain's suite (tactics + laws).
+[[rules]]
+match = "scripts/sim/match_ai_shapes.gd*"
+domain = "match_engine"
+
 # The marking band is read by the shape (MatchAI) and pinned by the tactics
 # suite: same theme, one boot.
 [[rules]]
