@@ -39,7 +39,7 @@ static func watch(record: LeagueRecord, engine, events: Array, seed: int,
 		date: String, matchday: int) -> void:
 	var rows: Array = []
 	var sides := {}
-	for p in engine.players:
+	for p in engine.appeared:
 		var club := str(engine.teams[p.team]["id"])
 		rows.append({
 			"player_id": str(p.key), "club_id": club,

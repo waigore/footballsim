@@ -109,6 +109,7 @@ func _bring_on(t: int, off, for_gk: bool = false, at_half_time: bool = false, me
 	np.stamina = 1.0
 	var idx = players.find(off)
 	players[idx] = np
+	appeared.append(np)
 	by_id.erase(off.id)
 	by_id[np.id] = np
 	_touch_squad()

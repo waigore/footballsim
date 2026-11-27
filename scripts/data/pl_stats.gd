@@ -54,7 +54,7 @@ static func player_line(player, club_id: String, minutes: int = 90) -> Dictionar
 
 static func record_match(engine) -> bool:
 	var lines: Array = []
-	for p in engine.players:
+	for p in engine.appeared:
 		if str(p.key) == "":
 			continue
 		lines.append(player_line(p, str(engine.teams[p.team]["id"]), 90))
