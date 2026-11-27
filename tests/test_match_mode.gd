@@ -3,6 +3,7 @@ extends GdToolsTest
 
 var PREFS := TestScratch.file("test_match_mode_issue164.cfg")
 var game = null
+var engine_dirty := false
 
 func before_all() -> void:
 	if FileAccess.file_exists(PREFS):
@@ -35,12 +36,17 @@ func after_each() -> void:
 	if game == null:
 		return
 	game.view.set_mode(Prefs.DEFAULT_MODE)
-
-
-	game.new_match(1000)
+	if engine_dirty:
+		game.new_match(1000)
+		engine_dirty = false
 	game.menus.close()
 	game.paused = true
 	game.hud_layer.visible = true
+	game.in_highlight = false
+	game.fast_mode = true
+	game.speed = 1.0
+	game.replay = null
+	game.highlight_until = -1.0
 
 func _key(code: int) -> void:
 	var ev := InputEventKey.new()
@@ -172,8 +178,9 @@ func test_goals_only_replays_only_scored_goals() -> void:
 
 	var engine = MatchEngine.new(4242, "MUN", "MCI")
 	game.engine = engine
+	engine_dirty = true
 	game.highlights.restart()
-	for i in range(60):
+	for i in range(90):
 		engine.tick()
 		game.highlights.sample()
 	var director: HighlightDirector = game.highlights
