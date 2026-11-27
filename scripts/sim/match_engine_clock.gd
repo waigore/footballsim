@@ -243,6 +243,7 @@ func to_dict() -> Dictionary:
 			"focus": referee.focus, "focus_t": referee.focus_t},
 		"ev_seq": ev_seq, "sim_tick": sim_tick, "goal_timer": goal_timer,
 		"last_goal": last_goal.duplicate(true), "goal_sheet": goal_sheet.duplicate(true),
+		"report_log": report_log.duplicate(true),
 		"rng": rng.state, "dirs": [teams[0]["dir"], teams[1]["dir"]],
 		"subs": [teams[0]["subs_made"], teams[1]["subs_made"]],
 		"subs_left": [teams[0]["subs_left"], teams[1]["subs_left"]], "finished": finished,
@@ -337,6 +338,7 @@ func from_dict(d: Dictionary) -> void:
 		_fill_attr_cache(p)
 		players.append(p)
 		by_id[p.id] = p
+	appeared = players.duplicate()
 	_touch_squad()
 	stats = d["stats"].duplicate(true)
 	events = d["events"].duplicate(true)
@@ -347,6 +349,12 @@ func from_dict(d: Dictionary) -> void:
 
 
 	goal_sheet = d.get("goal_sheet", []).duplicate(true)
+
+
+	var logged = d.get("report_log")
+	if logged == null:
+		logged = _log_from_events(d["events"])
+	report_log = (logged as Array).duplicate(true)
 	rng.state = d["rng"]
 	teams[0]["dir"] = d["dirs"][0]
 	teams[1]["dir"] = d["dirs"][1]

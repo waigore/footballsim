@@ -133,6 +133,7 @@ var seed_value = 4242
 
 var teams: Array = []
 var players: Array = []
+var appeared: Array = []
 var by_id: Dictionary = {}
 var ball = Ball.new()
 var referee = Official.new()

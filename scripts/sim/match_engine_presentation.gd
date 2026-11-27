@@ -62,17 +62,35 @@ func minute_of(t: float) -> int:
 var goal_sheet: Array = []
 
 
+var report_log: Array = []
+
+
+func _log_from_events(source: Array) -> Array:
+	var out: Array = []
+	for e in source:
+		var kind := str((e as Dictionary).get("type", ""))
+		if kind != "goal" and kind != "card":
+			continue
+		out.append(e.duplicate(true))
+	return out
+
+
 func _emit(kind: String, text: String, team: int, player, extra: Dictionary = {}) -> void:
 	ev_seq += 1
 	var e = {
 		"id": ev_seq, "type": kind, "text": text, "team": team,
 		"player": player.name if player != null else "",
+		"player_key": str(player.key) if player != null else "",
 		"player_id": player.id if player != null else -1,
 		"minute": minute_of(clock), "clock": clock, "pos": ball.pos,
 	}
+	if kind == "card" and player != null:
+		e["card"] = "red" if player.red else "yellow"
 	for k in extra.keys():
 		e[k] = extra[k]
 	events.append(e)
+	if kind == "goal" or kind == "card":
+		report_log.append(e)
 	if events.size() > 600:
 		events.pop_front()
 	if kind == "goal":

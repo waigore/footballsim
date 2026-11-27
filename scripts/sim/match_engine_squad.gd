@@ -96,6 +96,7 @@ func _blank_stats() -> Dictionary:
 
 func _build_squads() -> void:
 	players.clear()
+	appeared.clear()
 	by_id.clear()
 	for t in range(2):
 		var data: Dictionary = teams[t]["data"]
@@ -103,6 +104,7 @@ func _build_squads() -> void:
 		for pd in data["starters"]:
 			var p = _make_player(pd, t, t * 100 + i)
 			players.append(p)
+			appeared.append(p)
 			by_id[p.id] = p
 			i += 1
 	_touch_squad()

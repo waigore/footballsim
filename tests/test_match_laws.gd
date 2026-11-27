@@ -105,6 +105,90 @@ func test_referee_stays_on_the_pitch_and_whistles() -> void:
 		eng.tick()
 	assert_eq(float(r.whistle), 0.0, "the whistle never cleared")
 
+func test_a_report_keeps_a_goal_the_scorer_left_behind() -> void:
+	var eng := MatchEngine.new(41)
+	var scorer = _outfield(eng, 0)
+	eng._emit("goal", "GOAL!", 0, scorer)
+	eng.score[0] = 1
+	assert_true(eng._bring_on(0, scorer, false, false, {}), "the bench refused the change")
+	assert_false(eng.by_id.has(scorer.id), "the scorer is still on the pitch")
+	var rows := LeagueHighlights.engine_events(eng, "fx")
+	assert_eq(rows.size(), 1, "the goal left the report with its scorer")
+	assert_eq(str(rows[0]["kind"]), "goal", "the row is not a goal")
+	assert_eq(str(rows[0]["player_id"]), str(scorer.key), "the goal lost its scorer")
+	assert_eq(str(rows[0]["club_id"]), "MUN", "the goal lost its club")
+
+func test_the_live_ring_trimming_never_takes_a_goal_off_the_report() -> void:
+	var eng := MatchEngine.new(42)
+	var p = _outfield(eng, 0)
+	eng._emit("goal", "GOAL!", 0, p)
+	for i in range(650):
+		eng._emit("pass", "pass %d" % i, 0, p)
+	assert_eq(eng.events.size(), 600, "the live ring grew past its cap")
+	var rows := LeagueHighlights.engine_events(eng, "fx")
+	assert_eq(rows.size(), 1, "the trimmed live ring took the goal with it")
+	assert_eq(int(rows[0]["minute"]), 1, "the goal lost its minute")
+
+func test_each_booking_keeps_the_colour_it_was_shown() -> void:
+	var eng := MatchEngine.new(43)
+	var p = _outfield(eng, 0)
+	p.yellow = 1
+	eng._send_off_or_book(p, "yellow")
+	p.yellow = 2
+	eng._send_off_or_book(p, "red_second")
+	var rows := LeagueHighlights.engine_events(eng, "fx")
+	assert_eq(rows.size(), 2, "a booking left the report")
+	assert_eq(str(rows[0]["kind"]), "yellow", "the first yellow was recorded as a red")
+	assert_eq(str(rows[1]["kind"]), "red", "the second yellow was not a red")
+
+func test_a_snapshot_carries_the_report_log() -> void:
+	var eng := MatchEngine.new(44)
+	var p = _outfield(eng, 0)
+	eng._emit("goal", "GOAL!", 0, p)
+	var other := MatchEngine.new(45)
+	other.from_dict(eng.to_dict())
+	var rows := LeagueHighlights.engine_events(other, "fx")
+	assert_eq(rows.size(), 1, "the restored engine lost its report")
+
+func test_an_older_snapshot_rebuilds_its_report_from_its_events() -> void:
+	var eng := MatchEngine.new(46)
+	var p = _outfield(eng, 0)
+	eng._emit("pass", "a pass", 0, p)
+	eng._emit("goal", "GOAL!", 0, p)
+	var snap: Dictionary = eng.to_dict()
+	snap.erase("report_log")
+	for e in snap["events"]:
+		(e as Dictionary).erase("player_key")
+	var other := MatchEngine.new(47)
+	other.from_dict(snap)
+	var rows := LeagueHighlights.engine_events(other, "fx")
+	assert_eq(rows.size(), 1, "the older snapshot lost its goal")
+	assert_eq(str(rows[0]["player_id"]), str(p.key), "the older snapshot lost its scorer")
+	assert_eq(str(rows[0]["detail"]), str(p.name), "the older snapshot lost his name")
+
+func test_an_older_snapshot_card_reads_its_colour_and_skips_a_missing_man() -> void:
+	var eng := MatchEngine.new(48)
+	var booked = _outfield(eng, 0)
+	eng._send_off_or_book(booked, "yellow")
+	var sent_off = _outfield(eng, 1)
+	eng._send_off_or_book(sent_off, "red")
+	var snap: Dictionary = eng.to_dict()
+	snap.erase("report_log")
+	for e in snap["events"]:
+		(e as Dictionary).erase("player_key")
+		(e as Dictionary).erase("card")
+	var kept: Array = []
+	for pd in snap["players"]:
+		if str(pd["key"]) != str(sent_off.key):
+			kept.append(pd)
+	snap["players"] = kept
+	var other := MatchEngine.new(49)
+	other.from_dict(snap)
+	var rows := LeagueHighlights.engine_events(other, "fx")
+	assert_eq(rows.size(), 1, "a booking with no man on the pitch invented a row")
+	assert_eq(str(rows[0]["player_id"]), str(booked.key), "the older booking lost its man")
+	assert_eq(str(rows[0]["kind"]), "yellow", "the older booking lost its colour")
+
 func test_snapshot_carries_official_and_injury_state() -> void:
 	var eng := MatchEngine.new(18)
 	eng.teams[0]["subs_left"] = 0

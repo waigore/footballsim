@@ -170,6 +170,62 @@ func test_a_second_watch_mid_season_records_and_rolls_on() -> void:
 	assert_true(bool(season.report(held)["played"]), "the second watch did not store")
 	assert_eq((season.report(held)["score"] as Array)[1], 0, "the second watch lost its score")
 
+func test_a_watched_result_keeps_a_goal_its_scorer_left_behind() -> void:
+	var fixtures: Array = []
+	for fx in season.plan():
+		if str(fx["status"]) != "played":
+			fixtures.append(fx)
+	if fixtures.is_empty():
+		season.advance()
+		fixtures = season.plan()
+	assert_false(fixtures.is_empty(), "the clock holds no fixture to watch")
+	var held := str(fixtures[0]["id"])
+	season.set_watch(held, true)
+	season.advance()
+	var watch := season.start_watch(held)
+	var engine := MatchEngine.new(SEED + 17, str(watch["home"]), str(watch["away"]))
+	var scorer = null
+	for p in engine.players:
+		if p.team == 0 and not p.is_gk:
+			scorer = p
+			break
+	var away_scorer = null
+	for p in engine.players:
+		if p.team == 1 and not p.is_gk:
+			away_scorer = p
+			break
+	engine.ball.last_touch_id = scorer.id
+	engine.ball.last_touch_team = 0
+	engine._score_goal(1)
+	engine.ball.last_touch_id = away_scorer.id
+	engine.ball.last_touch_team = 1
+	engine._score_goal(0)
+	assert_eq(int(engine.score[0]), 1, "the home goal did not land")
+	assert_eq(int(engine.score[1]), 1, "the away goal did not land")
+	assert_true(engine._bring_on(0, scorer, false, false, {}), "the bench refused the change")
+	var stored_scorer := str(scorer.key)
+	var stored_away := str(away_scorer.key)
+	var before_line := LeagueLedger.player_line(stored_scorer)
+	LeagueSeason.engine_finished(engine)
+	var report := season.report(held)
+	var goals := 0
+	for e in report["events"]:
+		if str(e["kind"]) == "goal":
+			goals += 1
+	assert_eq(goals, int((report["score"] as Array)[0]) + int((report["score"] as Array)[1]),
+		"the report's goal rows do not total the stored score")
+	var named := {}
+	for e in season.record.report.events(held):
+		if str(e["kind"]) == "goal":
+			named[str(e["player_id"])] = true
+	assert_true(named.has(stored_scorer), "the substituted scorer's goal left the record")
+	assert_true(named.has(stored_away), "the away goal left the record")
+	var line := LeagueLedger.player_line(stored_scorer)
+	assert_eq(int(line.get("apps", 0)), int(before_line.get("apps", 0)) + 1,
+		"the substituted scorer lost his appearance")
+	assert_eq(int(line.get("goals", 0)), int(before_line.get("goals", 0)) + 1,
+		"the substituted scorer lost his goal from the season line")
+
 func test_the_season_walks_to_a_complete_round_robin() -> void:
 	_ledger_play_remaining()
 	assert_eq(season.matches_remaining(), 0, "the season could not be finished")
