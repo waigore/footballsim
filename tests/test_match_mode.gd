@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## The match view (#164): Highlights, Goals only and the full match, driven
-## through the real main.gd. One preference, four doors to it — the `H` key, the
-## bar's mode door, the Settings segments and the Settings keys — and the copy
-## that tells the player which view they are watching.
 
 var PREFS := TestScratch.file("test_match_mode_issue164.cfg")
 var game = null
@@ -19,7 +15,7 @@ func before_all() -> void:
 	game.menus.close()
 	game.hud_layer.visible = true
 	game._on_fixture_confirmed("MUN", "MCI")
-	# #157: the briefing comes before the sim, so kick it off.
+
 	TestBriefing.kick(game)
 	game.paused = true
 	game.hud.queue_redraw()
@@ -32,15 +28,15 @@ func after_all() -> void:
 		game.queue_free()
 
 func after_each() -> void:
-	# Every test starts in the default view with no pref left behind by the one
-	# before it. `view.set_mode` applies the flags without writing the file.
+
+
 	if FileAccess.file_exists(PREFS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
 	if game == null:
 		return
 	game.view.set_mode(Prefs.DEFAULT_MODE)
-	# A test may have swapped in a private engine for the ring; rebuild the live
-	# one so the next test starts from the scene's own match.
+
+
 	game.new_match(1000)
 	game.menus.close()
 	game.paused = true
@@ -76,7 +72,6 @@ func _band_label(id: String) -> String:
 func _vps() -> Array:
 	return [Vector2(1600, 900), Vector2(1280, 720), Vector2(913, 411), Vector2(800, 360), Vector2(415, 923)]
 
-# ------------------------------------------------------------------- pref ---
 
 func test_a_missing_file_opens_in_highlights() -> void:
 	assert_false(FileAccess.file_exists(PREFS), "the probe file should start absent")
@@ -113,7 +108,6 @@ func test_the_view_shares_the_file_with_the_other_two_prefs() -> void:
 	assert_true(Prefs.save_bgm(0.9, PREFS), "re-saving the volume failed")
 	assert_eq(Prefs.load_mode(PREFS), "goals", "the volume save erased the view")
 
-# ------------------------------------------------------------------ match ---
 
 func test_the_bar_door_cycles_all_three_views() -> void:
 	game.view.set_mode("highlights")
@@ -143,12 +137,12 @@ func test_a_toggle_remembers_the_view_and_a_relaunch_restores_it() -> void:
 	game.view.set_mode("highlights")
 	_key(KEY_H)
 	assert_eq(Prefs.load_mode(PREFS), "goals", "the toggle did not save Goals only")
-	# The next launch: the scene starts on the default, then reads the file.
+
 	game.view.set_mode("highlights")
 	game.menus.restore_mode()
 	assert_eq(game.mode, "goals", "a relaunch did not restore Goals only")
 	assert_true(game.fast_mode, "a restored Goals only did not fast-forward")
-	# --clear-cache wipes the file: the broadcast opens in Highlights again.
+
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
 	game.menus.restore_mode()
 	assert_eq(game.mode, "highlights", "a cleared cache did not open in Highlights")
@@ -174,8 +168,8 @@ func test_skip_ends_a_live_replay_in_goals_only() -> void:
 
 func test_goals_only_replays_only_scored_goals() -> void:
 	game.view.set_mode("goals")
-	# A private engine drives the ring so the scene's own events cannot open a
-	# replay behind this test; after_each rebuilds the live match.
+
+
 	var engine = MatchEngine.new(4242, "MUN", "MCI")
 	game.engine = engine
 	game.highlights.restart()
@@ -215,8 +209,7 @@ func test_the_state_line_names_the_view() -> void:
 	game.paused = true
 	assert_eq(band.state_label(game, bar.speed_label(game)), "PAUSED", "the paused line lost its word")
 
-## #265: while a replay view fast-forwards, the speed door reads the sim state's
-## own word — the one the state line uses — never a multiplier's `x` glued to it.
+
 func test_the_speed_door_never_reads_simx() -> void:
 	var bar: HudControlsBand = game.hud.controls_band
 	var band: HudRosterBand = game.hud.roster_band
@@ -228,7 +221,7 @@ func test_the_speed_door_never_reads_simx() -> void:
 	assert_eq(label, "SIM", "a simming replay view shows a multiplier on its speed door")
 	assert_false(label.ends_with("x"), "the door glued the multiplier's x onto the sim word")
 	assert_true(band.state_label(game, label).contains("SIMMING"), "the door and the state line name different states")
-	# A full match keeps the player's own rate, and the two still agree.
+
 	game.view.set_mode("full")
 	game.speed = 4.0
 	assert_eq(_speed_door(bar, paint), "4x", "the full match lost its speed on the door")
@@ -245,8 +238,8 @@ func test_the_simulating_chip_waits_for_a_goal_in_goals_only() -> void:
 	assert_true(HudTopBand.sim_chip_label("highlights").contains("NEXT CHANCE"), "Highlights stopped waiting on chances")
 
 func test_the_state_line_and_chip_leave_with_the_whistle() -> void:
-	# #276: a finished match describes itself as over, and the replay chip waits
-	# for a moment that can no longer come.
+
+
 	var band: HudRosterBand = game.hud.roster_band
 	game.view.set_mode("highlights")
 	game.paused = false
@@ -263,7 +256,6 @@ func test_the_state_line_and_chip_leave_with_the_whistle() -> void:
 	assert_eq(band.state_label(game, "2", "full_time"), "FULL TIME  ·  MATCH OVER",
 		"the full-match speed outlived the whistle")
 
-# --------------------------------------------------------------- settings ---
 
 func test_settings_shows_and_sets_the_same_view() -> void:
 	game.menus.open_settings()

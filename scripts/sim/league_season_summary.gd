@@ -1,22 +1,7 @@
 class_name LeagueSeasonSummary
 extends RefCounted
 
-## The season-end podium: champion, runner-up, European places and the drop per
-## active competition, read from that league's own saved regulations. Split out
-## of `LeagueSeason` so the clock stays one concern; it reads the season's record
-## and returns the same plain dictionary the podium always drew.
 
-## The whole podium, or {} until every active competition has played out its
-## calendar. The primary league's reading is mirrored at the top so a
-## single-league caller reads the keys it always did.
-##
-## The linked tiers ride here too: the English pyramid's play-offs and its
-## membership swap (#258/#260), and the German Relegation and its swap (#240).
-## Each lane resolves once and applies its swap once; the result is stamped in
-## the save (`linked_end`), so a reopened season reads the same brackets and
-## never shuffles its clubs a second time — a reopened save recomputes its
-## tables from the played fixtures, and a settle run on those tables would read
-## a different set of clubs.
 static func build(season: LeagueSeason) -> Dictionary:
 	if season == null or season.save == null or season.record == null:
 		return {}
@@ -35,8 +20,7 @@ static func build(season: LeagueSeason) -> Dictionary:
 	_end_of_linked_season(season, out)
 	return out
 
-## The linked tiers' end: the stored reading when the season has already settled
-## once, otherwise the brackets, the swap and the stamp that freezes them.
+
 static func _end_of_linked_season(season: LeagueSeason, out: Dictionary) -> void:
 	var stored: Variant = season.save.meta.get("linked_end", "")
 	if stored is String and str(stored) != "":

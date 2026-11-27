@@ -1,24 +1,13 @@
 class_name Commentary
 extends RefCounted
 
-## Broadcast voice for in-play events. Pure text helpers, no engine mutation:
-## the engine calls them at the instant something happens so the log describes
-## the pitch. Live filler, restarts/whistles and bench lines live in
-## CommentaryLive / CommentaryRestarts / CommentaryBench so this file stays
-## inside its size budget (RUB-P3-01).
-##
-## Lines are kept under ~90 characters so the commentary panel never truncates
-## mid-word, and every variant names a real player/team from the event.
 
-## One line from a set. `i >= 0` takes that variant deterministically — the
-## live line must not disturb the sim — and otherwise the match RNG chooses.
 static func _pick(rng, lines: Array, i: int = -1) -> String:
 	if i >= 0:
 		return lines[i % lines.size()]
 	return lines[rng.randi_range(0, lines.size() - 1)]
 
 
-## Distance phrasing for shots, relative to the goal being attacked.
 static func _shot_range(dist: float) -> String:
 	if dist < 10.0:
 		return "from point-blank range"
@@ -57,7 +46,6 @@ static func shot(rng, name: String, dist: float, xg: float, pressure: float, kin
 	])
 
 
-## how: "hold", "parry" or "goal_line".
 static func save(rng, gk: String, shooter: String, how: String, xg: float) -> String:
 	var big: bool = xg >= 0.30
 	var denied := "" if shooter == "" else " to deny %s" % shooter
@@ -128,8 +116,6 @@ static func block(rng, name: String, shooter: String) -> String:
 	return _pick(rng, ["Blocked by %s!" % name, "%s throws his body in the way!" % name])
 
 
-## The frame denies it: the ball comes back off a post or the bar instead of
-## going in, which is neither a goal nor a save.
 static func woodwork(rng, name: String, frame: String) -> String:
 	if frame == "bar":
 		return _pick(rng, [

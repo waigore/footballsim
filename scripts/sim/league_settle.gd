@@ -1,17 +1,7 @@
 class_name LeagueSettle
 extends RefCounted
 
-## What a finished fixture leaves behind besides its score: every player's stat
-## line, and the season availability — bans served, cards punished, injuries
-## carried — that the next fixture reads.
-##
-## Both outcome paths hand their squads here, so an auto-simmed and a watched
-## match leave the save in the same shape (#155, #156). The lines are written
-## first because the disciplinary table reads the season totals the lines just
-## moved.
 
-## Auto path: the XI played ninety minutes and the synthetic event rows carry the
-## goals, assists and cards.
 static func auto(record: LeagueRecord, fixture_id: String, home: String, away: String,
 		home_xi: Array, away_xi: Array, events: Array, seed: int,
 		date: String, matchday: int) -> void:
@@ -44,8 +34,7 @@ static func auto(record: LeagueRecord, fixture_id: String, home: String, away: S
 	]
 	SeasonAvailability.apply_fixture(matchday, date, sides, seed)
 
-## Watch path: the engine's own players — its cards, its minutes, and the bodies
-## it actually lost to injury.
+
 static func watch(record: LeagueRecord, engine, events: Array, seed: int,
 		date: String, matchday: int) -> void:
 	var rows: Array = []

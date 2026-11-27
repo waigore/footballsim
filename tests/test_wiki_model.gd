@@ -1,7 +1,5 @@
 extends GdToolsTest
 
-## Encyclopedia page data: every section the issue asked for is present, and
-## every cross-link points at a page that exists.
 
 func before_all() -> void:
 	PLDatabase.cache_dir = TestScratch.dir("cache_test_wiki")
@@ -56,8 +54,7 @@ func test_the_player_page_shows_ability_real_and_sim_numbers() -> void:
 			bars = block["items"]
 	assert_eq(bars.size(), 6, "an outfielder should show six attributes")
 
-## The empty states on a player page read as player copy, not as notes about the
-## data pipeline (#208): no snapshot, dataset, season line or ledger talk.
+
 func test_the_player_page_notes_read_as_player_copy() -> void:
 	for p in PLRepository.shared().squad("MUN"):
 		var text := _flatten(WikiModel.page(WikiModel.PLAYER, str(p["id"])))

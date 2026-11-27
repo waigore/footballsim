@@ -1,11 +1,5 @@
 extends GdToolsTest
 
-## League regulations: the v1 template, points from saved values, the European
-## and relegation bands, and the round trip through the save's own row.
-##
-## The synthetic match report the season writes for auto-simmed fixtures rides
-## with the rules that shape the season's table: seeded and repeatable, scorers
-## from the front line, cards from the pivots and the back four.
 
 func test_the_v1_template_is_this_league() -> void:
 	var r := LeagueRules.defaults()
@@ -58,12 +52,6 @@ func test_setup_choices_are_validated() -> void:
 	assert_eq(str(bad["calendar_mode"]), "generated", "a bad calendar mode was kept")
 	assert_eq(str(bad["advance_mode"]), "fixture_days", "a bad advance mode was kept")
 
-# ------------------------------------------------------------------------
-
-
-## Synthetic reports for auto-simmed fixtures: seeded, position-weighted, and
-## plausible — scorers come from the front line, cards from the pivots and the
-## back four.
 
 func _xi() -> Array:
 	return StrongestXI.pick(TeamData.get_team("MCI"))
@@ -155,9 +143,7 @@ func test_empty_sides_and_zero_weights_are_safe() -> void:
 	assert_true(MatchEvents.pick([], MatchEvents.GOAL_SHARE, "sho", rng).is_empty(),
 		"an empty XI returned a scorer")
 
-## #171: some synthetic goals are converted penalties. The row is still one
-## goal — the Poisson scoreline owns that — but a spot kick carries no assist,
-## so the report can mark it without inventing a set-up man.
+
 func test_penalty_goals_are_tagged_and_carry_no_assist() -> void:
 	var xi := _xi()
 	var goals := 0
@@ -176,8 +162,7 @@ func test_penalty_goals_are_tagged_and_carry_no_assist() -> void:
 	var share := float(penalties) / float(goals)
 	assert_between(share, 0.02, 0.20, "the penalty share is off the engine's own")
 
-## The scoreline comes only from the Poisson sample: tagging a goal as a penalty
-## never adds or removes one, whatever the seed.
+
 func test_penalty_tags_never_change_the_goal_count() -> void:
 	var xi := _xi()
 	for seed in range(1, 61):
@@ -187,8 +172,7 @@ func test_penalty_tags_never_change_the_goal_count() -> void:
 				goals += 1
 		assert_eq(goals, 5, "a tagged report lost or added a goal at seed %d" % seed)
 
-## Same save seed and fixture, same tags: the report a player reopens reads the
-## way it did when the fixture settled.
+
 func test_penalty_tags_are_seeded_with_the_report() -> void:
 	var xi := _xi()
 	var a := MatchEvents.side(171, "gw09-MCI-ARS", "MCI", xi, 5)
@@ -199,9 +183,7 @@ func test_penalty_tags_are_seeded_with_the_report() -> void:
 			"a penalty tag drifted between replays")
 		assert_eq(str(a[i]["player_id"]), str(b[i]["player_id"]), "a scorer drifted between replays")
 
-## #321: an injury or a sending-off ends that player's match. The report may name
-## him before he leaves, never at or after the minute he goes off — no card, no
-## goal, no assist — and one body cannot be claimed to leave twice.
+
 func test_a_player_who_leaves_takes_no_further_part() -> void:
 	var xi := _xi()
 	var exits_seen := 0
@@ -229,8 +211,7 @@ func test_a_player_who_leaves_takes_no_further_part() -> void:
 						kind, int(e["minute"]), int(exit_at[id]), seed, goals])
 	assert_gt(exits_seen, 100, "the sweep never saw a player leave the pitch")
 
-## #321: losing a body never costs the report a goal. The Poisson sample still
-## owns the scoreline; a goal only ever moves to a player who is still on.
+
 func test_an_exit_never_costs_the_report_a_goal() -> void:
 	var xi := _xi()
 	var injury_reports := 0
@@ -249,10 +230,7 @@ func test_an_exit_never_costs_the_report_a_goal() -> void:
 			injury_reports += 1
 	assert_gt(injury_reports, 0, "the sweep never injured a body")
 
-## #321, watched path: once the engine takes a body off, the report cannot name
-## him again. An injured player is either replaced — his id leaves `by_id`, so a
-## row cannot be mapped back to him — or sent off and skipped by every tackle,
-## shot and card pick.
+
 func test_a_watched_match_takes_an_injured_player_out_of_play() -> void:
 	var eng := MatchEngine.new(321, "MUN", "MCI")
 	var hurt = null

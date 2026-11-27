@@ -1,16 +1,13 @@
 class_name AppShellPaint
 extends RefCounted
 
-## The menu shell's stills backdrop and quit-confirm copy. The Control keeps
-## `_draw`; this module owns the pixels and the prompt wording so the shell
-## stays inside its P3 size and method budget.
 
 var shell = null
 
 func _init(host: Control) -> void:
 	shell = host
 
-## The prompt says what will actually be lost: a live match, or just the app.
+
 func confirm_body() -> String:
 	if shell.prev_screen == AppShell.SCREEN_NONE:
 		return "The match in progress will end and the game will close."

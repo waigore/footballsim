@@ -1,44 +1,28 @@
 class_name LeagueTableHead
 extends RefCounted
 
-## The league table's column band: the sort captions (`#`, `CLUB`, the record)
-## that ride above the rows, and the group labels the full reading puts over the
-## overall, home and away splits.
-##
-## It sits beside `LeagueTableView` and owns the half of it that is band geometry
-## rather than rows: the table still owns the reading, the sort and the press;
-## this module only says where the band goes and how it is painted.
-##
-## On a touch sheet the band is a row-height handhold (#204): a header press is a
-## sort — the table's other action — and a 12-unit line of type is not something a
-## thumb can aim at. On a desktop sheet it stays the one-line caption it was.
 
-## A desktop band: one caption line above one line of rows.
 const CAPTION_H := 12.0
-## The handhold a touch band gets: the same 48 density points a club row gets.
+
 const TAP_H := 48.0
-## The group labels (OVERALL / HOME / AWAY) sit in their own line above it.
+
 const GROUPS_H := 12.0
-## Air between the band and the first row.
+
 const GAP := 4.0
 
-## How tall the band answers to on this pose: a thumb-sized handhold on touch,
-## the caption line on desktop (#204).
+
 static func height(touch: bool) -> float:
 	return TAP_H if touch else CAPTION_H
 
-## Top of the band: under the sheet header, and under the group labels when the
-## full reading prints them. `offset` is air the sheet reserves above the band
-## for its own chips (the table's league tabs).
+
 static func top(full: bool, offset: float = 0.0) -> float:
 	return LeagueChrome.HEADER + offset + 6.0 + (GROUPS_H if full else 0.0)
 
-## First row below the band.
+
 static func rows_top(full: bool, touch: bool, offset: float = 0.0) -> float:
 	return top(full, offset) + height(touch) + GAP
 
-## The band's cells, in paint order: the place, the club, then one per number
-## column on the rail `places` measured.
+
 static func cells(places: Dictionary, full: bool, sort: String, touch: bool,
 		offset: float = 0.0) -> Array:
 	var items: Array = []
@@ -79,9 +63,7 @@ static func cell(y: float, x: float, w: float, label: String, key: String,
 
 # gd-tools: no cover start
 
-## One header cell. A desktop band paints its caption at the top of the strip; a
-## touch band centres it in the handhold and hangs the sorted rule under the
-## glyphs, clear of the row below (#204).
+
 static func draw(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
 		compact: bool) -> void:
 	var size: int = 9 if compact else 8

@@ -1,10 +1,6 @@
 class_name MatchManagerTactics
 extends RefCounted
 
-## Touchline lever changes: the act roll, the trigger→lever map, apply and the
-## opponent's reaction. Split from `MatchManager` so the dugout orchestration
-## stays under the method ceiling (RUB-P3-01), the same way `MatchCadence`
-## holds the wait rule.
 
 static func consider(m: MatchManager, t: int, trigger: String, weight: float) -> bool:
 	if m.e == null or t < 0 or t > 1:
@@ -30,8 +26,6 @@ static func act_probability(m: MatchManager, t: int, weight: float) -> float:
 	return clampf(p, 0.0, 0.80)
 
 
-## Turn a trigger into concrete levers, weighted by the manager's risk appetite
-## and preferred levers. Never returns an empty change for a known trigger.
 static func choose(m: MatchManager, t: int, trigger: String) -> Dictionary:
 	var prof: Dictionary = m.profiles[t]
 	var levers: Array = prof.get("levers", [])

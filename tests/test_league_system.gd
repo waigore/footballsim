@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## The System sheet (#109): the season's own save and exit actions, driven through
-## the real scene — the hub door, Quick Save, Save As with a typed name, Load that
-## unloads the save before the next one opens, Main Menu and the shell's Quit.
 
 const SAVE_DIR := "user://saves_test_system_109"
 const CACHE_DIR := "user://cache_test_system_109"
@@ -38,7 +35,7 @@ func after_all() -> void:
 func screen():
 	return game.menus.league.screen
 
-## A tap in design space: press and release, so the scene commits the click.
+
 func press(p: Vector2) -> void:
 	for down in [true, false]:
 		var ev := InputEventMouseButton.new()
@@ -57,8 +54,7 @@ func press_id(id: String) -> void:
 		return
 	assert_true(false, "no button %s on screen %s" % [id, screen().mode])
 
-## Doors that moved into the left panel (#105): the season sheets no longer carry
-## a bottom door bar, so a suite that asks for one presses the panel row instead.
+
 const PANEL_DOORS := {
 	"system": "nav:system", "table": "nav:table", "calendar": "nav:calendar",
 	"stats": "nav:stats", "interest": "nav:interest", "podium": "stats:podium",
@@ -81,14 +77,14 @@ func _press_panel_row(id: String) -> void:
 			return
 	assert_true(false, "no panel door %s" % id)
 
-## A season on the hub, created fresh so a case never inherits another's save.
+
 func _season(name: String) -> LeagueSeason:
 	var season := LeagueSeason.create(name, "generated", "fixture_days", 7)
 	assert_not_null(season, "could not create %s: %s" % [name, LeagueSave.last_error])
 	game.menus.league.show_season(season)
 	return season
 
-## Open the System sheet from the hub door a player presses.
+
 func _system(season: LeagueSeason) -> void:
 	game.menus.league.show_season(season)
 	press_id("system")
@@ -161,8 +157,7 @@ func test_save_as_writes_the_default_name_without_a_keyboard() -> void:
 	assert_eq(screen().season.save.slug, "no-keyboard", "the season followed its copy")
 	_leave()
 
-## Load is a swap, not a stack: the season in memory, its ledger and the sheets'
-## cached readings all belong to the save that is leaving.
+
 func test_load_unloads_the_previous_season_first() -> void:
 	var first := _season("Swap A")
 	first.advance()
@@ -191,7 +186,7 @@ func test_load_unloads_the_previous_season_first() -> void:
 		"the freshly loaded save already played the old one's matchdays")
 	_leave()
 
-## A → B → A brings A's own clock and table back, not B's.
+
 func test_a_b_a_keeps_each_seasons_own_state() -> void:
 	var a := _season("Cycle A")
 	a.advance()
@@ -212,8 +207,7 @@ func test_a_b_a_keeps_each_seasons_own_state() -> void:
 	assert_eq(LeagueSave.current.slug, a_slug, "the connection is not on A")
 	_leave()
 
-## Main Menu leaves the sheet for the menu and keeps the season as the menu's
-## resume point — only Load takes a save out of memory.
+
 func test_main_menu_returns_to_the_menu_and_keeps_the_session() -> void:
 	var season := _season("Leaving")
 	_system(season)
@@ -238,9 +232,7 @@ func test_quit_asks_the_shell_to_confirm() -> void:
 	LeagueSystemActions.unload(screen())
 	assert_null(LeagueSeason.active, "the unload kept the season")
 
-## QUIT from the season's System sheet used to raise the dialog under the
-## season layer, where it could neither be seen nor answered (#123): the
-## confirm must stack above the sheet, take Esc, and hand the sheet back.
+
 func test_quit_from_the_system_sheet_raises_an_answerable_confirm() -> void:
 	var season := _season("Confirm Cut")
 	_system(season)
@@ -287,14 +279,14 @@ func test_back_from_the_load_list_returns_to_the_system_sheet() -> void:
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "BACK from System did not return to the hub")
 	_leave()
 
-## Leaving the season the way a player does, so a case never strands one open.
+
 func _leave() -> void:
 	if screen().mode == LeagueScreen.MODE_SYSTEM:
 		press_id("sys:menu")
 	elif game.menus.league_active():
 		press_id("system")
 		press_id("sys:menu")
-	# Every case ends with the save out of memory, so the next one starts clean.
+
 	LeagueSystemActions.unload(screen())
 	assert_null(LeagueSeason.active, "a case left a season in memory")
 

@@ -1,9 +1,6 @@
 class_name LeagueSeasonSim
 extends RefCounted
 
-## The auto-settled fixture: the Dixon–Coles score, a synthetic event sheet, the
-## table move, player lines, availability and a stored goal clip. Split out of
-## `LeagueSeason` so the clock owns the calendar and this module owns one match.
 
 static func fixture(season: LeagueSeason, fx: Dictionary) -> Dictionary:
 	var fixture_id := str(fx["id"])
@@ -24,13 +21,12 @@ static func fixture(season: LeagueSeason, fx: Dictionary) -> Dictionary:
 	LeagueSettle.auto(season.record, fixture_id, home, away, hxi, axi, events, seed,
 		str(fx["kickoff"]), int(fx["matchday"]))
 	LeagueHighlights.store_auto(season.record, int(season.rng.seed), fixture_id, events, home, away)
-	# The encyclopedia reads this save's ledger, so forget what it read before
-	# this result landed (DR-20261125-08).
+
+
 	PLRepository.shared().invalidate()
 	return season.report(fixture_id)
 
-## The season's own seed folded with the fixture id, so a fixture always draws
-## the same synthetic report.
+
 static func seed_for(season: LeagueSeason, fixture_id: String) -> int:
 	var h := 0
 	for i in range(fixture_id.length()):

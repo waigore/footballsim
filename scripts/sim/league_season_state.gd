@@ -1,10 +1,6 @@
 class_name LeagueSeasonState
 extends RefCounted
 
-## Everything a screen needs for one frame of a season: the shared clock, the
-## day's fixtures, the table(s) and whether every active competition is over.
-## Split out of `LeagueSeason` so the clock stays one concern and the state
-## shape stays one file.
 
 static func build(season: LeagueSeason) -> Dictionary:
 	if season == null or season.save == null or season.record == null:
@@ -36,8 +32,8 @@ static func build(season: LeagueSeason) -> Dictionary:
 			"complete": season.record.fixtures.unplayed(str(cid)) == 0,
 		})
 	var primary := str(save.actives[0]) if not save.actives.is_empty() else "PL"
-	# The door appears when any active league has five rounds behind it: the
-	# planner then suggests from that league's own top six.
+
+
 	var ready := 0
 	for cid in save.actives:
 		if season.record.fixtures.completed_matchdays(str(cid)) >= LeaguePlanner.SUGGEST_AFTER_ROUNDS:

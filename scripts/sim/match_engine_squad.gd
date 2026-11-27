@@ -1,60 +1,31 @@
 extends "res://scripts/sim/match_engine_core.gd"
 
-## The painted squad and the reads every other layer takes off it: who is on
-## the pitch per side, the team-revision cache that keeps those lookups off the
-## per-tick path, the closes-opponent and pressure probes the AI and duels ask
-## for, the squad build itself, and the finishing multiplier the squads' ratings
-## price into every shot. One layer up from the bare core state so core owns
-## only the shape (match scalars, Player/Ball/Official), and every module that
-## needs a body or a side read reads it here.
 
-## Finishing calibration against the Poisson model: a shot converts with
-## p = FINISH_EFFICIENCY · xG, so a match's goals track its expected goals (the
-## model's λ) instead of the old keeper-steer hack.
 const FINISH_EFFICIENCY := 1.0
-## Positional xG is calibrated down to real-football levels: the engine creates
-## more chances than a real side, so each one is worth less. Fitted to the
-## tier-2 census against the PL-envelope λ (wiki poisson-model, DR-20261126-06).
+
+
 const XG_SCALE := 0.50
-## A shot is also worth more when the defence facing it is weak and when the
-## side taking it is strong — the same combined rating gradient the model puts
-## into λ, read from one source (`PoissonModel.exponent_terms`). The engine's
-## positional xG knows only distance, angle and aim, so without this a good back
-## line and keeper move *where* chances happen but never how good a chance is.
-## Elasticity is per 10 rating points of that derived gap; it sits below the
-## model's 0.98 because the engine's chance creation already carries part of the
-## gradient. Fitted to the tier-2 census (wiki poisson-model, DR-20261126-06).
+
+
 const XG_CONTEST_ELASTICITY := 0.13
-## Venue premium in chance quality, in log terms. It is zero because the home
-## side already gets its edge in *creation* — it holds the ball higher up and
-## shoots from better positions — so pricing the venue again in the finishing
-## multiplier double-counted it and left the even anchor's home side above λ;
-## the model keeps its own edge in HOME_XG / AWAY_XG.
+
+
 const XG_HOME_EDGE := 0.0
-## Per-side shot-contest multiplier, exp(XG_CONTEST_ELASTICITY · the side's
-## share of the model's rating gradient ± XG_HOME_EDGE). Rebuilt by
-## `_calibrate_finishing`.
+
+
 var xg_form: Array = [1.0, 1.0]
 
-## Tactics bridge -------------------------------------------------------------
 
-## MatchAI reads the side's effective FM style from here instead of the static
-## club style, so a manager change moves the whole pitch.
 func style_of(t: int) -> Dictionary:
 	return live_style[t]
 
-## Role push after the manager's duty instruction (attack runs higher, defend
-## holds deeper) is applied on top of the squad role.
+
 func push_of(p) -> float:
 	if manager == null:
 		return Attrs.role_push(p.role)
 	return Attrs.role_push(p.role) + manager.tactics_for(p.team).duty_offset(p.role)
 
-## Reads each side's share of the model's rating gradient once per match, so the
-## same shot is a better chance for a strong attack than a weak one, and scales
-## both sides by how open the model expects the fixture to be: the engine's chance
-## creation does not know the defence it faces, so an even game between two good
-## defences would otherwise score like an open one. One squad reading per side.
+
 func _calibrate_finishing() -> void:
 	var h := str(teams[0]["id"])
 	var a := str(teams[1]["id"])
@@ -68,10 +39,7 @@ func _calibrate_finishing() -> void:
 	xg_form[0] = exp(XG_CONTEST_ELASTICITY * (attack.x + defence.x)) * venue * open
 	xg_form[1] = exp(XG_CONTEST_ELASTICITY * (attack.y + defence.y)) / venue * open
 
-## Squad cache ----------------------------------------------------------------
 
-## Active (on-pitch) players of one side, cached per squad revision.
-## Callers must treat the returned array as read-only.
 func team_players(t: int) -> Array:
 	if _team_cache_rev != _squad_rev:
 		_team_cache[0].clear()
@@ -85,17 +53,13 @@ func team_players(t: int) -> Array:
 func _touch_squad() -> void:
 	_squad_rev += 1
 
-## Contract answers ------------------------------------------------------------
 
-## Home advantage, expressed as a multiplier on technical execution.
-## >1 means less error for the home side; <1 slightly more for the visitors.
 func home_factor(p) -> float:
 	if p.team == home_team:
 		return 1.0 + home_advantage
 	return 1.0 - home_advantage * 0.5
 
-## Shirt colour the side is actually wearing in this match (kit selection may
-## have sent the visitors to their change kit).
+
 func kit_color(t: int) -> Color:
 	var kit: Dictionary = teams[t].get("kit", {})
 	if kit.has("shirt"):
@@ -111,7 +75,6 @@ func _blank_stats() -> Dictionary:
 		"interceptions": 0,
 	}
 
-## Squad build ----------------------------------------------------------------
 
 func _build_squads() -> void:
 	players.clear()
@@ -146,7 +109,6 @@ func _make_player(pd: Dictionary, t: int, id_in: int) -> Player:
 	_fill_attr_cache(p)
 	return p
 
-## Pitch caches ---------------------------------------------------------------
 
 func ball_owner():
 	if ball.owner_id < 0:

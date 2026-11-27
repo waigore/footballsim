@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## The decider lane: a competition that cannot end level plays extra time,
-## then penalties. Every kick comes from the match RNG, so a seed settles the
-## same tie twice (DR-20261126-11).
 
 func _level_engine(seed: int) -> MatchEngine:
 	var eng := MatchEngine.new(seed)
@@ -24,7 +21,6 @@ func _settle_shootout(eng) -> void:
 		eng.tick()
 		guard += 1
 
-# ----------------------------------------------------------- extra time ----
 
 func test_a_level_tie_goes_to_extra_time() -> void:
 	var eng := _level_engine(101)
@@ -79,7 +75,6 @@ func test_extra_time_plays_both_periods_then_penalties() -> void:
 	assert_eq(eng.phase, "shootout", "level after extra time did not go to penalties")
 	assert_true(_has_event(eng, "shootout_start"), "the shootout was not announced")
 
-# ------------------------------------------------------------- shootout ----
 
 func test_the_shootout_settles_the_tie() -> void:
 	var eng := _level_engine(105)
@@ -172,7 +167,6 @@ func test_a_leftover_shootout_finishes_in_one_call() -> void:
 	assert_eq(eng.clock, frozen, "the match clock ran during the shootout")
 	assert_true(eng.winner >= 0, "the fast-forwarded shootout named no winner")
 
-# --------------------------------------------------------------- state -----
 
 func test_the_extra_time_clock_reads_as_the_match_does() -> void:
 	var eng := _level_engine(108)

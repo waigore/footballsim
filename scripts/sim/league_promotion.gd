@@ -1,23 +1,11 @@
 class_name LeaguePromotion
 extends RefCounted
 
-## Who belongs in which German tier once the season is over (#240).
-##
-## The Bundesliga's 17th and 18th drop and 2. Bundesliga's 1st and 2nd rise; the
-## Relegation's winner takes the last top-flight place and its loser the last
-## second-tier one. The result is applied to the save's own membership: the
-## `competition_member` rows, the clubs' `competition_id` and every fixture's
-## competition move together, so the encyclopedia, the table identity and a
-## reopened save all read the same two leagues afterwards.
-##
-## A save that does not run both German tiers has nothing to swap, and no save
-## starts a second season: the swap is the last thing a season does.
 
 const TOP := "BL"
 const SECOND := "BL2"
 
-## The movers for a finished season, read from its own tables and the Relegation
-## result. Empty until both calendars are played out.
+
 static func movers(season: LeagueSeason, relegation: Dictionary) -> Dictionary:
 	if season == null or season.record == null or season.save == null:
 		return {}
@@ -39,9 +27,8 @@ static func movers(season: LeagueSeason, relegation: Dictionary) -> Dictionary:
 	var up: Array = []
 	for i in range(second_up):
 		up.append(str((second_table[i] as Dictionary)["club_id"]))
-	# The Relegation's winner takes the top-flight place. When the top-flight
-	# club holds it, nobody moves; when the second-tier club takes it, its club
-	# rises and the top-flight loser drops.
+
+
 	var playoff := ""
 	if not relegation.is_empty():
 		var winner := str(relegation.get("winner_club_id", ""))
@@ -57,9 +44,7 @@ static func movers(season: LeagueSeason, relegation: Dictionary) -> Dictionary:
 		"applied": false,
 	}
 
-## Apply a set of movers to the save. Idempotent: a save whose clubs already sit
-## in the right tier is left alone, so reopening a finished season cannot swap
-## them twice.
+
 static func apply(season: LeagueSeason, movers: Dictionary) -> bool:
 	if season == null or season.record == null or movers.is_empty():
 		return false
@@ -79,7 +64,7 @@ static func apply(season: LeagueSeason, movers: Dictionary) -> bool:
 	PLRepository.shared().invalidate()
 	return true
 
-## True while any mover still sits in the tier it is leaving.
+
 static func _needs_swap(up: Array, down: Array) -> bool:
 	for club_id in up:
 		if LeaguePyramid.competition_of(str(club_id)) != TOP:
@@ -89,8 +74,6 @@ static func _needs_swap(up: Array, down: Array) -> bool:
 			return true
 	return false
 
-## One club's identity: its membership row and its club row. The season's own
-## fixtures and table rows are the record of what was played, so they stay in
-## the competition that was played — only who belongs where changes.
+
 static func _move(club_id: String, competition_id: String) -> void:
 	LeaguePyramid.move_club(club_id, competition_id)

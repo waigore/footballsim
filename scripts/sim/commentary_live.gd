@@ -1,13 +1,7 @@
 class_name CommentaryLive
 extends RefCounted
 
-## Filler lines when no fresh event has fired: possession, ball zone, pressure
-## and, late on, the scoreline. Split from Commentary so the in-play event voice
-## stays inside its size budget (RUB-P3-01).
 
-## One line from a set. `i >= 0` takes that variant deterministically — the
-## live line must not disturb the sim — and otherwise the match RNG chooses.
-## `rng` is unused when `i >= 0` (deterministic live lines); callers may pass null.
 static func _pick(rng: Variant, lines: Array, i: int = -1) -> String:
 	if i >= 0:
 		return lines[i % lines.size()]
@@ -35,8 +29,6 @@ static func _scoreline(e: MatchEngine) -> String:
 	return "%s %d-%d %s" % [e.teams[0]["data"]["short"], e.score[0], e.score[1], e.teams[1]["data"]["short"]]
 
 
-## A truthful description of the current picture, for when no fresh event has
-## fired: possession, ball zone, pressure and, late on, the scoreline.
 static func live(e: MatchEngine) -> String:
 	var t: int = e.possession_team
 	var tn: String = e.teams[t]["data"]["short"]

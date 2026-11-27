@@ -1,15 +1,11 @@
 class_name CommentaryBench
 extends RefCounted
 
-## Bench and touchline lines: injuries, substitutions and tactics tweaks.
-## Split from Commentary so the in-play event voice stays inside its size
-## budget (RUB-P3-01).
 
 static func _pick(rng: RandomNumberGenerator, lines: Array) -> String:
 	return lines[rng.randi_range(0, lines.size() - 1)]
 
 
-## `continues` is false when the side has no change left to make.
 static func injury(rng: RandomNumberGenerator, name: String, continues: bool) -> String:
 	if continues:
 		return _pick(rng, [
@@ -37,7 +33,6 @@ static func substitution(rng: RandomNumberGenerator, team_short: String, on_name
 	])
 
 
-## Manager tinkering: one short line naming the manager and what moved.
 static func tactics(rng: RandomNumberGenerator, manager: String, _team_short: String,
 		changes: Array) -> String:
 	var what := _brief(changes)

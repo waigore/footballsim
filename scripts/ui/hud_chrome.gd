@@ -1,13 +1,10 @@
 class_name HudChrome
 extends RefCounted
 
-## Drawing surface shared by every broadcast-overlay band: cached style boxes,
-## the three text alignments, and the door list the overlay turns into taps.
-## Split out of hud.gd so each band is its own module (RUB-P3-01).
 
 const BORDER := Color(1, 1, 1, 0.085)
 
-## Every door the overlay drew this frame, in draw order.
+
 var buttons: Array = []
 var _panel_cache := {}
 
@@ -42,7 +39,7 @@ func text_r(c: CanvasItem, right_x: float, y: float, s: String, size: int, color
 func add_button(id: String, r: Rect2, label: String, hint: String) -> void:
 	buttons.append({"id": id, "rect": r, "label": label, "hint": hint})
 
-## First door under a design-space point, or "" when the pointer is on the pitch.
+
 func button_at(p: Vector2) -> String:
 	for b in buttons:
 		if (b["rect"] as Rect2).has_point(p):

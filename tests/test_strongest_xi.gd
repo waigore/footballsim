@@ -1,7 +1,5 @@
 extends GdToolsTest
 
-## The save's chosen eleven: best player per formation slot, a keeper in goal,
-## no duplicates, and the choice written back so both outcome paths field it.
 
 var SAVE_DIR := TestScratch.dir("saves_test_xi_issue58")
 var CACHE_DIR := TestScratch.dir("cache_test_xi_issue58")

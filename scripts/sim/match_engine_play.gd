@@ -1,19 +1,12 @@
 extends "res://scripts/sim/match_engine_actions.gd"
 
-## Movement, ball physics and duels.
 
-## How close a keeper has to be to a carrier to dive on the ball, and how close
-## to his own goal line the carrier has to be for it. A carrier who has rounded
-## the defence is challenged from here instead of walking the ball over the line
-## unopposed; the ball itself leads his feet, so the reach is measured to the
-## carrier. The line window keeps it to the walk-in: a keeper does not challenge
-## every touch inside his own box.
 const SMOTHER_RADIUS := 2.1
 const SMOTHER_BOX := 3.0
 
 func _move_players(dt: float) -> void:
-	# Flat position arrays for the separation pass (rebuilt per tick; the arrays
-	# live on the core state). Same arithmetic, same order, fewer member lookups.
+
+
 	_sep_x.resize(players.size())
 	_sep_y.resize(players.size())
 	var idx := 0
@@ -61,32 +54,32 @@ func _move_players(dt: float) -> void:
 		var desired_vel := Vector2.ZERO
 		if d > 0.02:
 			desired_vel = to / d * desired_speed
-		# separation from other bodies
+
 		desired_vel += _separation(p, p._sep_idx) * 1.4
 		var dv := desired_vel - p.vel
 		var max_dv := acc * dt
 		if dv.length() > max_dv:
 			dv = dv.normalized() * max_dv
 		p.vel += dv
-		# clamp overspeed caused by separation pushes
+
 		var vl := p.vel.length()
 		if vl > spd_cap * 1.25:
 			p.vel = p.vel.normalized() * spd_cap * 1.25
 			vl = p.vel.length()
 		p.pos += p.vel * dt
-		# Publish the moved position: separation for later players must read it.
+
 		_sep_x[p._sep_idx] = p.pos.x
 		_sep_y[p._sep_idx] = p.pos.y
 		var moved := vl * dt
 		p.stats["distance"] += moved
 		if vl > 0.3:
 			p.facing = p.vel.normalized()
-		# Attrs.stamina_drain, inlined on the cached top speed and phy factor.
+
 		var intensity := clampf(vl / maxf(1.0, p.spd_max), 0.0, 1.0)
 		var per_sec := 0.00055 + intensity * intensity * 0.0026
 		var drain: float = per_sec * dt * p.drain_phy * (0.96 if p.team == home_team else 1.02)
 		p.stamina = maxf(0.25, p.stamina - drain)
-		# keep bodies loosely on the field
+
 		p.pos.x = clampf(p.pos.x, -3.0, L + 3.0)
 		p.pos.y = clampf(p.pos.y, -3.0, W + 3.0)
 		if p.has_ball and ball.owner_id != p.id:
@@ -99,9 +92,8 @@ func _separation(p: Player, self_idx: int) -> Vector2:
 	for j in _sep_count:
 		if j == self_idx:
 			continue
-		# Cheap axis reject first: a body more than 1.7m away on either axis
-		# cannot be inside the separation radius, and this loop runs for every
-		# player on every sim tick.
+
+
 		var dx: float = px - _sep_x[j]
 		if dx > 1.7 or dx < -1.7:
 			continue
@@ -121,7 +113,7 @@ func _ball_physics(dt: float, goal_mode: bool = false) -> void:
 		if p == null:
 			ball.owner_id = -1
 		else:
-			# Dribble: the ball lives just ahead of the carrier's feet.
+
 			var lead = 0.55 + 0.18 * sin(clock * 9.0 + p.id)
 			var ahead = p.facing * lead + p.vel * 0.045
 			var target = p.pos + ahead
@@ -133,7 +125,7 @@ func _ball_physics(dt: float, goal_mode: bool = false) -> void:
 	if ball.z > 0.001 or ball.vz > 0.0:
 		ball.vz -= 9.81 * dt
 		ball.z += ball.vz * dt
-		# magnus / swerve
+
 		if absf(ball.spin) > 0.01:
 			var perp = Vector2(-ball.vel.y, ball.vel.x).normalized()
 			ball.vel += perp * ball.spin * 0.35 * dt
@@ -161,13 +153,11 @@ func _ball_physics(dt: float, goal_mode: bool = false) -> void:
 		ball.pos += ball.vel * dt * 0.55
 
 func _ball_interactions(dt: float) -> void:
-	# A converted chance is already a goal by the model's account: nothing may
-	# touch it before the line, or it would pass a second dice the xG never paid
-	# for (a block, a header in flight, a crowd squirt). Priced-out chances stay
-	# live and contestable.
+
+
 	if ball.planned_goal:
 		return
-	# Owner keeps control only while the ball is at their feet.
+
 	var owned_at_entry: bool = ball.owner_id >= 0
 	if owned_at_entry:
 		var own = by_id.get(ball.owner_id, null)
@@ -175,7 +165,7 @@ func _ball_interactions(dt: float) -> void:
 			ball.owner_id = -1
 		else:
 			ball.loose_t = 0.0
-			# Opponents can challenge the carrier.
+
 			for q in players:
 				if q.team == own.team or q.sent_off or q.is_gk or q.cooldown > 0.0:
 					continue
@@ -201,16 +191,14 @@ func _ball_interactions(dt: float) -> void:
 				if ball.owner_id >= 0:
 					continue
 				_try_control(p, d)
-	# A keeper dives on a carrier who is in his reach. This has to be read after
-	# every ownership change in the tick: a carrier who has rounded the defence
-	# is exactly the case, and the ball leads his feet by half a metre, so the
-	# goal line must not be the first thing to notice him.
+
+
 	if ball.owner_id >= 0:
 		_smother_carrier()
 		if ball.owner_id >= 0:
 			_after_owner_checks()
 			return
-	# Goalkeepers handle the ball with their hands.
+
 	var def_team := 0
 	for t in range(2):
 		if (teams[t]["dir"] == 1) == (ball.pos.x < L * 0.5):
@@ -223,14 +211,14 @@ func _ball_interactions(dt: float) -> void:
 			var reach = 1.75 if ball.z < 2.6 else 1.2
 			if d < reach:
 				_gk_claim(kgk, d)
-	# Desperate blocks: defenders in the shot lane can throw a body in the way.
-	# (A converted chance never reaches this loop: see the early return above.)
+
+
 	if ball.shot_team >= 0 and ball.z < 1.9 and clock - ball.shot_time < 0.9:
 		for q in players:
 			if q.team == ball.shot_team or q.sent_off or q.is_gk or q.cooldown > 0.0:
 				continue
 			if q.pos.distance_to(ball.pos) < 1.75:
-				# An arm in the flight path is a handball, not a block.
+
 				if rng.randf() < HANDBALL_P:
 					_award_handball(q)
 					break
@@ -249,7 +237,7 @@ func _ball_interactions(dt: float) -> void:
 				_emit("block", Commentary.block(rng, q.name, _last_kicker_name(q.team)), q.team, q)
 				_flash(0.35)
 				break
-	# A loose ball in a crowd eventually squirts clear.
+
 	if ball.owner_id < 0 and ball.loose_t > 1.2:
 		var crowd = 0
 		for p in players:
@@ -268,7 +256,7 @@ func _ball_interactions(dt: float) -> void:
 			for p in players:
 				if not p.sent_off and p.pos.distance_to(ball.pos) < 2.0:
 					p.cooldown = maxf(p.cooldown, 0.3)
-	# Aerial duels: headers when the ball is up around head height.
+
 	if ball.z > 0.9 and ball.z < 3.1 and ball.owner_id < 0:
 		var winner = null
 		var wscore = -1.0
@@ -287,10 +275,7 @@ func _ball_interactions(dt: float) -> void:
 func _after_owner_checks() -> void:
 	pass
 
-## A keeper dives on a carrier who has broken through. A defender's poke is not
-## a keeper's claim, so this reads the carrier directly: the ball leads his feet
-## by half a metre, which is why the goal line cannot be the first thing to
-## notice him. Handling decides whether he holds it or parries it wide.
+
 func _smother_carrier() -> void:
 	var def_team := 0
 	for t in range(2):

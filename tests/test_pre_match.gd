@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## The pre-match briefing (#157): what it reads, what it draws room for, and
-## every way in and out of it — league Watch, single-match KICK OFF, SKIP, the
-## ten second auto-advance and BACK.
 
 var SAVE_DIR := TestScratch.dir("saves_test_prematch")
 var CACHE_DIR := TestScratch.dir("cache_test_prematch")
@@ -10,7 +7,7 @@ const SEED := 909
 
 var season: LeagueSeason = null
 
-## A play scene stand-in: the briefing host and the picker only touch these.
+
 class StubGame extends Node:
 	var prematch = null
 	var paused := false
@@ -31,7 +28,7 @@ class StubGame extends Node:
 		seeded = seed
 		match_started = true
 
-## The picker's own sheet, reduced to the two fields `FixtureSheet.open` writes.
+
 class StubSelector extends RefCounted:
 	var back_to_menu := false
 	var visible := true
@@ -41,7 +38,7 @@ class StubSelector extends RefCounted:
 		clubs = Vector2(0, 0)
 		back_to_menu = false
 
-## Records the request and both callbacks the way `PreMatchHost.ask` would.
+
 class StubPreMatch extends RefCounted:
 	var asked: Dictionary = {}
 	var kick := Callable()
@@ -74,7 +71,6 @@ func _fixture() -> Dictionary:
 	var rows := season.plan()
 	return rows[0] if not rows.is_empty() else {}
 
-# -------------------------------------------------------------------- model ---
 
 func test_a_league_briefing_reads_the_fixture_and_the_season() -> void:
 	var fx := _fixture()
@@ -146,7 +142,7 @@ func test_every_quote_pack_can_be_reached() -> void:
 		"the plain quote is empty")
 	assert_eq(str(good["by"]), str(home["manager"]).to_upper(), "the quote is not the manager's")
 
-## True when `line` is one of `pack`'s templates with its placeholder filled.
+
 func _in_pack(pack: Array, line: String, placeholder: String, value: String) -> bool:
 	for template in pack:
 		var filled := str(template) if placeholder == "" else str(template).replace(placeholder, value)
@@ -165,7 +161,6 @@ func test_every_blurb_pack_can_be_reached() -> void:
 	assert_eq(str(plain["title"]), "MATCHDAY BRIEFING", "an ordinary game is not a briefing")
 	assert_true(str(plain["line"]).contains("matchday 12"), "the blurb lost its matchday")
 
-# ------------------------------------------------------------------- screen ---
 
 func test_the_doors_lay_out_inside_the_window() -> void:
 	var screen := PreMatchScreen.new()
@@ -244,7 +239,6 @@ func test_the_short_name_is_the_last_word() -> void:
 	assert_eq(PreMatchPitch.short_name("Bruno Fernandes"), "FERNANDES", "the pitch name is not the last word")
 	assert_eq(PreMatchPitch.short_name("Rasmus"), "RASMUS", "a one-word name was cut")
 
-# -------------------------------------------------------------------- hosts ---
 
 func test_the_picker_asks_for_a_decided_match_only_when_chosen() -> void:
 	var picker = load("res://scripts/ui/team_select.gd").new()
@@ -259,15 +253,13 @@ func test_the_picker_asks_for_a_decided_match_only_when_chosen() -> void:
 	assert_eq(str(picker.winner_mode), "extra", "the picker did not take extra time")
 	picker.click("win:draw")
 	assert_eq(str(picker.winner_mode), "draw", "the picker did not go back to a draw")
-	# The phone control still sits above the fixed doors.
+
 	for vp in [Vector2(411, 780), Vector2(914, 411)]:
 		var last: Rect2 = LeagueChrome.winner_rects(vp, vp.y * 0.30)[1]["rect"]
 		assert_lte(last.end.x, vp.x - 8.0, "the winner control runs off the sheet")
 		assert_lte(last.end.y, vp.y - 128.0, "the winner control reaches into the doors")
 
-## The KICK OFF and RANDOM doors are placed against the winner control, never
-## over it. At 640x360 and 640x300 the fixed door position covered both chips,
-## so a short handset could not reach the choice it was being offered.
+
 func test_the_picker_doors_never_cover_the_winner_control() -> void:
 	for vp in [Vector2(1600, 900), Vector2(1280, 800), Vector2(1024, 600),
 			Vector2(913, 411), Vector2(800, 480), Vector2(640, 360), Vector2(640, 300),
@@ -287,31 +279,28 @@ func test_the_picker_doors_never_cover_the_winner_control() -> void:
 				"a picker door rose into the control at %s" % vp)
 			assert_lte(r.end.x, vp.x, "a picker door runs off the sheet at %s" % vp)
 
-## #266: the league chips and the sheet's heading never share a band. On a phone
-## the heading is dropped so the chips keep their place under the rule; a roomy
-## sheet keeps the heading and the chips ride above the rule, clear of its ink.
+
 func test_the_picker_chips_never_cut_through_the_heading() -> void:
 	for vp in [Vector2(1600, 900), Vector2(1280, 720), Vector2(1096, 493),
 			Vector2(914, 411), Vector2(640, 360), Vector2(411, 914)]:
 		var head: Dictionary = LeagueChrome.picker_header(vp)
 		var band: Rect2 = LeagueChrome.picker_chips_band(vp)
 		var bold: FontFile = load("res://fonts/BarlowCondensed-SemiBold.ttf")
-		# The heading's own ink: what the font reports for the string it paints.
+
 		if bool(head["title"]):
 			var size := int(head["title_size"])
 			var ink_h: float = bold.get_ascent(size) - bold.get_ascent(size) * 0.28
 			var title_rect := Rect2(0.0, float(head["title_y"]) - ink_h, vp.x, ink_h)
 			assert_false(title_rect.intersects(band),
 				"the SELECT FIXTURE heading shares a band with the chips at %s" % vp)
-		# Either way the chips clear the wordmark above and the cards below.
+
 		assert_gt(band.position.y, float(head["wordmark_y"]) + 6.0,
 			"the chips sit on the wordmark at %s" % vp)
 		var card_top: float = vp.y * 0.42 - minf(vp.y * 0.32, 250.0) * 0.5
 		assert_lt(band.end.y, card_top, "the chips reach the club cards at %s" % vp)
 		assert_eq(band.size.y, LeagueChrome.PICKER_CHIP_H, "the chip band changed height at %s" % vp)
 
-## The chip row a press lands on is the row the sheet paints: both come from
-## `picker_chip_rects`, and every chip's centre answers its own door (#266).
+
 func test_every_painted_chip_answers_a_press() -> void:
 	for vp in [Vector2(1600, 900), Vector2(1096, 493), Vector2(914, 411), Vector2(640, 360)]:
 		var rows: int = 1 + PLCompetitions.active().size()
@@ -353,15 +342,15 @@ func test_the_picker_confirms_into_the_briefing_and_back_reopens_it() -> void:
 	assert_false(game.prematch.asked.is_empty(), "KICK OFF skipped the briefing")
 	assert_false(game.match_started, "the match started before the briefing")
 	assert_eq(str(game.prematch.asked["kick"]), "KICK OFF", "a single match does not say KICK OFF")
-	# KICK OFF on the briefing starts the match.
+
 	game.prematch.kick.call()
 	assert_true(game.match_started, "the briefing's KICK OFF did not start the match")
-	# BACK returns to the picker, not to a match.
+
 	game.match_started = false
 	sheet.confirm("MUN", "MCI")
 	game.prematch.back.call()
 	assert_false(game.match_started, "BACK from the briefing started the match")
-	# The picker's own doors still start a match and come back on their clubs.
+
 	sheet.reopen()
 	assert_true(game.select_open, "the picker did not come back")
 	sheet.start("MUN", "MCI")
@@ -428,8 +417,7 @@ func test_the_host_runs_one_callback_per_press() -> void:
 	assert_eq(calls[0], 1, "BACK ran the kick callback")
 	game.free()
 
-## The host answers every event while it is up: hover, a key that holds the
-## auto-advance, ESC that leaves, and a tap on the primary door.
+
 func _event_key(code: int) -> InputEventKey:
 	var ev := InputEventKey.new()
 	ev.keycode = code
@@ -468,7 +456,7 @@ func test_the_host_answers_mouse_and_keys_while_open() -> void:
 	host.handle_input(_event_click(kick.get_center(), true), kick.get_center())
 	host.handle_input(_event_click(kick.get_center(), false), kick.get_center())
 	assert_eq(calls[0], 1, "a tap on CONTINUE did not start the match")
-	# With no request there is nothing to read: the caller's kick runs at once.
+
 	var kicked := [0]
 	host.ask({}, func(): kicked[0] += 1, Callable())
 	assert_eq(kicked[0], 1, "an empty briefing did not hand straight over")
@@ -487,10 +475,7 @@ func test_the_briefing_reads_form_and_places_once_results_are_in() -> void:
 	assert_gte(int(view["home_position"]), 1, "the home place is missing")
 	assert_lte(int(view["home_position"]), 20, "the home place is out of the table")
 
-# --------------------------------------------------- one competition (#209) ---
 
-## Every way of printing a place goes through one ordinal, and the suffix comes
-## from the number: the teens are the trap that a hard-coded "TH" walks into.
 func test_a_table_place_reads_as_a_real_ordinal() -> void:
 	var want := {
 		1: "1st", 2: "2nd", 3: "3rd", 4: "4th", 9: "9th", 10: "10th",
@@ -500,15 +485,15 @@ func test_a_table_place_reads_as_a_real_ordinal() -> void:
 	for n in want:
 		assert_eq(PreMatchCopy.place(int(n)), str(want[n]), "%d reads wrong" % int(n))
 	assert_eq(PreMatchCopy.place(0), "", "an unplaced club was given a place")
-	# The club strip prints the same ordinal in chrome caps, between the shape
-	# and the form run.
+
+
 	assert_eq(PreMatchScreen.strip_line({"formation": "4-2-3-1"}, 2, "W D L W W"),
 		"4-2-3-1 · 2ND · W D L W W", "the club strip lost its ordinal place")
 	assert_eq(PreMatchScreen.strip_line({"formation": "4-2-3-1"}, 0, ""), "4-2-3-1",
 		"an unplaced club grew a place out of nothing")
 	assert_eq(PreMatchScreen.strip_line({}, 11, ""), "11TH", "a place needs its shape to print")
 
-## Issue #207's own numbers: the briefing strip, not just the copy pack.
+
 func test_the_briefing_strip_never_prints_a_hard_coded_suffix() -> void:
 	for n in [1, 2, 3, 4, 7]:
 		var line := PreMatchScreen.strip_line({"formation": "4-2-3-1"}, n, "")
@@ -518,8 +503,7 @@ func test_the_briefing_strip_never_prints_a_hard_coded_suffix() -> void:
 	assert_eq(PreMatchScreen.strip_line({"formation": "4-2-3-1"}, 2, ""), "4-2-3-1 · 2ND",
 		"second place did not read 2ND")
 
-## The competition is the home club's own, read from the file — a league watch
-## names it on the caption, the blurb and the broadcast card alike.
+
 func test_a_league_match_names_its_competition_everywhere() -> void:
 	var fx := _fixture()
 	var view := PreMatchModel.build(str(fx["home_club_id"]), str(fx["away_club_id"]), fx, season)
@@ -533,10 +517,9 @@ func test_a_league_match_names_its_competition_everywhere() -> void:
 	assert_true(blurb.contains(billing.full_name), "the desk blurb does not name the competition")
 	assert_false(blurb.to_lower().contains("friendly"), "a league game was called a friendly")
 
-## The picker's match is a friendly, and a friendly never borrows a league's
-## competition or round: one match reads one way on every surface (#209).
+
 func test_a_single_match_names_one_competition_on_every_surface() -> void:
-	# A non-derby pair: a derby keeps its own title (pinned in the test below).
+
 	var view := PreMatchModel.build("MUN", "LIV", {}, null)
 	assert_eq(str(view["caption"]), MatchBilling.FRIENDLY_CAPTION, "the caption changed shape")
 	assert_eq(str(view["competition"]), MatchBilling.FRIENDLY, "the briefing claims a league")
@@ -548,8 +531,7 @@ func test_a_single_match_names_one_competition_on_every_surface() -> void:
 	assert_eq(str(news.get("title", "")), PreMatchCopy.NEWS_TITLE_FRIENDLY,
 		"a friendly's blurb is not filed as a friendly")
 
-## Two clubs meeting outside a league are still a derby, so the title stays — but
-## the line must not promise points a friendly cannot award.
+
 func test_a_friendly_derby_promises_no_points() -> void:
 	var news := PreMatchCopy.news(5, TeamData.get_team("MUN"), TeamData.get_team("MCI"),
 		{"derby": true, "friendly": true})
@@ -557,8 +539,7 @@ func test_a_friendly_derby_promises_no_points() -> void:
 	assert_false(str(news["line"]).contains("three points"), "a friendly promised league points")
 	assert_true(str(news["line"]).contains("friendly"), "a friendly derby does not say friendly")
 
-## A friendly's manager talks about the run-out, never about a table it is not in
-## — and never says there is no friendly in a friendly.
+
 func test_a_friendly_briefing_speaks_as_a_friendly() -> void:
 	var home := TeamData.get_team("MUN")
 	var away := TeamData.get_team("MCI")
@@ -567,28 +548,26 @@ func test_a_friendly_briefing_speaks_as_a_friendly() -> void:
 	assert_true(quote != "", "a friendly's manager said nothing")
 	assert_false(quote.contains("no friendly"), "a friendly's manager denied it is a friendly")
 	assert_true(PreMatchCopy.FRIENDLY_LINES.has(quote), "a friendly took a league quote pack")
-	# The pack itself is reachable for both sides and reads the same way twice.
+
 	var again := PreMatchCopy.quote(3, home, away, {"friendly": true})
 	var twice := PreMatchCopy.quote(3, home, away, {"friendly": true})
 	assert_eq(str(again["line"]), str(twice["line"]), "a friendly quote is not seeded")
 	assert_eq(str(again["by"]), str(home["manager"]).to_upper(), "a friendly quote is not the manager's")
 
-## The broadcast reads the scene's binding: a friendly's card never claims the
-## Premier League while the briefing says FRIENDLY. (The paint lives in the HUD
-## suite, where the card is drawn.)
+
 func test_the_scene_binding_is_the_one_answer_every_surface_reads() -> void:
 	var game := StubScene.new()
 	assert_eq(game.billing.chrome_name(), MatchBilling.FRIENDLY, "the scene started billed as a league")
 	MatchBilling.bind_scene(game, "MUN", {"matchday": 5})
 	assert_eq(game.billing.chrome_name(), "PREMIER LEAGUE", "the league was not bound")
 	assert_eq(game.billing.caption(), "PREMIER LEAGUE · MATCHDAY 5", "the caption lost its round")
-	# A stand-in scene with no billing at all still gets one answer, not a crash.
+
 	var bare := MatchBilling.bind_scene(null, "MUN", {})
 	assert_true(bare.friendly, "a bare scene is not a friendly")
 	assert_eq(MatchBilling.bind_scene(null, "MUN", {"matchday": 2}).matchday, 2,
 		"a bare scene dropped its round")
 
-## One press of a league fixture binds the scene before the briefing paints.
+
 func test_a_league_watch_binds_the_competition_it_plays_in() -> void:
 	var fx := _fixture()
 	var game := StubScene.new()
@@ -606,8 +585,7 @@ func test_a_league_watch_binds_the_competition_it_plays_in() -> void:
 		"the briefing and the broadcast disagree about the competition")
 	game.free()
 
-## The picker rebinds to a friendly, so a season's last league name cannot leak
-## into the next single match.
+
 func test_the_picker_rebinds_the_scene_to_a_friendly() -> void:
 	var game := StubScene.new()
 	game.prematch = StubPreMatch.new()
@@ -621,9 +599,7 @@ func test_the_picker_rebinds_the_scene_to_a_friendly() -> void:
 		"the picker's briefing still names a league")
 	game.free()
 
-## The picker's own footer counts the clubs the file carries, and names the
-## competition from the file rather than a hard-coded league (#209). The picker
-## carries no `class_name`, so the suite reads its static off the script.
+
 func test_the_picker_footer_names_the_file_s_competition() -> void:
 	var picker := load("res://scripts/ui/team_select.gd")
 	assert_eq(picker.clubs_line(20, "Premier League"), "20 PREMIER LEAGUE CLUBS",
@@ -633,8 +609,7 @@ func test_the_picker_footer_names_the_file_s_competition() -> void:
 	assert_eq(picker.clubs_line(18, "La Liga"), "18 LA LIGA CLUBS",
 		"the picker footer is hard-coded to one league")
 
-## A stand-in play scene: only the billing field and the two collaborators the
-## league host and the picker touch.
+
 class StubScene extends Node:
 	var billing := MatchBilling.new()
 	var prematch = null

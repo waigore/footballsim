@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## The table sheet's own band: columns on a phone and a desktop pose, the header
-## captions and their sorts, the two reading doors, and the pan a narrow sheet
-## needs to reach its last column. Split out of the sheet suite with
-## `LeagueTableView`'s chrome, which paints the title and the zone legend.
 
 func _table(rows: int = 20) -> Array:
 	var out: Array = []
@@ -18,9 +14,7 @@ func _table(rows: int = 20) -> Array:
 		})
 	return out
 
-## #72/#74: the full reading is the compact strip plus the overall, home and
-## away columns. On the phone landscape design space (`--ui-scale` on a 1080p
-## handset) every one of them has to sit inside the row.
+
 func test_the_full_table_shows_every_column_on_a_phone_landscape() -> void:
 	for vp in [Vector2(913, 411), Vector2(873, 393)]:
 		var view := LeagueTableView.new()
@@ -66,8 +60,7 @@ func test_the_table_defaults_to_compact_on_a_phone_and_full_on_desktop() -> void
 	desktop.layout(Vector2(1600, 900), {"table": _table(), "rules": LeagueRules.defaults()})
 	assert_eq(desktop.mode, LeagueTableView.FULL, "a desktop did not open the full table")
 
-## #102: a column Compact now shows is a column Compact sorts by — the whole
-## overall record behaves like any other visible field.
+
 func test_the_compact_strip_sorts_by_the_overall_columns_it_shows() -> void:
 	var rows: Array = _table()
 	rows[0]["gf"] = 3
@@ -85,10 +78,7 @@ func test_the_compact_strip_sorts_by_the_overall_columns_it_shows() -> void:
 			goals.append(int((item["row"] as Dictionary)["gf"]))
 	assert_eq(goals[0], 30, "the compact strip did not sort by goals scored")
 
-## A full table is wider than a portrait phone: the body offers the sideways
-## pan and every column is reachable by dragging.
-## The chrome's own split: the title caption joins the season's name and the day,
-## and the band legend names one place rule per colour, phone labels included.
+
 func test_the_caption_and_the_legend_name_every_band() -> void:
 	assert_eq(LeagueTableChrome.caption({}, ""), "", "an empty sheet grew a caption")
 	assert_eq(LeagueTableChrome.caption({"name": "S"}, ""), "S", "the season name left the caption")
@@ -104,8 +94,7 @@ func test_the_caption_and_the_legend_name_every_band() -> void:
 	for band in LeagueTableChrome.BANDS:
 		assert_true(LeagueChrome.zone_color(band).a > 0.0, "legend band %s paints nothing" % band)
 
-## #278: the sentence names the pointer the player is holding — CLICK for a mouse
-## on a desktop sheet, TAP for a finger on a touch one.
+
 func test_the_sort_sentence_names_the_pointer() -> void:
 	var desk := LeagueTableChrome.sentence(false)
 	var phone := LeagueTableChrome.sentence(true)
@@ -114,8 +103,7 @@ func test_the_sort_sentence_names_the_pointer() -> void:
 	assert_false(desk.contains("TAP"), "the desktop sentence still says TAP: %s" % desk)
 	assert_eq(desk.replace("CLICK", "TAP"), phone, "the two readings say different sentences")
 
-## A phone sheet has no room for the legend in the bottom bar, so it moves up
-## beside the title; a wide sheet keeps it on the bar and prints the sentence.
+
 func test_the_legend_moves_up_on_a_phone_sheet() -> void:
 	assert_true(LeagueTableChrome.narrow(Vector2(360, 780)), "a portrait phone is not narrow")
 	assert_false(LeagueTableChrome.narrow(Vector2(1600, 900)), "a desktop sheet was called narrow")
@@ -134,7 +122,7 @@ func test_the_legend_moves_up_on_a_phone_sheet() -> void:
 			"the wide legend left the bottom bar at %s" % vp)
 		var sentence := LeagueTableChrome.sentence_rect(vp)
 		assert_almost_eq(sentence.end.x, vp.x - 24.0, 0.01, "the sentence left the sheet at %s" % vp)
-	# And a narrow legend is the shorter one, measured really.
+
 	var bold: Font = load("res://fonts/BarlowCondensed-SemiBold.ttf")
 	var short_w := LeagueTableChrome.legend_width(bold, LeagueTableChrome.SHORT_LABELS, 8)
 	var wide_w := LeagueTableChrome.legend_width(bold, LeagueTableChrome.WIDE_LABELS, 9)
@@ -142,8 +130,7 @@ func test_the_legend_moves_up_on_a_phone_sheet() -> void:
 	assert_gt(wide_w, short_w, "the wide legend is not wider than the phone one")
 	assert_lte(short_w, 360.0 - 24.0, "the legend cannot fit beside a phone title")
 
-## The reading doors are this sheet's; a header press belongs to the save's sort,
-## and both write the choice through to the save that is open.
+
 func test_a_mode_press_flips_the_reading_and_a_header_press_sorts() -> void:
 	var view := LeagueTableView.new()
 	view.mode = LeagueTableView.FULL
@@ -184,9 +171,7 @@ func test_the_full_table_pans_sideways_on_a_portrait_phone() -> void:
 	assert_eq(body.hscroll, 0.0, "the pan ran past the first column")
 	body.free()
 
-## #308: both readings paint a zone band at the row's own left edge, so the place
-## number has to start on the panel beside it — never on top of it. Ranks 1–6 are
-## the rows a player reads first, and the full sheet is where they read them.
+
 func test_the_place_number_clears_the_zone_band_in_the_full_reading() -> void:
 	var med: Font = load("res://fonts/BarlowCondensed-Medium.ttf")
 	var digit_w: float = med.get_string_size("20", HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
@@ -201,8 +186,8 @@ func test_the_place_number_clears_the_zone_band_in_the_full_reading() -> void:
 			var rect: Rect2 = item["rect"]
 			var places: Dictionary = item["places"]
 			var band_w: float = LeagueTableView.ZONE_BAND_W
-			# The band is painted at the row's left edge whatever the reading: the
-			# place ink starts after it, and the digits still fit before the club.
+
+
 			assert_gte(float(places["pos_x"]), rect.position.x + band_w,
 				"the place number lands on the zone band at %s" % vp)
 			assert_lte(float(places["pos_x"]) + digit_w, float(places["club_x"]),
@@ -210,8 +195,8 @@ func test_the_place_number_clears_the_zone_band_in_the_full_reading() -> void:
 			if str(item["zone"]) != "":
 				banded += 1
 		assert_gte(banded, 6, "the zone bands left the full table at %s" % vp)
-		# The header `#` caption and its door stay on the digits' rail, and clear of
-		# the `CLUB` cell it sits beside.
+
+
 		var hash_cell := {}
 		var club_cell := {}
 		for item in view.layout(vp, {"table": _table(), "rules": LeagueRules.defaults()}):

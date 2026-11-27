@@ -1,16 +1,7 @@
 class_name LeagueCalendar
 extends RefCounted
 
-## The month grid a season's calendar screen shows: which days hold fixtures,
-## how many of them are played, and which day is open under the grid.
-##
-## Split out of the modal screen so its state machine stays inside the size
-## budget. The helpers work on the screen's own fields — `month`, `day`,
-## `days_cache` and `day_fixtures` — so the screen (and its tests) keep reading
-## the same state they always did.
 
-## Build the day index for the season's month and open a day in it: the clock's
-## own day when it falls inside the month, else the first day with fixtures.
 static func open(screen) -> void:
 	screen.days_cache = {}
 	var season = screen.season
@@ -44,8 +35,7 @@ static func open(screen) -> void:
 					break
 	pick(screen, chosen)
 
-## Move the grid a month and open the first day of the new month that has a
-## fixture (or its first day when the month is empty).
+
 static func shift(screen, delta: int) -> void:
 	screen.month = LeagueMonth.shift(screen.month, delta)
 	var keys: Array = screen.days_cache.keys()
@@ -57,8 +47,7 @@ static func shift(screen, delta: int) -> void:
 			break
 	pick(screen, chosen)
 
-## Open one day: the fixtures that day, with the event rows of the played ones
-## so the day list can print each result's side columns (#168), and repaint.
+
 static func pick(screen, date: String) -> void:
 	screen.day = date
 	screen.day_fixtures = []

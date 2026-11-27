@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## The league's page history (#169): BACK / Esc / Backspace walk one page back
-## inside the season, the root disables BACK instead of leaving, MAIN MENU is the
-## only way out, and the trail never outlives the session.
 
 var SAVE_DIR := TestScratch.dir("saves_test_league_nav")
 var CACHE_DIR := TestScratch.dir("cache_test_league_nav")
@@ -41,7 +38,7 @@ func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
 		TestScratch.clear(folder)
 
-## A fresh root: the hub of the season with no history behind it.
+
 func _root() -> void:
 	screen.season = season
 	screen.nav.clear()
@@ -82,7 +79,7 @@ func test_a_panel_jump_pushes_a_page_and_back_undoes_it() -> void:
 	screen.click("table")
 	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table did not open")
 	assert_eq(screen.nav.depth(), 1, "the table did not leave a page behind")
-	# The panel is a jump, not a new root: BACK returns to the sheet it left.
+
 	screen.click("calendar")
 	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR, "the calendar did not open")
 	assert_eq(screen.nav.depth(), 2, "the calendar did not leave a page behind")
@@ -108,7 +105,7 @@ func test_the_calendar_day_and_stats_are_pages_of_their_own() -> void:
 	screen.panel.settle()
 	screen.click("nav:stats")
 	assert_eq(screen.mode, LeagueScreen.MODE_STATS, "Stats did not open")
-	# The calendar's selected day survives behind the Stats page.
+
 	screen.click("back")
 	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR, "BACK did not return to the calendar")
 	assert_eq(screen.day, date, "the calendar forgot its day")
@@ -129,7 +126,7 @@ func test_a_report_returns_to_the_page_that_opened_it() -> void:
 				played = str(row["id"])
 				break
 	assert_true(played != "", "there is no played fixture to open")
-	# A matchday opened from Stats returns to Stats, not to the hub.
+
 	screen.mode = LeagueScreen.MODE_STATS
 	screen.nav.clear()
 	screen.refresh()
@@ -143,7 +140,7 @@ func test_a_report_returns_to_the_page_that_opened_it() -> void:
 	assert_eq(screen.mode, LeagueScreen.MODE_REPORT, "a matchday did not open its roundup")
 	screen.click("back")
 	assert_eq(screen.mode, LeagueScreen.MODE_STATS, "BACK did not return to Stats")
-	# A report opened from the hub returns to the hub, the same way.
+
 	screen.mode = LeagueScreen.MODE_HUB
 	screen.nav.clear()
 	screen.show_report(played)
@@ -160,7 +157,7 @@ func test_the_system_sheet_returns_to_the_page_it_covered() -> void:
 	screen.click("back")
 	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR,
 		"BACK from System did not return to the page it covered")
-	# Load opened over the season is a page too: BACK returns to System.
+
 	screen.click("system")
 	screen.click("sys:load")
 	assert_eq(screen.mode, LeagueScreen.MODE_LOAD, "Load did not open over the season")
@@ -184,11 +181,11 @@ func test_the_history_is_session_state_and_is_never_saved() -> void:
 	screen.click("table")
 	screen.click("calendar")
 	assert_gte(screen.nav.depth(), 2, "the season kept no history to lose")
-	# The save knows nothing about pages: the trail is the screen's own field.
+
 	season.save.touch()
 	assert_false(str(season.save.read_meta()).contains("nav"),
 		"the page history was written into the save")
-	# Leaving the season ends the trail, and a reopened season starts at its root.
+
 	screen.close()
 	assert_eq(screen.nav.depth(), 0, "closing the season kept its history")
 	screen.open_season(season)

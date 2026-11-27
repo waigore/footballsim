@@ -1,13 +1,5 @@
 extends GdToolsTest
 
-## A long press on a club name (#107): the same gesture on every surface raises
-## the Teams of Interest menu, a short tap still does what it always did, a drag
-## never opens it, and the one write it makes is the season's shortlist.
-##
-## The grammar, the menu and the strip registry are pure, so most of this suite
-## drives them directly; the league sheet, the picker and the encyclopedia are
-## driven through their real screens, because "which club is under the finger" is
-## a question only the painter can answer.
 
 var SAVE_DIR := TestScratch.dir("saves_test_long_press")
 var CACHE_DIR := TestScratch.dir("cache_test_long_press")
@@ -17,7 +9,6 @@ const PRISTINE := "_pristine.sqlite"
 var season: LeagueSeason = null
 var slug := ""
 
-# ------------------------------------------------------------------ fakes ---
 
 class FakeInterest extends RefCounted:
 	var marked := {}
@@ -49,8 +40,8 @@ func before_all() -> void:
 	_clean()
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
-	# One create for every surface that needs a live season: hub, picker, HUD
-	# and encyclopedia restore this file instead of paying create again.
+
+
 	season = LeagueSeason.create("Long Press", "generated", "fixture_days", SEED)
 	assert_not_null(season, "the shared long-press season was not created")
 	slug = season.save.slug
@@ -76,8 +67,7 @@ func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
 		TestScratch.clear(folder)
 
-## Keep a byte-for-byte copy of the fresh save so interest writes can rewind
-## without recreating the calendar.
+
 func _snapshot() -> void:
 	if season == null or season.save == null:
 		return
@@ -90,8 +80,7 @@ func _snapshot() -> void:
 		out.close()
 	season.save.ensure_open()
 
-## Restore the pristine season and reopen it. Mutating tests each get a clean
-## shortlist this way.
+
 func _fresh() -> LeagueSeason:
 	if season != null:
 		season.close()
@@ -127,7 +116,7 @@ func _motion(p: Vector2) -> InputEventMouseMotion:
 	ev.position = p
 	return ev
 
-## A hold wired to a fake season: no save, no repository, just the grammar.
+
 func _hold(season_in) -> InterestHold:
 	var hold := InterestHold.new()
 	hold.vp = Vector2(1280, 800)
@@ -136,7 +125,6 @@ func _hold(season_in) -> InterestHold:
 	hold.season_of = func(): return season_in
 	return hold
 
-# --------------------------------------------------------------- the press ---
 
 func test_a_short_tap_is_still_a_click() -> void:
 	var press := InterestPress.new()
@@ -174,7 +162,6 @@ func test_a_press_on_plain_chrome_never_holds() -> void:
 	assert_false(press.tick(2.0), "chrome opened the menu")
 	assert_true(press.release_click(), "chrome's click was swallowed")
 
-# ---------------------------------------------------------------- the menu ---
 
 func test_the_menu_stays_inside_the_sheet() -> void:
 	var menu := InterestMenu.new()
@@ -202,8 +189,7 @@ func test_every_press_is_answered_by_the_open_menu() -> void:
 	menu.close()
 	assert_eq(menu.hit(menu.door_rect(vp).get_center(), vp), "", "a closed menu answered a press")
 
-## #310: the footer names the pointer that dismisses the card — a mouse clicks
-## elsewhere, a finger taps — the same split the league's other chrome makes.
+
 func test_the_footer_names_the_pointer_that_dismisses() -> void:
 	var menu := InterestMenu.new()
 	assert_eq(menu.close_hint(), "CLICK ELSEWHERE TO CLOSE",
@@ -212,7 +198,6 @@ func test_the_footer_names_the_pointer_that_dismisses() -> void:
 	assert_eq(menu.close_hint(), "TAP ELSEWHERE TO CLOSE",
 		"a phone card stopped naming the finger")
 
-# -------------------------------------------------------------- the strips ---
 
 func test_strips_name_the_club_under_a_point() -> void:
 	var names := InterestNames.new()
@@ -239,7 +224,6 @@ func test_the_strip_matches_the_caption_it_painted() -> void:
 	assert_true(strip.size.x >= 12.0, "a short abbreviation lost its tap target")
 	assert_true(strip.has_point(Vector2(62.0, 98.0)), "the strip missed the glyphs it painted")
 
-# ---------------------------------------------------------------- the hold ---
 
 func test_a_hold_opens_the_menu_for_the_named_club() -> void:
 	var fake := FakeSeason.new()
@@ -274,7 +258,7 @@ func test_a_press_beside_the_card_dismisses_without_a_write() -> void:
 	hold.press_at(Vector2(50, 40))
 	hold.tick(InterestPress.HOLD + 0.01)
 	hold.release_at(Vector2(50, 40))
-	# Beside the card: a second press, answered by the menu rather than the sheet.
+
 	assert_true(hold.press_at(Vector2(2, 2)), "a press beside the card was not taken")
 	assert_true(hold.release_at(Vector2(2, 2)), "a press beside the card was not consumed")
 	assert_false(hold.is_open(), "the menu stayed up")
@@ -286,7 +270,6 @@ func test_with_no_season_there_is_no_menu() -> void:
 	assert_false(hold.tick(InterestPress.HOLD + 0.01), "a hold opened a menu with no season")
 	assert_false(hold.is_open(), "a menu appeared with no season")
 
-# ----------------------------------------------------- the shared pointer ---
 
 class PointerSheet extends RefCounted:
 	var mouse := Vector2(-1000, -1000)
@@ -338,7 +321,6 @@ func test_a_drag_under_the_pointer_scrolls_instead_of_holding() -> void:
 	assert_false(pointer.hold.is_open(), "a drag opened the menu")
 	assert_false(sheet.scrolls.is_empty(), "a drag did not scroll the sheet")
 
-# ------------------------------------------------------- the league sheet ---
 
 func _open_hub() -> LeagueScreen:
 	_fresh()
@@ -350,8 +332,7 @@ func _open_hub() -> LeagueScreen:
 	screen.open_season(season)
 	return screen
 
-## The first club name the hub painted, in design space (the sheet is not scrolled
-## when it opens, so the strip is already where the pointer can reach it).
+
 func _first_name(screen: LeagueScreen) -> Dictionary:
 	for zone in screen.rows_names.zones:
 		return zone
@@ -405,7 +386,6 @@ func test_escape_puts_the_menu_away_before_the_sheet() -> void:
 	screen.close()
 	screen.queue_free()
 
-# ------------------------------------------------------- the fixture picker ---
 
 func test_the_picker_holds_a_club_card() -> void:
 	_fresh()
@@ -430,7 +410,6 @@ func test_the_picker_holds_a_club_card() -> void:
 	assert_true(season.record.interest.is_interested("MUN"), "the picker's door did not follow the club")
 	picker.queue_free()
 
-# ---------------------------------------------------------------- the HUD ---
 
 func _match() -> Node2D:
 	var game := Node2D.new()
@@ -475,8 +454,8 @@ func test_the_hud_holds_a_club_name() -> void:
 		InterestMenu.TOGGLE, "the overlay did not hand the press to the menu")
 	game.hud.interest.click(InterestMenu.TOGGLE)
 	assert_true(season.record.interest.is_interested("MUN"), "the overlay's door did not follow the club")
-	# The overlay paints the gold from a set it reads when the season moves, not
-	# from the save on every frame: the write must reach it.
+
+
 	assert_true(bool(game.hud.followed.get("MUN", false)),
 		"the overlay did not pick up the club it just followed")
 	game.queue_free()
@@ -509,7 +488,6 @@ func test_a_short_tap_on_a_club_name_still_opens_its_page() -> void:
 	game.wiki_host.close()
 	game.queue_free()
 
-# ------------------------------------------------------- the encyclopedia ---
 
 func _wiki() -> Control:
 	var screen: Control = Control.new()

@@ -1,8 +1,5 @@
 extends SceneTree
 
-## Census: physics engine vs Poisson model for one fixture.
-##   godot --headless --path . --script tests/check_poisson_agreement.gd -- <home> <away> <n> <seed0>
-## Prints one line per match and a summary comparing mean/variance with λ.
 
 func _init() -> void:
 	var a := OS.get_cmdline_user_args()

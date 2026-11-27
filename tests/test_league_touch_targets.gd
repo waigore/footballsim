@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## #204: on a handheld the league's targets are finger-sized. The table's rows
-## and its sortable headers, and the drawer door that is the only way to the
-## season's other readings, all have to answer to a thumb; the desktop table is
-## a reading, not a keypad, and keeps its dense pitch.
 
 func _table(rows: int = 20) -> Array:
 	var out: Array = []
@@ -36,14 +32,14 @@ func test_a_touch_table_lays_finger_sized_rows_and_headers() -> void:
 			assert_gte(rect.size.y, 48.0, "a touch sortable header is shorter than 48 units")
 	assert_eq(rows, 20, "the touch table lost rows")
 	assert_gt(heads, 8, "the touch table lost sortable headers")
-	# The rows never overlap, so two clubs can never answer one press.
+
 	var previous := -1.0
 	for item in items:
 		if str(item["kind"]) == "table_row":
 			var rect: Rect2 = item["rect"]
 			assert_gt(rect.position.y, previous, "two touch rows share a pixel")
 			previous = rect.end.y
-	# And it is still a scrolling page, never a clipped one.
+
 	var body := LeagueBody.new()
 	body.set_sheet(items, vp, true)
 	assert_gt(body.max_scroll(), 0.0, "the touch table does not scroll its rows")
@@ -81,7 +77,7 @@ func test_a_desktop_table_keeps_its_dense_pitch() -> void:
 		"the desktop table pitch moved: it must stay the dense 22-unit reading")
 	assert_almost_eq(LeagueTableHead.height(false), 12.0, 0.01,
 		"the desktop header band grew past its one caption line")
-	# The pose's device is what picks one of the two readings.
+
 	assert_almost_eq(LeagueTableView.row_height({}), 22.0, 0.01,
 		"a pose with no touch reading did not default to the desktop pitch")
 	assert_gte(LeagueTableView.row_height({"touch": true}), 49.0,
@@ -89,10 +85,7 @@ func test_a_desktop_table_keeps_its_dense_pitch() -> void:
 	assert_gte(LeagueTableHead.height(true), 48.0,
 		"a touch pose did not ask for a finger-sized header band")
 
-## The door sits inboard of the system gesture strip, because Android eats
-## presses in the outermost ~16 density points of the screen edge. A mouse does
-## not need that, so the desktop door is unchanged — but it must not have grown
-## into the club rows either, or it would eat their presses.
+
 func test_the_panel_drawer_door_is_a_finger_sized_labelled_target() -> void:
 	var panel := LeaguePanel.new()
 	panel.touch = true
@@ -116,14 +109,13 @@ func test_the_desktop_drawer_door_keeps_its_edge_sliver() -> void:
 	assert_almost_eq(door.position.x, -2.0, 0.01, "the desktop door left the sheet edge")
 	assert_almost_eq(door.size.x, 24.0, 0.01, "the desktop door grew into the club rows")
 	assert_almost_eq(door.size.y, 104.0, 0.01, "the desktop door lost its tall strip")
-	# A mouse arrives at the exact strip; the club rows start at x=24 and must
-	# keep every pixel of their own width.
+
+
 	assert_eq(panel.hit(Vector2(6.0, door.get_center().y), vp), "panel",
 		"the desktop door no longer answers the edge")
 	assert_lte(door.end.x, 24.0, "the desktop door now covers the club rows")
 
-## The full table is wider than a portrait phone; a touch table that grew its
-## rows must still be pannable, and the last column still reachable.
+
 func test_a_touch_full_table_still_pans_to_its_last_column() -> void:
 	var view := LeagueTableView.new()
 	view.mode = LeagueTableView.FULL
