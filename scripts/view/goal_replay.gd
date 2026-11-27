@@ -183,7 +183,10 @@ func apply(first: bool) -> void:
 	engine.clock = float(a.get("c", engine.clock))
 	engine.half = 1 if engine.clock < 2700.0 else 2
 	engine.phase = "play"
-	set_score(int(a["s"][0]) if a.has("s") else 0, int(a["s"][1]) if a.has("s") else 0)
+	if live and held.has("score"):
+		set_score(int(held["score"][0]), int(held["score"][1]))
+	else:
+		set_score(int(a["s"][0]) if a.has("s") else 0, int(a["s"][1]) if a.has("s") else 0)
 	if first:
 		host.actors.ball_trail.clear()
 	if int(a.get("g", 0)) == 1 and not goal_shown:

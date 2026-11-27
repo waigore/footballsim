@@ -468,10 +468,14 @@ func test_a_live_goal_clip_keeps_the_goal_on_the_board() -> void:
 			goal_frames += 1
 	assert_gt(goal_frames, 0, "the live clip never shows the goal")
 	engine.rng.state = 4711
+	var mid_ok := true
 	while true:
 		if replay.step(1.0 / 30.0):
 			host.replay = null
 			break
+		if engine.score != score_open:
+			mid_ok = false
+	assert_true(mid_ok, "the board dropped the goal while the clip played")
 	assert_eq(engine.score, score_open, "the clip rewound the live score")
 	assert_almost_eq(float(engine.clock), clock_open, 0.001, "the clip resumed on a different clock")
 	assert_eq(engine.phase, phase_open, "the clip resumed in a different phase")
