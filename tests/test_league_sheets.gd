@@ -389,12 +389,92 @@ func _item_rect(items: Array, id: String) -> Rect2:
 			return item["rect"]
 	return Rect2()
 
-## #278: the hub's plan hint names the pointer the player is holding.
+## #278, #323: the hub's body line names the pointer the player is holding, and
+## it is the line on its own — the page's title is in the header, so the hint
+## never repeats it.
 func test_the_hub_hint_names_the_pointer() -> void:
-	assert_eq(LeagueSheet.plan_hint(true), " · TAP A GAME TO SWITCH AUTO / WATCH",
+	assert_eq(LeagueSheet.plan_hint(true), "TAP A GAME TO SWITCH AUTO / WATCH",
 		"a touch hub stopped naming the tap")
-	assert_eq(LeagueSheet.plan_hint(false), " · CLICK A GAME TO SWITCH AUTO / WATCH",
+	assert_eq(LeagueSheet.plan_hint(false), "CLICK A GAME TO SWITCH AUTO / WATCH",
 		"a desktop hub tells a mouse user to tap")
+	for touch in [true, false]:
+		var hint := LeagueSheet.body_hint({"touch": touch, "can_suggest": true, "plan": [_fixture(1)]})
+		assert_false(hint.begins_with(" · ") or hint.contains("TODAY'S FIXTURES"),
+			"the body line still carries a caption or the page's own title: %s" % hint)
+	# A day with nothing to hint paints nothing; a pending watch says what
+	# CONTINUE does with it (#100) and gives the pointer hint up.
+	assert_eq(LeagueSheet.body_hint({"touch": false, "can_suggest": false, "plan": []}), "",
+		"a hub with no hint painted a line")
+	assert_eq(LeagueSheet.body_hint({"touch": false, "can_suggest": true, "plan": [_fixture(1, 1)]}),
+		"CONTINUE OPENS THE NEXT WATCH", "a pending watch lost its CONTINUE line")
+
+## #323: the hub names its own page. The title is Today's Fixtures on every
+## season — never the save's name — and the caption carries the day and the
+## ledger only, with no per-league gameweek chip to grow a long line.
+func test_the_hub_names_today_and_its_ledger() -> void:
+	var state := _state([_fixture(1)], _table())
+	state["name"] = "LEAGUE 1"
+	state["competitions"] = [{"id": "PL", "short": "PREMIER LEAGUE", "matchday": 7},
+		{"id": "LL", "short": "LA LIGA", "matchday": 7},
+		{"id": "BL", "short": "BUNDESLIGA", "matchday": 7},
+		{"id": "BL2", "short": "2. BUNDESLIGA", "matchday": 7}]
+	state["played"] = 120
+	state["total"] = 760
+	var caption := LeagueSheet.hub_caption(state)
+	assert_eq(caption, "15/AUG/2026 · 120 OF 760 PLAYED",
+		"the hub caption is not the day and the ledger: %s" % caption)
+	assert_false(caption.contains("GW"), "the caption still lists a league's gameweek")
+	for short in ["PREMIER LEAGUE", "LA LIGA", "BUNDESLIGA"]:
+		assert_false(caption.contains(short), "the caption still lists %s's gameweek" % short)
+	# A settling watch keeps its own suffix, whatever the ledger says.
+	state["settling"] = true
+	assert_true(LeagueSheet.hub_caption(state).ends_with(" · FINISHING THE WATCHED MATCH"),
+		"the settling caption lost its suffix")
+	# The title is the pose's name, in title case, and it is not the save's.
+	var bold: Font = UiChrome.fonts()["bold"]
+	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
+		var band := LeagueExtra.header_band(vp, bold, LeagueSheet.HUB_TITLE, caption,
+			LeagueExtra.primary_rect(vp).size.x + 12.0, false)
+		assert_eq(str(band["title"]), "Today's Fixtures",
+			"the hub header does not read Today's Fixtures at %s" % vp)
+		assert_false(str(band["title"]).contains("LEAGUE 1"), "the hub title is the save name")
+	var caps := LeagueExtra.header_band(Vector2(1600, 900), bold, "TODAY'S FIXTURES", "", 152.0)
+	assert_eq(str(caps["title"]), "TODAY'S FIXTURES", "a kicker lost its upper case")
+
+## #323: every fixture group opens with its league's heading and gameweek, on a
+## single-league day as much as on a mixed one, so the list always says which
+## competition it is and which round of it.
+func test_every_plan_group_opens_with_its_league_heading() -> void:
+	var sheet := LeagueSheet.new()
+	for count in [1, 2]:
+		var plan: Array = []
+		for i in range(count):
+			var fx := _fixture(i + 1)
+			fx["competition_id"] = "PL" if i == 0 else "LL"
+			fx["matchday"] = 4 + i
+			plan.append(fx)
+		var heads: Array = []
+		for item in sheet.hub_layout(Vector2(1280, 720), _state(plan, _table())):
+			if str(item["kind"]) == "league_head":
+				heads.append("%s/%d" % [str(item["competition"]), int(item["matchday"])])
+		assert_eq(heads, ["PL/4"] if count == 1 else ["PL/4", "LL/5"],
+			"a %d-league day is not headed by its league" % count)
+
+## #323: a New League opens named My League Sim, so a fresh save never reads as
+## the English third tier the wizard offers. A save already called League 1 keeps
+## its name — nothing here renames what is on disk.
+func test_a_new_league_opens_on_my_league_sim() -> void:
+	assert_eq(LeagueStartSheet.SAVE_NAME, "My League Sim", "the wizard's default name moved")
+	assert_eq(str(LeagueScreen.new().wizard["name"]), LeagueStartSheet.SAVE_NAME,
+		"a fresh screen does not open on the wizard's default name")
+	var start := LeagueStartSheet.new()
+	var field := {}
+	for item in start.wizard_layout(Vector2(1280, 720),
+			{"name": "", "calendar_mode": "generated", "advance_mode": "fixture_days"}):
+		if str(item["id"]) == "name":
+			field = item
+	assert_true(not field.is_empty(), "the wizard laid out no name field")
+	assert_eq(str(field["value"]), "", "an empty field paints its placeholder state")
 
 ## #280: the load row reads as player copy, never as the save's stored token.
 func test_the_load_row_status_reads_as_player_copy() -> void:
