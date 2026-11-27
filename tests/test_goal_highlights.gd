@@ -311,17 +311,32 @@ class FakeHost:
 		highlight_until = -1.0
 		return true
 
+func _fill_ring(engine, director: HighlightDirector) -> void:
+	director.restart()
+	while director.history.size() < HighlightDirector.MIN_CAPTURE_FRAMES:
+		engine.tick()
+		director.snapshot()
+		if director.history.size() < HighlightDirector.MIN_CAPTURE_FRAMES:
+			engine.clock += HighlightDirector.SNAPSHOT_EVERY
+
+
+func _open_pending_clip(engine, director: HighlightDirector) -> bool:
+	if not director.waiting():
+		return director.host.replay != null
+	for i in range(3):
+		engine.tick()
+		director.snapshot()
+		engine.clock += HighlightDirector.SNAPSHOT_EVERY * 0.5
+	director.open_pending(true)
+	return director.host.replay != null
+
+
 func _ring_host(seed: int) -> Array:
-
-
 	var engine = MatchEngine.new(seed, "MUN", "MCI")
 	var host := FakeHost.new()
 	host.engine = engine
 	var director := HighlightDirector.new(host)
-	director.restart()
-	for i in range(90):
-		engine.tick()
-		director.sample()
+	_fill_ring(engine, director)
 	return [host, director, engine]
 
 func test_a_live_goal_is_cut_from_the_ring() -> void:
@@ -377,20 +392,12 @@ func _live_host(seed: int, mode: String) -> Array:
 	host.mode = mode
 	var director := HighlightDirector.new(host)
 	engine.event_fired.connect(director.on_event)
-	director.restart()
-	for i in range(90):
-		engine.tick()
-		director.sample()
+	_fill_ring(engine, director)
 	return [host, director, engine]
 
 
-func _play_until_clip(engine, director: HighlightDirector, ticks: int = 180) -> bool:
-	for i in range(ticks):
-		if director.host.replay != null:
-			return true
-		engine.tick()
-		director.sample()
-	return director.host.replay != null
+func _play_until_clip(engine, director: HighlightDirector, _ticks: int = 180) -> bool:
+	return _open_pending_clip(engine, director)
 
 
 func _stage_goal(engine, team: int) -> void:

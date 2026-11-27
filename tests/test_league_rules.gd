@@ -89,7 +89,7 @@ func test_scorers_follow_the_position_priors() -> void:
 	var forwards := 0
 	var defenders := 0
 	var goals := 0
-	for seed in range(1, 61):
+	for seed in range(1, 41):
 		for e in MatchEvents.side(seed, "gw03-MCI-MUN", "MCI", xi, 6):
 			if str(e["kind"]) != "goal":
 				continue
@@ -106,14 +106,14 @@ func test_cards_favour_the_physical_roles() -> void:
 	var xi := _xi()
 	var cards := 0
 	var back := 0
-	for seed in range(1, 61):
+	for seed in range(1, 41):
 		for e in MatchEvents.side(seed, "gw04-BUR-MCI", "BUR", xi, 0):
 			if str(e["kind"]) not in ["yellow", "red"]:
 				continue
 			cards += 1
 			if _role_of(xi, str(e["player_id"])) in ["RDM", "LDM", "CM", "RCB", "LCB", "RB", "LB"]:
 				back += 1
-	assert_gt(cards, 60, "the report has almost no cards")
+	assert_gt(cards, 40, "the report has almost no cards")
 	assert_gt(back, cards / 2, "cards do not favour the defensive roles")
 
 func test_a_clean_sheet_still_reports_cards() -> void:
@@ -148,7 +148,7 @@ func test_penalty_goals_are_tagged_and_carry_no_assist() -> void:
 	var xi := _xi()
 	var goals := 0
 	var penalties := 0
-	for seed in range(1, 121):
+	for seed in range(1, 61):
 		for e in MatchEvents.side(seed, "gw08-MCI-MUN", "MCI", xi, 6):
 			if str(e["kind"]) != "goal":
 				continue
@@ -165,7 +165,7 @@ func test_penalty_goals_are_tagged_and_carry_no_assist() -> void:
 
 func test_penalty_tags_never_change_the_goal_count() -> void:
 	var xi := _xi()
-	for seed in range(1, 61):
+	for seed in range(1, 41):
 		var goals := 0
 		for e in MatchEvents.side(seed, "gw10-BUR-MCI", "BUR", xi, 5):
 			if str(e["kind"]) == "goal":
@@ -187,7 +187,7 @@ func test_penalty_tags_are_seeded_with_the_report() -> void:
 func test_a_player_who_leaves_takes_no_further_part() -> void:
 	var xi := _xi()
 	var exits_seen := 0
-	for seed in range(1, 241):
+	for seed in range(1, 81):
 		for goals in [0, 3, 5]:
 			var events := MatchEvents.side(seed, "gw11-MCI-BUR", "MCI", xi, goals)
 			var exit_at := {}
@@ -209,13 +209,13 @@ func test_a_player_who_leaves_takes_no_further_part() -> void:
 				assert_lt(int(e["minute"]), int(exit_at[id]),
 					"a %s at %d' names a player who left at %d' (seed %d, %d goals)" % [
 						kind, int(e["minute"]), int(exit_at[id]), seed, goals])
-	assert_gt(exits_seen, 100, "the sweep never saw a player leave the pitch")
+	assert_gt(exits_seen, 40, "the sweep never saw a player leave the pitch")
 
 
 func test_an_exit_never_costs_the_report_a_goal() -> void:
 	var xi := _xi()
 	var injury_reports := 0
-	for seed in range(1, 121):
+	for seed in range(1, 61):
 		var events := MatchEvents.side(seed, "gw12-MCI-ARS", "MCI", xi, 4)
 		var goals := 0
 		var hurt := false

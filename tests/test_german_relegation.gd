@@ -254,14 +254,9 @@ func _links_league(page: Dictionary, competition_id: String) -> bool:
 	return false
 
 func test_a_tie_between_the_tiers_is_only_for_a_german_pair() -> void:
-	var alone := LeagueSeason.create("Only Bundesliga", "generated", "fixture_days", 1, ["BL"])
-	assert_not_null(alone, "the single-tier save was not created")
-	assert_false(LeagueRelegation.runs(alone.save.actives), "a lone tier plays a Relegation")
-	alone.close()
-	var english := LeagueSeason.create("English Only", "generated", "fixture_days", 2, ["PL"])
-	assert_not_null(english, "the English save was not created")
-	assert_false(LeagueRelegation.runs(english.save.actives), "England plays a German Relegation")
-	english.close()
+	assert_false(LeagueRelegation.runs(["BL"]), "a lone tier plays a Relegation")
+	assert_false(LeagueRelegation.runs(["PL"]), "England plays a German Relegation")
+	assert_true(LeagueRelegation.runs(["BL", "BL2"]), "a German pair skipped the Relegation")
 
 func test_the_tie_is_applied_only_once() -> void:
 	var current := _fresh()

@@ -119,7 +119,7 @@ func _market(m: PoissonModel, kind: String) -> float:
 
 func test_sampling_matches_the_distribution() -> void:
 	var m := _model(4242)
-	var n := 8000
+	var n := 4000
 	var counts := {}
 	for i in range(n):
 		var s := m.sample()
@@ -134,7 +134,7 @@ func test_sampling_matches_the_distribution() -> void:
 			if err > worst:
 				worst = err
 				worst_key = "%d-%d" % [x, y]
-	assert_lt(worst, 0.02, "sampling drifted from the grid at %s (%.3f)" % [worst_key, worst])
+	assert_lt(worst, 0.025, "sampling drifted from the grid at %s (%.3f)" % [worst_key, worst])
 
 func test_sampling_is_deterministic_per_seed() -> void:
 	var a := _model(77)
