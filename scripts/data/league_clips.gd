@@ -1,22 +1,13 @@
 class_name LeagueClips
 extends RefCounted
 
-## The goal clips of a season save: one playback pack per goal on every match
-## report, keyed by `(fixture_id, goal_index)` — the goal's ordinal in that
-## fixture's report, so a row and its clip always agree. Re-settling a fixture
-## replaces its clips instead of stacking a second set behind the first.
-##
-## Owned by `LeagueReport`, thin beside the event rows it belongs to: the
-## ledger of results and the store of pictures stay one concern each; both talk
-## to the same bound save.
 
 var save: LeagueSave = null
 
 func _init(owner: LeagueSave) -> void:
 	save = owner
 
-## Store a fixture's clips. `rows` carry the commentary line and the packed
-## frames, so reopening a save reads the same words beside the same pitch.
+
 func add(rows: Array) -> void:
 	save.ensure_open()
 	for row in rows:
@@ -49,8 +40,7 @@ func add(rows: Array) -> void:
 			],
 		)
 
-## Clip metadata for a fixture's report: everything the rows paint, without
-## inflating the blobs.
+
 func list(fixture_id: String) -> Array:
 	save.ensure_open()
 	return PLDatabase.rows(
@@ -60,11 +50,7 @@ func list(fixture_id: String) -> Array:
 		[fixture_id],
 	)
 
-## One stored clip, decoded. Empty when the row is missing.
-##
-## An auto-settled goal keeps its recipe, not its picture (see
-## `LeagueHighlights._generated_row`): the pack is drawn here, on the first
-## report that asks for it, and cached in the row so reopening it is one read.
+
 func pack(fixture_id: String, goal_index: int) -> Dictionary:
 	save.ensure_open()
 	var row := PLDatabase.row(
@@ -85,10 +71,7 @@ func pack(fixture_id: String, goal_index: int) -> Dictionary:
 	)
 	return GoalHighlight.unpack(drawn)
 
-## Draw one recipe row's pack from what the save itself remembers: the club ids
-## pick the XI, the fixture's own goal rows give the scoreline at that goal, and
-## the save seed plus the goal's index give the clip its seed back. Everything
-## here is what the settling pass would have used, so the clip is the same one.
+
 func _draw(row: Dictionary) -> PackedByteArray:
 	var fixture_id := str(row.get("fixture_id", ""))
 	var index := int(row.get("goal_index", 0))
@@ -118,8 +101,7 @@ func _draw(row: Dictionary) -> PackedByteArray:
 	var seed := GoalHighlight.seed_for(int(str(save.meta.get("seed", "0"))), fixture_id, index)
 	return GoalHighlight.pack(GoalHighlight.build(fields, sides, seed))
 
-## The scoreline a goal stood at, from the fixture's own goal rows in the order
-## the report prints them: the goal's own club's tally includes the goal.
+
 func _score_after(fixture_id: String, index: int, home: String, club: String) -> Array:
 	var score := [0, 0]
 	for row in PLDatabase.rows(
@@ -134,7 +116,7 @@ func _score_after(fixture_id: String, index: int, home: String, club: String) ->
 			break
 	return [int(score[0]), int(score[1])]
 
-## Drop a fixture's clips (a re-settled fixture rewrites its own report).
+
 func clear(fixture_id: String) -> void:
 	save.ensure_open()
 	PLDatabase.execute("DELETE FROM goal_highlight WHERE fixture_id = ?;", [fixture_id])

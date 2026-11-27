@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## The match HUD's show/hide (#158): the bands slide away while the score and the
-## match cards stay, one discreet door never moves, the choice survives a
-## relaunch, and a phone opens already following the ball. Driven through the
-## real main.gd, the same way the touch and input suites drive it.
 
 const SIZES := [
 	Vector2(1600, 900),
@@ -31,7 +27,7 @@ func before_all() -> void:
 	game.menus.close()
 	game.hud_layer.visible = true
 	game._on_fixture_confirmed("MUN", "MCI")
-	# #157: the briefing comes before the sim, so kick it off.
+
 	TestBriefing.kick(game)
 	game.paused = true
 	game.hud.queue_redraw()
@@ -44,8 +40,8 @@ func after_all() -> void:
 		game.queue_free()
 
 func after_each() -> void:
-	# Every test starts with the chrome shown and the match paused, whatever the
-	# one before it asked for, and with no pref file left behind.
+
+
 	if FileAccess.file_exists(PREFS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
 	if game == null:
@@ -78,7 +74,6 @@ func _draw() -> void:
 	game.hud.queue_redraw()
 	await get_tree().process_frame
 
-# ------------------------------------------------------------------ prefs ---
 
 func test_the_pref_defaults_to_shown_and_round_trips() -> void:
 	assert_true(Prefs.load_hud(PREFS), "a missing prefs file did not leave the HUD shown")
@@ -100,7 +95,6 @@ func test_a_wrong_value_type_falls_back_to_shown() -> void:
 	assert_eq(cfg.save(PREFS), OK, "could not write the type probe")
 	assert_true(Prefs.load_hud(PREFS), "a string HUD choice did not default to shown")
 
-# --------------------------------------------------------------- geometry ---
 
 func test_the_toggle_never_moves_and_stays_clear_of_every_band() -> void:
 	for vp in SIZES:
@@ -117,7 +111,6 @@ func test_the_toggle_never_moves_and_stays_clear_of_every_band() -> void:
 		assert_false(r.intersects(HudLayout.controls_rect(vp, true)), "the phone pill covers the bar at %s" % vp)
 		assert_true(Rect2(Vector2.ZERO, vp).encloses(r), "the phone pill left the viewport at %s" % vp)
 
-# ------------------------------------------------------------------ hiding ---
 
 func test_the_chrome_slides_away_and_leaves_the_score_and_the_toggle() -> void:
 	var vp: Vector2 = game.hud.design_vp()
@@ -158,7 +151,6 @@ func test_the_keyboard_and_the_pill_toggle_the_same_state() -> void:
 	_tap(HudLayout.hud_toggle_rect(game.hud.design_vp(), game.hud.touch).get_center())
 	assert_true(game.hud.hud_visible, "the pill did not bring the chrome back")
 
-# ---------------------------------------------------------------- settings ---
 
 func test_the_settings_switch_reads_and_writes_the_same_pref() -> void:
 	game.menus.open_settings()
@@ -195,18 +187,16 @@ func test_a_saved_choice_is_restored_without_animating() -> void:
 	assert_true(game.hud.hud_visible, "the saved shown choice was not restored")
 	assert_almost_eq(game.hud.slide, 1.0, 0.001, "the restore animated instead of starting shown")
 
-# ------------------------------------------------------------------ camera ---
 
 func test_a_phone_opens_in_follow_and_the_desktop_stays_wide() -> void:
 	assert_eq(MatchView.default_follow(), OS.has_feature("mobile"),
 		"the opening camera is not the platform rule")
 	assert_false(game.camera_follow, "a desktop match opened tracking the ball instead of wide")
 
-# ------------------------------------------------- hidden HUD's cards (#202) ---
 
 func test_the_match_hud_row_says_what_on_means() -> void:
-	# The switch's ON is chrome shown (#158), so its caption names that state
-	# (#202); a line about hiding belongs under an OFF switch.
+
+
 	var hint: String = SettingsScreen.HUD_ROW_HINT
 	assert_true(hint.begins_with("ON "), "the caption does not name the ON state: %s" % hint)
 	assert_true(hint.contains("SHOWS"), "the caption does not say the bars show: %s" % hint)

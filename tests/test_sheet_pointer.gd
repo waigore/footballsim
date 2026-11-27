@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## The pointer grammar the league and encyclopedia sheets share: a press that
-## lifts in place is a click, a press that travels is a scroll drag, and wheel,
-## pan and key events reach the sheet without ever firing a click.
 
 class FakeSheet extends RefCounted:
 	var mouse := Vector2(-1000, -1000)

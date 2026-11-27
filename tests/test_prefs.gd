@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Menu-music volume prefs: the only player preference shipped today. The file
-## lives in user:// so the launcher's --clear-cache resets it with the rest of
-## the product's local data.
 
 var P := TestScratch.file("test_prefs_issue36.cfg")
 

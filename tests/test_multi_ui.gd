@@ -1,12 +1,5 @@
 extends GdToolsTest
 
-## The multi-league chrome (#187/#189) without a renderer: the picker filters by
-## league and allows a cross-league friendly, the hub groups a mixed day, the
-## TABLES sheet tabs per league, STATS filters reports and leaders, and the
-## podium frames one block per competition.
-##
-## One PL+LL season covers the month-step and advance-mode chrome so coverage
-## does not rebuild two calendars for the same filters.
 
 var SAVE_DIR := TestScratch.dir("saves_test_multi_ui")
 var season: LeagueSeason = null
@@ -61,8 +54,8 @@ func test_the_picker_offers_the_german_tiers() -> void:
 		assert_eq(picker.ids.size(), int(pair[1]), "%s filter is not one league" % pair[0])
 		for id in picker.ids:
 			assert_true(str(id).begins_with(str(pair[2])), "%s is not a %s club" % [id, pair[0]])
-	# The chips keep their full names where they fit and fall back to codes on a
-	# phone, where four competitions no longer fit as words (#242).
+
+
 	assert_eq(LeagueChrome.competition_chip_label({"id": "BL", "short_name": "BUNDESLIGA"}, 150.0),
 		"BUNDESLIGA", "a wide chip lost its name")
 	assert_eq(LeagueChrome.competition_chip_label({"id": "BL", "short_name": "BUNDESLIGA"}, 66.0),
@@ -167,9 +160,7 @@ func test_stats_filters_reports_and_leaders() -> void:
 				"the assists chart printed another stat")
 	assert_eq(leaders, 1, "the leader chart row is missing")
 
-## #279: the picker's footer legend is derived from the chips it draws: key 1
-## names ALL and every league takes the key its own chip sits at, so the legend
-## can never advertise fewer keys than the sheet answers (or call key 1 a league).
+
 func test_the_picker_legend_names_every_league_key() -> void:
 	var rows := LeagueChrome.competition_rows()
 	assert_eq(rows.size(), 1 + PLCompetitions.active().size(), "the chip list lost a league")
@@ -234,8 +225,8 @@ func test_the_stats_doors_write_their_filter() -> void:
 	assert_true(LeagueStatsActions.press(screen, "statsteam"), "the team field press was not handled")
 	assert_false(LeagueStatsActions.press(screen, "back"), "a foreign door was swallowed")
 	assert_eq(screen.refreshes, 3, "a filter door did not repaint")
-	# A month step reads the clock only while a season is open; with none it still
-	# answers the press without inventing a date.
+
+
 	assert_true(LeagueStatsActions.press(screen, "statsmonth:1"), "the month door was not handled")
 	assert_eq(str(screen.stats_filter["month"]), "", "a month was invented with no season")
 
@@ -264,7 +255,7 @@ func test_the_wizard_league_toggle_keeps_one_on() -> void:
 
 func test_the_system_sheet_can_switch_the_advance_mode() -> void:
 	assert_not_null(season, "the shared season was not created")
-	# Leave the shared save on fixture_days so later suites (or a re-run) start clean.
+
 	if season.save.advance_mode() != "fixture_days":
 		season.set_advance_mode("fixture_days")
 	var screen := FakeSys.new()

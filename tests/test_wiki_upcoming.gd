@@ -1,10 +1,5 @@
 extends GdToolsTest
 
-## The club page reads the season ahead (DR-20261124-09): a club's results are
-## only the games already played, and the games still to come are their own
-## reading — soonest first, from the same ledger (the open season or the
-## snapshot), each row pointing at the opponent. One season is shared by the
-## suite so the season work is paid once; the last test walks it to the end.
 
 var SAVE_DIR := TestScratch.dir("saves_test_wiki_upcoming")
 var CACHE_DIR := TestScratch.dir("cache_test_wiki_upcoming")
@@ -21,14 +16,12 @@ func before_all() -> void:
 	PLRepository.shared().invalidate()
 	season = LeagueSeason.create("Upcoming Season", "generated", "fixture_days", SEED)
 	assert_not_null(season, "the season was not created")
-	# Every reading above needs a season in play, so only the first matchday is
-	# settled here; the last test walks the rest to the end.
+
+
 	day_one = season.record.fixtures.all(1)
 	season.advance()
 
-## The same fixture three matchdays on: "a run of fixtures ahead" is a reading
-## that starts once the season has a run behind it, and the settled matchdays
-## are shared by the whole suite rather than re-simulated per test.
+
 func _a_few_matchdays_on() -> void:
 	if int(season.state().get("matchday", 1)) >= 4:
 		return
@@ -44,7 +37,6 @@ func after_all() -> void:
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
 
-# ---------------------------------------------------------------- season ---
 
 func test_the_club_page_shows_the_season_s_results_and_what_is_next() -> void:
 	var club_id := str(day_one[0]["home_club_id"])
@@ -56,7 +48,7 @@ func test_the_club_page_shows_the_season_s_results_and_what_is_next() -> void:
 	var next := _rows_below(page, "NEXT FIXTURES  ·  SEASON")
 	assert_gte(next.size(), 1, "the season ahead is empty after one round")
 	assert_lte(next.size(), 6, "the page lists more fixtures than it asked for")
-	# The result of the day is a result, never a fixture ahead.
+
 	var played_on := FixtureCalendar.day_label(str(day_one[0]["kickoff"]))
 	for row in next:
 		assert_ne(str(row["cells"][0]), played_on, "the played day is listed as still to come")
@@ -88,7 +80,6 @@ func test_each_fixture_ahead_opens_the_opponent() -> void:
 		assert_ne(str(target["id"]), club_id, "a fixture ahead opens the club it belongs to")
 		assert_true(WikiModel.has_page(str(target["page"]), str(target["id"])), "a fixture ahead is a dead link")
 
-# -------------------------------------------------------------- snapshot ---
 
 func test_without_a_season_the_page_reads_the_snapshot_ahead() -> void:
 	season.close()
@@ -100,18 +91,17 @@ func test_without_a_season_the_page_reads_the_snapshot_ahead() -> void:
 	assert_gte(next.size(), 5, "the snapshot's remaining schedule is short")
 	var results := _rows_below(page, "RESULTS  ·  SNAPSHOT")
 	assert_gte(results.size(), 5, "the snapshot's results block is short")
-	# The two readings never share a row shape: a result carries its score, a
-	# fixture ahead carries its two clubs and no gameweek (the snapshot has none).
+
+
 	for row in results:
 		assert_true(str(row["cells"][1]).contains(" – "), "a result row lost its score")
 	for row in next:
 		assert_eq((row["cells"] as Array).size(), 2, "the snapshot's fixture ahead claims a gameweek it has not got")
 		assert_false(str(row["cells"][1]).contains(" – "), "a fixture ahead carries a score")
-	# Bind the season again so the shared fixture stays valid for the walk.
+
 	season = LeagueSeason.open(LeagueSave.current.slug if LeagueSave.current != null else season.save.slug)
 	assert_not_null(season, "the save could not be reopened")
 
-# ------------------------------------------------------------------ data ---
 
 func test_results_and_fixtures_ahead_never_overlap() -> void:
 	var played := PLRepository.shared().fixtures("MUN", 100)
@@ -127,12 +117,7 @@ func test_results_and_fixtures_ahead_never_overlap() -> void:
 		assert_false(ids.has(str(row["id"])), "a fixture is both played and still to come")
 	assert_eq(played.size() + ahead.size(), 38, "a club plays 38 games in the snapshot")
 
-# ------------------------------------------------------------------ end ---
 
-## Declared last on purpose: it finishes the shared season, so every reading
-## above has run on a season still in play. The remaining fixtures are settled
-## by hand (same shape the clock would leave) — no need to sim-walk ~30 Autodays
-## just to prove the encyclopedia reading goes empty.
 func test_a_finished_season_says_nothing_is_left() -> void:
 	var club_id := str(day_one[0]["home_club_id"])
 	_finish_by_hand(season)
@@ -141,8 +126,7 @@ func test_a_finished_season_says_nothing_is_left() -> void:
 	var text := _flatten(WikiModel.page(WikiModel.TEAM, club_id))
 	assert_true(text.contains("NO FIXTURES LEFT  ·  THE SEASON IS COMPLETE"), "a finished season does not say so")
 
-## Play out every unplayed fixture without running the match model: enough for
-## the club page to see a complete season and an empty fixtures-ahead list.
+
 func _finish_by_hand(s: LeagueSeason) -> void:
 	for row in PLDatabase.rows(
 			"SELECT id, home_club_id, away_club_id FROM league_fixture WHERE status != 'played';"):
@@ -156,10 +140,7 @@ func _finish_by_hand(s: LeagueSeason) -> void:
 	s.record.standings.recompute()
 	s.save.set_status("complete")
 
-# --------------------------------------------------------------- helpers ---
 
-## The table laid directly under one section heading; an empty answer when the
-## heading is absent or nothing follows it.
 func _rows_below(page: Dictionary, section: String) -> Array:
 	var seen := false
 	for block in page["blocks"]:

@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Laws slice: first-half added time, handball restarts, injuries and the
-## official's own state. Engine-level only, so every case runs headless and
-## fast; the full-match behaviour is checked by the chance-creation tool.
 
 func _outfield(eng, t: int):
 	for p in eng.players:
@@ -23,7 +20,6 @@ func _has_event(eng, kind: String) -> bool:
 			return true
 	return false
 
-# ------------------------------------------------------------- added time --
 
 func test_first_half_plays_added_time() -> void:
 	var eng := MatchEngine.new(11)
@@ -43,7 +39,6 @@ func test_first_half_ends_after_added_time() -> void:
 	eng.tick()
 	assert_eq(eng.phase, "half_time", "the half did not end after its added time")
 
-# --------------------------------------------------------------- handball --
 
 func test_handball_outside_the_box_is_a_free_kick() -> void:
 	var eng := MatchEngine.new(13)
@@ -67,7 +62,6 @@ func test_handball_inside_the_box_is_a_penalty() -> void:
 	assert_eq(str(eng.restart["type"]), "penalty", "handball in the box should be a penalty")
 	assert_eq(int(eng.restart["team"]), 1, "the penalty went to the wrong side")
 
-# --------------------------------------------------------------- injuries --
 
 func test_injury_costs_a_change_and_is_replaced() -> void:
 	var eng := MatchEngine.new(15)
@@ -96,7 +90,6 @@ func test_injury_without_changes_leaves_ten() -> void:
 	assert_true(p.sent_off, "an injured player stayed on with no change available")
 	assert_eq(_on_pitch(eng, 0), before - 1, "the side did not go down to ten")
 
-# --------------------------------------------------------------- official --
 
 func test_referee_stays_on_the_pitch_and_whistles() -> void:
 	var eng := MatchEngine.new(17)

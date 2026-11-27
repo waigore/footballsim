@@ -1,19 +1,10 @@
 class_name PreMatchModel
 extends RefCounted
 
-## Everything a pre-match briefing draws, in one dictionary (#157): the two
-## expected elevens, who is out and for how long, a manager line per side, the
-## desk blurb, and the labels the doors carry.
-##
-## The model reads the same season the match will be played from — the strongest
-## available XI and the absence list come from `SeasonAvailability`, so the
-## briefing cannot promise a lineup the sim will not field. Without a season
-## (single-match mode) it reads the snapshot and reports no absences.
 
-## Form is read over this many played fixtures.
 const FORM_LEN := 5
 
-## `fixture` is a `league_fixture` row, or `{}` for a single match.
+
 static func build(home_id: String, away_id: String, fixture: Dictionary, season: LeagueSeason) -> Dictionary:
 	var home := TeamData.get_team(home_id)
 	var away := TeamData.get_team(away_id)
@@ -33,8 +24,8 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 		"matchday": billing.matchday,
 		"home_position": home_pos,
 		"away_position": away_pos,
-		# One competition per match (#209): the blurb, the caption and the
-		# broadcast all read it, so a friendly never borrows a league's round.
+
+
 		"friendly": billing.friendly,
 		"competition": billing.full_name,
 	}
@@ -69,8 +60,7 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 		"auto_seconds": 10.0,
 	}
 
-## The armband goes to the best-rated starter: the snapshot carries no captain,
-## so the eleven's own best player wears it (DR-20261125-13).
+
 static func _captain(xi: Array) -> String:
 	var best := ""
 	var best_ovr := -1
@@ -80,7 +70,7 @@ static func _captain(xi: Array) -> String:
 			best = str(p.get("id", ""))
 	return best
 
-## Club id -> table position, read once per briefing.
+
 static func _positions(season: LeagueSeason) -> Dictionary:
 	var out := {}
 	if season == null or season.record == null:
@@ -89,7 +79,7 @@ static func _positions(season: LeagueSeason) -> Dictionary:
 		out[str(row["club_id"])] = int(row["position"])
 	return out
 
-## The club's last five results, oldest first, as a W/D/L string.
+
 static func _form(season: LeagueSeason, club_id: String) -> String:
 	if season == null or season.record == null:
 		return ""
@@ -103,8 +93,7 @@ static func _form(season: LeagueSeason, club_id: String) -> String:
 		out += "W" if mine > theirs else ("D" if mine == theirs else "L")
 	return out
 
-## A fixture's own seed: its id when it has one, otherwise the pairing. The same
-## game always reads the same quotes and blurb.
+
 static func _seed(home_id: String, away_id: String, fixture: Dictionary) -> int:
 	var text := str(fixture.get("id", "")) if not fixture.is_empty() else home_id + "v" + away_id
 	var h := 17

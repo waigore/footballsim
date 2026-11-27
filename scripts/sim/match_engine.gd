@@ -2,11 +2,6 @@ extends "res://scripts/sim/match_engine_decider.gd"
 
 class_name MatchEngine
 
-## A deterministic, full-Laws football match engine. The class is split across a
-## chain of files (core → pitch → presentation → duels → actions → play → rules
-## → clock); this leaf is the dead-ball lane. A restart's judgement (the taker's
-## picture, his reading of it, and how long he holds play up) lives in
-## MatchRestarts; this file places bodies, picks the taker and takes the kick.
 
 func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) -> void:
 	if phase == "goal":
@@ -63,7 +58,7 @@ func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) 
 		taker.target = pos + (pos - own_goal_pos(team)).normalized() * 0.9
 		taker.speed_scale = 1.0
 		ball.last_touch_team = team
-	# Push opponents the required distance away for a free kick.
+
 	if kind in ["free_kick", "corner"]:
 		var min_d = 9.15
 		for q in players:
@@ -79,12 +74,11 @@ func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) 
 		_arrange_penalty(team, taker, pos)
 	_vlog("RESTART %s team %s at (%.1f,%.1f)" % [kind, teams[team]["id"], pos.x, pos.y])
 	_emit(kind, _restart_text(kind, team, taker), team, taker)
-	# A dead ball is the manager's legal moment to change a player.
+
 	if manager != null:
 		manager.on_stoppage(kind, team)
 
-## Before a penalty only the two keepers and the taker stay near the box:
-## everyone else waits outside it, behind the ball.
+
 func _arrange_penalty(team: int, taker, pos: Vector2) -> void:
 	var dir: int = teams[team]["dir"]
 	for q in players:
@@ -131,7 +125,7 @@ func _update_restart(dt: float) -> void:
 		if restart["type"] == "penalty":
 			taker.target = restart["pos"] + Vector2(-teams[taker.team]["dir"] * 2.2, 0)
 			taker.pos = taker.target
-	# attackers arrange for corners
+
 	if restart["type"] == "corner":
 		_arrange_corner(restart["team"], restart["pos"])
 	if restart_timer <= 0.0:
@@ -141,8 +135,8 @@ func _update_restart(dt: float) -> void:
 			ready = pic.x
 			MatchRestarts.note_picture(restart, pic)
 		if MatchRestarts.should_wait(self, restart, ready, taker):
-			# Hold the restart: re-read the picture in short steps so the taker
-			# kicks as soon as his side is set, not on a fixed delay.
+
+
 			restart["wait"] = float(restart.get("wait", 0.0)) + MatchRestarts.WAIT_STEP
 			restart_timer = MatchRestarts.WAIT_STEP
 			if not bool(restart.get("called_wait", false)):
@@ -247,8 +241,8 @@ func _take_penalty(taker, team: int) -> void:
 	if not scored:
 		aim_y = side * rng.randf_range(3.7, 4.6)
 	shoot_ball(taker, aim_y, aim_z, 0.92, "penalty")
-	# A scored penalty is a converted chance like any other: the line cannot get
-	# a second dice at it. The stats record the probability it was taken with.
+
+
 	ball.planned_goal = scored
 	stats[team]["xg"] += conversion
 	stats[team]["shots"] += 1
@@ -289,12 +283,7 @@ func _best_short_outlet(team: int, taker):
 			best = p
 	return best
 
-## A keeper's long ball: his own boot carries it. The punt travels as far as his
-## KICKING rating allows and lands as truly as it, so a weak kicker's ball is
-## short and honest instead of identical to the league's best (`MatchKicking`,
-## wiki Open play: "GK distribution"). At the league's mean boot this is exactly
-## the ball the engine always struck, and the draws are skipped so the RNG
-## stream does not move for a keeper who has no scatter.
+
 func keeper_clear(p: Player, aim: Vector2) -> void:
 	var s: float = MatchKicking.scatter(p.gk)
 	var landing: Vector2 = aim
@@ -308,7 +297,7 @@ func _clear_long(taker, team: int) -> void:
 	var aim = Vector2(L * 0.5 + teams[team]["dir"] * 12.0, W * 0.5 + rng.randf_range(-16.0, 16.0))
 	keeper_clear(taker, aim)
 
-## Where the corner is aimed: the live set-piece routine decides near or far.
+
 func _corner_aim(team: int) -> float:
 	var routine := "far_post"
 	if manager != null:

@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## The follow door the encyclopedia carries on a team page while a league season
-## is open (#104): it names the club, says whether the season follows it, sits
-## clear of BACK and ✕, and hands the club id to the host — which owns the rule —
-## on a press.
 
 var SAVE_DIR := TestScratch.dir("saves_test_wiki_interest")
 var CACHE_DIR := TestScratch.dir("cache_test_wiki_interest")
@@ -48,7 +44,6 @@ func _clean() -> void:
 func _team_page() -> Dictionary:
 	return {"page": WikiModel.TEAM, "id": CLUB}
 
-# ------------------------------------------------------------------ target ---
 
 func test_only_a_team_page_in_a_season_carries_the_door() -> void:
 	assert_eq(WikiInterest.target(_team_page(), season), CLUB, "the team page has no door")
@@ -87,11 +82,10 @@ func test_the_door_carries_the_club_and_its_state() -> void:
 		Rect2(600.0, 10.0, 44.0, 34.0)).is_empty(), "the league page produced a door")
 	season.set_interest(CLUB, false)
 
-# ------------------------------------------------------------------ press ---
 
 func test_a_press_names_the_club_to_the_host() -> void:
-	# A GDScript lambda captures by value, so the listener is made per press:
-	# the box it appends to is this test's own.
+
+
 	var heard: Array = []
 	wiki.interest_toggled.connect(func(club_id: String) -> void: heard.append(club_id))
 	wiki.open(WikiModel.TEAM, CLUB)

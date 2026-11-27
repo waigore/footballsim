@@ -1,10 +1,5 @@
 extends GdToolsTest
 
-## The encyclopedia while a season is open (DR-20261125-08): every Footballsim
-## reading on the league, club and player pages is the save's own ledger, the
-## snapshot keeps its own SNAPSHOT sections, and closing the season puts the
-## pages back the way they were. One played matchday is shared by the suite so
-## the season work is paid once.
 
 var SAVE_DIR := TestScratch.dir("saves_test_wiki_season")
 var CACHE_DIR := TestScratch.dir("cache_test_wiki_season")
@@ -94,14 +89,11 @@ func test_closing_the_season_returns_the_snapshot_pages() -> void:
 	assert_true(text.contains("LATEST RESULTS  ·  SNAPSHOT"), "the league page did not fall back to the snapshot")
 	assert_false(text.contains("LATEST RESULTS  ·  SEASON"), "the league page kept the closed season's ledger")
 	assert_eq(_kv_value(WikiModel.page(WikiModel.TEAM, "MUN"), "PLAYED"), "11", "the club page did not fall back to the snapshot")
-	# Bind the season again so the shared fixture stays valid for any later read.
+
 	season = LeagueSeason.open(LeagueSave.current.slug if LeagueSave.current != null else season.save.slug)
 	assert_not_null(season, "the save could not be reopened")
 
-# ------------------------------------------------------------------ helpers ---
 
-## The table laid directly under one section heading; an empty answer when the
-## heading is absent or nothing follows it.
 func _rows_below(page: Dictionary, section: String) -> Array:
 	var seen := false
 	for block in page["blocks"]:
@@ -117,8 +109,7 @@ func _rows_below(page: Dictionary, section: String) -> Array:
 			return []
 	return []
 
-## The value of a label in the page's headline kv block, or in its last one (the
-## player's Footballsim line); "" when the label is absent.
+
 func _kv_value(page: Dictionary, label: String, from_last: bool = false) -> String:
 	var blocks: Array = page["blocks"].duplicate()
 	if from_last:

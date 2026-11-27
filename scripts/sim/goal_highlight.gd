@@ -1,49 +1,20 @@
 class_name GoalHighlight
 extends RefCounted
 
-## One goal's broadcast clip: a short playback-only pack built when a fixture is
-## settled, stored in the league save, and played from the match report.
-##
-## The pack is not an engine snapshot. A match report only ever needs to *show*
-## a goal, so each frame carries the ball and the twenty-two players' ground
-## positions, the clock, the score and whether the goal has landed — no
-## attributes, stats, tactics or manager state. That keeps a clip a few
-## kilobytes against the megabytes a full snapshot ring would cost for a season.
-##
-## The two paths behind a pack differ in where the picture came from. A watched
-## goal replays the live match's own snapshots (`from_snapshots`). An auto goal
-## never happened, so `GoalVignette` simulates a bounded physics chance that is
-## constrained to end with the report's scorer and assist: bodies accelerate, the
-## ball is passed and struck with the engine's own gravity, drag and swerve.
-## Either way the pack shape — and the seed folded from the save, the fixture and
-## the goal's index — is the same, so a report reads a clip without knowing which
-## path made it, and the same save always replays the same picture.
-##
-## Geometry is world space with the home side attacking +x, exactly like the
-## engine, so the viewer can bind the frames straight onto a real squad.
 
 const CODEC := "goal-highlight"
 const VERSION := 1
-## Playback poses per match second. The viewer interpolates between them.
+
 const FPS := 12
 
-# ------------------------------------------------------------------ seed ---
 
-## Deterministic clip seed: the save's own seed, the fixture and the goal's
-## ordinal inside that fixture. Reopening a save and re-settling a fixture
-## therefore reproduces the same clip and the same commentary line.
 static func seed_for(save_seed: int, fixture_id: String, goal_index: int) -> int:
 	var h := 0
 	for i in range(fixture_id.length()):
 		h = int((h * 31 + fixture_id.unicode_at(i)) % 2147483647)
 	return int((save_seed % 2147483647) * 7 + h * 13 + goal_index * 977 + 1009) % 2147483647
 
-# --------------------------------------------------------------- commentary ---
 
-## The one line a report shows for a goal. It reuses the broadcast voice but is
-## drawn from a fresh, seeded RNG so it never disturbs the season's own stream.
-## The scoreline always reads from the *scoring* club's side, exactly like the
-## live engine's goal line, so an away goal never reads as a lead for the hosts.
 static func commentary(goal: Dictionary, seed: int) -> String:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
@@ -56,12 +27,7 @@ static func commentary(goal: Dictionary, seed: int) -> String:
 		str(goal.get("opp_short", "")), maxi(goals_for - 1, 0), goals_against,
 		int(goal.get("minute", 0)), bool(goal.get("penalty", false)))
 
-# ------------------------------------------------------------------ build ---
 
-## Playback pack for one goal. `sides` maps "home"/"away" to the XI that played,
-## in the order the engine fields them, so the viewer can bind frames by key.
-## The poses come from the physics vignette (`GoalVignette`), which is seeded to
-## finish with this goal's own scorer, assist and minute.
 static func build(goal: Dictionary, sides: Dictionary, seed: int) -> Dictionary:
 	var home := str(goal.get("home", ""))
 	var away := str(goal.get("away", ""))
@@ -82,11 +48,7 @@ static func build(goal: Dictionary, sides: Dictionary, seed: int) -> Dictionary:
 		"keys": shot.get("keys", []), "frames": shot.get("frames", []),
 	}
 
-# ---------------------------------------------------------------- capture ---
 
-## A pack built from the live match's own snapshot ring, so a watched goal
-## replays the picture that actually happened. `snaps` are engine snapshots
-## (`MatchEngine.to_dict()`); only positions, clock and score are kept.
 static func from_snapshots(snaps: Array, meta: Dictionary) -> Dictionary:
 	if snaps.is_empty():
 		return {}
@@ -127,9 +89,7 @@ static func from_snapshots(snaps: Array, meta: Dictionary) -> Dictionary:
 		"keys": keys, "frames": frames,
 	}
 
-# ------------------------------------------------------------------ codec ---
-## Wire format: a four-byte little-endian length, then the gzipped JSON pack.
-## The length rides in the blob so the row is readable without the schema.
+
 static func pack(clip: Dictionary) -> PackedByteArray:
 	var raw := JSON.stringify(clip).to_utf8_buffer()
 	var body := raw.compress(FileAccess.COMPRESSION_GZIP)
@@ -139,8 +99,7 @@ static func pack(clip: Dictionary) -> PackedByteArray:
 	out.append_array(body)
 	return out
 
-## Decode a stored pack. Empty on a codec or version the viewer does not know,
-## so an old save offers no ▶ instead of playing a broken clip.
+
 static func unpack(bytes: PackedByteArray) -> Dictionary:
 	if bytes.size() < 5:
 		return {}
@@ -157,8 +116,7 @@ static func unpack(bytes: PackedByteArray) -> Dictionary:
 		return {}
 	return parsed
 
-## Position of one player in a frame, in world space, honouring the frame's
-## flat [x0, y0, x1, y1, ...] layout.
+
 static func player_at(frame: Dictionary, index: int) -> Vector2:
 	var flat: Array = frame.get("p", [])
 	var at := index * 2
@@ -166,15 +124,14 @@ static func player_at(frame: Dictionary, index: int) -> Vector2:
 		return Vector2.ZERO
 	return Vector2(float(flat[at]), float(flat[at + 1]))
 
-## Ball position of a frame in world space.
+
 static func ball_at(frame: Dictionary) -> Vector3:
 	var b: Array = frame.get("b", [0.0, 0.0, 0.0])
 	if b.size() < 3:
 		return Vector3.ZERO
 	return Vector3(float(b[0]), float(b[1]), float(b[2]))
 
-## Interpolated pose between two frames: the viewer plays at screen rate while
-## the clip stores twelve poses a second.
+
 static func blend(a: Dictionary, b: Dictionary, alpha: float) -> Dictionary:
 	var k := clampf(alpha, 0.0, 1.0)
 	var ba := ball_at(a)

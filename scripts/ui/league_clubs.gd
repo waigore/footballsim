@@ -1,8 +1,6 @@
 class_name LeagueClubs
 extends RefCounted
 
-## Club rows for the Teams of Interest list and its search. Reads the save the
-## game is bound to, so the list always names clubs in the league being simmed.
 
 static func rows(ids: Array) -> Array:
 	var out: Array = []
@@ -16,8 +14,7 @@ static func rows(ids: Array) -> Array:
 		})
 	return out
 
-## Autocomplete over the league's clubs. Clubs already on the shortlist never
-## come back as an "add", and five suggestions is what fits above the list.
+
 static func search(query: String, exclude: Array) -> Array:
 	var q := query.strip_edges().to_lower()
 	if q == "":

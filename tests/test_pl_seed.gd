@@ -1,7 +1,5 @@
 extends GdToolsTest
 
-## The shipped seed and the cache that carries it: version stamping, flush on a
-## version bump, and the repository shapes the engine and the encyclopedia read.
 
 var CACHE_DIR := TestScratch.dir("cache_test_seed")
 
@@ -52,8 +50,7 @@ func test_repository_serves_the_engine_shape() -> void:
 		assert_has(team["style"], "possession", "%s has no style profile" % id)
 		assert_true(TeamData.FORMATIONS.has(str(team["formation"])), "%s prefers an unknown formation" % id)
 
-## The seed carries more than one competition, and a German club's ids never
-## collide with an English, Spanish or second-tier one.
+
 func test_the_seed_ships_the_multi_competition_set() -> void:
 	var comps := PLCompetitions.active_ids()
 	assert_true(comps.has("PL"), "the seed has no Premier League")
@@ -68,8 +65,8 @@ func test_the_seed_ships_the_multi_competition_set() -> void:
 		for id in german:
 			assert_true(str(id).begins_with(cid + "-"),
 				"%s does not carry its competition namespace" % id)
-	# The English pyramid below the Premier League (#259): four 24-club tiers,
-	# each id namespaced so a refresh can never collide one with another.
+
+
 	for cid in ["CH", "L1", "L2", "NL"]:
 		assert_true(comps.has(cid), "the seed has no %s" % cid)
 		var tier := TeamData.team_ids(cid)
@@ -84,8 +81,7 @@ func test_the_seed_ships_the_multi_competition_set() -> void:
 		unique[str(id)] = true
 	assert_eq(unique.size(), all_ids.size(), "club ids collide across competitions")
 
-## The snapshot is one date in a season, not the season's end: every club has
-## played the same number of games and the table is ordered by points.
+
 func test_league_table_is_the_snapshot_reading() -> void:
 	var rows := PLRepository.shared().table("PL")
 	assert_eq(rows.size(), 20, "the table is short")
@@ -103,8 +99,7 @@ func test_league_table_is_the_snapshot_reading() -> void:
 	sorted_points.reverse()
 	assert_eq(points, sorted_points, "the table is not sorted by points")
 
-## The shipped calendar is the whole 2026-27 season; results lag the fixture
-## list because the snapshot is taken mid-season.
+
 func test_fixtures_cover_the_season() -> void:
 	var all := PLDatabase.rows("SELECT * FROM fixture WHERE competition_id = 'PL';")
 	assert_eq(all.size(), 380, "a twenty-club double round robin is 380 fixtures")

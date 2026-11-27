@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Kit selection: no fixture may send both sides out in the same-looking shirt.
-## Pair checks call Kits.assign on cached team data — a MatchEngine per pair
-## would rebuild squads ~30k times under coverage.
 
 var club_ids: Array = []
 var club_data: Dictionary = {}
@@ -12,7 +9,7 @@ func before_all() -> void:
 	for id in club_ids:
 		club_data[str(id)] = TeamData.get_team(str(id))
 
-## Minimal sides array Kits.assign mutates (same shape MatchEngine hands it).
+
 func _sides(home_id: String, away_id: String) -> Array:
 	return [
 		{"id": home_id, "data": club_data[home_id]},

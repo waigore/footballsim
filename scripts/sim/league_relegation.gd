@@ -1,31 +1,15 @@
 class_name LeagueRelegation
 extends RefCounted
 
-## The Relegation playoff between the two German tiers (#240).
-##
-## The Bundesliga's 16th and the 2. Bundesliga's 3rd play two legs: the first at
-## the top-flight club's ground, the second at the second tier's. There are no
-## away goals, so a level aggregate is settled by extra time and penalties — the
-## decider lane the match engine grew for this tie (DR-20261126-12). The winner
-## belongs to the Bundesliga, the loser to the 2. Bundesliga.
-##
-## Both legs are settled by the season's own Poisson model with the season's own
-## seed, so a save settles the same tie the same way every time. The swap itself
-## is `LeaguePromotion`, which reads this result and rewrites the save's
-## membership.
 
-## The two German tiers, as shipped.
 const TOP := "BL"
 const SECOND := "BL2"
 
-## Whether this save runs a pair that can produce a Relegation: both tiers
-## active, which is what makes the 16th and 3rd mean something.
+
 static func runs(actives: Array) -> bool:
 	return actives.has(TOP) and actives.has(SECOND)
 
-## The tie for a finished season, or {} when there is nothing to settle.
-## `top_position` and `second_position` are the places the regulations name, so
-## a save that moved 16th or 3rd around still plays the right clubs.
+
 static func build(season: LeagueSeason) -> Dictionary:
 	if season == null or season.save == null or season.record == null:
 		return {}
@@ -79,7 +63,7 @@ static func build(season: LeagueSeason) -> Dictionary:
 		"text": _text(aggregate, decided_by, winner, top_club, second_club),
 	}
 
-## The two legs, in order: the top-flight club at home first.
+
 static func _legs(season: LeagueSeason, seed: int, top_club: String, second_club: String) -> Array:
 	var out: Array = []
 	var pairings := [[top_club, second_club], [second_club, top_club]]
@@ -107,7 +91,7 @@ static func _aggregate(legs: Array, top_club: String) -> Dictionary:
 			second += int(leg["home_goals"])
 	return {"top": top, "second": second}
 
-## A level aggregate is settled on penalties, by the shared shootout lane.
+
 static func _shootout(seed: int, top_club: String, second_club: String) -> Vector2i:
 	return LeagueShootout.settle(seed, top_club, second_club)
 

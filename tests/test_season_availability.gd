@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Season availability (#155, #156): injuries carry between fixtures with a
-## hidden day count and a month tick, cards become real bans, and the strongest
-## XI never names a player the season has ruled out.
 
 var SAVE_DIR := TestScratch.dir("saves_test_availability")
 var CACHE_DIR := TestScratch.dir("cache_test_availability")
@@ -31,7 +28,7 @@ func _clean() -> void:
 	TestScratch.clear(SAVE_DIR)
 	TestScratch.clear(CACHE_DIR)
 
-## Every test starts from a season with nobody out and nobody booked.
+
 func before_each() -> void:
 	_wipe()
 
@@ -47,7 +44,6 @@ func _first_player(club_id: String) -> Dictionary:
 	var team := TeamData.get_team(club_id)
 	return team["starters"][0]
 
-# ------------------------------------------------------------------ injuries ---
 
 func test_a_roll_grades_the_injury_and_hides_the_days() -> void:
 	var rng := RandomNumberGenerator.new()
@@ -101,15 +97,15 @@ func test_a_month_tick_heals_by_the_days_that_passed() -> void:
 	var player := _first_player(club)
 	var id := str(player["id"])
 	SeasonAvailability.injure(id, club, "2026-08-15", "ligament", 60, 1.0)
-	# Sixteen days later, the same month: nothing recalculates.
+
 	assert_eq(SeasonAvailability.month_tick("2026-08-15", "2026-08-31"), 0,
 		"a mid-month move healed a body")
 	assert_eq(int(SeasonAvailability.rows(club)[0]["days_left"]), 60, "a mid-month move moved the days")
-	# Across the boundary the elapsed days come off.
+
 	SeasonAvailability.month_tick("2026-08-31", "2026-09-30")
 	assert_eq(int(SeasonAvailability.rows(club)[0]["days_left"]), 30,
 		"the month tick did not take the elapsed days")
-	# A knock heals out on the next boundary.
+
 	SeasonAvailability.injure(id, club, "2026-10-01", "knock", 6, 1.0)
 	SeasonAvailability.month_tick("2026-10-31", "2026-11-30")
 	assert_eq(SeasonAvailability.rows(club).size(), 0, "a healed body stayed out")
@@ -127,7 +123,6 @@ func test_the_recovery_rate_bends_the_month_without_jumping() -> void:
 	assert_eq(int(SeasonAvailability.rows(club)[0]["days_left"]), 59,
 		"a slow healer healed as fast as the calendar")
 
-# --------------------------------------------------------------- suspensions ---
 
 func _book(club: String, player_id: String, yellow: int, red: int, matchday: int) -> void:
 	season.record.report.add_player_lines([{
@@ -151,10 +146,10 @@ func test_five_yellows_ban_one_match_and_the_ban_is_served() -> void:
 	assert_eq(absences.size(), 1, "five yellows did not ban the player")
 	assert_eq(str((absences[0] as Dictionary)["kind"]), "suspension", "the ban is not a suspension")
 	assert_eq(str((absences[0] as Dictionary)["label"]), "1 MATCH", "the ban length is wrong")
-	# The club's next fixture serves it.
+
 	SeasonAvailability.apply_fixture(2, "2026-08-22", [{"club_id": club, "rows": [], "events": []}], SEED)
 	assert_eq(SeasonAvailability.absences(club).size(), 0, "the ban was not served")
-	# The mark stays spent: another five cards do not pay twice.
+
 	_book(club, id, 1, 0, 2)
 	assert_eq(SeasonAvailability.absences(club).size(), 0, "five cards paid twice")
 
@@ -194,7 +189,6 @@ func test_a_threshold_past_its_cut_off_does_not_ban() -> void:
 	assert_eq(SeasonAvailability.absences(club).size(), 0,
 		"five cards after the nineteenth game still banned")
 
-# ------------------------------------------------------------------ lineups ---
 
 func test_the_strongest_xi_skips_the_ruled_out() -> void:
 	var club := _first_club()
@@ -206,7 +200,7 @@ func test_the_strongest_xi_skips_the_ruled_out() -> void:
 	assert_eq(xi.size(), 11, "the XI is not eleven")
 	for p in xi:
 		assert_ne(str(p["id"]), id, "a suspended player was picked")
-	# Without the season there is no absence to read: single-match mode is whole.
+
 	LeagueSeason.active = null
 	var full := StrongestXI.pick(TeamData.get_team(club))
 	var back := false
@@ -228,7 +222,6 @@ func test_a_short_squad_still_fields_eleven() -> void:
 	assert_eq(xi.size(), 11, "a club with nobody fit did not field eleven")
 	PLDatabase.execute("DELETE FROM league_absence WHERE club_id = ?;", [club])
 
-# --------------------------------------------------------------- the fixture ---
 
 func test_an_auto_fixture_can_injure_and_the_season_keeps_it() -> void:
 	var club := _first_club()

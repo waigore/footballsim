@@ -1,12 +1,6 @@
 class_name HudManagers
 extends RefCounted
 
-## Broadcast card for in-match manager acts: when a manager changes tactics or
-## sends a substitution on, a compact card names him, the minute and what
-## changed, then fades. Presentational only — it never pauses play and never
-## covers the control bar. Tap/click (or Escape) dismisses it.
-##
-## Split out of hud.gd so the overlay keeps its P3 size budget.
 
 const HOLD_TACTICS := 7.5
 const HOLD_SUB := 6.0
@@ -62,7 +56,7 @@ func dismiss() -> void:
 	hold = 0.0
 	card = {}
 
-## Whole card is one touch target: tapping anywhere on it clears it.
+
 func button_at(p: Vector2) -> bool:
 	return visible() and box.has_point(p)
 

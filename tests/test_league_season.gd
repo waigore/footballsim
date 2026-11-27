@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## The season loop driven like a player drives it: set up a save, walk the
-## calendar, watch one fixture, take the planner's suggestion, and finish on the
-## podium. One generated season is shared across the tests so the full 380-fixture
-## run stays inside the per-test budget.
 
 var SAVE_DIR := TestScratch.dir("saves_test_season_issue58")
 var CACHE_DIR := TestScratch.dir("cache_test_season_issue58")
@@ -90,8 +86,8 @@ func test_a_watch_holds_the_clock_until_the_match_is_played() -> void:
 	var stored := season.report(held)
 	assert_true(bool(stored["played"]), "the watched fixture stayed unplayed")
 	assert_eq((stored["score"] as Array)[0], 2, "the watched score was not stored")
-	# #124: the day that was played stays current so the hub can show its result;
-	# the next Continue moves the clock on.
+
+
 	assert_eq(str(season.state()["date"]), date, "the clock ran off the day the watch was played")
 	var on_day := false
 	for fx in season.plan():
@@ -102,8 +98,7 @@ func test_a_watch_holds_the_clock_until_the_match_is_played() -> void:
 	assert_true(str(season.state()["date"]) > date, "Continue did not move the clock on")
 	assert_eq(season.watching_fixture, "", "the season is still waiting for that watch")
 
-## #100: a watch the player walks out of is played out on the physical engine —
-## both halves, no presentation — and lands on the save like full time does.
+
 func test_leaving_a_watch_early_finishes_it_on_the_engine() -> void:
 	var fixtures := season.plan()
 	var held := str(fixtures[fixtures.size() - 1]["id"])
@@ -153,8 +148,8 @@ func test_suggestions_start_after_five_rounds() -> void:
 	assert_eq(flagged, ids.size(), "the suggestion flags were not stored")
 
 func test_the_calendar_keeps_rolling_through_midwinter() -> void:
-	# Later rounds are played in batches so no single test blows the per-test
-	# budget: the season is one shared object across the suite.
+
+
 	_play_until(14)
 	assert_gte(season.record.fixtures.completed_matchdays(), 14, "the season stalled before round 14")
 	assert_eq(season.matches_remaining(), 380 - int(season.state()["played"]), "the ledger is short")
@@ -251,8 +246,7 @@ func test_engine_finish_without_watching_is_a_no_op() -> void:
 func test_an_unknown_date_falls_back_to_the_saved_gameweek() -> void:
 	assert_eq(season._matchday_of("1999-01-01"), season.save.matchday(), "an empty day lost the gameweek")
 
-## The full table is only worth reading if its home and away splits are the
-## fixture ledger itself.
+
 func test_every_side_total_matches_the_fixture_ledger() -> void:
 	var rows: Array = season.record.standings.table()
 	assert_eq(rows.size(), 20, "the table is short")
@@ -278,8 +272,7 @@ func test_every_side_total_matches_the_fixture_ledger() -> void:
 		assert_eq(int(row["home_ga"]) + int(row["away_ga"]), int(row["ga"]),
 			"%s side goals against do not add up" % club)
 
-## An older save (or one whose side columns were never filled) gets its home and
-## away totals rebuilt from the played fixtures when the season opens.
+
 func test_opening_a_save_rebuilds_its_side_totals() -> void:
 	var slug := str(season.save.slug)
 	PLDatabase.execute(
@@ -301,8 +294,7 @@ func test_opening_a_save_rebuilds_its_side_totals() -> void:
 	assert_eq(goals, int(total["n"]), "the rebuilt side goals are not the fixture ledger")
 	season = reopened
 
-## Recompute is the repair path an older save takes: a row that drifted comes
-## back to the ledger, home and away included.
+
 func test_recompute_restores_a_drifted_side_record() -> void:
 	var before: Array = season.record.standings.table()
 	var row: Dictionary = before[0]

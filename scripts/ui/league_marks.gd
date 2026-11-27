@@ -1,22 +1,13 @@
 class_name LeagueMarks
 extends RefCounted
 
-## The icon and caption a fixture row prints for one event (#168): a ball for a
-## goal, a card for a booking, a cross for an injury — painted with the same
-## vector chrome as the rest of the season sheets, so no bitmap set has to match
-## the palette and every mark stays crisp at any window size.
-##
-## An own goal keeps the ball and carries the `(OG)` mark on its caption; a
-## converted penalty carries `(PEN)`; the assist rides in brackets. Paint only:
-## the reading that decides what each entry says lives in `LeagueRoundup`.
 
-## The icon box each event reserves, and the caption's own size.
 const BOX := 10.0
 const SIZE := 10
 
 # gd-tools: no cover start
 
-## One event's icon, in a 10-unit box whose top-left is `at`.
+
 static func icon(c: CanvasItem, kind: String, at: Vector2, own: bool = false) -> void:
 	var cx := at.x + BOX * 0.5
 	var cy := at.y + BOX * 0.5
@@ -25,8 +16,8 @@ static func icon(c: CanvasItem, kind: String, at: Vector2, own: bool = false) ->
 			c.draw_circle(Vector2(cx, cy), 3.7, UiChrome.C_GOLD)
 			c.draw_circle(Vector2(cx, cy), 1.3, Color(0.06, 0.06, 0.05))
 			if own:
-				# A short bar through the ball: the goal counts, the credit is
-				# the other side's mistake.
+
+
 				c.draw_line(Vector2(cx - 4.0, cy + 3.4), Vector2(cx + 4.0, cy - 3.4),
 					Color(0.06, 0.06, 0.05, 0.9), 1.4)
 		"yellow":
@@ -39,9 +30,7 @@ static func icon(c: CanvasItem, kind: String, at: Vector2, own: bool = false) ->
 		_:
 			c.draw_circle(Vector2(cx, cy), 2.4, UiChrome.C_DIM)
 
-## One event as a row prints it: the icon, then `6' Y. Pino (J. Eze)`. The name
-## is shortened rather than painted into the next column; the minute and the
-## bracket marks always stay whole.
+
 static func line(c: CanvasItem, at: Vector2, e: Dictionary, fonts: Dictionary,
 		max_w: float, ink: Color = UiChrome.C_TEXT) -> void:
 	var kind := str(e.get("kind", ""))

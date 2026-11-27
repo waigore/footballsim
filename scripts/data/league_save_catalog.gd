@@ -1,12 +1,6 @@
 class_name LeagueSaveCatalog
 extends RefCounted
 
-## The save directory as a catalogue: naming, listing and deleting the files
-## beside the season a player has open. Split out of `LeagueSave` so the storage
-## class keeps one concern and stays inside its size budget.
-##
-## Listing reads only `save_meta` from each file, so it never disturbs the
-## connection a running season is using.
 
 static func slugify(name: String) -> String:
 	var out := ""
@@ -33,7 +27,7 @@ static func unique_slug(base: String) -> String:
 		n += 1
 	return candidate
 
-## Every save on disk, newest first.
+
 static func list() -> Array:
 	var out: Array = []
 	DirAccess.make_dir_recursive_absolute(LeagueSave.dir)

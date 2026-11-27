@@ -1,49 +1,24 @@
 class_name LeaguePlanRows
 extends RefCounted
 
-## The hub's two row grammars: a fixture on today's plan, and a club on the side
-## table.
-##
-## A plan row is a result block once the fixture is played — the shared
-## `LeagueBlock` every result surface prints (#168) — and the planner's single
-## line while it is pending: kick-off, both clubs by full name, and the
-## AUTO/WATCH chip, or the shortlist's own mark when a followed club put the
-## game on Watch (#104).
-##
-## A side-table row is the compact record: the place, the club abbreviation and
-## the number rail `LeagueColumns` measures, with the zone band at its edge.
-##
-## Both paint in the rect they are handed, like every other sheet: no canvas
-## transform, so a name's strip and the row's box are always the same design-space
-## numbers the layout produced.
 
-## The planner's line sits this far down a pending row.
 const LINE := 17.0
 
-## Where the planner's clubs start inside a row. A row that carries a kick-off
-## time starts them after the time itself, measured rather than at a fixed
-## gutter, the way the calendar's day row does — the slot is never wider than
-## the time it holds. A real-fixture row stores no time at all
-## (`FixtureCalendar.real_rows`), so its clubs start at the result block's own
-## inset: the block that replaces the row at the whistle then puts its clubs on
-## the same design column, and the row does not jump left when the fixture is
-## played (#309).
+
 static func clubs_x(rect: Rect2, kickoff: String, font: Font) -> float:
 	if kickoff == "":
 		return rect.position.x + LeagueBlock.INSET
 	return rect.position.x + 8.0 + InterestNames.width(font, kickoff, 10) + 8.0
 
-## Paint one plan row. `home_ink` / `away_ink` are the interest mark's inks,
-## resolved by the sheet that laid the row. `names` is the sheet's own registry,
-## so the long press reads exactly the strips this row painted (#107).
+
 static func paint_fixture(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dictionary,
 		cache: Dictionary, names: InterestNames, home_ink: Color, away_ink: Color) -> void:
 	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6)
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	if str(fx.get("status", "")) == "played":
-		# The result block: score, both full names, and each side's events under
-		# its own name (#168). The chip's old slots are all inside it.
+
+
 		LeagueBlock.paint(c, rect, fx, fonts, names, home_ink, away_ink)
 		return
 	var x := rect.position.x
@@ -65,7 +40,7 @@ static func paint_fixture(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dic
 	if int(fx.get("suggested", 0)) == 1:
 		UiChrome.text_r(c, rect.end.x - 78.0, rect.position.y + 15.0, "TOP-6", 10, UiChrome.C_GOLD, bold)
 
-## The AUTO/WATCH chip of a pending row (#100).
+
 static func paint_toggle(c: CanvasItem, rect: Rect2, fx: Dictionary, cache: Dictionary,
 		bold: Font) -> void:
 	var watch := int(fx.get("watched", 0)) == 1
@@ -74,8 +49,7 @@ static func paint_toggle(c: CanvasItem, rect: Rect2, fx: Dictionary, cache: Dict
 	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 14.0,
 		"WATCH" if watch else "AUTO", 10, Color(0.06, 0.06, 0.05) if watch else UiChrome.C_DIM, bold)
 
-## Paint one side-table club row: the zone band, the place, the abbreviation (or
-## the full name once a followed club is amber), then the rail.
+
 static func paint_table_row(c: CanvasItem, rect: Rect2, row: Dictionary, zone: String,
 		places: Dictionary, interested: bool, fonts: Dictionary, names: InterestNames) -> void:
 	if zone != "":

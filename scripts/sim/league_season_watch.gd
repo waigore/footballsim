@@ -1,20 +1,15 @@
 class_name LeagueSeasonWatch
 extends RefCounted
 
-## A watched fixture: hand it to the match viewer, hold goal clips until full
-## time, then write the engine result into the season ledger. Split out of
-## `LeagueSeason` so the clock owns the calendar and this module owns one watch.
 
-## Hand one fixture to the match viewer. The screen starts the engine with these
-## clubs; when it reaches full time, `engine_finished` records the result here.
 static func start(season: LeagueSeason, fixture_id: String) -> Dictionary:
 	if season == null or season.record == null or fixture_id == "" or season.finishing:
 		return {}
 	var fx := season.record.fixtures.one(fixture_id)
 	if fx.is_empty():
 		return {}
-	# The engine reads the save's own squad flags, so rebuild both elevens from
-	# who is available today before it is handed the fixture (#155, #156).
+
+
 	StrongestXI.apply(str(fx["home_club_id"]))
 	StrongestXI.apply(str(fx["away_club_id"]))
 	season.watching_fixture = fixture_id
@@ -26,9 +21,7 @@ static func start(season: LeagueSeason, fixture_id: String) -> Dictionary:
 		"competition": PLRepository.shared().competition_name(str(fx.get("competition_id", ""))),
 	}
 
-## Back out of a pre-match briefing: the fixture never kicked off, so the season
-## stops waiting for it. The fixture keeps its Watch flag and the clock stays on
-## the day, so the next Continue offers the same game again.
+
 static func cancel(season: LeagueSeason) -> void:
 	if season == null or season.finishing:
 		return
@@ -36,8 +29,7 @@ static func cancel(season: LeagueSeason) -> void:
 	season.captured = []
 	season.state_changed.emit()
 
-## The viewer's ring caught a goal during a watched fixture: hold the clip here
-## until full time, when it is written beside the report it belongs to.
+
 static func capture(season: LeagueSeason, pack: Dictionary) -> void:
 	if season == null or season.watching_fixture == "" or pack.is_empty():
 		return
@@ -68,9 +60,9 @@ static func record_engine(season: LeagueSeason, engine: MatchEngine) -> void:
 		str(fx["home_club_id"]), str(fx["away_club_id"]))
 	season.captured = []
 	PLDatabase.transaction("COMMIT;")
-	# The encyclopedia reads this save's ledger: show it this result now.
+
 	PLRepository.shared().invalidate()
-	# The clock stays on the day just played so the hub can show its result, and
-	# the next Continue moves on (#124); `open()` still rolls a played day forward.
+
+
 	season.state_changed.emit()
 	season.match_recorded.emit(season.report(fixture_id))

@@ -1,10 +1,6 @@
 class_name WikiModel
 extends RefCounted
 
-## Page data for the encyclopedia. Each page is a title plus a list of blocks in
-## reading order; blocks are plain dictionaries so the layout, the drawing and
-## the tests all read the same description. Nothing here touches a node or a
-## font, which is what keeps the dashboards testable without a screen.
 
 const LEAGUE := "league"
 const TEAM := "team"
@@ -19,7 +15,7 @@ const STYLE_LABELS := [
 static func repo() -> PLRepository:
 	return PLRepository.shared()
 
-## Every page the screen can show: used to reject a bad target before pushing.
+
 static func has_page(page: String, id: String) -> bool:
 	if page == LEAGUE:
 		return id == "" or PLCompetitions.exists(id)
@@ -29,7 +25,7 @@ static func has_page(page: String, id: String) -> bool:
 		return not repo().player(id).is_empty()
 	return false
 
-## A page: {title, eyebrow, subtitle, accent, blocks, crumb}.
+
 static func page(page: String, id: String) -> Dictionary:
 	if page == TEAM:
 		return team_page(id)
@@ -45,18 +41,14 @@ static func label(page: String, id: String) -> String:
 	var comp := PLCompetitions.one(id if id != "" else PLCompetitions.default_id())
 	return str(comp.get("short_name", "LEAGUE")).to_upper()
 
-# ------------------------------------------------------------------- league --
 
-## One competition's hub. `competition_id` empty means the file's default
-## competition (the Premier League in the shipped seed), so every existing
-## caller keeps its page.
 static func league_page(competition_id: String = "") -> Dictionary:
 	var comp := PLCompetitions.one(
 		competition_id if competition_id != "" else PLCompetitions.default_id())
 	var comp_id := str(comp.get("id", ""))
 	var meta := repo().meta()
-	# A file with no competition row at all (an old cache) still reads: the
-	# metadata is the snapshot's own name for its league.
+
+
 	var season := str(comp.get("season_label", meta.get("season_label", "")))
 	var name := str(comp.get("name", meta.get("league_name", "Premier League")))
 	var out := {
@@ -64,8 +56,8 @@ static func league_page(competition_id: String = "") -> Dictionary:
 		"id": comp_id,
 		"title": name.to_upper(),
 		"eyebrow": "%s  ·  %s" % [str(comp.get("short_name", name)).to_upper(), season],
-		# The snapshot date is drawn as its own date label (#99), so the sheet can
-		# give it the weekday hint without hunting for it in the subtitle.
+
+
 		"subtitle": "%d CLUBS  ·  SNAPSHOT " % int(comp.get("clubs", 0)),
 		"snapshot": str(meta.get("snapshot_date", "")),
 		"accent": Color("#f7c948"),
@@ -120,9 +112,8 @@ static func league_page(competition_id: String = "") -> Dictionary:
 			"widths": [0.16, 0.28, 0.22, 0.34], "text_cols": [0, 1, 3],
 			"rows": results,
 		})
-	# A season's own block only belongs on the competition it is playing, and the
-	# single-match ledger (no season open) only on the file's own competition: an
-	# inactive competition reads the snapshot alone.
+
+
 	var claims_ledger := PLCompetitions.season_owns(comp_id) \
 		or (not LeagueLedger.bound() and comp_id == PLCompetitions.default_id())
 	if claims_ledger:
@@ -153,7 +144,6 @@ static func _club_chips(competition_id: String = "") -> Array:
 		})
 	return items
 
-# --------------------------------------------------------------------- team --
 
 static func team_page(club_id: String) -> Dictionary:
 	var club := repo().club(club_id)
@@ -223,12 +213,11 @@ static func team_page(club_id: String) -> Dictionary:
 			"widths": [0.16, 0.84], "text_cols": [0, 1],
 			"rows": results,
 		})
-	# What comes next, from the same ledger as the results above: the season's
-	# remaining schedule, or the snapshot's. A fixture ahead is not a result, so
-	# it never carries a score (DR-20261125-10).
+
+
 	out["blocks"].append({"k": "section", "text": "NEXT FIXTURES  ·  %s" % WikiLedger.ledger_label()})
-	# Only a save's ledger carries a gameweek; the snapshot ships its schedule
-	# without one, so the column is there only when every row has a figure.
+
+
 	var with_gw := repo().season_active()
 	var next: Array = []
 	for fx in repo().upcoming(club_id, 6):
@@ -261,8 +250,7 @@ static func team_page(club_id: String) -> Dictionary:
 	out["blocks"].append_array(WikiLedger.club_blocks(club_id))
 	return out
 
-## A count that the snapshot may not carry: negative means "unknown", and a
-## dash is honest where a zero would be a lie.
+
 static func _count(source: Dictionary, key: String) -> String:
 	var value := int(source.get(key, -1))
 	return "—" if value < 0 else str(value)
@@ -272,7 +260,6 @@ static func _or_dash(table: Dictionary, key: String) -> String:
 		return "—"
 	return str(int(table[key]))
 
-# ------------------------------------------------------------------- player --
 
 static func player_page(player_id: String) -> Dictionary:
 	var p := repo().player(player_id)
@@ -318,8 +305,8 @@ static func player_page(player_id: String) -> Dictionary:
 		for pair in [["pac", "PACE"], ["sho", "SHOOTING"], ["pas", "PASSING"], ["dri", "DRIBBLING"], ["def", "DEFENDING"], ["phy", "PHYSICAL"]]:
 			bars.append([str(pair[1]), float(p[pair[0]]) / 100.0])
 	out["blocks"].append({"k": "bars", "items": bars})
-	# The real-world season wears its label, not the pipeline's name for the
-	# file: a player reads a season, not a snapshot (#208).
+
+
 	var season_label := str(season.get("season_label", ""))
 	var season_head := "SEASON"
 	if season_label != "":
@@ -359,7 +346,6 @@ static func player_page(player_id: String) -> Dictionary:
 	out["blocks"].append(WikiCompetitions.link(str(club.get("competition", ""))))
 	return out
 
-# ---------------------------------------------------------------- shared bit --
 
 static func _hex(col) -> String:
 	var c: Color = col if col is Color else Color.WHITE

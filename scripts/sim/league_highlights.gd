@@ -1,22 +1,7 @@
 class_name LeagueHighlights
 extends RefCounted
 
-## Goal clips for a season: one playback pack per goal on every match report.
-##
-## A fixture the player left on Auto has no live picture to record, so each goal
-## gets a situated clip — `GoalVignette` simulates the chance — that ends with the
-## report's own scorer and assist. A
-## watched fixture already ran on the pitch, so the clip is cut from the
-## viewer's snapshot ring of the goal that really happened. Both paths write the
-## same row shape, so a report reads a clip without knowing which path made it.
-##
-## The store is keyed by `(fixture_id, goal_index)`: the goal's ordinal in that
-## fixture's report. Re-settling a fixture therefore replaces its clips instead
-## of stacking a second set behind the first.
 
-# --------------------------------------------------------------- auto path ---
-
-## Build and store a clip for every goal of a settled fixture.
 static func store_auto(record: LeagueRecord, save_seed: int, fixture_id: String,
 		events: Array, home: String, away: String) -> void:
 	if record == null:
@@ -34,8 +19,7 @@ static func store_auto(record: LeagueRecord, save_seed: int, fixture_id: String,
 			home, away, 0))
 	record.clips.add(rows)
 
-## The goal rows of a match report, in the order the report prints them: by
-## minute, then by the order the season wrote them.
+
 static func goal_rows(events: Array) -> Array:
 	var ordered: Array = []
 	for i in range(events.size()):
@@ -53,12 +37,7 @@ static func goal_rows(events: Array) -> Array:
 		out.append(item["e"])
 	return out
 
-# -------------------------------------------------------------- watch path ---
 
-## Store the clips of a fixture that was just watched. Each goal event row gets
-## the live capture that matches it; a goal with no capture (a ring cleared at
-## half-time, a fast-forwarded session) falls back to a generated clip so the
-## report still offers a ▶.
 static func store_watch(record: LeagueRecord, save_seed: int, fixture_id: String,
 		captured: Array, home: String, away: String) -> void:
 	if record == null or fixture_id == "":
@@ -87,9 +66,7 @@ static func store_watch(record: LeagueRecord, save_seed: int, fixture_id: String
 		rows.append(row)
 	record.clips.add(rows)
 
-## The first unused capture of this goal. A capture is stamped with the minute
-## and scorer the live engine reported, so the pair identifies it even when two
-## goals share a minute.
+
 static func _match_capture(captured: Array, used: Dictionary, minute: int, scorer_id: String) -> Dictionary:
 	for i in range(captured.size()):
 		if used.has(i):
@@ -140,13 +117,7 @@ static func _captured_row(pack: Dictionary, fixture_id: String, event: Dictionar
 		"bytes": GoalHighlight.pack(clip),
 	}
 
-# ------------------------------------------------------------------- rows ---
 
-## A simulated clip's row: the line and the fields its pack is built from, but
-## not the pack. A settled gameweek draws a dozen clips nobody opens, and a pack
-## is ~10 kB of JSON and gzip apiece — the single largest cost of a settled
-## matchday. The row keeps its recipe, and `LeagueClips.pack` runs the vignette
-## the first time a report asks for it, then caches it in the row.
 static func _generated_row(save_seed: int, fixture_id: String, event: Dictionary,
 		index: int, score_after: Array, home: String, away: String,
 		event_id: int) -> Dictionary:
@@ -172,8 +143,7 @@ static func _generated_row(save_seed: int, fixture_id: String, event: Dictionary
 		"bytes": PackedByteArray(),
 	}
 
-## The fields a clip and its line are built from: the report's own scorer,
-## assist and minute, plus the club labels the broadcast line names.
+
 static func _goal_fields(source: Dictionary, event: Dictionary, fixture_id: String,
 		index: int, score_after: Array) -> Dictionary:
 	var home := str(source.get("home", ""))
@@ -193,15 +163,14 @@ static func _goal_fields(source: Dictionary, event: Dictionary, fixture_id: Stri
 		"score_after": [int(score_after[0]), int(score_after[1])],
 	}
 
-## The three-letter label the broadcast line uses for a club.
+
 static func short_name(club_id: String) -> String:
 	if club_id == "":
 		return ""
 	var team := TeamData.get_team(club_id)
 	return str(team.get("short", club_id))
 
-## The ledger rows a watched match leaves behind: goals and cards, mapped
-## from the engine's own event log to the report's event kinds.
+
 static func engine_events(engine, fixture_id: String) -> Array:
 	var rows: Array = []
 	for e in engine.events:

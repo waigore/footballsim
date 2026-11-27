@@ -1,9 +1,5 @@
 extends Node2D
 
-## Playback controller + scene assembly: the engine, the snapshot ring, the
-## camera and the input bindings. Arena build, the clock loop, design-space
-## arithmetic and sheet routing live in MatchScene / MatchPlayback / MatchView /
-## MatchInput so the scene stays inside its P3 size budget.
 
 const W := 68.0
 const L := 105.0
@@ -26,15 +22,15 @@ var replay_banner := 0.0
 var seeded := 1000
 
 var accumulator := 0.0
-## The broadcast ring and the goal captures it makes (see HighlightDirector).
+
 var highlights: HighlightDirector = null
-## A stored goal clip being played over the pitch, or null.
+
 var replay: GoalReplay = null
 var half_time_timer := -1.0
 var focus_id := -1
 var hover_id := -1
 var names_visible := true
-var camera_follow: bool = MatchView.default_follow()  # follow on phones (#158)
+var camera_follow: bool = MatchView.default_follow()
 var zoom_scale := 1.0
 var base_zoom := 11.0
 var mouse := Vector2.ZERO
@@ -51,12 +47,12 @@ var audio: MatchAudio = null
 var camera: MatchCamera = null
 var view: MatchView = null
 var input: MatchInput = null
-## Live clock loop: ticks, half-time waits, highlight windows and event juice.
+
 var playback: MatchPlayback = null
 var fixture: FixtureSheet = null
 var batch_abort := false
 var hud_scale := 1.0
-## Reading scale for the non-match layers; the match HUD keeps HudLayout's.
+
 var chrome_scale := 1.0
 var token_scale := 1.0
 var pitch_shift := 0.0
@@ -69,24 +65,22 @@ var select_open := false
 var selector = null
 var sel_layer: CanvasLayer
 var fixture_arg_given := false
-## Menu shell: main menu, settings, quit confirm and the menu music.
+
 var menus: MenuHost = null
 var select_from_menu := false
 var match_started := false
-## Encyclopedia sheet: league / club / player pages over the paused broadcast.
+
 var wiki_host: WikiHost = null
-## The pre-match briefing (#157): the last screen before a watched or single
-## match starts. League watches and the fixture picker both ask it first.
+
+
 var prematch: PreMatchHost = null
-## A finished match is written to the cached seed exactly once.
+
 var result_recorded := false
-## The competition this match is being played in (#209): the briefing, the
-## broadcast's fixture card and the opening team sheet all read it, so one match
-## can never be named two ways. A league watch rebinds it; the picker leaves it a
-## friendly.
+
+
 var billing: MatchBilling = MatchBilling.new()
-## A league watch keeps its FULL TIME card until the player taps it away (#124);
-## LeagueHost owns the flag, the broadcast only reads it.
+
+
 var result_hold := false
 
 func _ready() -> void:
@@ -141,7 +135,6 @@ func new_match(seed: int) -> void:
 	result_recorded = false
 	highlights.restart()
 
-# --------------------------------------------------------------- fixture ----
 
 func open_select(from_menu: bool = false) -> void:
 	fixture.open(from_menu)
@@ -156,10 +149,7 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		_sync_overlay_scale()
 
-# ------------------------------------------------------------------ input ----
 
-## Sheets, the wheel, the overlay bar and the one-key controls all route
-## through MatchInput; the scene only exposes its state.
 func _input(event: InputEvent) -> void:
 	input.handle(event)
 
@@ -169,8 +159,7 @@ func _click(p: Vector2) -> void:
 func _toggle_mode() -> void:
 	set_mode(Prefs.next_mode(mode))
 
-## Every door into the match view — `H`, the bar's mode door, the Settings sheet
-## — lands here, and the prefs file remembers the choice (#164).
+
 func set_mode(next: String) -> void:
 	view.set_mode(next)
 	if menus != null:
@@ -179,7 +168,6 @@ func set_mode(next: String) -> void:
 func _skip() -> void:
 	playback.skip()
 
-# ------------------------------------------------------------------ loop ----
 
 func _process(delta: float) -> void:
 	view.sync_type_density()
@@ -191,8 +179,7 @@ func _advance_ticks(n: int) -> void:
 func _post_tick() -> void:
 	playback.post_tick()
 
-## Play one stored goal clip on the broadcast. The league hands the pack back
-## with `on_done`, which puts its report sheet back on screen when the clip ends.
+
 func play_goal_clip(pack: Dictionary, on_done := Callable()) -> void:
 	if replay != null:
 		replay.finish(false)
@@ -204,7 +191,6 @@ func play_goal_clip(pack: Dictionary, on_done := Callable()) -> void:
 func _on_engine_event(e: Dictionary) -> void:
 	playback.on_engine_event(e)
 
-# ---------------------------------------------------------------- camera ----
 
 func _apply_camera(snap_zoom: bool) -> void:
 	if camera != null:

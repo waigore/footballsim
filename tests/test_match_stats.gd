@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## The readings a match summary carries beside the score: the frame a shot
-## struck, the pass a defender cut out, the momentum a side is carrying, and the
-## rating the summary stores. Established by DR-20261125-01.
 
 const W := 68.0
 const GOAL_W := 7.32
@@ -34,8 +31,7 @@ func _events(eng, kind: String) -> int:
 			n += 1
 	return n
 
-## A shot in flight at the goal `team` attacks, crossing the line `past` metres
-## beyond it at `y`, `z`.
+
 func _shot_at(eng, team: int, y: float, z: float, past: float = 0.10):
 	var goal: Vector2 = eng.target_goal_pos(team)
 	var line_x: float = eng.L if goal.x > 1.0 else 0.0
@@ -53,7 +49,6 @@ func _shot_at(eng, team: int, y: float, z: float, past: float = 0.10):
 	eng.ball.planned_save = false
 	return shooter
 
-# ----------------------------------------------------------------- frame ---
 
 func test_the_frame_band_is_a_post_a_bar_or_nothing() -> void:
 	var centre: float = W * 0.5
@@ -71,8 +66,8 @@ func test_the_frame_band_is_a_post_a_bar_or_nothing() -> void:
 		"", "a ball well over the bar was read as woodwork")
 
 func test_the_crossing_point_undoes_the_tick_overshoot() -> void:
-	# 0.20 m past the line at 20 m/s is 0.01 s of flight: the crossing point sits
-	# back down the path, not where the tick left the ball.
+
+
 	var cross: Vector2 = MatchStats.goal_plane_point(
 		Vector2(105.2, 37.0), Vector2(20.0, 10.0), 1.5, 2.0, 105.0)
 	assert_almost_eq(cross.x, 36.9, 0.02, "the crossing y did not undo the overshoot")
@@ -101,9 +96,8 @@ func test_a_shot_off_the_bar_stays_in_play_and_is_counted() -> void:
 	assert_eq(eng.phase, "play", "the bar stopped play")
 
 func test_a_priced_goal_is_never_denied_by_the_frame() -> void:
-	# The finishing roll decides whether a chance converts; the frame may not veto
-	# it. A priced goal that somehow crosses at the post is out of play, not a
-	# woodwork event, and never a goal.
+
+
 	var eng := _eng(54)
 	_park_keepers(eng)
 	_shot_at(eng, 0, W * 0.5 + GOAL_W * 0.5 + 0.06, 0.9)
@@ -120,7 +114,6 @@ func test_a_ball_wide_of_the_frame_earns_a_restart() -> void:
 	assert_eq(int(eng.stats[0]["woodwork"]), 0, "a ball wide of the frame was counted as woodwork")
 	assert_eq(eng.phase, "restart", "a ball wide of the posts did not stop play")
 
-# ---------------------------------------------------------- interceptions ---
 
 func test_an_opponent_taking_a_pass_is_credited_with_an_interception() -> void:
 	var eng := _eng(56)
@@ -175,7 +168,6 @@ func test_a_clearance_is_not_a_pass_waiting_to_be_intercepted() -> void:
 	eng._claim_ball(rival)
 	assert_eq(int(rival.stats["interceptions"]), 0, "a clearance was read as an intercepted pass")
 
-# --------------------------------------------------------------- momentum ---
 
 func test_momentum_credits_the_side_applying_pressure() -> void:
 	var pressure: Array = [0.0, 0.0]
@@ -184,7 +176,7 @@ func test_momentum_credits_the_side_applying_pressure() -> void:
 	var m: Vector2 = MatchStats.momentum_level(pressure)
 	assert_gt(m.x, 0.8, "four good chances did not put a side on top")
 	assert_lt(m.y, 0.05, "the side creating nothing read as on top")
-	# A save is the keeper's side reacting: it is pressure for the attacker.
+
 	MatchStats.bump(pressure, 1, "save")
 	assert_gt(MatchStats.momentum_level(pressure).x, m.x, "a save did not credit the attacker")
 	MatchStats.bump(pressure, 1, "goal")
@@ -209,8 +201,7 @@ func test_the_summary_reads_the_momentum_the_match_carried() -> void:
 	assert_gt(momentum.x, 0.5, "the side creating the chances was not on top")
 	assert_lt(momentum.y, 0.05, "the side creating nothing was on top")
 
-## The broadcast meter reads the same numbers the summary does, so the two can
-## never disagree about who is carrying play (DR-20261125-02).
+
 func test_the_broadcast_reads_the_same_momentum_as_the_summary() -> void:
 	var eng := _eng(63)
 	eng._emit("shot", "Chance!", 0, null, {"xg": 0.4})
@@ -220,7 +211,7 @@ func test_the_broadcast_reads_the_same_momentum_as_the_summary() -> void:
 	assert_gt(live.x, float(0.0), "a good chance left the meter at zero")
 
 func test_the_meter_names_the_side_carrying_play() -> void:
-	# A side well on top is named; a level match says nobody is.
+
 	assert_eq(MatchStats.momentum_leader(Vector2(0.80, 0.10)), 0, "the on-top side was not named")
 	assert_eq(MatchStats.momentum_leader(Vector2(0.10, 0.80)), 1, "the away side was not named")
 	assert_eq(MatchStats.momentum_leader(Vector2(0.42, 0.40)), -1, "an even match named a leader")
@@ -228,12 +219,11 @@ func test_the_meter_names_the_side_carrying_play() -> void:
 	assert_eq(MatchStats.momentum_phrase(0.80), "ON TOP", "a big spell is not read as on top")
 	assert_eq(MatchStats.momentum_phrase(0.35), "PRESSING", "a normal spell lost its word")
 	assert_eq(MatchStats.momentum_phrase(0.05), "", "a quiet side was given a word")
-	# The thresholds sit inside the range full matches actually read.
+
 	assert_gt(MatchStats.MOMENTUM_ON_TOP, MatchStats.MOMENTUM_PRESSING, "the ladder is inverted")
 	assert_lte(MatchStats.MOMENTUM_ON_TOP, 1.0, "the on-top bar is unreachable")
 	assert_true(MatchStats.MOMENTUM_CLEAR_GAP > 0.0, "the clear gap must be positive")
 
-# ----------------------------------------------------------------- rating ---
 
 func test_the_summary_stores_the_shared_rating() -> void:
 	var eng := _eng(61)
@@ -246,7 +236,6 @@ func test_the_summary_stores_the_shared_rating() -> void:
 		"the stored rating is not the ledger's own")
 	assert_gt(float(p.stats["rating"]), 6.5, "a two-goal match did not move the stored rating")
 
-# ------------------------------------------------------- woodwork from play ---
 
 func test_priced_out_chances_can_be_struck_at_the_frame() -> void:
 	var eng := _eng(62)

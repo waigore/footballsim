@@ -1,8 +1,6 @@
 class_name CommentaryRestarts
 extends RefCounted
 
-## Set-piece, kick-off and whistle lines. Split from Commentary so the in-play
-## event voice stays inside its size budget (RUB-P3-01).
 
 static func _pick(rng: RandomNumberGenerator, lines: Array) -> String:
 	return lines[rng.randi_range(0, lines.size() - 1)]
@@ -15,8 +13,6 @@ static func kickoff(rng: RandomNumberGenerator, team_name: String) -> String:
 	])
 
 
-## Set-piece / restart line. `waiting` marks the taker holding play up for
-## team-mates to arrive.
 static func restart(rng: RandomNumberGenerator, kind: String, team_short: String, taker: String,
 		waiting: bool) -> String:
 	if waiting:

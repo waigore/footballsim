@@ -1,9 +1,5 @@
 extends GdToolsTest
 
-## The season surface's doors (`LeagueDoors`): the key map, the press table and
-## the season actions a press can reach. Driven against a bare `LeagueScreen` and
-## a real generated season, so the dispatch is pinned without a renderer or the
-## match view.
 
 var SAVE_DIR := TestScratch.dir("saves_test_league_doors")
 var CACHE_DIR := TestScratch.dir("cache_test_league_doors")
@@ -46,8 +42,8 @@ func _clean() -> void:
 func _hub() -> void:
 	screen.season = season
 	screen.mode = LeagueScreen.MODE_HUB
-	# An open surface: a case that closed it earlier must not change what the
-	# next one is testing.
+
+
 	screen.visible = true
 
 func _fixture(watched: int = 0) -> Dictionary:
@@ -59,8 +55,8 @@ func _fixture(watched: int = 0) -> Dictionary:
 
 func test_the_key_map_walks_a_sheet_without_a_window() -> void:
 	_hub()
-	# A bare screen has no body: the map still reports the keys it owns and the
-	# scroll helpers simply have nothing to move.
+
+
 	for code in [KEY_UP, KEY_W, KEY_DOWN, KEY_S, KEY_PAGEUP, KEY_PAGEDOWN, KEY_HOME, KEY_END]:
 		assert_true(screen.key(code), "the sheet did not take scroll key %d" % code)
 	assert_false(screen.key(KEY_TAB), "an unbound key was taken")
@@ -74,14 +70,14 @@ func test_enter_continues_the_hub_and_escape_walks_it_back() -> void:
 	screen.nav.clear()
 	assert_true(screen.key(KEY_ENTER), "Enter did not press Continue")
 	assert_ne(screen.mode, LeagueScreen.MODE_HUB, "Continue left the hub without settling")
-	# A reading opens over the hub, so BACK has a page to return to (#169).
+
 	screen.mode = LeagueScreen.MODE_HUB
 	screen.nav.clear()
 	screen.click("table")
 	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table door did not open the table")
 	assert_true(screen.key(KEY_ESCAPE), "Esc was not taken on a reading")
 	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "Esc did not return to the hub")
-	# At the root BACK is consumed but does nothing: it is not a way out.
+
 	assert_true(screen.key(KEY_BACKSPACE), "Backspace was not taken on the hub")
 	assert_true(screen.visible, "BACK at the root closed the season")
 	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "BACK at the root moved the sheet")
@@ -106,7 +102,7 @@ func test_the_pose_doors_move_the_surface_between_its_sheets() -> void:
 	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR, "the calendar door did not open the calendar")
 	screen.click("podium")
 	assert_eq(screen.mode, LeagueScreen.MODE_PODIUM, "the podium door did not open the podium")
-	# BACK unwinds the trail one page at a time; the season stays open (#169).
+
 	screen.click("back")
 	assert_eq(screen.mode, LeagueScreen.MODE_CALENDAR, "BACK did not return to the calendar")
 	screen.click("back")
@@ -116,7 +112,7 @@ func test_the_pose_doors_move_the_surface_between_its_sheets() -> void:
 	assert_true(screen.visible, "BACK at the root closed the surface")
 	screen.click("")
 	assert_true(screen.visible, "an empty press reopened something")
-	# The podium's own MAIN MENU door is a leave action, not BACK.
+
 	screen.mode = LeagueScreen.MODE_PODIUM
 	screen.refresh()
 	screen.click("menu")
@@ -171,8 +167,8 @@ func test_continue_is_inert_without_a_season_or_while_finishing() -> void:
 	screen.click("continue")
 	assert_eq(str(season.state()["date"]), before, "Continue moved the clock while finishing")
 	season.finishing = false
-	# #326: a Results reading with no page behind it still lands on the hub
-	# rather than leaving the player on a sheet with no way out.
+
+
 	screen.mode = LeagueScreen.MODE_REPORT
 	screen.nav.clear()
 	screen.click("continue")
@@ -249,8 +245,8 @@ func test_a_goal_door_plays_a_stored_clip_and_names_its_fixture() -> void:
 	assert_eq(played.size(), 2, "the report's goal key did not play the clip")
 
 func test_the_moved_doors_answer_on_their_own() -> void:
-	# The goal doors and the season doors live beside the press table, so each
-	# one is pinned without the dispatch in front of it.
+
+
 	LeagueGoalDoors.play(screen, 7)
 	assert_false(LeagueGoalDoors.has_clip(screen, 7), "an ordinal the report never stored claimed a clip")
 	screen.mode = LeagueScreen.MODE_REPORT
@@ -269,13 +265,13 @@ func test_the_moved_doors_answer_on_their_own() -> void:
 	assert_eq(screen.report_back, LeagueScreen.MODE_HUB, "an inert day door moved the report's return")
 
 func test_the_panel_doors_jump_pose_and_bind_the_table() -> void:
-	# The panel's destinations live in their own module, so each jump is pinned
-	# without the dispatch in front of it.
+
+
 	_hub()
 	var depth: int = screen.nav.depth()
 	LeaguePanelDoors.nav(screen, "table")
 	assert_eq(screen.mode, LeagueScreen.MODE_TABLE, "the table destination did not open the table")
-	# Closing is a slide the screen's own clock finishes: the door only aims it.
+
 	assert_false(screen.panel.is_open(), "the panel did not head back in")
 	assert_eq(screen.book.table.order.key, str(season.save.read_meta().get(LeagueTableView.META_SORT, "")),
 		"the table did not read the season save's own sort")
@@ -295,7 +291,7 @@ func test_the_panel_doors_jump_pose_and_bind_the_table() -> void:
 	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "Today's Fixtures did not land on the hub")
 
 func test_deleting_the_open_save_unloads_it_first() -> void:
-	# The delete door asks first: the file stays until the answer is DELETE.
+
 	var throwaway := LeagueSeason.create("Doors Throwaway", "generated", "fixture_days", SEED + 1)
 	assert_not_null(throwaway, "the throwaway season was not created")
 	screen.season = throwaway
@@ -311,8 +307,8 @@ func test_deleting_the_open_save_unloads_it_first() -> void:
 	for row in LeagueSaveCatalog.list():
 		still.append(str(row["slug"]))
 	assert_true(still.has(slug), "the save went before the answer")
-	# DELETE confirms: the already-open season unloads before its file goes, so
-	# nothing keeps reading a save that no longer exists.
+
+
 	screen.click("delete_yes")
 	assert_null(screen.season, "the deleted save stayed bound to the surface")
 	assert_false(screen.delete.is_open(), "the question outlived its answer")
@@ -320,7 +316,7 @@ func test_deleting_the_open_save_unloads_it_first() -> void:
 	for row in LeagueSaveCatalog.list():
 		left.append(str(row["slug"]))
 	assert_false(left.has(slug), "the deleted save is still on disk")
-	# A save that is not the open one leaves the season alone.
+
 	var copy := season.save.write_copy("Doors other copy")
 	assert_true(copy != "", "the stand-in save was not written")
 	screen.season = season
@@ -333,7 +329,7 @@ func test_deleting_the_open_save_unloads_it_first() -> void:
 	assert_false(screen.delete.is_open(), "the question outlived its answer")
 
 func test_the_delete_question_is_a_door_of_its_own() -> void:
-	# Cancel is the safe answer: the save is untouched and the list stays put.
+
 	var copy := season.save.write_copy("Doors kept copy")
 	assert_true(copy != "", "the kept save was not written")
 	screen.season = season
@@ -354,11 +350,11 @@ func test_the_delete_question_is_a_door_of_its_own() -> void:
 	for row in LeagueSaveCatalog.list():
 		kept.append(str(row["slug"]))
 	assert_true(kept.has(copy), "cancelling deleted the save")
-	# The dialog's own CANCEL is the other safe answer.
+
 	screen.click("delete:" + copy)
 	screen.click("delete_no")
 	assert_false(screen.delete.is_open(), "the dialog's CANCEL did not put the question away")
-	# Enter is the answer.
+
 	screen.click("delete:" + copy)
 	assert_true(screen.key(KEY_ENTER), "Enter was not taken by the dialog")
 	assert_false(screen.delete.is_open(), "Enter did not answer the dialog")

@@ -1,19 +1,12 @@
 class_name LeagueSystemSheet
 extends RefCounted
 
-## The System sheet (#109): the season's own save and exit actions in one place
-## instead of a single MENU door. Quick Save rewrites this save, Save As writes a
-## copy under a typed name, Load swaps saves (the caller unloads the old one),
-## Main Menu leaves the season and Quit asks the shell to close the game.
-##
-## It is its own pose beside the hub, the readings and the front door: geometry
-## and paint only, no save calls.
 
 const HEADER := 58.0
 const ROW_H := 46.0
 const ROW_GAP := 8.0
 
-## id, label, caption. Every row is a plain door; the screen owns what each does.
+
 const ACTIONS := [
 	{"id": "sys:quick", "label": "QUICK SAVE", "hint": "overwrite this save"},
 	{"id": "sys:save", "label": "SAVE AS", "hint": "write a copy under a name"},
@@ -23,7 +16,7 @@ const ACTIONS := [
 ]
 
 var cache := {}
-## Dates the chrome painted, with the strip each one occupies (#99).
+
 var hints := DateHints.new()
 
 func layout(vp: Vector2, view: Dictionary) -> Array:
@@ -44,10 +37,10 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": str(action["id"]), "kind": "row", "label": str(action["label"]),
 			"hint": str(action["hint"]), "rect": Rect2(x, y, w, ROW_H)})
 		y += ROW_H + ROW_GAP
-	# The shared clock policy is editable mid-season: the next Continue reads it.
+
 	var mode := str(view.get("advance_mode", "fixture_days"))
-	# The hint names the pointer that will press the row: a mouse clicks, a
-	# finger taps (#278, #310).
+
+
 	var verb: String = "tap" if bool(view.get("touch", false)) else "click"
 	items.append({"id": "sys:advance", "kind": "row",
 		"label": "ADVANCE: %s" % ("FIXTURE DAYS" if mode == "fixture_days" else "EVERY DAY"),
@@ -73,8 +66,8 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 	LeagueExtra.header(c, vp, fonts, "SYSTEM", " · ".join(PackedStringArray(parts)))
 	if date != "":
 		hints.add(DateHints.strip_right(bold, label, vp.x - 24.0, 34.0, 10), date)
-	# The acknowledgement is painted, never modal: a save lands without an extra
-	# press and never hides the next action.
+
+
 	var status := str(view.get("status", ""))
 	var error := str(view.get("error", ""))
 	if error != "":

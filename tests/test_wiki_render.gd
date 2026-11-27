@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## Rendering and pointer plumbing for the encyclopedia: every block kind is
-## drawn at least once, the body scrolls, and the host converts pointers into
-## design space for taps, buttons, wheels and keys.
 
 var game = null
 
@@ -13,8 +10,8 @@ func before_all() -> void:
 	game = Node2D.new()
 	game.set_script(load("res://scripts/main.gd"))
 	add_child(game)
-	# A phone-sized design space: compact layout, two-column kv, wrapping chips
-	# and a body shorter than its content, so scrolling is real.
+
+
 	game.dev.ui_scale = 4.0
 	game._sync_overlay_scale()
 	game._on_fixture_confirmed("MUN", "MCI")
@@ -34,7 +31,7 @@ func _motion(p: Vector2) -> void:
 	ev.relative = Vector2(0, 6)
 	game._input(ev)
 
-## Hover only: the pointer moves, no button is held.
+
 func _move(p: Vector2) -> void:
 	var ev := InputEventMouseMotion.new()
 	ev.position = p * game.hud_scale
@@ -55,7 +52,7 @@ func _release(p: Vector2, button: int = MOUSE_BUTTON_LEFT) -> void:
 	ev.position = p * game.hud_scale
 	game._input(ev)
 
-## A full click: press and release on the same point, the way a player taps.
+
 func _click(p: Vector2, button: int = MOUSE_BUTTON_LEFT) -> void:
 	_press(p, button)
 	_release(p, button)
@@ -69,7 +66,7 @@ func _key(code: int) -> void:
 func _screen() -> Control:
 	return game.wiki_host.screen
 
-## The body rect in design space, for taps that must land inside the sheet.
+
 func _body() -> Rect2:
 	var screen := _screen()
 	return Rect2(screen.body.position, screen.body.size)
@@ -118,8 +115,7 @@ func test_a_pointer_tap_opens_a_row() -> void:
 	_key(KEY_ESCAPE)
 	assert_false(game.wiki_host.is_open(), "escape at the root did not close the sheet")
 
-## A trackpad never sends wheel buttons: macOS reports a pan gesture instead, so
-## ignoring it left the sheet frozen on laptops.
+
 func test_a_trackpad_pan_gesture_scrolls_the_body() -> void:
 	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
 	await get_tree().process_frame
@@ -142,8 +138,7 @@ func test_wheel_up_and_down_both_move_the_body() -> void:
 	assert_lt(screen.body.scroll, down, "the wheel did not scroll back up")
 	game.wiki_host.close()
 
-## Dragging the sheet with the button held scrolls it and must not fire a tap on
-## the row the drag started over.
+
 func test_a_drag_scrolls_without_opening_a_page() -> void:
 	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
 	await get_tree().process_frame
@@ -171,8 +166,7 @@ func test_hover_and_a_stray_release_change_nothing() -> void:
 	game.touch = true
 	game.wiki_host.close()
 
-## Taps must open the row that is drawn where the player clicked, not the row
-## that used to be there before the body scrolled.
+
 func test_a_tap_after_scrolling_opens_the_row_that_is_drawn() -> void:
 	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
 	await get_tree().process_frame
@@ -183,8 +177,8 @@ func test_a_tap_after_scrolling_opens_the_row_that_is_drawn() -> void:
 			picked = r
 			break
 	assert_false(picked.is_empty(), "the club page drew no squad rows")
-	# Park the squad row 80 units down the sheet, well clear of where it sits in
-	# the unscrolled layout.
+
+
 	var scroll: float = maxf(0.0, (picked["rect"] as Rect2).position.y - 80.0)
 	assert_gt(scroll, 0.0, "the squad starts on screen; nothing to scroll")
 	screen.body.scroll_to(scroll)
@@ -203,8 +197,7 @@ func test_a_tap_outside_the_sheet_is_ignored() -> void:
 	assert_eq(screen.stack.size(), 1, "a tap in the header opened a page")
 	game.wiki_host.close()
 
-## The acceptance for this bug: every input a player can reach scrolls the body,
-## and the end of the scroll puts the last squad row on screen.
+
 func test_keys_scroll_and_the_last_squad_row_is_reachable() -> void:
 	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
 	await get_tree().process_frame

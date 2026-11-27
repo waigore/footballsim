@@ -1,8 +1,5 @@
 extends GdToolsTest
 
-## The broadcast overlay draws end to end: every panel, the ticker and the
-## control bar. Geometry is asserted, not eyeballed, so the ticker can never
-## creep back over a button.
 
 class FakeGame:
 	var engine = null
@@ -18,9 +15,9 @@ class FakeGame:
 	var camera_follow := false
 	var speed := 1.0
 	var token_scale := 1.0
-	## The scene field the broadcast reads when a league watch holds its card (#124).
+
 	var result_hold := false
-	## The competition the match is billed in (#209), as the play scene carries it.
+
 	var billing := MatchBilling.new()
 
 func _hud(eng) -> Control:
@@ -73,8 +70,8 @@ func test_ticker_follows_events_then_live_play() -> void:
 	hud.queue_free()
 
 func test_ticker_keeps_the_whistle_line_after_full_time() -> void:
-	# #276: the fallback "LIVE" tag and its narration belong to a match still
-	# being played. Once the whistle has gone the last line stays.
+
+
 	var eng := MatchEngine.new(277)
 	eng.events = [{"id": 901, "type": "full_time", "text": "Full time: MUN 2-1 MCI.", "minute": 90}]
 	eng.phase = "full_time"
@@ -159,8 +156,8 @@ func test_phone_bar_carries_one_tappable_teams_door() -> void:
 	for b in hud.buttons:
 		ids.append(str(b["id"]))
 	assert_eq(ids.count("teams"), 1, "expected exactly one teams door, got %s" % str(ids))
-	# The bar's doors, the two club doors on the scoreboard chrome and the HUD
-	# show/hide pill, which is drawn above the ticker on every platform (#158).
+
+
 	assert_eq(ids.size(), HudLayout.CONTROL_COUNT_TOUCH + 2 + 1, "the phone should hold the bar, two club doors and the HUD pill: %s" % str(ids))
 	for b in hud.buttons:
 		var r: Rect2 = b["rect"]
@@ -197,9 +194,8 @@ func test_phone_player_card_stays_clear_of_the_other_panels() -> void:
 		assert_gte(box.size.y, 96.0, "the card is too short to hold its rows at %s" % vp)
 
 func test_desktop_player_card_hangs_under_the_stats_card() -> void:
-	# The dossier is a column under the stats card; the card's momentum footer
-	# grew it (DR-20261125-02), so the column must read its bottom, never a
-	# constant it would now overlap.
+
+
 	var card := HudPlayerCard.new(Color.BLACK, Color.GOLD, Color.WHITE, Color.GRAY)
 	for vp in [Vector2(1600, 900), Vector2(1280, 720), Vector2(1920, 1080)]:
 		var box: Rect2 = card.rect_for(vp)
@@ -242,7 +238,7 @@ func test_goal_and_half_time_banners_draw_on_a_phone() -> void:
 	eng.phase = "full_time"
 	hud.queue_redraw()
 	await get_tree().process_frame
-	# #124: a league watch keeps this card, so its line points back at the season.
+
 	hud.game.result_hold = true
 	hud.queue_redraw()
 	await get_tree().process_frame
@@ -278,9 +274,8 @@ func test_extra_time_and_shootout_cards_draw_on_both_metrics() -> void:
 	desk.queue_free()
 
 func test_the_whistle_card_lists_its_goals_on_both_metrics() -> void:
-	# DR-20261125-04: the half/full-time card is a summary, not just a score. It
-	# lists the goals on phone and desktop metrics alike, counts the ones it
-	# cannot fit (`+n`) and marks an own goal.
+
+
 	var short: Array = [
 		{"team": 0, "minute": 12, "scorer": "E. Haaland", "own_goal": false},
 		{"team": 1, "minute": 38, "scorer": "B. Šeško", "own_goal": false},
@@ -311,8 +306,8 @@ func test_the_whistle_card_lists_its_goals_on_both_metrics() -> void:
 			hud.queue_free()
 
 func test_the_momentum_meter_draws_inside_the_stats_card() -> void:
-	# DR-20261125-02: the summary's momentum reading reaches the broadcast on
-	# both metrics, and the meter is paint only — never a door.
+
+
 	for phone in [false, true]:
 		var eng := MatchEngine.new(37)
 		for i in range(4):
@@ -336,7 +331,7 @@ func test_zoomed_follow_view_draws_the_surname_labels() -> void:
 	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 411.0
 	hud.touch = true
 	hud.game.camera_follow = true
-	# The follow camera's zoom multiplier is what lifts labels above the gate.
+
 	var cam := Camera2D.new()
 	cam.zoom = Vector2(40.0, 40.0)
 	add_child(cam)
@@ -347,28 +342,26 @@ func test_zoomed_follow_view_draws_the_surname_labels() -> void:
 	cam.queue_free()
 	hud.queue_free()
 
-## The fixture card and the opening team sheet name the match's own competition
-## (#209): a friendly's card must not claim the Premier League while the briefing
-## that opened it says FRIENDLY.
+
 func test_the_fixture_card_and_team_sheet_follow_the_scene_billing() -> void:
 	var eng := MatchEngine.new(4242)
 	var hud := _hud(eng)
-	# A scene with no binding at all (a probe, an old suite) still names the home
-	# club's own league rather than printing an empty line.
+
+
 	assert_eq(HudTopBand.billing_name(BareScene.new(), eng), "PREMIER LEAGUE",
 		"the card lost the home club's competition")
-	# A friendly (the picker's match) names no league anywhere on the chrome.
+
 	var game := FakeGame.new()
 	game.engine = eng
 	assert_eq(HudTopBand.billing_name(game, eng), "FRIENDLY", "a friendly's card claims a league")
-	# A league watch rebinds the scene, and both the card and the team sheet read
-	# the same answer the briefing printed.
+
+
 	MatchBilling.bind_scene(game, "MUN", {"matchday": 5})
 	assert_eq(HudTopBand.billing_name(game, eng), game.billing.chrome_name(),
 		"the card disagrees with the briefing about the competition")
 	assert_eq(game.billing.caption(), "PREMIER LEAGUE · MATCHDAY 5",
 		"the briefing lost its round")
-	# Both surfaces paint without a script error at phone and desktop metrics.
+
 	for phone in [false, true]:
 		hud.touch = phone
 		hud.game = game
@@ -376,16 +369,14 @@ func test_the_fixture_card_and_team_sheet_follow_the_scene_billing() -> void:
 		await get_tree().process_frame
 	hud.queue_free()
 
-## A scene that carries no billing field at all: the overlay must still name the
-## home club's league rather than crash on the read.
+
 class BareScene extends RefCounted:
 	pass
 
-# ------------------------------------------------ hidden HUD's cards (#202) ---
 
 func test_every_whistle_hint_names_a_door_the_player_can_reach() -> void:
-	# The bar's RESTART door and its key line leave with the chrome (#158), so a
-	# hidden HUD's full-time card names its own press instead (#202).
+
+
 	assert_eq(HudBannersBand.break_hint("half_time", true, false, false), "SECOND HALF STARTS SHORTLY",
 		"the half-time card offered a door")
 	assert_eq(HudBannersBand.break_hint("full_time", true, false, false), "TAP PLAY AGAIN",
@@ -415,13 +406,11 @@ func test_the_full_time_card_is_the_restart_door_only_with_the_chrome_hidden() -
 	await get_tree().process_frame
 	assert_eq(hud.button_at(card.get_center()), "restart",
 		"a hidden chrome left no way to play again from the card")
-	# The pill stays the one door back (#158): no card takes its corner.
+
 	assert_eq(hud.button_at(HudLayout.hud_toggle_rect(vp, true).get_center()), "hud",
 		"the whistle card stole the HUD pill's press")
-	# A watched league fixture's result is already in the ledger: the held card
-	# owns every press and every key until it is read, so the strip — the
-	# never-hiding pill included — is painted dead rather than advertising a
-	# `PLAY AGAIN` and an `R` the season swallows (#124, #311).
+
+
 	hud.game.result_hold = true
 	hud.queue_redraw()
 	await get_tree().process_frame
@@ -429,7 +418,7 @@ func test_the_full_time_card_is_the_restart_door_only_with_the_chrome_hidden() -
 	for b in hud.buttons:
 		var id := str(b["id"])
 		if id in ["team_0", "team_1"]:
-			continue   # the scoreboard's club names carry no key of its own
+			continue
 		live.append(id)
 	assert_eq(live, [], "a held league result still answered bar doors: %s" % str(live))
 	assert_eq(hud.button_at(card.get_center()), "", "a held league result restarted the match")
@@ -437,16 +426,13 @@ func test_the_full_time_card_is_the_restart_door_only_with_the_chrome_hidden() -
 	hud.set_hud_visible(true, true)
 	hud.queue_redraw()
 	await get_tree().process_frame
-	# With the season off the screen the whistle gets its way on back: the bar
-	# is a live strip again and the card stops answering.
+
+
 	assert_eq(hud.button_at(HudLayout.hud_toggle_rect(vp, true).get_center()), "hud",
 		"the pill stayed dead after the season let go")
 	hud.queue_free()
 
-## #311: a watched league fixture's result is held until it is read, and nothing
-## on the match can replay a game already in the ledger. Over that card the bar
-## paints every door dead and prints no key at all, while a friendly's whistle
-## (a result nobody holds) keeps its live `PLAY AGAIN` and its `R`.
+
 func test_a_held_league_result_leaves_no_live_door_on_the_bar() -> void:
 	var eng := MatchEngine.new(311)
 	eng.phase = "full_time"
@@ -461,15 +447,15 @@ func test_a_held_league_result_leaves_no_live_door_on_the_bar() -> void:
 		assert_eq(str(friendly[i][0]), str(held[i][0]), "door %d changed place under a held result" % i)
 		assert_eq(str(friendly[i][1]), str(held[i][1]), "door %d lost its caption under a held result" % i)
 		assert_false(bool(held[i][3]), "door %s answered over a held league result (#311)" % str(held[i][0]))
-	# A friendly's whistle still offers the doors that are not play: the restart
-	# door the card names, the mode door, the cameras, the league and the menu.
+
+
 	var live: Array = []
 	for spec in friendly:
 		if bool(spec[3]):
 			live.append(str(spec[0]))
 	assert_eq(live, ["mode", "camera", "league", "restart", "menu"],
 		"a friendly's whistle lost a door: %s" % str(live))
-	# The friendly's restart door is the one the card names, and it answers.
+
 	var restart: Array = []
 	for spec in friendly:
 		if str(spec[0]) == "restart":
@@ -494,9 +480,8 @@ func test_the_paused_banner_resumes_when_the_chrome_is_hidden() -> void:
 	hud.queue_free()
 
 func test_a_finished_match_offers_no_play_doors() -> void:
-	# #276: the whistle ends the play controls. PAUSE, speed and SKIP keep their
-	# boxes (the strip never jumps) but answer nothing, and the state line says
-	# the match is over instead of claiming to be live.
+
+
 	var eng := MatchEngine.new(276)
 	var hud := _hud(eng)
 	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 900.0
@@ -521,8 +506,8 @@ func test_a_finished_match_offers_no_play_doors() -> void:
 		assert_false(ids.has(id), "%s answered on a finished match: %s" % [id, str(ids)])
 	for id in ["mode", "camera", "league", "restart", "menu"]:
 		assert_true(ids.has(id), "%s left with the whistle: %s" % [id, str(ids)])
-	# The doors' boxes are still there, in the strip's own order: PAUSE is the
-	# first cell and SKIP the fourth, and neither is a press anymore.
+
+
 	for i in [0, 3]:
 		var cell := Rect2(bar.position.x + float(i) * (bw + gap), bar.position.y, bw, HudLayout.CONTROL_H)
 		assert_eq(hud.button_at(cell.get_center()), "", "dead door %d still answered a press" % i)

@@ -1,25 +1,18 @@
 class_name PreMatchHost
 extends RefCounted
 
-## Owns the pre-match briefing layer and the hand-off either side of it (#157).
-##
-## Both ways into a watched match — a league Continue that reaches a Watch, and
-## the fixture picker's KICK OFF — ask this host to show the briefing first. The
-## host answers every press itself, and only a kick starts the sim; BACK hands
-## control to the caller's own way out (the hub, or the picker) without starting.
 
 const LAYER := 40
 
 var game = null
 var layer: CanvasLayer = null
 var screen: PreMatchScreen = null
-## What is on the briefing, kept for the caller's back door.
+
 var request: Dictionary = {}
 var on_kick := Callable()
 var on_back := Callable()
 
-## Create, attach and build the layer in one step: the scene keeps one field
-## instead of three lines of wiring.
+
 static func mount(host) -> PreMatchHost:
 	var out := PreMatchHost.new()
 	out.attach(host)
@@ -47,8 +40,7 @@ func build() -> void:
 func is_open() -> bool:
 	return layer != null and layer.visible and screen != null and screen.is_open()
 
-## Show the briefing for `req` (a `PreMatchModel.build` dictionary). `kick` runs
-## when the player starts the match; `back` when they leave without starting.
+
 func ask(req: Dictionary, kick: Callable, back: Callable) -> void:
 	if req.is_empty():
 		if kick.is_valid():
@@ -99,8 +91,7 @@ func sync(frame: Transform2D, scale: float, touch: bool) -> void:
 	screen.touch = touch
 	screen.queue_redraw()
 
-## Hover, taps and keys, all in design space. The briefing is modal: it answers
-## every event while it is up.
+
 func handle_input(event: InputEvent, design_point: Vector2) -> bool:
 	if not is_open():
 		return false

@@ -1,10 +1,6 @@
 class_name GoalVignetteFlight
 extends RefCounted
 
-## The ball's own physics for an AUTO clip (#162): the engine's own gravity, drag,
-## bounce and swerve, the pass and the strike that aim it, and the net that judges
-## whether the flight crossed the line. State stays on the sim — these are the
-## ball's verbs, so the build-up, the strike and the sampling all read one ball.
 
 const L := GoalVignette.L
 const CENTRE := GoalVignette.CENTRE
@@ -13,10 +9,10 @@ const BAR := GoalVignette.BAR
 const DT := GoalVignette.DT
 const SUB := GoalVignette.SUB
 const GRAVITY := GoalVignette.GRAVITY
-## How far a flight from the strike point is searched before giving up on the line.
+
 const SEARCH := SUB * 240
 
-## Carry the ball at the owner's feet: a little ahead of his run, bobbling.
+
 static func carry(sim: GoalVignette.Sim, dt: float) -> void:
 	var b: GoalVignetteCast.Body = sim.bodies[sim.owner]
 	var lead := 0.55 + 0.18 * sin(sim.t * 9.0 + float(sim.owner))
@@ -25,7 +21,7 @@ static func carry(sim: GoalVignette.Sim, dt: float) -> void:
 	sim.ball = sim.ball.lerp(target, clampf(dt * 16.0, 0.0, 1.0))
 	sim.bvel = Vector3(b.vel.x, b.vel.y, 0.0)
 
-## One tick of a free ball: sub-stepped physics, then the line is judged.
+
 static func step(sim: GoalVignette.Sim, dt: float) -> void:
 	var step_dt := dt / float(SUB)
 	var start := sim.ball
@@ -33,7 +29,7 @@ static func step(sim: GoalVignette.Sim, dt: float) -> void:
 		integrate(sim, step_dt)
 	judge_net(sim, start)
 
-## Gravity, swerve, drag and the bounce — the engine's own constants.
+
 static func integrate(sim: GoalVignette.Sim, dt: float) -> void:
 	if sim.ball.z > 0.0 or sim.bvel.z > 0.0:
 		sim.bvel.z -= GRAVITY * dt
@@ -65,8 +61,7 @@ static func integrate(sim: GoalVignette.Sim, dt: float) -> void:
 	sim.spin *= 1.0 - 2.2 * dt
 	sim.ball += sim.bvel * dt
 
-## The goalmouth is judged where the flight actually crossed the line, not at
-## whatever pose the tick happened to land on; a miss rebounds off the frame.
+
 static func judge_net(sim: GoalVignette.Sim, start: Vector3) -> void:
 	if not sim.scored and start.x < L and sim.ball.x >= L:
 		var k := (L - start.x) / maxf(sim.ball.x - start.x, 0.0001)
@@ -82,7 +77,7 @@ static func judge_net(sim: GoalVignette.Sim, start: Vector3) -> void:
 		sim.ball.x = L
 		sim.bvel.x = -absf(sim.bvel.x) * 0.3
 
-## The through-ball: released flat to where the runner will be, with a seeded bend.
+
 static func through_ball(sim: GoalVignette.Sim) -> void:
 	sim.owner = -1
 	var runner: GoalVignetteCast.Body = sim.bodies[sim.shooter] as GoalVignetteCast.Body
@@ -92,8 +87,7 @@ static func through_ball(sim: GoalVignette.Sim) -> void:
 		(0.11 - sim.ball.z) / flight + 0.5 * GRAVITY * flight)
 	sim.spin = sim.rng.randf_range(-0.35, 0.35)
 
-## The finish: aim away from the keeper, then fly the solved velocity. The keeper
-## only starts his dive once the ball is struck, after his own reaction delay.
+
 static func strike(sim: GoalVignette.Sim) -> void:
 	sim.shot = true
 	sim.owner = -1
@@ -108,7 +102,7 @@ static func strike(sim: GoalVignette.Sim) -> void:
 	sim.react_at = sim.t + sim.bodies[sim.keeper].delay
 	sim.bvel = solve_shot(sim, sim.ball, aim, 19.0 + sim.rng.randf() * 6.0)
 
-## Solve the strike: fly the velocity, then bend the aim by what it missed by.
+
 static func solve_shot(sim: GoalVignette.Sim, from: Vector3, aim: Vector3,
 		speed: float) -> Vector3:
 	var flat := Vector2(aim.x - from.x, aim.y - from.y)
@@ -125,7 +119,7 @@ static func solve_shot(sim: GoalVignette.Sim, from: Vector3, aim: Vector3,
 		v.z -= (z - aim.z) / flight
 	return v
 
-## One flight through the ball's own integrator, stopped at the goal line.
+
 static func fly(sim: GoalVignette.Sim, from: Vector3, v0: Vector3) -> Dictionary:
 	var p := from
 	var v := v0
