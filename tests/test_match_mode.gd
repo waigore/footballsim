@@ -36,6 +36,9 @@ func after_each() -> void:
 	if game == null:
 		return
 	game.view.set_mode(Prefs.DEFAULT_MODE)
+	game.skip_armed = false
+	if game.engine != null and str(game.engine.phase) != "play":
+		engine_dirty = true
 	if engine_dirty:
 		game.new_match(1000)
 		engine_dirty = false
@@ -174,6 +177,7 @@ func test_skip_ends_a_live_replay_in_goals_only() -> void:
 
 
 func test_skip_runs_the_match_on_to_the_next_whistle() -> void:
+	engine_dirty = true
 	game.view.set_mode("highlights")
 	game.paused = false
 	game.engine.added = [1.0, 1.0]
@@ -191,6 +195,7 @@ func test_skip_runs_the_match_on_to_the_next_whistle() -> void:
 
 
 func test_a_skip_spends_one_frame_budget_at_a_time() -> void:
+	engine_dirty = true
 	game.view.set_mode("highlights")
 	game.paused = false
 	game.engine.clock = 60.0
@@ -204,6 +209,7 @@ func test_a_skip_spends_one_frame_budget_at_a_time() -> void:
 
 
 func test_a_second_skip_press_stops_it() -> void:
+	engine_dirty = true
 	game.view.set_mode("highlights")
 	game.paused = false
 	game.engine.clock = 120.0
@@ -214,6 +220,7 @@ func test_a_second_skip_press_stops_it() -> void:
 
 
 func test_pause_stops_a_running_skip() -> void:
+	engine_dirty = true
 	game.view.set_mode("highlights")
 	game.paused = false
 	game.engine.clock = 200.0
@@ -226,6 +233,7 @@ func test_pause_stops_a_running_skip() -> void:
 
 
 func test_a_finished_match_cannot_skip_and_a_break_holds_the_skip_off() -> void:
+	engine_dirty = true
 	game.engine.phase = "full_time"
 	game.paused = false
 	_key(KEY_S)
@@ -237,6 +245,7 @@ func test_a_finished_match_cannot_skip_and_a_break_holds_the_skip_off() -> void:
 
 
 func test_the_state_line_and_the_door_name_a_running_skip() -> void:
+	engine_dirty = true
 	var band: HudRosterBand = game.hud.roster_band
 	game.view.set_mode("highlights")
 	game.paused = false
@@ -252,6 +261,7 @@ func test_the_state_line_and_the_door_name_a_running_skip() -> void:
 
 
 func test_a_skip_in_the_second_half_names_full_time() -> void:
+	engine_dirty = true
 	game.view.set_mode("full")
 	game.paused = false
 	game.engine.half = 2
