@@ -151,18 +151,27 @@ func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 	y += 26.0
 	var reports: Array = view.get("reports", [])
 	if reports.is_empty():
-		items.append({"id": "", "kind": "note", "label": "No matchdays match these filters.",
+		# The note says why the list is empty: a season with nothing played yet
+		# has nothing to blame the filters for (#312).
+		var note: String = "No matchdays match these filters."
+		if int(view.get("played", 0)) == 0:
+			note = "No matchday has been played yet."
+		items.append({"id": "", "kind": "note", "label": note,
 			"rect": Rect2(24.0, y, vp.x - 48.0, 24.0)})
 	for i in range(reports.size()):
 		var row: Dictionary = reports[i]
 		items.append({"id": "statsday:" + str(row["date"]), "kind": "day", "row": row,
 			"rect": Rect2(24.0, y + float(i) * (ROW_H + GAP), vp.x - 48.0, ROW_H)})
 	y += float(reports.size()) * (ROW_H + GAP) + 10.0
+	var leaders: Array = view.get("leaders", [])
+	# A chart with no rows is not a section: with nothing to rank the caption is
+	# left off rather than printed over empty space (#312).
+	if leaders.is_empty():
+		return items
 	items.append({"id": "", "kind": "caption",
 		"label": "LEADERS  ·  %s" % str(filters.get("stat", "goals")).to_upper(),
 		"rect": Rect2(24.0, y, vp.x - 48.0, 20.0)})
 	y += 24.0
-	var leaders: Array = view.get("leaders", [])
 	for i in range(leaders.size()):
 		items.append({"id": "", "kind": "leader", "row": leaders[i], "rank": i + 1,
 			"rect": Rect2(24.0, y + float(i) * 24.0, vp.x - 48.0, 23.0)})
