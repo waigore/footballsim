@@ -183,15 +183,27 @@ static func team_page(club_id: String) -> Dictionary:
 		bars.append([str(pair[1]), float(club.get("style", {}).get(pair[0], 0.5))])
 	out["blocks"].append({"k": "bars", "items": bars})
 	out["blocks"].append({"k": "section", "text": "SQUAD"})
+	var squad := repo().squad(club_id)
+	var absences := WikiAbsence.statuses(club_id)
 	var squad_rows: Array = []
-	for p in repo().squad(club_id):
+	for p in squad:
 		squad_rows.append({
 			"cells": [str(p["number"]), str(p["name"]), str(p["pos"]), str(p["ovr"])],
 			"target": {"page": PLAYER, "id": str(p["id"])},
 		})
+	var squad_head := ["#", "PLAYER", "POS", "OVR"]
+	var squad_widths := [0.09, 0.55, 0.19, 0.17]
+	var squad_text := [1, 2]
+	if not absences.is_empty():
+		squad_head.append("STATUS")
+		squad_widths = [0.07, 0.34, 0.13, 0.10, 0.36]
+		squad_text = [1, 2, 4]
+		for i in range(squad_rows.size()):
+			var row: Dictionary = squad_rows[i]
+			row["cells"].append(str(absences.get(str(squad[i]["id"]), "")))
 	out["blocks"].append({
-		"k": "table", "cols": ["#", "PLAYER", "POS", "OVR"],
-		"widths": [0.09, 0.55, 0.19, 0.17], "text_cols": [1, 2],
+		"k": "table", "cols": squad_head,
+		"widths": squad_widths, "text_cols": squad_text,
 		"rows": squad_rows,
 	})
 	out["blocks"].append({"k": "section", "text": "RESULTS  ·  %s" % WikiLedger.ledger_label()})
@@ -286,16 +298,17 @@ static func player_page(player_id: String) -> Dictionary:
 		"accent": club.get("color", Color.WHITE),
 		"blocks": [],
 	}
-	out["blocks"].append({
-		"k": "kv",
-		"items": [
-			["OVERALL", str(int(p["ovr"])), true],
-			["POSITION", str(p["pos"]), false],
-			["ROLE", str(p["role"]), false],
-			["HEIGHT", "%d CM" % int(p["height"]), false],
-			["SQUAD", "STARTING XI" if str(p["squad"]) == "starter" else "BENCH", false],
-		],
-	})
+	var summary: Array = [
+		["OVERALL", str(int(p["ovr"])), true],
+		["POSITION", str(p["pos"]), false],
+		["ROLE", str(p["role"]), false],
+		["HEIGHT", "%d CM" % int(p["height"]), false],
+		["SQUAD", "STARTING XI" if str(p["squad"]) == "starter" else "BENCH", false],
+	]
+	var absence := WikiAbsence.status_of(str(p["club_id"]), player_id)
+	if absence != "":
+		summary.append(["STATUS", absence, false])
+	out["blocks"].append({"k": "kv", "items": summary})
 	out["blocks"].append({"k": "section", "text": "ATTRIBUTES"})
 	var bars: Array = []
 	if str(p["role"]) == "GK":
