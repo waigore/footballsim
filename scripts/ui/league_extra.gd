@@ -55,10 +55,12 @@ static var header_cache := {}
 ## lane between BACK and whatever door owns the right corner (#180). A title too
 ## long for the lane is shortened with an ellipsis; the caption only rides what
 ## the title leaves, and is dropped when that is too narrow to read.
+## `caps` is the kicker's own convention: every sheet's title is upper case
+## except the hub's, which names the pose in title case (#323).
 static func header_band(vp: Vector2, bold: Font, title: String, caption: String = "",
-		right: float = 0.0) -> Dictionary:
+		right: float = 0.0, caps: bool = true) -> Dictionary:
 	var lane_end: float = vp.x - 24.0 - right
-	var label: String = title.to_upper()
+	var label: String = title.to_upper() if caps else title
 	var room: float = lane_end - TITLE_X
 	var shown: String = "" if room <= 0.0 else LeagueColumns.fit_name(label, bold, TITLE_SIZE, room)
 	var title_w: float = UiChrome.text_width(bold, shown, TITLE_SIZE)
@@ -81,15 +83,17 @@ static func header_band(vp: Vector2, bold: Font, title: String, caption: String 
 ## in the gold kicker position, and an optional right-hand caption. Continue is
 ## the only control that ever shares the row, and the hub adds it itself.
 ## `right` reserves room for a door in the corner; the title and caption are
-## fitted inside what it leaves (#180). Returns the band it painted, so a date
-## caption can register its hint on the strip it really occupies.
+## fitted inside what it leaves (#180). `caps` keeps the kicker's upper case,
+## which every sheet uses except the hub's own title case (#323). Returns the
+## band it painted, so a date caption can register its hint on the strip it
+## really occupies.
 static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
-		caption: String = "", right: float = 0.0) -> Dictionary:
+		caption: String = "", right: float = 0.0, caps: bool = true) -> Dictionary:
 	var bold: Font = fonts["bold"]
 	var rect := back_rect()
 	UiChrome.panel(c, header_cache, rect, UiChrome.C_PANEL_LIGHT, 7)
 	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 21.0, "BACK", 12, UiChrome.C_TEXT, bold)
-	var band := header_band(vp, bold, title, caption, right)
+	var band := header_band(vp, bold, title, caption, right, caps)
 	UiChrome.text(c, Vector2(TITLE_X, 36.0), str(band["title"]), TITLE_SIZE, UiChrome.C_GOLD, bold)
 	if str(band["caption"]) != "":
 		UiChrome.text_r(c, vp.x - 24.0 - right, 34.0, str(band["caption"]), 10, UiChrome.C_DIM, bold)

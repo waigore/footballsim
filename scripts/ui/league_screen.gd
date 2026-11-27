@@ -43,7 +43,7 @@ var holding := false
 
 var mode := MODE_WIZARD
 var season: LeagueSeason = null
-var wizard := {"name": "League 1", "calendar_mode": "generated", "advance_mode": "fixture_days",
+var wizard := {"name": LeagueStartSheet.SAVE_NAME, "calendar_mode": "generated", "advance_mode": "fixture_days",
 	"competitions": ["PL"], "error": ""}
 var saves: Array = []
 ## The load list's delete question, over the sheet that raised it (DR-20261125-06).
