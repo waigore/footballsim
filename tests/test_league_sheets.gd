@@ -1115,6 +1115,56 @@ func test_a_portrait_phone_pans_to_the_last_table_column() -> void:
 	assert_lte((last["rect"] as Rect2).end.x, vp.x + 0.5, "the last column is still off the window")
 	body.free()
 
+## #320: the two club captions are painted above their columns, so the first
+## event on each side must start below the caption band — and two cards at the
+## same minute still take a row each instead of stacking on one line.
+func test_the_report_columns_start_below_their_club_captions() -> void:
+	var book := LeagueBook.new()
+	var events := [
+		{"minute": 6, "kind": "goal", "club_id": "A1", "player_name": "A. Striker"},
+		{"minute": 9, "kind": "yellow", "club_id": "B1", "player_name": "C. Pivot"},
+		{"minute": 9, "kind": "red", "club_id": "B1", "player_name": "C. Pivot"},
+		{"minute": 52, "kind": "injury", "club_id": "A1", "player_name": "D. Back"},
+	]
+	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
+		var items: Array = book.report_layout(vp, {
+			"fixture": _fixture(1), "events": events, "day": "2026-08-15",
+		})
+		var rows := {"home": [], "away": []}
+		for item in items:
+			if str(item["kind"]) != "event":
+				continue
+			var rect: Rect2 = item["rect"]
+			assert_gte(rect.position.y, LeagueReportSheet.CAPTION_Y + 12.0,
+				"a %s row shares the club caption's line at %s" % [item["side"], vp])
+			(rows[str(item["side"])] as Array).append(rect.position.y)
+		assert_eq(float((rows["home"] as Array)[0]), LeagueReportSheet.EVENTS_TOP,
+			"the home column did not start on its first row at %s" % vp)
+		assert_eq(float((rows["away"] as Array)[0]), LeagueReportSheet.EVENTS_TOP,
+			"the away column did not start on its first row at %s" % vp)
+		var away: Array = rows["away"]
+		assert_eq(away.size(), 2, "a card row was lost at %s" % vp)
+		assert_ne(float(away[0]), float(away[1]),
+			"two cards at the same minute shared a row at %s" % vp)
+		assert_gte(float(away[1]) - float(away[0]), LeagueReportSheet.ROW_H,
+			"two card rows crowd each other at %s" % vp)
+## #310: the System sheet's ADVANCE row names the pointer that will press it — a
+## desktop sheet says CLICK, a phone sheet keeps TAP — and it still names the
+## mode the press switches to.
+func test_the_system_advance_hint_names_the_pointer() -> void:
+	var sheet := LeagueSystemSheet.new()
+	for pair in [[false, "click to switch to every day"], [true, "tap to switch to every day"]]:
+		var items: Array = sheet.layout(Vector2(1280, 720), {
+			"date": "2026-08-15", "name": "S", "advance_mode": "fixture_days",
+			"touch": bool(pair[0]),
+		})
+		assert_eq(str(_item(items, "sys:advance").get("hint", "")), str(pair[1]),
+			"the ADVANCE hint names the wrong pointer (touch=%s)" % pair[0])
+	var mirrored: Array = sheet.layout(Vector2(1280, 720), {
+		"date": "2026-08-15", "advance_mode": "every_day", "touch": false,
+	})
+	assert_eq(str(_item(mirrored, "sys:advance").get("hint", "")),
+		"click to switch to fixture days", "the hint does not name the mode it switches to")
 ## #312: an empty PLAYED MATCHDAYS list says why it is empty — a season with
 ## nothing played yet names that, and only a played season emptied by the
 ## filters gets the filters blamed — and an empty LEADERS chart leaves no bare

@@ -31,6 +31,8 @@ var followed := false
 var at := Vector2.ZERO
 ## Pointer position in the same design space as `at`, for the door's hover fill.
 var mouse := Vector2(-1000, -1000)
+## Read on a handset (#310): the footer names the finger's verb, not the mouse's.
+var touch := false
 var cache := {}
 
 func show(club: String, club_name: String, club_abbr: String, is_followed: bool,
@@ -92,6 +94,10 @@ func state_line() -> String:
 		return "FOLLOWED  ·  ITS GAMES STAY ON WATCH"
 	return "NOT FOLLOWED  ·  FOLLOW TO KEEP ITS GAMES ON WATCH"
 
+## The footer's leave hint: a mouse clicks elsewhere, a finger taps (#278, #310).
+func close_hint() -> String:
+	return "TAP ELSEWHERE TO CLOSE" if touch else "CLICK ELSEWHERE TO CLOSE"
+
 # gd-tools: no cover start
 
 func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary) -> void:
@@ -121,6 +127,6 @@ func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary) -> void:
 	UiChrome.text_c(c, close.get_center().x, close.position.y + 19.0, "✕", 14,
 		UiChrome.C_TEXT if close.has_point(mouse) else UiChrome.C_DIM, bold)
 	UiChrome.text(c, Vector2(r.position.x + 18.0, r.end.y - 10.0),
-		"TAP ELSEWHERE TO CLOSE", 8, UiChrome.C_DIM, med)
+		close_hint(), 8, UiChrome.C_DIM, med)
 
 # gd-tools: no cover end
