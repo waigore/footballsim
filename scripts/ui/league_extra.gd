@@ -14,6 +14,12 @@ const TITLE_SIZE := 16
 
 const CAPTION_MIN := 160.0
 
+const NAV_DOOR := 44.0
+const NAV_GAP := 8.0
+const TOUCH_PRIMARY_W := 96.0
+const TOUCH_TIGHT_W := 560.0
+const TITLE_FLOOR := 40.0
+
 static var header_cache := {}
 
 
@@ -23,15 +29,39 @@ static func back_rect(touch := false) -> Rect2:
 	return Rect2(24.0, 12.0, 96.0, 32.0)
 
 
+static func nav_rect(vp: Vector2) -> Rect2:
+	var back: Rect2 = back_rect(true)
+	var lane_end: float = vp.x - 24.0 - primary_width(vp, 140.0, true)
+	if back.end.x + NAV_GAP + NAV_DOOR + NAV_GAP > lane_end:
+		return Rect2()
+	return Rect2(back.end.x + NAV_GAP, back.position.y, NAV_DOOR, NAV_DOOR)
+
+
+static func title_x(vp: Vector2, touch := false, nav := true) -> float:
+	if not touch or not nav:
+		return TITLE_X
+	var door: Rect2 = nav_rect(vp)
+	if door.size.x <= 0.0:
+		return TITLE_X
+	return door.end.x + 12.0
+
+
 static func back_item(touch := false) -> Dictionary:
 	return {"id": "back", "kind": "button", "label": "BACK", "pinned": true,
 		"rect": back_rect(touch)}
 
 
+static func primary_width(vp: Vector2, width: float, touch: bool) -> float:
+	if touch and vp.x < TOUCH_TIGHT_W:
+		return minf(width, TOUCH_PRIMARY_W)
+	return width
+
+
 static func primary_rect(vp: Vector2, width: float = 140.0, touch := false) -> Rect2:
+	var w: float = primary_width(vp, width, touch)
 	if touch:
-		return Rect2(vp.x - 24.0 - width, 6.0, width, UiChrome.TAP_H)
-	return Rect2(vp.x - 24.0 - width, 12.0, width, 32.0)
+		return Rect2(vp.x - 24.0 - w, 6.0, w, UiChrome.TAP_H)
+	return Rect2(vp.x - 24.0 - w, 12.0, w, 32.0)
 
 
 static func row_h(touch: bool) -> float:
@@ -39,19 +69,23 @@ static func row_h(touch: bool) -> float:
 
 
 static func header_band(vp: Vector2, bold: Font, title: String, caption: String = "",
-		right: float = 0.0, caps: bool = true) -> Dictionary:
+		right: float = 0.0, caps: bool = true, touch: bool = false,
+		nav: bool = true) -> Dictionary:
 	var lane_end: float = vp.x - 24.0 - right
 	var label: String = title.to_upper() if caps else title
-	var room: float = lane_end - TITLE_X
-	var shown: String = "" if room <= 0.0 else LeagueColumns.fit_name(label, bold, TITLE_SIZE, room)
+	var left: float = title_x(vp, touch, nav)
+	var room: float = lane_end - left
+	var floor_w: float = TITLE_FLOOR if touch else 0.0
+	var shown: String = "" if room <= 0.0 or room < floor_w \
+		else LeagueColumns.fit_name(label, bold, TITLE_SIZE, room)
 	var title_w: float = UiChrome.text_width(bold, shown, TITLE_SIZE)
-	var out := {"title": shown, "title_rect": Rect2(TITLE_X, 20.0, title_w, 16.0),
+	var out := {"title": shown, "title_rect": Rect2(left, 20.0, title_w, 16.0),
 		"caption": "", "caption_rect": Rect2()}
 	if caption == "":
 		return out
 
 
-	var space: float = lane_end - (TITLE_X + title_w + 12.0)
+	var space: float = lane_end - (left + title_w + 12.0)
 	if space < CAPTION_MIN:
 		return out
 	var fit: String = LeagueColumns.fit_name(caption, bold, 10, space)
@@ -63,14 +97,16 @@ static func header_band(vp: Vector2, bold: Font, title: String, caption: String 
 
 static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
 		caption: String = "", right: float = 0.0, caps: bool = true,
-		touch: bool = false) -> Dictionary:
+		touch: bool = false, nav: bool = true) -> Dictionary:
 	var bold: Font = fonts["bold"]
 	var rect := back_rect(touch)
 	UiChrome.panel(c, header_cache, rect, UiChrome.C_PANEL_LIGHT, 7)
 	UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0,
 		"BACK", 12, UiChrome.C_TEXT, bold)
-	var band := header_band(vp, bold, title, caption, right, caps)
-	UiChrome.text(c, Vector2(TITLE_X, 36.0), str(band["title"]), TITLE_SIZE, UiChrome.C_GOLD, bold)
+	var band := header_band(vp, bold, title, caption, right, caps, touch, nav)
+	var title_rect: Rect2 = band["title_rect"]
+	UiChrome.text(c, Vector2(title_rect.position.x, 36.0), str(band["title"]), TITLE_SIZE,
+		UiChrome.C_GOLD, bold)
 	if str(band["caption"]) != "":
 		UiChrome.text_r(c, vp.x - 24.0 - right, 34.0, str(band["caption"]), 10, UiChrome.C_DIM, bold)
 	c.draw_rect(Rect2(24.0, HEADER - 8.0, vp.x - 48.0, 1.0), Color(1, 1, 1, 0.08))

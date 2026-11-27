@@ -86,20 +86,37 @@ func test_a_desktop_table_keeps_its_dense_pitch() -> void:
 		"a touch pose did not ask for a finger-sized header band")
 
 
-func test_the_panel_drawer_door_is_a_finger_sized_labelled_target() -> void:
+func test_the_panel_drawer_door_is_a_finger_sized_header_door() -> void:
 	var panel := LeaguePanel.new()
 	panel.touch = true
-	var vp := Vector2(913, 411)
+	for vp in [Vector2(411, 914), Vector2(640, 360), Vector2(913, 411)]:
+		var door := panel.tab_rect(vp)
+		assert_eq(door, LeagueExtra.nav_rect(vp), "the drawer door left the header lane at %s" % vp)
+		assert_gte(door.size.x, UiChrome.TAP_H, "the drawer door is narrower than a finger at %s" % vp)
+		assert_gte(door.size.y, UiChrome.TAP_H, "the drawer door is shorter than a finger at %s" % vp)
+		assert_gte(door.position.x, LeagueExtra.back_rect(true).end.x,
+			"the drawer door sits on BACK at %s" % vp)
+		assert_lte(door.end.y, LeagueChrome.HEADER, "the drawer door left the header band at %s" % vp)
+		assert_lte(door.end.x, LeagueExtra.primary_rect(vp).position.x,
+			"the drawer door sits under the primary door at %s" % vp)
+		assert_eq(panel.hit(door.get_center(), vp), "panel",
+			"the drawer door centre does not open it at %s" % vp)
+		assert_eq(panel.hit(Vector2(door.position.x + 40.0, door.get_center().y), vp), "panel",
+			"the inboard half of the drawer door does not open it at %s" % vp)
+		assert_eq(panel.hit(Vector2(door.end.x + 8.0, door.get_center().y), vp), "",
+			"a press beside the drawer door opened the panel at %s" % vp)
+
+
+func test_a_window_too_narrow_for_the_header_door_keeps_the_edge_plate() -> void:
+	var panel := LeaguePanel.new()
+	panel.touch = true
+	var vp := Vector2(280, 240)
+	assert_eq(LeagueExtra.nav_rect(vp), Rect2(), "a narrow window still claims a header lane")
 	var door := panel.tab_rect(vp)
-	assert_gte(door.size.x, 48.0, "the drawer door is narrower than a finger")
-	assert_gte(door.size.y, 48.0, "the drawer door is shorter than a finger")
-	assert_gte(door.position.x, 16.0, "the drawer door starts in the system gesture strip")
-	assert_lte(door.end.x, vp.x, "the drawer door runs off the sheet")
-	assert_eq(panel.hit(door.get_center(), vp), "panel", "the drawer door centre does not open it")
-	assert_eq(panel.hit(Vector2(door.position.x + 40.0, door.get_center().y), vp), "panel",
-		"the inboard half of the drawer door does not open it")
-	assert_eq(panel.hit(Vector2(door.end.x + 8.0, door.get_center().y), vp), "",
-		"a press beside the drawer door opened the panel")
+	assert_gte(door.size.x, 48.0, "the edge plate is narrower than a finger")
+	assert_gte(door.size.y, 48.0, "the edge plate is shorter than a finger")
+	assert_gte(door.position.x, 16.0, "the edge plate starts in the system gesture strip")
+	assert_eq(panel.hit(door.get_center(), vp), "panel", "the edge plate answers no press")
 
 
 func test_the_desktop_drawer_door_keeps_its_edge_sliver() -> void:
