@@ -16,15 +16,48 @@ extends RefCounted
 ## drops the sentence altogether.
 
 ## The legend's bands, in paint order: the three European places and the drop.
+## A tier below the top flight paints its own promotion picture instead and
+## reads it from `bands_for()`.
 const BANDS := ["ucl", "uel", "uecl", "relegation"]
 const SHORT_LABELS := ["UCL", "UEL", "UECL", "REL"]
 const WIDE_LABELS := ["UCL", "UEL", "UECL", "RELEGATION"]
+
+## The bands one competition's table paints, from its own regulations: a
+## promoting tier shows promotion and its play-off band, a top flight the
+## European places. The drop is always the last mark (#258).
+static func bands_for(rules: Dictionary) -> Array:
+	if int(rules.get("promotion_places", 0)) <= 0:
+		return BANDS.duplicate()
+	if int(rules.get("promotion_playoff_places", 0)) > 0:
+		return ["promotion", "playoff", "relegation"]
+	return ["promotion", "relegation"]
+
+## The legend captions for those bands, in the short reading a phone uses and
+## the wide one a desktop prints.
+static func labels_for(bands: Array, short: bool) -> Array:
+	var out: Array = []
+	for band in bands:
+		var label := LeagueRules.zone_label(str(band))
+		if str(band) == "promotion":
+			label = "UP"
+		elif str(band) == "playoff":
+			label = "PLO"
+		elif str(band) == "relegation":
+			label = "REL" if short else "RELEGATION"
+		out.append(label)
+	return out
 ## Below this the reading doors and the legend cannot share the bottom bar.
 const NARROW_VP := 620.0
 ## The sort sentence only rides the legend when the sheet is wide enough for both.
 const SENTENCE_VP := 760.0
-const SENTENCE := "TAP A COLUMN TO SORT · COLOURED BAND = PLACE"
 const GAP := 8.0
+
+## The sort sentence under the legend: the pointer's verb on a desktop sheet and
+## the finger's on a touch one (#278), the same split the fixture picker's footer
+## already makes.
+static func sentence(touch: bool) -> String:
+	return "TAP A COLUMN TO SORT · COLOURED BAND = PLACE" if touch \
+		else "CLICK A COLUMN TO SORT · COLOURED BAND = PLACE"
 
 ## A phone sheet: the legend moves up beside the title, the doors keep the bar.
 static func narrow(vp: Vector2) -> bool:
@@ -65,23 +98,27 @@ static func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 	if date != "":
 		hints.add(DateHints.strip_right(fonts["bold"], label, vp.x - 24.0, 34.0, 10), date)
 	var spot := legend_rect(vp)
-	var sentence := sentence_rect(vp)
-	if sentence != Rect2():
-		UiChrome.text_r(c, vp.x - 24.0, sentence.end.y - 4.0, SENTENCE, 8, UiChrome.C_DIM, fonts["med"])
-	_legend(c, spot, fonts)
+	var strip := sentence_rect(vp)
+	if strip != Rect2():
+		UiChrome.text_r(c, vp.x - 24.0, strip.end.y - 4.0, sentence(bool(view.get("touch", false))),
+			8, UiChrome.C_DIM, fonts["med"])
+	var rules: Dictionary = view.get("rules", {})
+	_legend(c, spot, fonts, bands_for(rules))
 
 ## The band legend: one coloured glyph per place rule, right-aligned against the
-## strip's end on a phone sheet and left-aligned at its start on a wide one.
-static func _legend(c: CanvasItem, strip: Rect2, fonts: Dictionary) -> void:
+## strip's end on a phone sheet and left-aligned at its start on a wide one. The
+## bands are the league's own, so a promoting tier's legend names its promotion
+## and play-off places rather than European ones it does not have.
+static func _legend(c: CanvasItem, strip: Rect2, fonts: Dictionary, bands: Array) -> void:
 	var phone := strip.size.y > 0.0
-	var labels: Array = SHORT_LABELS if phone else WIDE_LABELS
+	var labels: Array = labels_for(bands, phone)
 	var size: int = 8 if phone else 9
 	var bold: Font = fonts["bold"]
 	var x: float = strip.end.x - legend_width(bold, labels, size) if phone else strip.position.x
 	for i in range(labels.size()):
 		var label := str(labels[i])
 		UiChrome.text(c, Vector2(x, strip.position.y), label, size,
-			LeagueChrome.zone_color(str(BANDS[i])), bold)
+			LeagueChrome.zone_color(str(bands[i])), bold)
 		x += bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + GAP
 
 # gd-tools: no cover end

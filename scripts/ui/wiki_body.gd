@@ -42,12 +42,22 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
 
+## The pitch a touch build lays its table rows on: 48 density points of hit area
+## plus the sheet's own divider, the same pitch the league table took in #204
+## (#274). The encyclopedia is where clubs are looked up, so a phone must be able
+## to press one club per finger.
+const TAP_ROW_H := 49.0
+
 ## Positioned rows for a block list at a given content width. Every row keeps
-## its own rect and (for rows that open a page) its target.
-static func layout(blocks: Array, width: float, compact: bool = false) -> Dictionary:
+## its own rect and (for rows that open a page) its target. `touch` asks for the
+## finger-sized row pitch; a mouse keeps the dense reading.
+static func layout(blocks: Array, width: float, compact: bool = false,
+		touch: bool = false) -> Dictionary:
 	var rows: Array = []
 	var y := MARGIN
 	var row_h := 24.0 if compact else 22.0
+	if touch:
+		row_h = TAP_ROW_H
 	for block in blocks:
 		var kind := str(block.get("k", ""))
 		var x := 0.0
@@ -119,7 +129,7 @@ static func _widths(block: Dictionary, count: int) -> Array:
 	return out
 
 func set_page(page: Dictionary, compact: bool = false) -> void:
-	var built := layout(page.get("blocks", []), size.x, compact)
+	var built := layout(page.get("blocks", []), size.x, compact, touch)
 	_rows = built["rows"]
 	_height = float(built["height"])
 	scroll = 0.0
@@ -310,14 +320,22 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 			var ink: Color = UiChrome.C_GOLD if marked and i == mark else Color(0.92, 0.95, 0.96)
 			var right: bool = not text_cols.has(i) and i != 0
 			if right:
-				_text_right(x + cw - 8.0, rect.position.y + 16.0, str(cells[i]), 11, ink, i == cells.size() - 1)
+				_text_right(x + cw - 8.0, _row_baseline(rect), str(cells[i]), 11, ink, i == cells.size() - 1)
 			else:
-				_text(Vector2(x, rect.position.y + 16), _clip(str(cells[i]), 34), 11, ink, i == 1 and cells.size() >= 4)
+				_text(Vector2(x, _row_baseline(rect)), _clip(str(cells[i]), 34), 11, ink, i == 1 and cells.size() >= 4)
 			x += cw
 		draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), Color(1, 1, 1, 0.05), 1)
 
 func _clip(s: String, max_chars: int) -> String:
 	return s if s.length() <= max_chars else s.substr(0, max_chars - 1) + "…"
+
+## A row's text baseline: the dense reading's fixed offset, or the centre of a
+## finger-sized row, so a touch row's club name sits in the middle of the strip
+## that answers the press (#274).
+func _row_baseline(rect: Rect2) -> float:
+	if rect.size.y > 30.0:
+		return rect.position.y + rect.size.y * 0.5 + 4.0
+	return rect.position.y + 16.0
 
 func _text(pos: Vector2, s: String, size_px: int, color: Color, bold: bool) -> void:
 	draw_string(f_bold if bold else f_body, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, WikiChrome.text_size(size_px), color)

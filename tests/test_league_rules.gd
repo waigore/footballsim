@@ -199,6 +199,74 @@ func test_penalty_tags_are_seeded_with_the_report() -> void:
 			"a penalty tag drifted between replays")
 		assert_eq(str(a[i]["player_id"]), str(b[i]["player_id"]), "a scorer drifted between replays")
 
+## #321: an injury or a sending-off ends that player's match. The report may name
+## him before he leaves, never at or after the minute he goes off — no card, no
+## goal, no assist — and one body cannot be claimed to leave twice.
+func test_a_player_who_leaves_takes_no_further_part() -> void:
+	var xi := _xi()
+	var exits_seen := 0
+	for seed in range(1, 241):
+		for goals in [0, 3, 5]:
+			var events := MatchEvents.side(seed, "gw11-MCI-BUR", "MCI", xi, goals)
+			var exit_at := {}
+			for e in events:
+				var kind := str(e["kind"])
+				if kind != "injury" and kind != "red":
+					continue
+				var id := str(e["player_id"])
+				assert_false(exit_at.has(id), "one body left the pitch twice at seed %d" % seed)
+				exit_at[id] = int(e["minute"])
+			exits_seen += exit_at.size()
+			for e in events:
+				var kind := str(e["kind"])
+				if kind == "injury" or kind == "red":
+					continue
+				var id := str(e["player_id"])
+				if not exit_at.has(id):
+					continue
+				assert_lt(int(e["minute"]), int(exit_at[id]),
+					"a %s at %d' names a player who left at %d' (seed %d, %d goals)" % [
+						kind, int(e["minute"]), int(exit_at[id]), seed, goals])
+	assert_gt(exits_seen, 100, "the sweep never saw a player leave the pitch")
+
+## #321: losing a body never costs the report a goal. The Poisson sample still
+## owns the scoreline; a goal only ever moves to a player who is still on.
+func test_an_exit_never_costs_the_report_a_goal() -> void:
+	var xi := _xi()
+	var injury_reports := 0
+	for seed in range(1, 121):
+		var events := MatchEvents.side(seed, "gw12-MCI-ARS", "MCI", xi, 4)
+		var goals := 0
+		var hurt := false
+		for e in events:
+			var kind := str(e["kind"])
+			if kind == "goal":
+				goals += 1
+			elif kind == "injury":
+				hurt = true
+		assert_eq(goals, 4, "seed %d lost or added a goal" % seed)
+		if hurt:
+			injury_reports += 1
+	assert_gt(injury_reports, 0, "the sweep never injured a body")
+
+## #321, watched path: once the engine takes a body off, the report cannot name
+## him again. An injured player is either replaced — his id leaves `by_id`, so a
+## row cannot be mapped back to him — or sent off and skipped by every tackle,
+## shot and card pick.
+func test_a_watched_match_takes_an_injured_player_out_of_play() -> void:
+	var eng := MatchEngine.new(321, "MUN", "MCI")
+	var hurt = null
+	for p in eng.players:
+		if p.team == 0 and not p.is_gk:
+			hurt = p
+			break
+	assert_not_null(hurt, "the engine fielded no outfield player")
+	eng._injure(hurt)
+	assert_true(bool(hurt.injured), "the knock did not take")
+	var still_named: bool = eng.by_id.has(int(hurt.id))
+	assert_true(bool(hurt.sent_off) or not still_named,
+		"an injured player stayed available to the engine")
+
 func _role_of(xi: Array, player_id: String) -> String:
 	for p in xi:
 		if str(p["id"]) == player_id:

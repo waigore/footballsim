@@ -76,7 +76,7 @@ func setup_kickoff(kicking_team: int, swap: bool) -> void:
 		ball.last_touch_team = kicking_team
 		taker.has_ball = true
 	brain.on_kickoff()
-	_emit("kickoff", Commentary.kickoff(rng, teams[kicking_team]["data"]["name"]), kicking_team, taker)
+	_emit("kickoff", CommentaryRestarts.kickoff(rng, teams[kicking_team]["data"]["name"]), kicking_team, taker)
 
 func start() -> void:
 	pass
@@ -147,7 +147,7 @@ func _tick_clock_end() -> void:
 func _end_first_half() -> void:
 	phase = "half_time"
 	half_break_timer = 4.0
-	_emit("half_time", Commentary.half_time(rng, teams[0]["data"]["short"], score[0], teams[1]["data"]["short"], score[1]), -1, null)
+	_emit("half_time", CommentaryRestarts.half_time(rng, teams[0]["data"]["short"], score[0], teams[1]["data"]["short"], score[1]), -1, null)
 	# Half-time is a free substitution window and a natural tactics moment.
 	manager.on_half_time()
 	blackout()
@@ -186,7 +186,7 @@ func _end_match() -> void:
 
 ## The final whistle's line. A match that went to penalties says so.
 func _full_time_text() -> String:
-	return Commentary.full_time(rng, teams[0]["data"]["short"], score[0],
+	return CommentaryRestarts.full_time(rng, teams[0]["data"]["short"], score[0],
 		teams[1]["data"]["short"], score[1])
 
 # Hooks the decider layer (extra time + shootouts) fills in. They live here so

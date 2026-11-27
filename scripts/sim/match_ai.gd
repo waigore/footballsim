@@ -175,22 +175,30 @@ func _defence_shape(p, fallback: Vector2, dlines: Dictionary = {}) -> Vector2:
 		depth = clampf(depth, 1.6, 30.0)
 		var spread: float = (8.0 if is_back else 11.0) * lateral
 		target = own + axis * depth + perp * spread
-	# Man-mark the nearest dangerous opponent.
+	# Man-mark: a defender carrying an assignment covers that man, goal-side of
+	# him, out to whatever band his side's own `marking` instruction buys
+	# (`MatchMarking`, wiki Live tactics: man 30 m vs zonal 26 m). A body with no
+	# assignment keeps the zone's pounce on whoever steps inside it.
 	var threat = null
-	var best := 1e9
-	for q in e.players:
-		if q.team == p.team or q.sent_off or q.is_gk:
-			continue
-		var ax: float = e.attacking_x(p.team, q.pos)
-		if ax < e.L * 0.45:
-			continue
-		var dq: float = p.pos.distance_to(q.pos)
-		if dq > 16.0:
-			continue
-		var score: float = dq - ax * 0.12
-		if score < best:
-			best = score
-			threat = q
+	if p.mark_id >= 0:
+		var marked = e.by_id.get(p.mark_id, null)
+		if marked != null and not marked.sent_off and marked.team != p.team:
+			threat = marked
+	if threat == null:
+		var best := 1e9
+		for q in e.players:
+			if q.team == p.team or q.sent_off or q.is_gk:
+				continue
+			var ax: float = e.attacking_x(p.team, q.pos)
+			if ax < e.L * 0.45:
+				continue
+			var dq: float = p.pos.distance_to(q.pos)
+			if dq > 16.0:
+				continue
+			var score: float = dq - ax * 0.12
+			if score < best:
+				best = score
+				threat = q
 	if threat != null and (is_back or is_holder or p.role in ["RM", "LM", "CM"]):
 		var goal_side: Vector2 = (own - threat.pos).normalized()
 		var mark: Vector2 = threat.pos + goal_side * 1.15
@@ -306,7 +314,10 @@ func _assign_marks() -> void:
 				if dist < bd:
 					bd = dist
 					best = d
-			if best != null and bd < (30.0 if e.style_of(t)["marking"] == "man" else 26.0):
+			# The band belongs to the side doing the marking: it is 1 - t that
+			# hands out the marks, so it is 1 - t's own instruction that decides
+			# how far a defender will reach for one (MatchMarking).
+			if best != null and bd < MatchMarking.band(e.style_of(1 - t)):
 				best.mark_id = a.id
 
 func _gk_shape(gk) -> void:

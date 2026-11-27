@@ -36,6 +36,31 @@ func overlay_scale(hud_layer: CanvasLayer, dev) -> Dictionary:
 		"token": 1.5 if compact else 1.0,
 	}
 
+## Push the overlay numbers onto every chrome layer the host has opened. Each
+## sheet keeps its own transform; this module owns the arithmetic.
+func sync_overlays(hud_layer: CanvasLayer, dev: DevCapture) -> void:
+	var scales: Dictionary = overlay_scale(hud_layer, dev)
+	game.hud_scale = float(scales["hud"])
+	game.touch = bool(scales["touch"])
+	game.chrome_scale = float(scales["chrome"])
+	game.token_scale = float(scales["token"])
+	game.actors.token_scale = game.token_scale
+	game.hud.ui_scale = game.hud_scale
+	game.hud.touch = game.touch
+	hud_layer.transform = Transform2D.IDENTITY.scaled(Vector2(game.hud_scale, game.hud_scale))
+	var frame := Transform2D.IDENTITY.scaled(Vector2(game.chrome_scale, game.chrome_scale))
+	if game.sel_layer != null:
+		game.sel_layer.transform = frame
+		game.selector.ui_scale = game.chrome_scale
+	if game.wiki_host != null:
+		game.wiki_host.sync_scale()
+	if game.prematch != null:
+		game.prematch.sync(frame, game.chrome_scale, game.touch)
+	if game.menus != null:
+		game.menus.sync(frame, game.chrome_scale, game.touch)
+	if game.camera != null:
+		game.camera.fit()
+
 ## Overlay widgets read pointers in design space; a non-match sheet passes its
 ## own reading scale because the chrome layer is scaled separately.
 func design(p: Vector2, scale := -1.0) -> Vector2:

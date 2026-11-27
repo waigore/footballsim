@@ -19,10 +19,10 @@ stats (accepted: the sim ledger belongs to one snapshot).
 
 ## Competitions
 
-The seed carries the Premier League (`PL`), La Liga (`LL`) and Germany's pair
-(`BL`, `BL2`). Each owns an id namespace (`LL-BAR`, `BL-FCB`), so a refresh
-cannot collide two clubs. The German tiers play 18 clubs over 34 matchdays;
-auto-sim reuses the PL envelope.
+Eight competitions: England's five linked tiers (`PL`, `CH`, `L1`, `L2`, `NL`),
+La Liga (`LL`) and Germany's pair (`BL`, `BL2`) — 172 clubs. Each owns an id
+namespace (`LL-BAR`, `CH-BIR`). The English lower tiers play 24 clubs over 46
+matchdays, the German tiers 18 over 34; auto-sim reuses the PL envelope.
 
 ## Tool
 
@@ -43,9 +43,9 @@ python tools/pl_snapshot.py verify
   eleven starters per club and that the seed's version matches the JSON.
 - Commit both files together. Bump `db_version` whenever the content changes.
 
-Refreshing the snapshot is an agent workflow: see the
-[`update-pl-data-snapshot`](../.agents/skills/update-pl-data-snapshot/SKILL.md)
-project skill. Design rationale and the source policy: wiki
+Refreshing the snapshot is an agent workflow:
+[`update-pl-data-snapshot`](../.agents/skills/update-pl-data-snapshot/SKILL.md).
+Source policy: wiki
 [DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01).
 
 ## Poisson scoring envelope

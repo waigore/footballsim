@@ -171,6 +171,12 @@ func test_continue_is_inert_without_a_season_or_while_finishing() -> void:
 	screen.click("continue")
 	assert_eq(str(season.state()["date"]), before, "Continue moved the clock while finishing")
 	season.finishing = false
+	# #326: a Results reading with no page behind it still lands on the hub
+	# rather than leaving the player on a sheet with no way out.
+	screen.mode = LeagueScreen.MODE_REPORT
+	screen.nav.clear()
+	screen.click("continue")
+	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "a root Results reading did not land on the hub")
 
 func test_a_fixture_row_watches_starts_or_opens_a_report() -> void:
 	asked = []

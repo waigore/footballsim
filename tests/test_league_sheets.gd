@@ -113,34 +113,55 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			for item in items:
 				if str(item["kind"]) == "choice" and bool(item["selected"]):
 					chosen += 1
+			# The default set is the Premier League, so one league toggle plus the
+			# one selected reading of each shared pair.
 			assert_eq(chosen, 3, "one choice per group should be selected")
-			# NAME + LEAGUES caption + three league controls (PL, La Liga, the
-			# linked German pair) + two calendar + two advance + CREATE + BACK.
-			assert_eq(items.size(), 11, "the wizard is missing a control")
+			# NAME + LEAGUES caption + three country headers + eight league toggles
+			# + two calendar + two advance + CREATE + BACK (#261).
+			assert_eq(items.size(), 19, "the wizard is missing a control")
 
-func test_the_wizard_turns_the_german_pair_on_together() -> void:
+## #261: the wizard groups the leagues under their country and cascades the
+## linked tiers, so a lower tier can never run without the tiers above it.
+func test_the_wizard_cascades_a_country_chain() -> void:
 	var sheet := LeagueStartSheet.new()
 	var items: Array = sheet.wizard_layout(Vector2(1280, 720),
 		{"name": "Save", "calendar_mode": "real", "advance_mode": "fixture_days",
 		"competitions": ["PL"]})
 	var ids: Array = []
+	var countries: Array = []
 	for item in items:
 		if str(item["id"]).begins_with("wleague:"):
 			ids.append(str(item["id"]))
-	assert_eq(ids, ["wleague:PL", "wleague:LL", "wleague:DE"],
-		"the wizard did not fold the German tiers into one control")
+		elif str(item["kind"]) == "country":
+			countries.append(str(item["label"]))
+	assert_eq(ids, ["wleague:PL", "wleague:CH", "wleague:L1", "wleague:L2", "wleague:NL",
+		"wleague:LL", "wleague:BL", "wleague:BL2"], "the wizard did not list every league")
+	assert_eq(countries, ["ENGLAND", "SPAIN", "GERMANY"], "the country headers are wrong")
 	var screen := FakeWizard.new()
+	# Turning a lower tier on selects every tier above it in that country.
 	screen.wizard = {"competitions": ["PL"]}
-	LeagueWizardActions.toggle_league(screen, "DE")
+	LeagueWizardActions.toggle_league(screen, "L2")
+	assert_eq(screen.wizard["competitions"], ["PL", "CH", "L1", "L2"],
+		"League Two did not bring the tiers above it")
+	LeagueWizardActions.toggle_league(screen, "NL")
+	assert_eq(screen.wizard["competitions"], ["PL", "CH", "L1", "L2", "NL"],
+		"the National League did not complete the pyramid")
+	# Turning a tier off clears it and everything below it.
+	LeagueWizardActions.toggle_league(screen, "CH")
+	assert_eq(screen.wizard["competitions"], ["PL"], "the English pyramid did not cascade off")
+	# The top flight alone cannot be turned off: a save needs a competition.
+	LeagueWizardActions.toggle_league(screen, "PL")
+	assert_eq(screen.wizard["competitions"], ["PL"], "the wizard emptied itself")
+	# Spain is one league under its own header; Germany cascades like England.
+	screen.wizard = {"competitions": ["PL"]}
+	LeagueWizardActions.toggle_league(screen, "BL2")
 	assert_eq(screen.wizard["competitions"], ["PL", "BL", "BL2"],
-		"the German control did not pick both tiers")
-	LeagueWizardActions.toggle_league(screen, "DE")
-	assert_eq(screen.wizard["competitions"], ["PL"], "the German control did not drop both tiers")
-	# The pair alone cannot be turned off: a save needs one competition.
+		"2. Bundesliga did not bring the Bundesliga")
+	LeagueWizardActions.toggle_league(screen, "BL")
+	assert_eq(screen.wizard["competitions"], ["PL"], "the German pair did not cascade off")
 	screen.wizard = {"competitions": ["BL", "BL2"]}
-	LeagueWizardActions.toggle_league(screen, "DE")
+	LeagueWizardActions.toggle_league(screen, "BL")
 	assert_eq(screen.wizard["competitions"], ["BL", "BL2"], "the wizard emptied itself")
-
 func test_the_save_keeps_the_leagues_in_the_published_order() -> void:
 	var season := LeagueSeason.create("Order", "real", "every_day", 240, ["BL2", "LL", "BL", "PL"])
 	assert_not_null(season, "the four-league save did not build")
@@ -368,12 +389,138 @@ func _item_rect(items: Array, id: String) -> Rect2:
 			return item["rect"]
 	return Rect2()
 
+## #278, #323: the hub's body line names the pointer the player is holding, and
+## it is the line on its own — the page's title is in the header, so the hint
+## never repeats it.
+func test_the_hub_hint_names_the_pointer() -> void:
+	assert_eq(LeagueSheet.plan_hint(true), "TAP A GAME TO SWITCH AUTO / WATCH",
+		"a touch hub stopped naming the tap")
+	assert_eq(LeagueSheet.plan_hint(false), "CLICK A GAME TO SWITCH AUTO / WATCH",
+		"a desktop hub tells a mouse user to tap")
+	for touch in [true, false]:
+		var hint := LeagueSheet.body_hint({"touch": touch, "can_suggest": true, "plan": [_fixture(1)]})
+		assert_false(hint.begins_with(" · ") or hint.contains("TODAY'S FIXTURES"),
+			"the body line still carries a caption or the page's own title: %s" % hint)
+	# A day with nothing to hint paints nothing; a pending watch says what
+	# CONTINUE does with it (#100) and gives the pointer hint up.
+	assert_eq(LeagueSheet.body_hint({"touch": false, "can_suggest": false, "plan": []}), "",
+		"a hub with no hint painted a line")
+	assert_eq(LeagueSheet.body_hint({"touch": false, "can_suggest": true, "plan": [_fixture(1, 1)]}),
+		"CONTINUE OPENS THE NEXT WATCH", "a pending watch lost its CONTINUE line")
+
+## #323: the hub names its own page. The title is Today's Fixtures on every
+## season — never the save's name — and the caption carries the day and the
+## ledger only, with no per-league gameweek chip to grow a long line.
+func test_the_hub_names_today_and_its_ledger() -> void:
+	var state := _state([_fixture(1)], _table())
+	state["name"] = "LEAGUE 1"
+	state["competitions"] = [{"id": "PL", "short": "PREMIER LEAGUE", "matchday": 7},
+		{"id": "LL", "short": "LA LIGA", "matchday": 7},
+		{"id": "BL", "short": "BUNDESLIGA", "matchday": 7},
+		{"id": "BL2", "short": "2. BUNDESLIGA", "matchday": 7}]
+	state["played"] = 120
+	state["total"] = 760
+	var caption := LeagueSheet.hub_caption(state)
+	assert_eq(caption, "15/AUG/2026 · 120 OF 760 PLAYED",
+		"the hub caption is not the day and the ledger: %s" % caption)
+	assert_false(caption.contains("GW"), "the caption still lists a league's gameweek")
+	for short in ["PREMIER LEAGUE", "LA LIGA", "BUNDESLIGA"]:
+		assert_false(caption.contains(short), "the caption still lists %s's gameweek" % short)
+	# A settling watch keeps its own suffix, whatever the ledger says.
+	state["settling"] = true
+	assert_true(LeagueSheet.hub_caption(state).ends_with(" · FINISHING THE WATCHED MATCH"),
+		"the settling caption lost its suffix")
+	# The title is the pose's name, in title case, and it is not the save's.
+	var bold: Font = UiChrome.fonts()["bold"]
+	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
+		var band := LeagueExtra.header_band(vp, bold, LeagueSheet.HUB_TITLE, caption,
+			LeagueExtra.primary_rect(vp).size.x + 12.0, false)
+		assert_eq(str(band["title"]), "Today's Fixtures",
+			"the hub header does not read Today's Fixtures at %s" % vp)
+		assert_false(str(band["title"]).contains("LEAGUE 1"), "the hub title is the save name")
+	var caps := LeagueExtra.header_band(Vector2(1600, 900), bold, "TODAY'S FIXTURES", "", 152.0)
+	assert_eq(str(caps["title"]), "TODAY'S FIXTURES", "a kicker lost its upper case")
+
+## #323: every fixture group opens with its league's heading and gameweek, on a
+## single-league day as much as on a mixed one, so the list always says which
+## competition it is and which round of it.
+func test_every_plan_group_opens_with_its_league_heading() -> void:
+	var sheet := LeagueSheet.new()
+	for count in [1, 2]:
+		var plan: Array = []
+		for i in range(count):
+			var fx := _fixture(i + 1)
+			fx["competition_id"] = "PL" if i == 0 else "LL"
+			fx["matchday"] = 4 + i
+			plan.append(fx)
+		var heads: Array = []
+		for item in sheet.hub_layout(Vector2(1280, 720), _state(plan, _table())):
+			if str(item["kind"]) == "league_head":
+				heads.append("%s/%d" % [str(item["competition"]), int(item["matchday"])])
+		assert_eq(heads, ["PL/4"] if count == 1 else ["PL/4", "LL/5"],
+			"a %d-league day is not headed by its league" % count)
+
+## #323: a New League opens named My League Sim, so a fresh save never reads as
+## the English third tier the wizard offers. A save already called League 1 keeps
+## its name — nothing here renames what is on disk.
+func test_a_new_league_opens_on_my_league_sim() -> void:
+	assert_eq(LeagueStartSheet.SAVE_NAME, "My League Sim", "the wizard's default name moved")
+	assert_eq(str(LeagueScreen.new().wizard["name"]), LeagueStartSheet.SAVE_NAME,
+		"a fresh screen does not open on the wizard's default name")
+	var start := LeagueStartSheet.new()
+	var field := {}
+	for item in start.wizard_layout(Vector2(1280, 720),
+			{"name": "", "calendar_mode": "generated", "advance_mode": "fixture_days"}):
+		if str(item["id"]) == "name":
+			field = item
+	assert_true(not field.is_empty(), "the wizard laid out no name field")
+	assert_eq(str(field["value"]), "", "an empty field paints its placeholder state")
+
+## #280: the load row reads as player copy, never as the save's stored token.
+func test_the_load_row_status_reads_as_player_copy() -> void:
+	assert_eq(LeagueStartSheet.status_label("in_progress"), "IN PROGRESS",
+		"an unfinished save still prints its stored token")
+	assert_eq(LeagueStartSheet.status_label("complete"), "COMPLETE",
+		"a complete save prints its stored token")
+	assert_eq(LeagueStartSheet.status_label(""), "", "an empty status grew words")
+	assert_eq(LeagueStartSheet.status_label("paused_by_user"), "PAUSED BY USER",
+		"an unknown token is not read as words")
+	for token in ["in_progress", "complete", "paused_by_user"]:
+		assert_false(LeagueStartSheet.status_label(token).contains("_"),
+			"a raw token reached the load row: %s" % token)
+
+## #281: the month label and both chevrons bound one control at every window
+## size: the readout sits between them with matching gaps, they share a height,
+## and the stat chips keep clear of the group.
+func test_the_month_stepper_binds_its_label_and_chevrons() -> void:
+	for vp in [Vector2(1280, 720), Vector2(1600, 900), Vector2(913, 411), Vector2(360, 780)]:
+		var items: Array = LeagueExtra.new().stats_layout(vp, {"name": "S", "reports": [],
+			"filters": {"league": "", "month": "2026-09", "team": "", "stat": "goals"}})
+		var prev := _item_rect(items, "statsmonth:-1")
+		var next := _item_rect(items, "statsmonth:1")
+		var read := _item_rect(items, "")
+		var goals := _item_rect(items, "statsstat:goals")
+		assert_true(read.size.x >= 72.0, "the readout has no width at %s" % vp)
+		assert_almost_eq(read.position.x, prev.end.x + LeagueExtra.STEP_GAP, 0.01,
+			"the readout does not follow its back arrow at %s" % vp)
+		assert_almost_eq(next.position.x, read.end.x + LeagueExtra.STEP_GAP, 0.01,
+			"the forward arrow does not hug its readout at %s" % vp)
+		assert_almost_eq(prev.position.y, next.position.y, 0.01,
+			"the stepper cells do not share a row at %s" % vp)
+		assert_almost_eq(prev.size.y, read.size.y, 0.01,
+			"the readout left the arrows' height at %s" % vp)
+		assert_gte(goals.position.x - next.end.x, LeagueExtra.STEP_AFTER,
+			"the stat chips crowd the stepper at %s" % vp)
+		assert_lte(next.end.x, vp.x - 24.0, "the stepper runs off the sheet at %s" % vp)
+
 ## The body clips the scrolling rows to the band between the header and the
-## bottom bar, so it paints the doors a sheet pins itself: BACK and CONTINUE in
-## the header, the table's readings in the bottom bar. Those doors stand outside
-## the clipped window and are laid out in screen space, so the body must keep
-## them out of its rows and out of its scroll — a door that rode the clip or the
-## scroll would drift off the corner the layout put it in.
+## bottom bar, and Godot clips a Control's own draw along with its children's.
+## The doors a sheet pins stand outside that band — BACK and CONTINUE in the
+## header lane, the table's readings in the bottom bar — so they are laid out in
+## screen space and the body must keep them out of its rows and out of its
+## scroll: a door that rode the clip or the scroll would drift off the corner the
+## layout put it in, and a door painted under the clip is a door the player never
+## sees (#284). `LeaguePinned` paints them on the unclipped layer above.
 func test_the_body_keeps_the_pinned_doors_outside_the_clipped_window() -> void:
 	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
 		var hub: Array = LeagueSheet.new().hub_layout(vp, _state([_fixture(1)], _table()))
@@ -384,7 +531,7 @@ func test_the_body_keeps_the_pinned_doors_outside_the_clipped_window() -> void:
 		var body := _body(vp)
 		body.set_sheet(hub, vp, true, 0.0)
 		assert_lte(cont.end.y, LeagueChrome.HEADER, "CONTINUE left the header at %s" % vp)
-		assert_true(cont.end.y <= body.position.y, "the clip covers CONTINUE at %s" % vp)
+		assert_true(cont.end.y <= body.position.y, "CONTINUE sits inside the body's band at %s" % vp)
 		assert_eq(body.content.size(), hub.size() - body.pinned.size(),
 			"a pinned door rode the scrolling rows at %s" % vp)
 		body.set_sheet(table, vp, true, LeagueChrome.BAR_H)
@@ -556,6 +703,28 @@ func test_a_roundup_offers_no_play_doors() -> void:
 	})
 	for item in items:
 		assert_ne(str(item["kind"]), "play", "a roundup row offered a play door")
+
+## #309: a real-fixture season stores no kick-off time, so a pending row must not
+## hold a blank gutter for one. Its clubs start at the row's inset — the column
+## the result block puts its home name on — so the day does not jump sideways at
+## the whistle. A generated season's row still starts its clubs after the time it
+## prints, measured rather than at a fixed width.
+func test_a_pending_row_without_a_kickoff_starts_its_clubs_at_the_inset() -> void:
+	var med: Font = UiChrome.fonts()["med"]
+	for row in [Rect2(24.0, 72.0, 1552.0, LeagueChrome.ROW_H),
+			Rect2(24.0, 72.0, 865.0, LeagueChrome.ROW_H)]:
+		var bare := LeaguePlanRows.clubs_x(row, "", med)
+		assert_almost_eq(bare, row.position.x + LeagueBlock.INSET, 0.01,
+			"a row with no kick-off time left a blank gutter at %s" % row)
+		# The same column the block that replaces the row prints its home name in.
+		assert_almost_eq(bare, float(LeagueBlock.columns(row)["home_x"]), 0.01,
+			"the pending row and its result block disagree about the club column at %s" % row)
+		for kick in ["12:30", "15:00", "17:30"]:
+			var ink := InterestNames.width(med, kick, 10)
+			assert_almost_eq(LeaguePlanRows.clubs_x(row, kick, med), row.position.x + 8.0 + ink + 8.0,
+				0.01, "%s did not set its own gutter at %s" % [kick, row])
+			assert_gt(LeaguePlanRows.clubs_x(row, kick, med), row.position.x + 8.0 + ink,
+				"the home name sits on the %s kick-off at %s" % [kick, row])
 
 ## #168: a fixture's events are read as two sides — each row sits under the
 ## club stored on it, and the columns are in minute order. The old mixed run
@@ -897,7 +1066,7 @@ func test_the_plan_rows_and_side_table_carry_the_shortlist_mark() -> void:
 	assert_eq((side[0]["places"] as Dictionary), rail, "the rows disagree about the rail")
 
 ## The paint path is one frame re-entering the `_draw` call it arrived from
-## (see `LeagueBook._draw_calendar_body`); headless it is a straight call.
+## (see `LeagueCalendarView._draw_body`); headless it is a straight call.
 func test_the_calendar_paint_band_reuses_the_draw_call() -> void:
 	var book := LeagueBook.new()
 	var band := _PaintProbe.new()

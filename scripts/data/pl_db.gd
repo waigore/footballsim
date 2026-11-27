@@ -30,7 +30,9 @@ static func seed_version() -> int:
 		push_error("Premier League seed is missing: %s" % SEED_PATH)
 		return -1
 	DirAccess.make_dir_recursive_absolute(cache_directory())
-	var probe := cache_directory().path_join("_seed_probe.sqlite")
+	# Parallel test workers share one user cache; a fixed probe name races
+	# (one process truncates or deletes while another queries metadata).
+	var probe := cache_directory().path_join("_seed_probe_%d.sqlite" % OS.get_process_id())
 	var out := FileAccess.open(probe, FileAccess.WRITE)
 	if out == null:
 		push_error("cannot stage the seed for reading: %s" % probe)
@@ -41,6 +43,7 @@ static func seed_version() -> int:
 	probe_db.path = probe
 	if not probe_db.open_db():
 		push_error("cannot read the shipped seed: %s" % probe_db.error_message)
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(probe))
 		return -1
 	var version := -1
 	if probe_db.query("SELECT value FROM metadata WHERE key = 'db_version';") and not probe_db.query_result.is_empty():
@@ -66,12 +69,25 @@ static func ensure_cache() -> String:
 		if name.begins_with(CACHE_PREFIX) and name != target_name:
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(cache_directory().path_join(name)))
 	if not FileAccess.file_exists(target):
-		var out := FileAccess.open(target, FileAccess.WRITE)
+		# Write aside, then rename, so a peer opening the final path never
+		# sees an empty file mid-copy under --parallel.
+		var tmp := cache_directory().path_join("_seed_copy_%d.sqlite" % OS.get_process_id())
+		var out := FileAccess.open(tmp, FileAccess.WRITE)
 		if out == null:
-			push_error("cannot write the cached seed: %s" % target)
+			push_error("cannot write the cached seed: %s" % tmp)
 			return ""
 		out.store_buffer(FileAccess.get_file_as_bytes(SEED_PATH))
 		out.close()
+		if not FileAccess.file_exists(target):
+			if DirAccess.rename_absolute(
+				ProjectSettings.globalize_path(tmp),
+				ProjectSettings.globalize_path(target)
+			) != OK and not FileAccess.file_exists(target):
+				push_error("cannot publish the cached seed: %s" % target)
+				DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
+				return ""
+		if FileAccess.file_exists(tmp):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
 	return target
 
 ## Live connection, opened on first use. Null on failure so callers can show an

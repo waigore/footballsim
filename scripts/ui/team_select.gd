@@ -2,6 +2,8 @@ extends Control
 
 ## Pre-match fixture picker: choose the home and away club, then kick off.
 ## Drawn with the same broadcast palette as hud.gd so it feels part of the overlay.
+## Paint lives in `TeamSelectPaint` so this Control keeps actions and state inside
+## the soft size budget (RUB-P3-01).
 
 signal confirmed(home_id: String, away_id: String)
 signal cancelled()
@@ -42,6 +44,7 @@ var winner_mode := "draw"
 var f_bold: FontFile
 var f_med: FontFile
 var f_body: FontFile
+var style_cache := {}
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -173,9 +176,12 @@ func key(code: int) -> bool:
 	elif code == KEY_L:
 		browse.emit(WikiModel.LEAGUE, "")
 	elif code >= KEY_1 and code <= KEY_9:
-		var comps := PLCompetitions.active()
-		var pick := code - KEY_1 - 1
-		set_league("" if pick < 0 else str(comps[mini(pick, comps.size() - 1)]["id"]))
+		# Key 1 selects ALL, then each league takes the key its chip sits at (#279):
+		# the footer legend names exactly the chips `competition_rows()` returns.
+		var row := LeagueChrome.league_key_row(code, LeagueChrome.competition_rows())
+		if row.is_empty():
+			return false
+		set_league(str(row["id"]))
 	else:
 		return false
 	return true
@@ -195,8 +201,6 @@ func _process(d: float) -> void:
 	if interest.tick(d):
 		queue_redraw()
 	queue_redraw()
-
-var style_cache := {}
 
 func _style(c: Color, r: int = 10, bc: Color = C_BORDER, bw: int = 1) -> StyleBoxFlat:
 	var key := "%s|%d|%s|%d" % [c.to_html(), r, bc.to_html(), bw]
@@ -226,54 +230,6 @@ func text_c(center_x: float, y: float, s: String, size: int, color: Color = C_TE
 func _add_button(id: String, r: Rect2) -> void:
 	buttons.append({"id": id, "rect": r})
 
-func _arrow(r: Rect2, glyph: String, id: String) -> void:
-	var hovered := r.has_point(mouse)
-	rect(C_PANEL_LIGHT if hovered else C_PANEL, r, 8, Color(1, 1, 1, 0.14 if hovered else 0.07))
-	text_c(r.position.x + r.size.x * 0.5, r.position.y + r.size.y * 0.66, glyph, 24, C_TEXT if hovered else C_DIM, f_bold)
-	_add_button(id, r)
-
-## Competition chips over the cards: ALL, then each league the seed (or the open
-## save) carries. The pool the arrows walk is the selected set, so picking both
-## leagues is what makes a cross-league fixture. With four competitions on a
-## phone five chips no longer hold their full names, so a narrow chip falls back
-## to the competition's short code (PL, LL, BL, 2.BL) instead of overflowing.
-func _draw_league_chips(vp: Vector2) -> void:
-	var rows: Array = [{"id": "", "short_name": "ALL"}]
-	rows.append_array(PLCompetitions.active())
-	if rows.size() < 2:
-		return
-	var chip_h := 24.0
-	var gap := 8.0
-	var w: float = minf(150.0, (vp.x - 48.0 - gap * float(rows.size() - 1)) / float(rows.size()))
-	var x := 24.0
-	var y: float = vp.y * (0.155 if vp.y < 620.0 else 0.175)
-	for row in rows:
-		var chip := Rect2(x, y, w, chip_h)
-		var on := str(row["id"]) == league_filter
-		rect(C_GOLD.darkened(0.1) if on else C_PANEL, chip, 6,
-			C_GOLD if on else Color(1, 1, 1, 0.10))
-		text_c(chip.get_center().x, chip.position.y + 16.0, LeagueChrome.competition_chip_label(row, w), 10,
-			Color(0.06, 0.06, 0.05) if on else C_DIM, f_bold)
-		_add_button("league:" + str(row["id"]), chip)
-		x += w + gap
-
-func _card(r: Rect2, t: Dictionary, side: int) -> void:
-	rect(C_PANEL, r, 14, Color(1, 1, 1, 0.10))
-	draw_rect(Rect2(r.position.x + 1, r.position.y + 1, 6, r.size.y - 2), t["color"])
-	var cx := r.position.x + r.size.x * 0.5
-	# A followed club's card wears the interest mark (#107).
-	var club := str(t.get("id", ""))
-	if club == "":
-		club = home_id() if side == 0 else away_id()
-	var name_ink: Color = C_GOLD if followed.has(club) else C_TEXT
-	text_c(cx, r.position.y + r.size.y * 0.30, str(t["abbr"]), 54, name_ink, f_bold)
-	text_c(cx, r.position.y + r.size.y * 0.50, str(t["name"]).to_upper(), 17, name_ink, f_med)
-	text_c(cx, r.position.y + r.size.y * 0.64, str(t["nickname"]).to_upper(), 11, C_DIM, f_med)
-	text_c(cx, r.position.y + r.size.y * 0.80, "%s  ·  %s" % [str(t["formation"]), str(t["manager"]).to_upper()], 10, C_GOLD, f_med)
-	text_c(cx, r.position.y + r.size.y - 12.0, "VIEW CLUB  ›", 10, C_DIM, f_bold)
-	var label: String = "HOME" if side == 0 else "AWAY"
-	text_c(cx, r.position.y - 10, label, 11, C_DIM, f_bold)
-
 ## How many clubs the picker offers, and the competition it files them under —
 ## read from the file, not hard-coded (#209): a multi-competition seed names its
 ## own league here. Pure, so a suite can pin it.
@@ -281,10 +237,6 @@ static func clubs_line(count: int, competition_name: String) -> String:
 	if competition_name == "":
 		return "%d CLUBS" % count
 	return "%d %s CLUBS" % [count, competition_name.to_upper()]
-
-## The clubs line under the doors: the count and the league, from the file (#209).
-func _clubs_line() -> String:
-	return LeagueChrome.picker_clubs_line(self)
 
 ## Design space this sheet draws in (the layer is scaled up by main.gd).
 func design_vp() -> Vector2:
@@ -296,101 +248,5 @@ func design_vp() -> Vector2:
 func back_rect(vp: Vector2) -> Rect2:
 	return Rect2(24.0, 12.0, 116.0, 44.0)
 
-# gd-tools: no cover start
 func _draw() -> void:
-	var vp := design_vp()
-	buttons.clear()
-	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.015, 0.025, 0.032, 0.94))
-	draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
-	draw_rect(Rect2(0, vp.y - 3, vp.x, 3), Color(0, 0, 0, 0.5))
-	UiChrome.sheet_header(self, vp, {"bold": f_bold, "med": f_med, "body": f_body}, "SELECT FIXTURE")
-	# BACK owns the top-left corner on every sheet (#163); the league door takes
-	# the other one, so the wordmark rides the centre of the header.
-	UiChrome.wordmark_c(self, vp.x * 0.5, vp.y * (0.075 if vp.y < 620.0 else 0.105), 12, f_bold)
-	_draw_league_chips(vp)
-
-	var card_w := minf(vp.x * 0.30, 460.0)
-	var card_h := minf(vp.y * 0.32, 250.0)
-	var gap := clampf(vp.x * 0.14, 130.0, 220.0)
-	var card_y := vp.y * 0.42 - card_h * 0.5
-	var home_rect := Rect2(vp.x * 0.5 - gap * 0.5 - card_w, card_y, card_w, card_h)
-	var away_rect := Rect2(vp.x * 0.5 + gap * 0.5, card_y, card_w, card_h)
-
-	if ids.is_empty():
-		text_c(vp.x * 0.5, vp.y * 0.55, "NO SQUAD DATA", 20, C_DIM, f_bold)
-		return
-
-	var season = LeagueSeason.active
-	followed = LeagueInterestMark.set_of(season.state().get("interests", [])) \
-		if season != null else {}
-	var home := TeamData.get_team(home_id())
-	var away := TeamData.get_team(away_id())
-	_card(home_rect, home, 0)
-	_card(away_rect, away, 1)
-	# The cards are also encyclopedia doors: a club page is one tap away.
-	_add_button("team_home", home_rect)
-	_add_button("team_away", away_rect)
-
-	var arrow := 46.0
-	var ay := card_y + card_h * 0.5 - arrow * 0.5
-	_arrow(Rect2(home_rect.position.x - arrow - 12.0, ay, arrow, arrow), "‹", "home_prev")
-	_arrow(Rect2(home_rect.position.x + home_rect.size.x + 12.0, ay, arrow, arrow), "›", "home_next")
-	_arrow(Rect2(away_rect.position.x - arrow - 12.0, ay, arrow, arrow), "‹", "away_prev")
-	_arrow(Rect2(away_rect.position.x + away_rect.size.x + 12.0, ay, arrow, arrow), "›", "away_next")
-
-	text_c(vp.x * 0.5, card_y + card_h * 0.50, "v", 22, C_DIM, f_med)
-	# The venue clears the inner arrows and is fitted to the column it sits in,
-	# with 12 units of air either side (#200).
-	var venue := LeagueColumns.fit_caption(str(home.get("stadium", "")).to_upper(), f_med,
-		10, gap - 24.0)
-	if venue != "":
-		text_c(vp.x * 0.5, ay + arrow + 22.0, venue, 10, C_DIM, f_med)
-
-	var bw := 190.0
-	var bh := 50.0
-	LeagueChrome.winner_control(self, vp, card_y + card_h, winner_mode, f_bold)
-	var by: float = minf(card_y + card_h + 54.0, vp.y - bh - 78.0)
-	var confirm_rect := Rect2(vp.x * 0.5 - bw - 8.0, by, bw, bh)
-	var random_rect := Rect2(vp.x * 0.5 + 8.0, by, bw, bh)
-	# Doors take the shared grammar's radius so KICK OFF reads like every other
-	# primary; its ENTER hint is a keyboard-only affordance under the caption.
-	for spec in [["confirm", confirm_rect, "KICK OFF", "ENTER"],
-			["random", random_rect, "RANDOM", "TAB"]]:
-		var r: Rect2 = spec[1]
-		var hovered := r.has_point(mouse)
-		if spec[0] == "confirm":
-			UiChrome.button(self, style_cache, r, str(spec[2]), f_bold, true, 16,
-				"" if touch else str(spec[3]))
-		else:
-			# RANDOM stays the picker's quiet door: it keeps its hover fill.
-			rect(C_PANEL_LIGHT if hovered else C_PANEL, r, 10,
-				Color(1, 1, 1, 0.10 if hovered else 0.06))
-			var middle: float = r.position.y + r.size.y * 0.5
-			var cap_y: float = middle + (UiChrome.RISE if touch else -UiChrome.RISE)
-			text_c(r.get_center().x, cap_y, str(spec[2]), 16, C_TEXT, f_bold)
-			if not touch:
-				text_c(r.get_center().x, middle + UiChrome.HINT_DROP, str(spec[3]), 10,
-					C_DIM, f_med)
-		_add_button(spec[0], r)
-
-	# Footer: the same words on both shells, owned by the chrome module so this
-	# script stays inside its size budget.
-	for spec in LeagueChrome.picker_hints(self, touch, back_to_menu):
-		text_c(vp.x * 0.5, vp.y + float(spec[0]), str(spec[1]), int(spec[2]),
-			spec[3] as Color, f_med)
-
-	# A touch build has no Escape key: the sheet needs a visible way out.
-	var back := back_rect(vp)
-	var back_hover := back.has_point(mouse)
-	rect(C_PANEL_LIGHT if back_hover else C_PANEL, back, 8, Color(1, 1, 1, 0.14 if back_hover else 0.07))
-	text_c(back.position.x + back.size.x * 0.5, back.position.y + back.size.y * 0.66, "‹  MENU" if back_to_menu else "‹  BACK", 13, C_TEXT if back_hover else C_DIM, f_bold)
-	_add_button("back", back)
-
-	# Encyclopedia door: the whole league is one tap from the fixture sheet, in
-	# the corner opposite BACK (#163).
-	var league_btn := Rect2(vp.x - 24.0 - 138.0, 12.0, 138.0, 44.0)
-	var league_hover := league_btn.has_point(mouse)
-	rect(C_PANEL_LIGHT if league_hover else C_PANEL, league_btn, 8, Color(1, 1, 1, 0.14 if league_hover else 0.07))
-	text_c(league_btn.position.x + league_btn.size.x * 0.5, league_btn.position.y + league_btn.size.y * 0.66, "◈  LEAGUE", 13, C_TEXT if league_hover else C_DIM, f_bold)
-	_add_button("league", league_btn)
-# gd-tools: no cover end
+	TeamSelectPaint.paint(self)

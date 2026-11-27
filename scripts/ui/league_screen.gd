@@ -6,6 +6,10 @@ extends Control
 ## `LeagueDoors` owns the keys and presses, `LeagueSeasonDoors` the season's own
 ## actions and `LeagueGoalDoors` the report's goal doors; the season owns the
 ## sim. Input arrives in design space from `LeagueHost`.
+##
+## Open/close and pose routing live in `LeagueScreenPages`; hit-testing, scroll
+## and keys in `LeagueScreenInput`, so this Control stays inside its P3 size
+## and method budget.
 
 signal closed
 signal match_requested(home: String, away: String, fixture_id: String)
@@ -39,7 +43,7 @@ var holding := false
 
 var mode := MODE_WIZARD
 var season: LeagueSeason = null
-var wizard := {"name": "League 1", "calendar_mode": "generated", "advance_mode": "fixture_days",
+var wizard := {"name": LeagueStartSheet.SAVE_NAME, "calendar_mode": "generated", "advance_mode": "fixture_days",
 	"competitions": ["PL"], "error": ""}
 var saves: Array = []
 ## The load list's delete question, over the sheet that raised it (DR-20261125-06).
@@ -55,6 +59,10 @@ var buttons: Array:
 	get:
 		return body.button_rects() if body != null else []
 var body: LeagueBody = null
+## The doors each sheet pins in screen space: BACK, CONTINUE, the table's
+## readings. It is a sibling above the body, because the body clips its own
+## paint away outside the scrolling band (#284).
+var pinned: LeaguePinned = null
 var hub: LeagueSheet = LeagueSheet.new()
 ## The menu-level front door: New League and Load are their own pose sheet.
 var start := LeagueStartSheet.new()
@@ -95,6 +103,8 @@ var focus := LeagueFieldFocus.new()
 ## The layer that paints the menu above the body and the panel.
 var menu_layer: InterestLayer = null
 var tooltip: DateOverlay = null
+var pages: LeagueScreenPages = null
+var input: LeagueScreenInput = null
 var _last_mode := ""
 
 func _ready() -> void:
@@ -104,6 +114,12 @@ func _ready() -> void:
 	body = LeagueBody.new()
 	body.name = "Body"
 	add_child(body)
+	# The pinned doors are laid out in screen space, outside the band the body
+	# clips itself to, so they get their own unclipped layer above it (#284).
+	pinned = LeaguePinned.new()
+	pinned.name = "Pinned"
+	pinned.body = body
+	add_child(pinned)
 	tooltip = DateOverlay.attach(self, body, false)
 	overlay = LeagueOverlay.new()
 	overlay.name = "Overlay"
@@ -127,6 +143,8 @@ func _ready() -> void:
 	menu_layer.hold = interest
 	menu_layer.screen = self
 	add_child(menu_layer)
+	pages = LeagueScreenPages.new(self)
+	input = LeagueScreenInput.new(self)
 
 ## The slide animates on its own clock; a settled panel costs nothing and never
 ## blocks input.
@@ -148,72 +166,39 @@ func is_open() -> bool:
 # ------------------------------------------------------------------ open ---
 
 func open_wizard() -> void:
-	mode = MODE_WIZARD
-	delete.clear()
-	nav.clear()
-	wizard = {"name": "League %d" % (saves.size() + 1), "calendar_mode": "generated",
-		"advance_mode": "fixture_days", "competitions": ["PL"], "error": ""}
-	visible = true
-	refresh()
+	if pages != null:
+		pages.open_wizard()
 
 func open_load() -> void:
-	mode = MODE_LOAD
-	delete.clear()
-	nav.clear()
-	load_from = "menu"
-	saves = LeagueSaveCatalog.list()
-	visible = true
-	refresh()
+	if pages != null:
+		pages.open_load()
 
 func open_season(target: LeagueSeason, show_podium: bool = false) -> void:
-	season = target
-	delete.clear()
-	# A season opens at its own root: no history can point into a save that is
-	# not the one on screen.
-	nav.clear()
-	season_opened.emit(target)
-	if show_podium or (target != null and str(target.state().get("status", "")) == "complete"):
-		mode = MODE_PODIUM
-	else:
-		mode = MODE_HUB
-	month = LeagueMonth.state_month(season, month)
-	visible = true
-	refresh()
+	if pages != null:
+		pages.open_season(target, show_podium)
 
 func show_report(fixture_id: String) -> void:
-	if season == null:
-		return
-	push_page()
-	report = season.report(fixture_id)
-	roundup = []
-	mode = MODE_REPORT
-	refresh()
+	if pages != null:
+		pages.show_report(fixture_id)
 
 func show_roundup(reports: Array) -> void:
-	push_page()
-	report = {}
-	roundup = reports
-	mode = MODE_REPORT
-	refresh()
+	if pages != null:
+		pages.show_roundup(reports)
 
 ## Remember the page on screen so BACK can return to it. The one place that
 ## pushes, so every door down into a sheet leaves the same trail (#169).
 func push_page() -> void:
-	nav.push(LeagueNavStack.snapshot(self))
+	if pages != null:
+		pages.push_page()
 
 func close() -> void:
-	visible = false
-	mode = MODE_HUB
-	delete.clear()
-	# A keyboard is part of being on a field: leaving the sheet puts it away.
-	focus.blur()
-	# Leaving the league ends its history: a reopened season starts at its root.
-	nav.clear()
-	closed.emit()
+	if pages != null:
+		pages.close()
 
 ## Open a saved season, replacing the one on screen. The doors own the swap.
 func open_save(slug: String) -> void:
-	LeagueDoors.open_save(self, slug)
+	if pages != null:
+		pages.open_save(slug)
 
 # --------------------------------------------------------------- state ----
 
@@ -223,151 +208,44 @@ func current_view() -> Dictionary:
 # ---------------------------------------------------------------- layout ---
 
 func refresh() -> void:
-	var vp := design_vp()
-	var view := current_view()
-	# A confirmation belongs to the load list: any other pose puts it away.
-	if mode != MODE_LOAD:
-		delete.clear()
-	var pose: Array = LeagueView.pose(mode)
-	if body == null or pose.is_empty():
-		return
-	var sheet := _sheet(pose)
-	rows_hints = sheet.hints
-	rows_names = sheet.get("names") if sheet.get("names") is InterestNames else null
-	interest.vp = vp
-	if mode != _last_mode:
-		interest.close()
-	var items: Array = Callable(sheet, str(pose[1])).call(vp, view)
-	# BACK is visible at the root of the season's history, but not actionable:
-	# nothing behind it, and the main menu is not a page of the league (#169).
-	var can_back := LeagueDoors.can_back(self)
-	for item in items:
-		if str(item.get("id", "")) == "back":
-			item["disabled"] = not can_back
-	var content := body.set_sheet(items, vp, mode != _last_mode, _bottom_bar())
-	var fonts := UiChrome.fonts()
-	body.painter = Callable(sheet, str(pose[2])).bind(vp, fonts, content, view)
-	# The body paints its own pinned doors with the sheet's paint grammar, so it
-	# needs the font set and the hub's style cache, and it goes quiet while the
-	# delete question owns the press.
-	body.fonts = fonts
-	body.cache = hub.cache
-	body.frozen = delete_confirm_open()
-	panel.active = LeagueView.panel_reading(mode)
-	# The drawer door is the season's only way to its other readings, so it is
-	# sized for the pointer that will press it (#204).
-	panel.touch = touch
-	overlay.active_pose = panel.active
-	overlay.ui_scale = ui_scale
-	# Keep the on-screen keyboard on the field the pose paints (#201): a repaint
-	# the field survives leaves the IME alone, and a pose that no longer paints it
-	# puts the keyboard away.
-	focus.sync(self)
-	_last_mode = mode
-	overlay.queue_redraw()
-	queue_redraw()
-
-## Bottom chrome the pose reserves: only the table keeps its chips.
-func _bottom_bar() -> float:
-	return LeagueChrome.BAR_H if mode == MODE_TABLE else 0.0
-
-## The sheet that owns a pose: the hub sheets, the reading book, or the System
-## dialog (which is its own module).
-func _sheet(pose: Array) -> RefCounted:
-	match str(pose[0]):
-		"start":
-			return start
-		"book":
-			return book
-		"system":
-			return system
-		"extra":
-			return sheet_extra
-	return hub
+	if pages != null:
+		pages.refresh()
 
 ## True while the load list is waiting for a delete confirmation. Everything
 ## behind the dialog is frozen until it is answered.
 func delete_confirm_open() -> bool:
-	return mode == MODE_LOAD and delete.is_open()
+	return input.delete_confirm_open() if input != null else false
 
-## Hit test walks back to front so later items (e.g. a delete chip) win. The
-## layer stack above the body answers first: the delete question is the only
-## surface while it is up, and an open menu is in front of everything else
-## (#107); the body it covers is frozen and answers nothing.
+## Hit test walks back to front so later items (e.g. a delete chip) win.
 func button_at(p: Vector2) -> String:
-	if delete_confirm_open():
-		return delete.hit(p, design_vp())
-	if interest.is_open():
-		return interest.menu.hit(p, design_vp())
-	var over_panel: String = panel.hit(p, design_vp())
-	if over_panel != "":
-		return over_panel
-	return body.hit(p) if body != null else ""
+	return input.button_at(p) if input != null else ""
 
-## Wheel, trackpad, drag and keys; wide tables also pan sideways. The sheet is
-## frozen while the menu is up, so a press under it never scrolls the page.
+## Wheel, trackpad, drag and keys; wide tables also pan sideways.
 func scroll_by(delta: float, dx: float = 0.0) -> void:
-	if delete_confirm_open():
-		return
-	if interest.is_open():
-		return
-	if body != null:
-		body.pan_by(Vector2(dx, delta))
+	if input != null:
+		input.scroll_by(delta, dx)
 
 # --------------------------------------------------------------- highlights ---
 
 ## True when the report on screen carries a stored clip for a goal ordinal.
 func has_clip(index: int) -> bool:
-	return LeagueGoalDoors.has_clip(self, index)
+	return input.has_clip(index) if input != null else false
 
 # ---------------------------------------------------------------- input ----
 
 func click(id: String) -> void:
-	if delete_confirm_open():
-		LeagueDoors.press(self, id)
-		return
-	if interest.click(id):
-		return
-	LeagueDoors.press(self, id)
+	if input != null:
+		input.click(id)
 
 func key(code: int) -> bool:
-	# The delete confirmation is modal: Enter answers it, Esc/Backspace put it
-	# away, and every other key belongs to the dialog (nothing behind reacts).
-	if delete_confirm_open():
-		match code:
-			KEY_ENTER, KEY_KP_ENTER:
-				delete.answer(self)
-			KEY_ESCAPE, KEY_BACKSPACE:
-				delete.cancel(self)
-		return true
-	# ESC puts the menu away first: it is the top-most surface while it is up.
-	if interest.is_open() and (code == KEY_ESCAPE or code == KEY_BACKSPACE):
-		interest.close()
-		refresh()
-		return true
-	return LeagueDoors.key(self, code)
+	return input.key(code) if input != null else false
 
-## One character the platform typed, which is how a soft keyboard's own text
-## arrives (#201). The sheet's text fields take it; everything else is ignored,
-## so the shared pointer grammar can hand every key event here.
+## One character the platform typed (#201). Soft keyboard text arrives here.
 func text_key(code: int, unicode: int) -> bool:
-	if delete_confirm_open() or interest.is_open():
-		return false
-	return LeagueDoors.text_key(self, code, unicode)
+	return input.text_key(code, unicode) if input != null else false
 
 # ----------------------------------------------------------------- paint ---
 
 func _draw() -> void:
-	var vp := design_vp()
-	if vp.x <= 1.0 or vp.y <= 1.0:
-		return
-	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.008, 0.014, 0.018, 0.94))
-	var pose: Array = LeagueView.pose(mode)
-	if pose.is_empty():
-		return
-	var sheet := _sheet(pose)
-	var fonts := UiChrome.fonts()
-	hints.clear()
-	Callable(sheet, str(pose[3])).call(self, vp, fonts, current_view(), hints)
-	# The sheet's pinned doors are the body's paint: it clips the scrolling rows
-	# around them, so it draws them itself (LeagueChrome.pinned_door).
+	if pages != null:
+		pages.paint(design_vp())

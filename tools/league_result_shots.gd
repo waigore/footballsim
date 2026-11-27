@@ -50,6 +50,18 @@ func _initialize() -> void:
 	print("WHISTLE phase=", scene.engine.phase, " score=", scene.engine.score,
 		" holding=", league.is_holding(), " result_hold=", scene.result_hold,
 		" hud=", scene.hud_layer.visible, " paused=", scene.paused)
+	# #311: the bar must not offer a replay the season swallows. Read the doors
+	# the overlay registered, press `R`, and read the state back.
+	await _frames(2)
+	print("BAR doors=", _bar_doors())
+	var before_seed: int = scene.seeded
+	var r_key := InputEventKey.new()
+	r_key.keycode = KEY_R
+	r_key.pressed = true
+	scene._input(r_key)
+	await _frames(2)
+	print("AFTER R holding=", league.is_holding(), " seed_changed=", scene.seeded != before_seed,
+		" league_open=", league.is_open())
 	await _shot("issue-124-full-time-card")
 	# The key a desktop player reaches for hands the season back.
 	var key := InputEventKey.new()
@@ -76,6 +88,14 @@ func _initialize() -> void:
 func _kick_briefing() -> void:
 	if scene.prematch != null and scene.prematch.is_open():
 		scene.prematch.screen.click("kick")
+
+## Every door the overlay answered with at this pose, in draw order, with the key
+## hint each one printed. A held league result prints none (#311).
+func _bar_doors() -> String:
+	var out: Array = []
+	for b in scene.hud.buttons:
+		out.append("%s/%s" % [str(b["id"]), str(b["hint"])])
+	return "[%s]" % ", ".join(PackedStringArray(out))
 
 func _frames(count: int) -> void:
 	for i in range(count):

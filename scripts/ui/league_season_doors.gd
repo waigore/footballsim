@@ -11,7 +11,12 @@ extends RefCounted
 ## their own; the press table asks for the repaint once the door has moved.
 
 ## Continue: settle the auto-played day, or open the pending watch first (#100).
+## Only the hub's Continue plays a day: on a Result reading it leaves instead
+## (#326), because the day it shows was settled on the way in.
 static func continue_day(screen) -> void:
+	if screen.mode == screen.MODE_REPORT:
+		leave_results(screen)
+		return
 	if screen.season == null or screen.season.finishing:
 		screen.refresh()
 		return
@@ -32,6 +37,24 @@ static func continue_day(screen) -> void:
 		screen.show_roundup(played)
 		return
 	screen.month = LeagueMonth.state_month(screen.season, screen.month)
+	screen.refresh()
+
+## Continue on a Result reading: leave it for the page that opened it — Today's
+## Fixtures, or Stats when that list opened the roundup — and settle nothing.
+## The clock already stands on the next day when the roundup is shown, so this
+## door plays no match and moves no date (#326); only the hub's Continue does.
+## With no page behind it the reading still lands on the hub rather than leaving
+## the player on a sheet with no way out.
+static func leave_results(screen: LeagueScreen) -> void:
+	var entry: Dictionary = screen.nav.pop()
+	if entry.is_empty():
+		screen.mode = screen.MODE_HUB
+	else:
+		LeagueNavStack.restore(screen, entry)
+	if screen.season != null:
+		# The day just settled may have closed a month: the calendar's reading
+		# follows the clock rather than the page the reading was pushed from.
+		screen.month = LeagueMonth.state_month(screen.season, screen.month)
 	screen.refresh()
 
 ## Hand a started watch to the host: it owns the match view and reports back.

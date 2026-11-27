@@ -7,6 +7,8 @@ extends Control
 ##
 ## Screens are presentational RefCounted sheets (the same pattern as the HUD's
 ## ticker), so every rect and hit-test stays testable without a renderer.
+## Pointer and key routing live in `AppShellInput`; stills and confirm copy in
+## `AppShellPaint`, so this Control stays inside its P3 size and method budget.
 
 signal start_requested
 signal resume_requested
@@ -52,6 +54,8 @@ var motion := 0.0
 ## Soft left-to-right scrim so the wordmark and doors always sit on dark pixels
 ## without a hard-edged panel over the still.
 var scrim: GradientTexture2D = null
+var input: AppShellInput = null
+var paint: AppShellPaint = null
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -71,6 +75,8 @@ func _ready() -> void:
 		if tex != null:
 			stills.append(tex)
 	scrim = UiChrome.make_scrim()
+	input = AppShellInput.new(self)
+	paint = AppShellPaint.new(self)
 	visible = false
 
 func _process(delta: float) -> void:
@@ -179,190 +185,21 @@ func set_match_mode(mode: String) -> void:
 # ------------------------------------------------------------------ input ---
 
 func button_at(p: Vector2) -> String:
-	var vp := design_vp()
-	if screen == SCREEN_MENU:
-		return menu.button_at(p, vp)
-	if screen == SCREEN_SETTINGS:
-		return settings.button_at(p, vp)
-	if screen == SCREEN_CONFIRM:
-		return confirm.button_at(p, vp)
-	return ""
+	return input.button_at(p) if input != null else ""
 
 func click(p: Vector2) -> bool:
-	if screen == SCREEN_MENU:
-		return _menu_click(p)
-	if screen == SCREEN_SETTINGS:
-		return _settings_click(p)
-	if screen == SCREEN_CONFIRM:
-		return _confirm_click(p)
-	return false
-
-func _menu_click(p: Vector2) -> bool:
-	if menu != null:
-		menu.has_match = has_match
-	var id := menu.click(p, design_vp())
-	if id == "start":
-		close(true)
-		start_requested.emit()
-	elif id == "resume":
-		close(false)
-		resume_requested.emit()
-	elif id == "new_league":
-		close(true)
-		new_league_requested.emit()
-	elif id == "load_league":
-		close(true)
-		load_league_requested.emit()
-	elif id == "settings":
-		open_settings()
-	elif id == "quit":
-		open_quit_confirm()
-	return true
-
-func _settings_click(p: Vector2) -> bool:
-	var id := settings.click(p, design_vp())
-	if id == "back":
-		back_to_menu()
-	elif id == "minus":
-		set_volume(volume - 0.1)
-	elif id == "plus":
-		set_volume(volume + 0.1)
-	elif id == "track":
-		var v := settings.value_at(p, design_vp())
-		if v >= 0.0:
-			set_volume(v)
-	elif id == "hud":
-		# One preference, written here and handed to the scene to apply (#158).
-		hud_visible = not hud_visible
-		Prefs.save_hud(hud_visible, prefs_path)
-		hud_visibility_changed.emit(hud_visible)
-		queue_redraw()
-	elif id.begins_with("mode:"):
-		set_match_mode(id.substr(5))
-	return true
-
-func _confirm_click(p: Vector2) -> bool:
-	var id := confirm.click(p, design_vp())
-	if id == "confirm":
-		get_tree().quit()
-	elif id == "cancel":
-		cancel_confirm()
-	return true
+	return input.click(p) if input != null else false
 
 func key(code: int) -> bool:
-	if not active():
-		return false
-	if code == KEY_ESCAPE:
-		if screen == SCREEN_SETTINGS:
-			back_to_menu()
-		elif screen == SCREEN_CONFIRM:
-			cancel_confirm()
-		else:
-			open_quit_confirm()
-		return true
-	if screen == SCREEN_MENU:
-		return _menu_key(code)
-	if screen == SCREEN_SETTINGS:
-		return _settings_key(code)
-	return false
-
-func _menu_key(code: int) -> bool:
-	if code == KEY_ENTER or code == KEY_KP_ENTER:
-		close(true)
-		start_requested.emit()
-	elif code == KEY_N:
-		close(true)
-		new_league_requested.emit()
-	elif code == KEY_L:
-		close(true)
-		load_league_requested.emit()
-	elif code == KEY_S:
-		open_settings()
-	else:
-		return false
-	return true
-
-func _settings_key(code: int) -> bool:
-	if code == KEY_LEFT or code == KEY_A:
-		set_volume(volume - 0.1)
-	elif code == KEY_RIGHT or code == KEY_D:
-		set_volume(volume + 0.1)
-	elif code >= KEY_1 and code <= KEY_3:
-		# The segments' printed key line: keyboard reaches the same three views.
-		set_match_mode(str(Prefs.MODES[code - KEY_1]))
-	else:
-		return false
-	return true
+	return input.key(code) if input != null else false
 
 ## Forward an input event in design space; returns true when the shell took it.
 func handle_input(event: InputEvent, p: Vector2) -> bool:
-	if not active():
-		return false
-	if event is InputEventMouseMotion:
-		_paint_sheet_mouse(p)
-		if screen == SCREEN_SETTINGS and settings.dragging:
-			var v := settings.value_at(p, design_vp())
-			if v >= 0.0:
-				set_volume(v)
-		if not touch:
-			Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if button_at(p) != "" else Input.CURSOR_ARROW)
-		return true
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if not event.pressed:
-			if settings != null:
-				settings.dragging = false
-			return true
-		_paint_sheet_mouse(p)
-		return click(p)
-	if event is InputEventKey and event.pressed and not event.echo:
-		return key(event.keycode)
-	return false
-
-func _paint_sheet_mouse(p: Vector2) -> void:
-	if menu != null:
-		menu.mouse = p
-	if settings != null:
-		settings.mouse = p
-	if confirm != null:
-		confirm.mouse = p
-	queue_redraw()
+	return input.handle(event, p) if input != null else false
 
 # ---------------------------------------------------------------- drawing ---
 
 func _draw() -> void:
-	if not active():
+	if not active() or paint == null:
 		return
-	var vp := design_vp()
-	var under := screen
-	if screen == SCREEN_CONFIRM:
-		under = prev_screen
-	if under == SCREEN_MENU or under == SCREEN_SETTINGS:
-		_draw_backdrop(vp)
-		if under == SCREEN_MENU:
-			menu.draw(self, vp, fonts, has_match, volume, touch)
-		else:
-			settings.draw(self, vp, fonts, volume, touch, hud_visible, match_mode)
-	elif screen == SCREEN_CONFIRM:
-		draw_rect(Rect2(Vector2.ZERO, vp), Color(0, 0, 0, 0.35))
-	if screen == SCREEN_CONFIRM:
-		confirm.draw(self, vp, fonts, "QUIT FOOTBALL SIM?", _confirm_body(), "QUIT", "CANCEL", touch)
-
-## The prompt says what will actually be lost: a live match, or just the app.
-func _confirm_body() -> String:
-	if prev_screen == SCREEN_NONE:
-		return "The match in progress will end and the game will close."
-	return "The game will close."
-
-func _draw_backdrop(vp: Vector2) -> void:
-	if stills.is_empty():
-		draw_rect(Rect2(Vector2.ZERO, vp), UiChrome.C_BG)
-		return
-	var cur := MenuScreen.current_still(motion)
-	draw_texture_rect(stills[cur % stills.size()], MenuScreen.ken_rect(vp, cur, motion), false)
-	var a := MenuScreen.fade_alpha(motion)
-	if a > 0.001:
-		var nxt := MenuScreen.next_still(motion)
-		draw_texture_rect(stills[nxt % stills.size()], MenuScreen.ken_rect(vp, nxt, motion), false, Color(1, 1, 1, a))
-	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.008, 0.014, 0.018, 0.18))
-	if scrim != null:
-		draw_texture_rect(scrim, Rect2(Vector2.ZERO, vp), false)
+	paint.draw(design_vp())

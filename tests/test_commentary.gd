@@ -46,16 +46,25 @@ func test_block_names_both_players() -> void:
 	assert_true(line.contains("Yoro") and line.contains("Haaland"), "block line lost a name: " + line)
 
 func test_restart_wait_names_team() -> void:
-	var line: String = Commentary.restart(_rng(), "corner", "NFO", "", true)
+	var line: String = CommentaryRestarts.restart(_rng(), "corner", "NFO", "", true)
 	assert_true(line.contains("NFO"), "restart wait line lost the team: " + line)
 	assert_lte(line.length(), MAX_LEN, "restart line too long: " + line)
 
 func test_live_line_describes_state() -> void:
-	var eng := MatchEngine.new(5)
-	for i in range(600):
-		eng.tick()
-	var line: String = Commentary.live(eng)
+	# Craft the picture the live line reads — possession, a carrier, pressure —
+	# instead of ticking six hundred steps to stumble into one under coverage.
+	var eng := TestEngineBoot.match(5)
+	eng.phase = "play"
+	eng.possession_team = 0
+	eng.possession_loose = false
+	var carrier = eng.players[10]
+	eng.ball.owner_id = carrier.id
+	eng.ball.pos = carrier.pos
+	eng.ball.vel = Vector2.ZERO
+	var line: String = CommentaryLive.live(eng)
 	assert_ne(line, "", "live line is empty")
+	assert_true(line.contains(carrier.name) or line.contains(eng.teams[0]["data"]["short"]),
+		"live line lost the side in possession: " + line)
 	assert_lte(line.length(), MAX_LEN, "live line too long: " + line)
 
 # ---------------------------------------------------------- every builder ---
@@ -98,46 +107,46 @@ func test_handball_lines_read_the_box() -> void:
 	_each(func(i): return Commentary.handball(_rng(), "D. Dalot", false), 6, "Dalot")
 
 func test_injury_lines_read_whether_a_change_is_left() -> void:
-	_each(func(i): return Commentary.injury(_rng(), "L. Martínez", true), 6, "Martínez")
-	_each(func(i): return Commentary.injury(_rng(), "L. Martínez", false), 6, "Martínez")
+	_each(func(i): return CommentaryBench.injury(_rng(), "L. Martínez", true), 6, "Martínez")
+	_each(func(i): return CommentaryBench.injury(_rng(), "L. Martínez", false), 6, "Martínez")
 
 func test_substitution_lines_name_manager_or_team() -> void:
-	_each(func(i): return Commentary.substitution(_rng(), "MUN", "R. Højlund", "C. Eriksen", "R. Amorim"),
+	_each(func(i): return CommentaryBench.substitution(_rng(), "MUN", "R. Højlund", "C. Eriksen", "R. Amorim"),
 		6, "Højlund")
-	_each(func(i): return Commentary.substitution(_rng(), "MUN", "R. Højlund", "C. Eriksen"), 6, "Højlund")
+	_each(func(i): return CommentaryBench.substitution(_rng(), "MUN", "R. Højlund", "C. Eriksen"), 6, "Højlund")
 
 func test_restart_lines_cover_every_kind_and_the_wait() -> void:
 	for kind in ["throw_in", "corner", "free_kick", "penalty", "kickoff"]:
-		_each(func(i): return Commentary.restart(_rng(), kind, "NFO", "M. Sels", false), 6, "NFO")
+		_each(func(i): return CommentaryRestarts.restart(_rng(), kind, "NFO", "M. Sels", false), 6, "NFO")
 	# A goal kick is named for the keeper who takes it.
-	_each(func(i): return Commentary.restart(_rng(), "goal_kick", "NFO", "M. Sels", false), 6, "Sels")
-	_each(func(i): return Commentary.restart(_rng(), "goal_kick", "NFO", "", false), 6, "NFO")
+	_each(func(i): return CommentaryRestarts.restart(_rng(), "goal_kick", "NFO", "M. Sels", false), 6, "Sels")
+	_each(func(i): return CommentaryRestarts.restart(_rng(), "goal_kick", "NFO", "", false), 6, "NFO")
 	for kind in ["corner", "free_kick", "throw_in"]:
-		_each(func(i): return Commentary.restart(_rng(), kind, "NFO", "M. Sels", true), 6, "NFO")
-	assert_true(Commentary.restart(_rng(), "goal_kick", "NFO", "", false).begins_with("Goal kick"),
+		_each(func(i): return CommentaryRestarts.restart(_rng(), kind, "NFO", "M. Sels", true), 6, "NFO")
+	assert_true(CommentaryRestarts.restart(_rng(), "goal_kick", "NFO", "", false).begins_with("Goal kick"),
 		"a goal kick with no named taker was not read as one")
 
 func test_kickoff_cross_offside_and_penalty_lines_name_the_actor() -> void:
-	_each(func(i): return Commentary.kickoff(_rng(), "Manchester United"), 6, "Manchester United")
+	_each(func(i): return CommentaryRestarts.kickoff(_rng(), "Manchester United"), 6, "Manchester United")
 	_each(func(i): return Commentary.cross(_rng(), "A. Garnacho"), 8, "Garnacho")
 	_each(func(i): return Commentary.offside(_rng(), "A. Garnacho"), 6, "Garnacho")
-	_each(func(i): return Commentary.penalty_taken(_rng(), "B. Fernandes"), 6, "Fernandes")
+	_each(func(i): return CommentaryRestarts.penalty_taken(_rng(), "B. Fernandes"), 6, "Fernandes")
 
 func test_half_time_and_full_time_read_the_score() -> void:
-	var half: String = Commentary.half_time(_rng(), "MUN", 2, "MCI", 1)
+	var half: String = CommentaryRestarts.half_time(_rng(), "MUN", 2, "MCI", 1)
 	assert_true(half.contains("MUN") and half.contains("MCI"), "half-time line lost a side: " + half)
-	var draw: String = Commentary.full_time(_rng(), "MUN", 1, "MCI", 1)
+	var draw: String = CommentaryRestarts.full_time(_rng(), "MUN", 1, "MCI", 1)
 	assert_true(draw.contains("Honours even"), "a draw was not read as honours even: " + draw)
-	var home: String = Commentary.full_time(_rng(), "MUN", 3, "MCI", 1)
+	var home: String = CommentaryRestarts.full_time(_rng(), "MUN", 3, "MCI", 1)
 	assert_true(home.contains("MUN take it"), "a home win was not credited to the home side: " + home)
-	var away: String = Commentary.full_time(_rng(), "MUN", 1, "MCI", 2)
+	var away: String = CommentaryRestarts.full_time(_rng(), "MUN", 1, "MCI", 2)
 	assert_true(away.contains("MCI take it"), "an away win was not credited to the away side: " + away)
 
 func test_tactics_line_names_the_manager_and_the_change() -> void:
-	var line: String = Commentary.tactics(_rng(), "R. Amorim", "MUN", ["press higher", "narrower"])
+	var line: String = CommentaryBench.tactics(_rng(), "R. Amorim", "MUN", ["press higher", "narrower"])
 	assert_true(line.contains("Amorim"), "tactics line lost the manager: " + line)
 	assert_true(line.contains("press higher"), "tactics line lost the change: " + line)
-	var nothing: String = Commentary.tactics(_rng(), "R. Amorim", "MUN", [])
+	var nothing: String = CommentaryBench.tactics(_rng(), "R. Amorim", "MUN", [])
 	assert_true(nothing.contains("shape change"), "an empty change list was not described: " + nothing)
 
 func test_live_line_reads_the_zone_and_the_scoreline() -> void:
@@ -151,17 +160,17 @@ func test_live_line_reads_the_zone_and_the_scoreline() -> void:
 		eng.ball.owner_id = p.id
 		eng.ball.pos = pos
 		p.pos = pos
-		var line: String = Commentary.live(eng)
+		var line: String = CommentaryLive.live(eng)
 		assert_true(line.contains("MUN 2-0 MCI"), "a late live line dropped the score: " + line)
 	for kind in ["penalty", "corner", "throw_in", "goal_kick", "kickoff", "free_kick"]:
 		eng.phase = "restart"
 		eng.restart = {"type": kind}
-		assert_ne(Commentary.live(eng), "", "no live line for a " + kind)
+		assert_ne(CommentaryLive.live(eng), "", "no live line for a " + kind)
 	eng.phase = "play"
 	eng.ball.owner_id = -1
 	eng.ball.last_touch_team = 0
 	eng.ball.pos = Vector2(52.0, 34.0)
-	assert_ne(Commentary.live(eng), "", "no live line for a loose ball")
+	assert_ne(CommentaryLive.live(eng), "", "no live line for a loose ball")
 	var gk = eng._gk_of(0)
 	eng.ball.owner_id = gk.id
-	assert_true(Commentary.live(eng).contains("keeper"), "a keeper on the ball was not read as building from the back")
+	assert_true(CommentaryLive.live(eng).contains("keeper"), "a keeper on the ball was not read as building from the back")

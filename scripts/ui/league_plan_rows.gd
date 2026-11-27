@@ -20,6 +20,19 @@ extends RefCounted
 ## The planner's line sits this far down a pending row.
 const LINE := 17.0
 
+## Where the planner's clubs start inside a row. A row that carries a kick-off
+## time starts them after the time itself, measured rather than at a fixed
+## gutter, the way the calendar's day row does — the slot is never wider than
+## the time it holds. A real-fixture row stores no time at all
+## (`FixtureCalendar.real_rows`), so its clubs start at the result block's own
+## inset: the block that replaces the row at the whistle then puts its clubs on
+## the same design column, and the row does not jump left when the fixture is
+## played (#309).
+static func clubs_x(rect: Rect2, kickoff: String, font: Font) -> float:
+	if kickoff == "":
+		return rect.position.x + LeagueBlock.INSET
+	return rect.position.x + 8.0 + InterestNames.width(font, kickoff, 10) + 8.0
+
 ## Paint one plan row. `home_ink` / `away_ink` are the interest mark's inks,
 ## resolved by the sheet that laid the row. `names` is the sheet's own registry,
 ## so the long press reads exactly the strips this row painted (#107).
@@ -38,7 +51,7 @@ static func paint_fixture(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dic
 	var time := str(fx.get("kickoff_time", ""))
 	if time != "":
 		UiChrome.text(c, Vector2(x + 8.0, line_y), time, 10, UiChrome.C_DIM, med)
-	x += 60.0
+	x = clubs_x(rect, time, med)
 	var room := maxf((rect.end.x - 96.0 - x) * 0.46, 60.0)
 	var home_name: String = LeagueColumns.fit_name(str(fx.get("home_name", "")), bold, 13, room)
 	x += InterestNames.run(c, names, str(fx.get("home_club_id", "")), home_name,

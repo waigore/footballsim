@@ -130,6 +130,17 @@ func test_the_summary_waits_for_every_active_league() -> void:
 	# The save is left on disk; the relaunch test reopens it.
 	assert_true(str(slug) != "", "the save has no slug")
 
+func test_the_boot_orders_and_closes_competitions() -> void:
+	# The create path reads known_competitions from LeagueSeasonBoot: a lower
+	# tier closes over the chain above it, and the published order wins over the
+	# wizard's pick order (#241, #258).
+	assert_eq(LeagueSeasonBoot.known_competitions(["LL", "PL"]), ["PL", "LL"],
+		"the boot lost the published fixture order")
+	assert_eq(LeagueSeasonBoot.known_competitions(["CH"]), ["PL", "CH"],
+		"the boot did not close a lower tier over its chain")
+	assert_eq(LeagueSeasonBoot.known_competitions([]), ["PL"],
+		"an empty pick did not fall back to a known competition")
+
 func test_a_pl_only_save_still_opens_as_pl_active() -> void:
 	var single := LeagueSeason.create("Old World", "generated", "fixture_days", SEED + 1)
 	assert_not_null(single, "the single-league save was not created")

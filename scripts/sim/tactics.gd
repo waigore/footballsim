@@ -105,7 +105,7 @@ func style() -> Dictionary:
 		"width": clampf(width + float(m.get("width", 0.0)), 0.0, 1.0),
 		"directness": clampf(directness + float(m.get("directness", 0.0)), 0.0, 1.0),
 		"crossing": clampf(crossing, 0.0, 1.0),
-		"aggression": float(base.get("aggression", 0.5)),
+		"aggression": float(base.get("aggression", MatchContact.NEUTRAL)),
 		"time_wasting": clampf(time_wasting, 0.0, 1.0),
 		"press_trigger": str(opposition.get("press", "standard")),
 		"marking": str(opposition.get("marking", "zonal")),

@@ -11,6 +11,9 @@ const SAVE_DIR := "user://saves_test_text_fields_201"
 const CACHE_DIR := "user://cache_test_text_fields_201"
 
 var game = null
+## One generated season shared by the SAVE AS / shortlist keyboard tests so
+## coverage does not rebuild three calendars for the same chrome.
+var season: LeagueSeason = null
 ## Fields the fake keyboard was asked for, in order: `{text, frame, max_length}`,
 ## and how many times it was put away. A lambda captures a local by value in
 ## GDScript, so the counter lives in a one-cell array the closure can write.
@@ -44,6 +47,7 @@ func before_all() -> void:
 	game.set_script(load("res://scripts/main.gd"))
 	add_child(game)
 	game.menus.open_menu()
+	season = LeagueSeason.create("Keyboard Season", "generated", "fixture_days", 0)
 
 func after_all() -> void:
 	SoftKeyboard.on_show = Callable()
@@ -53,6 +57,9 @@ func after_all() -> void:
 		if game.menus.league != null:
 			game.menus.league.close()
 		game.queue_free()
+	if season != null:
+		season.close()
+		season = null
 	LeagueSeason.active = null
 	LeagueSave.close()
 	_clean()
@@ -175,7 +182,7 @@ func test_a_physical_key_still_types_the_letter_printed_on_it() -> void:
 # ---------------------------------------------------------------- system ---
 
 func test_save_as_opens_the_keyboard_and_takes_a_typed_name() -> void:
-	var season := LeagueSeason.create("Typed Copy", "generated", "fixture_days", 0)
+	assert_not_null(season, "the shared season was not created")
 	game.menus.league.show_season(season)
 	press_id("system")
 	asked.clear()
@@ -193,12 +200,10 @@ func test_save_as_opens_the_keyboard_and_takes_a_typed_name() -> void:
 	press_id("sys:cancel")
 	assert_false(bool(screen().sys["naming"]), "CANCEL left the field open")
 	assert_gte(hidden[0], 1, "the keyboard stayed up over a sheet with no field")
-	LeagueSeason.active = null
-	LeagueSave.close()
 	screen().close()
 
 func test_committing_save_as_shuts_the_keyboard() -> void:
-	var season := LeagueSeason.create("Commit Copy", "generated", "fixture_days", 0)
+	assert_not_null(season, "the shared season was not created")
 	game.menus.league.show_season(season)
 	press_id("system")
 	press_id("sys:save")
@@ -207,14 +212,12 @@ func test_committing_save_as_shuts_the_keyboard() -> void:
 	assert_false(bool(screen().sys["naming"]), "SAVE left the field open")
 	assert_gte(hidden[0], 1, "the keyboard stayed up after the copy was written")
 	assert_eq(str(screen().focus.kind), "", "the field kept focus after the copy was written")
-	LeagueSeason.active = null
-	LeagueSave.close()
 	screen().close()
 
 # -------------------------------------------------------------- interest ---
 
 func test_the_shortlist_search_raises_its_keyboard_and_takes_text() -> void:
-	var season := LeagueSeason.create("Search Copy", "generated", "fixture_days", 0)
+	assert_not_null(season, "the shared season was not created")
 	game.menus.league.show_season(season)
 	press_id("interest")
 	asked.clear()
@@ -226,5 +229,3 @@ func test_the_shortlist_search_raises_its_keyboard_and_takes_text() -> void:
 	assert_eq(str(screen().interest_query), "li", "the typed characters did not reach the search")
 	assert_eq(str(screen().focus.kind), LeagueFieldFocus.INTEREST, "the search did not take focus")
 	screen().close()
-	LeagueSeason.active = null
-	LeagueSave.close()

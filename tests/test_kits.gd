@@ -1,16 +1,39 @@
 extends GdToolsTest
 
 ## Kit selection: no fixture may send both sides out in the same-looking shirt.
+## Pair checks call Kits.assign on cached team data — a MatchEngine per pair
+## would rebuild squads ~30k times under coverage.
+
+var club_ids: Array = []
+var club_data: Dictionary = {}
+
+func before_all() -> void:
+	club_ids = TeamData.team_ids()
+	for id in club_ids:
+		club_data[str(id)] = TeamData.get_team(str(id))
+
+## Minimal sides array Kits.assign mutates (same shape MatchEngine hands it).
+func _sides(home_id: String, away_id: String) -> Array:
+	return [
+		{"id": home_id, "data": club_data[home_id]},
+		{"id": away_id, "data": club_data[away_id]},
+	]
+
+func _shirt(sides: Array, t: int) -> Color:
+	var kit: Dictionary = sides[t].get("kit", {})
+	if kit.has("shirt"):
+		return kit["shirt"]
+	return sides[t]["data"]["color"]
 
 func test_no_fixture_clashes() -> void:
-	var ids: Array = TeamData.team_ids()
-	for a in ids:
-		for b in ids:
+	for a in club_ids:
+		for b in club_ids:
 			if a == b:
 				continue
-			var eng := MatchEngine.new(1, str(a), str(b))
-			assert_false(Kits.clash(eng.kit_color(0), eng.kit_color(1)),
-				"%s v %s both wear %s" % [a, b, eng.kit_color(0).to_html(false)])
+			var sides := _sides(str(a), str(b))
+			Kits.assign(sides)
+			assert_false(Kits.clash(_shirt(sides, 0), _shirt(sides, 1)),
+				"%s v %s both wear %s" % [a, b, _shirt(sides, 0).to_html(false)])
 
 func test_home_keeps_first_choice() -> void:
 	var eng := MatchEngine.new(1, "ARS", "NFO")

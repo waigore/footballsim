@@ -14,6 +14,10 @@ extends RefCounted
 ## `active` is the season the scene is currently playing. It is how a finished
 ## watched match, recorded by PLSimStats from the match controller, finds its way
 ## back into the save without the controller knowing about leagues.
+##
+## Opening a save lives in `LeagueSeasonBoot`; a watched fixture's record path
+## lives in `LeagueSeasonWatch`. This file keeps the clock and the narrow API
+## screens call.
 
 signal match_recorded(report: Dictionary)
 signal state_changed
@@ -21,8 +25,10 @@ signal state_changed
 static var active: LeagueSeason = null
 
 ## The order a save keeps its competitions in, whatever order the wizard picked:
-## fixtures, hub groups and the podium all read it (#241).
-const COMPETITION_ORDER: Array = ["PL", "LL", "BL", "BL2"]
+## fixtures, hub groups and the podium all read it (#241). `LeagueTiers.order()`
+## is the same order and a test pins them together; it is spelled out here so a
+## const read needs no call.
+const COMPETITION_ORDER: Array = ["PL", "CH", "L1", "L2", "NL", "LL", "BL", "BL2"]
 
 var save: LeagueSave = null
 var record: LeagueRecord = null
@@ -43,103 +49,14 @@ var last_advance: Dictionary = {}
 # ------------------------------------------------------------------ setup ---
 
 ## New named save: calendar, strongest XIs, ledger, clock on gameweek one.
-## `competitions` lists the leagues to run (Premier League, La Liga, or both);
-## one is always active.
+## `competitions` names the leagues to run; the graph closes over the tiers above each.
 static func create(name: String, calendar_mode: String, advance_mode: String, seed: int = 0,
 		competitions: Array = ["PL"]) -> LeagueSeason:
-	var saved_mode := calendar_mode if LeagueRules.CALENDAR_MODES.has(calendar_mode) else "generated"
-	var saved_advance := advance_mode if LeagueRules.ADVANCE_MODES.has(advance_mode) else "fixture_days"
-	if seed == 0:
-		seed = int(Time.get_unix_time_from_system()) % 1000000
-	# Build every active league's calendar from the seed, then hand the whole set
-	# to the save: one file, one clock, one fixture table keyed by competition.
-	if LeagueSeason.active != null:
-		LeagueSeason.active.close()
-	PLDatabase.reset()
-	PLRepository.shared().invalidate()
-	var wanted: Array = _known_competitions(competitions)
-	var built: Array = []
-	var rules_map := {}
-	var first := ""
-	var last := ""
-	for i in range(wanted.size()):
-		var cid := str(wanted[i])
-		var comp_rules := LeagueRules.defaults(saved_mode, saved_advance, cid)
-		var fixtures := FixtureCalendar.build(saved_mode, comp_rules, seed + i * 97, cid)
-		if fixtures.is_empty():
-			return null
-		comp_rules["season_start"] = str(fixtures[0]["kickoff"])
-		comp_rules["season_end"] = str(fixtures[fixtures.size() - 1]["kickoff"])
-		if first == "" or str(fixtures[0]["kickoff"]) < first:
-			first = str(fixtures[0]["kickoff"])
-		if str(fixtures[fixtures.size() - 1]["kickoff"]) > last:
-			last = str(fixtures[fixtures.size() - 1]["kickoff"])
-		built.append({"competition_id": cid, "fixtures": fixtures})
-		rules_map[cid] = comp_rules
-	var save := LeagueSave.create(name, rules_map, seed, wanted)
-	if save == null:
-		return null
-	var season := LeagueSeason.new()
-	season.save = save
-	season.record = LeagueRecord.new(save)
-	season.record.fixtures.clear()
-	for i in range(built.size()):
-		var entry: Dictionary = built[i]
-		if not season.record.fixtures.install(entry["fixtures"], str(entry["competition_id"]), i == 0):
-			LeagueSave.close()
-			return null
-	save.reload()
-	season.rules_by = save.rules_by
-	season.rules = save.rules
-	# The shared clock opens on the earliest first fixture across the actives.
-	save.set_date(first)
-	save.set_matchday(season._matchday_of(first))
-	StrongestXI.apply_all()
-	save.reload()
-	season.rules_by = save.rules_by
-	season.rules = save.rules
-	season.rng.seed = seed
-	active = season
-	return season
-
-## Only competitions the seed carries, in the canonical order — the wizard's
-## pick order is not the fixture order — and never none (#241).
-static func _known_competitions(wanted: Array) -> Array:
-	var known: Array = []
-	for row in PLDatabase.rows("SELECT id FROM competition ORDER BY rowid;"):
-		known.append(str(row["id"]))
-	var out: Array = []
-	for cid in COMPETITION_ORDER:
-		if wanted.has(cid) and known.has(cid):
-			out.append(cid)
-	for cid in wanted:
-		if known.has(str(cid)) and not out.has(str(cid)):
-			out.append(str(cid))
-	if out.is_empty():
-		out.append("PL" if known.has("PL") or known.is_empty() else str(known[0]))
-	return out
+	return LeagueSeasonBoot.create(name, calendar_mode, advance_mode, seed, competitions)
 
 ## Resume a save from disk and put the clock on the next unplayed fixture day.
 static func open(slug: String) -> LeagueSeason:
-	var save := LeagueSave.open(slug)
-	if save == null:
-		return null
-	var season := LeagueSeason.new()
-	season.save = save
-	season.record = LeagueRecord.new(save)
-	season.rules_by = save.rules_by
-	season.rules = save.rules
-	season.rng.seed = int(str(save.meta.get("seed", "0")))
-	# An older save may predate the home/away columns, and a hand-edited fixture
-	# ledger can drift: rebuild the aggregates now so the table (and its full
-	# reading) matches the played fixtures (#73).
-	season.record.standings.recompute()
-	# Interest is the save's, so a reopened season re-applies it before the clock
-	# rolls: a followed club's game is never left on Auto by a stale flag (#104).
-	season.record.interest.force_watch()
-	season.roll_clock()
-	active = season
-	return season
+	return LeagueSeasonBoot.open(slug)
 
 static func engine_finished(engine) -> void:
 	if active != null:
@@ -322,70 +239,21 @@ func goal_clip(fixture_id: String, goal_index: int) -> Dictionary:
 ## Hand one fixture to the match viewer. The screen starts the engine with these
 ## clubs; when it reaches full time, `engine_finished` records the result here.
 func start_watch(fixture_id: String) -> Dictionary:
-	if record == null or fixture_id == "" or finishing:
-		return {}
-	var fx := record.fixtures.one(fixture_id)
-	if fx.is_empty():
-		return {}
-	# The engine reads the save's own squad flags, so rebuild both elevens from
-	# who is available today before it is handed the fixture (#155, #156).
-	StrongestXI.apply(str(fx["home_club_id"]))
-	StrongestXI.apply(str(fx["away_club_id"]))
-	watching_fixture = fixture_id
-	captured = []
-	return {
-		"fixture_id": fixture_id,
-		"home": str(fx["home_club_id"]), "away": str(fx["away_club_id"]),
-		"competition_id": str(fx.get("competition_id", "")),
-		"competition": PLRepository.shared().competition_name(str(fx.get("competition_id", ""))),
-	}
+	return LeagueSeasonWatch.start(self, fixture_id)
 
 ## Back out of a pre-match briefing: the fixture never kicked off, so the season
 ## stops waiting for it. The fixture keeps its Watch flag and the clock stays on
 ## the day, so the next Continue offers the same game again.
 func cancel_watch() -> void:
-	if finishing:
-		return
-	watching_fixture = ""
-	captured = []
-	state_changed.emit()
+	LeagueSeasonWatch.cancel(self)
 
 ## The viewer's ring caught a goal during a watched fixture: hold the clip here
 ## until full time, when it is written beside the report it belongs to.
 func capture_goal(pack: Dictionary) -> void:
-	if watching_fixture == "" or pack.is_empty():
-		return
-	captured.append(pack)
+	LeagueSeasonWatch.capture(self, pack)
 
 func record_engine(engine) -> void:
-	var fixture_id := watching_fixture
-	if fixture_id == "":
-		return
-	watching_fixture = ""
-	finishing = false
-	var fx := record.fixtures.one(fixture_id)
-	if fx.is_empty():
-		return
-	var home := int(engine.score[0])
-	var away := int(engine.score[1])
-	var cid := str(fx.get("competition_id", ""))
-	var events := LeagueHighlights.engine_events(engine, fixture_id)
-	PLDatabase.transaction("BEGIN TRANSACTION;")
-	record.report.save_result(fixture_id, home, away,
-		str(fx["home_club_id"]), str(fx["away_club_id"]), record.standings, cid)
-	record.report.add_events(events)
-	LeagueSettle.watch(record, engine, events, int(rng.seed),
-		str(fx["kickoff"]), int(fx["matchday"]))
-	LeagueHighlights.store_watch(record, int(rng.seed), fixture_id, captured,
-		str(fx["home_club_id"]), str(fx["away_club_id"]))
-	captured = []
-	PLDatabase.transaction("COMMIT;")
-	# The encyclopedia reads this save's ledger: show it this result now.
-	PLRepository.shared().invalidate()
-	# The clock stays on the day just played so the hub can show its result, and
-	# the next Continue moves on (#124); `open()` still rolls a played day forward.
-	state_changed.emit()
-	match_recorded.emit(report(fixture_id))
+	LeagueSeasonWatch.record_engine(self, engine)
 
 # ------------------------------------------------------------ season end ---
 

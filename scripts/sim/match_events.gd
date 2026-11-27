@@ -59,16 +59,49 @@ const PENALTY_SHARE := 0.12
 ## Minutes are sampled across the 90 regulation minutes.
 const MATCH_MINUTES := 90
 
-## Every event for one side of one fixture: goals, assists and cards. The rows
-## are plain dictionaries ready for `match_event`.
+## Every event for one side of one fixture: goals, assists, cards and the bodies
+## it loses. The rows are plain dictionaries ready for `match_event`.
+##
+## A player who leaves the pitch — injured or sent off — takes no further part
+## (#321), so the exits are drawn first and every later pick skips a body that is
+## already gone. The scoreline still comes only from the Poisson sample: a goal
+## is never dropped, it only ever goes to a player who is still on at its minute.
 static func side(seed: int, fixture_id: String, club_id: String, xi: Array, goals: int) -> Array:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	var out: Array = []
 	var used_minutes := {}
+	# Who leaves the pitch, and when. One row per body: a sending-off and an
+	# injury that land on the same player leave only the earlier one standing.
+	var exit_rows: Array = []
+	if rng.randf() < RED_CHANCE:
+		var minute := _minute(rng)
+		var sent_off := pick(xi, CARD_SHARE, "def", rng)
+		if not sent_off.is_empty():
+			exit_rows.append(_row(fixture_id, minute, "red", sent_off, club_id))
+	# A body breaks down at the rate the engine's own fatigue path lands on, so an
+	# auto-simmed season loses players the way a watched one does (#155). The season
+	# grades the injury; this row only says who went down and when.
+	if rng.randf() < SeasonAvailability.INJURY_RATE:
+		var minute := _minute(rng)
+		var hurt := pick(xi, CARD_SHARE, "phy", rng)
+		if not hurt.is_empty():
+			exit_rows.append(_row(fixture_id, minute, "injury", hurt, club_id))
+	# One exit per body: if a sending-off and an injury land on the same player,
+	# only the earlier row stands. `gone` is the id → exit minute map every later
+	# draw filters on.
+	var exits := {}
+	for row in exit_rows:
+		var id := str(row["player_id"])
+		if not exits.has(id) or int(row["minute"]) < int(exits[id]["minute"]):
+			exits[id] = row
+	var gone := {}
+	for id in exits.keys():
+		gone[id] = int(exits[id]["minute"])
+		out.append(exits[id])
 	for i in range(maxi(goals, 0)):
 		var minute := _minute(rng)
-		var scorer := pick(xi, GOAL_SHARE, "sho", rng)
+		var scorer := pick(xi, GOAL_SHARE, "sho", rng, "", gone, minute)
 		if scorer.is_empty():
 			continue
 		var row := _row(fixture_id, minute, "goal", scorer, club_id)
@@ -80,7 +113,7 @@ static func side(seed: int, fixture_id: String, club_id: String, xi: Array, goal
 			continue
 		var assist_row := {}
 		if rng.randf() < ASSIST_CHANCE:
-			var helper := pick(xi, ASSIST_SHARE, "pas", rng, str(scorer["id"]))
+			var helper := pick(xi, ASSIST_SHARE, "pas", rng, str(scorer["id"]), gone, minute)
 			if not helper.is_empty():
 				# The goal row carries its assist's identity so a report clip can
 				# script the final ball without pairing rows back together.
@@ -92,37 +125,37 @@ static func side(seed: int, fixture_id: String, club_id: String, xi: Array, goal
 			out.append(assist_row)
 	var yellows := clampi(int(round(YELLOWS_PER_SIDE + (rng.randf() - 0.5) * 2.0)), 0, 6)
 	for i in range(yellows):
-		var booked := pick(xi, CARD_SHARE, "def", rng)
+		# One booking per body per minute: redraw the minute, not the man, and
+		# give up rather than book the same body twice in it.
+		var minute := _minute(rng)
+		var booked := {}
+		for attempt in range(8):
+			booked = pick(xi, CARD_SHARE, "def", rng, "", gone, minute)
+			if booked.is_empty():
+				break
+			if not used_minutes.has("%d/%s" % [minute, str(booked["id"])]):
+				break
+			booked = {}
+			minute = _minute(rng)
 		if booked.is_empty():
 			continue
-		var minute := _minute(rng)
-		while used_minutes.has("%d/%s" % [minute, str(booked["id"])]):
-			minute = _minute(rng)
 		used_minutes["%d/%s" % [minute, str(booked["id"])]] = true
 		out.append(_row(fixture_id, minute, "yellow", booked, club_id))
-	if rng.randf() < RED_CHANCE:
-		var sent_off := pick(xi, CARD_SHARE, "def", rng)
-		if not sent_off.is_empty():
-			out.append(_row(fixture_id, _minute(rng), "red", sent_off, club_id))
-	# A body breaks down at the rate the engine's own fatigue path lands on, so an
-	# auto-simmed season loses players the way a watched one does (#155). The season
-	# grades the injury; this row only says who went down and when.
-	if rng.randf() < SeasonAvailability.INJURY_RATE:
-		var hurt := pick(xi, CARD_SHARE, "phy", rng)
-		if not hurt.is_empty():
-			out.append(_row(fixture_id, _minute(rng), "injury", hurt, club_id))
 	out.sort_custom(func(a, b): return int(a["minute"]) < int(b["minute"]))
 	return out
 
 ## Weighted pick over the XI. A player's share is the position prior scaled by
 ## the ability that role uses (finishing for goals, passing for assists, the
 ## defensive side for cards), so a side's best striker really does score most.
-static func pick(xi: Array, shares: Dictionary, ability: String, rng: RandomNumberGenerator, skip_id: String = "") -> Dictionary:
+## `gone` carries each departed player's exit minute, and no draw may name him
+## at or after it (#321).
+static func pick(xi: Array, shares: Dictionary, ability: String, rng: RandomNumberGenerator,
+		skip_id: String = "", gone: Dictionary = {}, minute: int = 0) -> Dictionary:
 	var weights: Array = []
 	var total := 0.0
 	for p in xi:
 		var id := str(p.get("id", ""))
-		if id == "" or id == skip_id:
+		if id == "" or id == skip_id or _off(gone, id, minute):
 			weights.append(0.0)
 			continue
 		var role := str(p.get("role", ""))
@@ -135,11 +168,22 @@ static func pick(xi: Array, shares: Dictionary, ability: String, rng: RandomNumb
 		return {}
 	var roll := rng.randf() * total
 	var acc := 0.0
+	var last := -1
 	for i in range(weights.size()):
+		if float(weights[i]) <= 0.0:
+			continue
+		last = i
 		acc += float(weights[i])
 		if roll <= acc:
 			return xi[i]
-	return xi[weights.size() - 1]
+	if last < 0:
+		return {}
+	return xi[last]
+
+## A body is out from his exit minute on: minute-granular rows never claim he
+## did something at or after the minute he left.
+static func _off(gone: Dictionary, id: String, minute: int) -> bool:
+	return gone.has(id) and int(gone[id]) <= minute
 
 static func _minute(rng: RandomNumberGenerator) -> int:
 	return rng.randi_range(1, MATCH_MINUTES)

@@ -12,19 +12,19 @@ Cite `REQ-*`/`RUB-*` in PRs.
 
 1. Touched pillars (`P1`–`P5`); others **N/A** (≠ pass).
 2. Score applicable criteria; pillar then overall.
-3. Cite failing IDs.
+3. Cite fail IDs.
 
 ## Score scale
 
 | Score | Label | Meaning |
 |------:|-------|---------|
-| 3 | Exemplary | Exceeds bar; reusable |
+| 3 | Exemplary | Exceeds; reusable |
 | 2 | Meets | Satisfies without material gaps |
 | 1 | Partial | Directionally right; blocks done |
 | 0 | Fail | Missing, contradicted, harmful |
 | — | N/A | Outside this change |
 
-**Pass:** applicable ≥ 2, none 0 per touched pillar; overall = all touched pass. Any **0** fails.
+**Pass:** applicable ≥2, none 0 per touched pillar; overall = all touched pass. Any **0** fails.
 
 ## Criteria (pass ≥2)
 
@@ -55,10 +55,10 @@ Cite `REQ-*`/`RUB-*` in PRs.
 
 | ID | Pass bar |
 |----|----------|
-| RUB-P3-01 | **S:** one domain; ≤400/25 (allowlist ≤5 shrink-only; hard ≤650/45) (`REQ-P3-01`) |
-| RUB-P3-02 | **I:** no deep `get_node`/`$` (≥3); autoloads allowlisted (`REQ-P3-02`) |
-| RUB-P3-03 | **D:** sim/rules RefCounted/Object-only; view reactive (`REQ-P3-03`) |
-| RUB-P3-04 | Changed rules/sim with `tests/` (`REQ-P3-04`) |
+| RUB-P3-01 | **S:** ≤400/25; shrink-only allowlist; no new untyped params (`REQ-P3-01`) |
+| RUB-P3-02 | **I:** no deep `get_node`/`$` (≥3); autoload declare+consumers (`REQ-P3-02`) |
+| RUB-P3-03 | **D:** sim/data pure; no ui/view loads; view reactive (`REQ-P3-03`) |
+| RUB-P3-04 | Changed `scripts/sim/**` (+rules) with `tests/` (`REQ-P3-04`) |
 | RUB-P3-05 | OS APIs only in `scripts/platform/**` (`REQ-P3-05`) |
 
 ### P4 — Performance & latency

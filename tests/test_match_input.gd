@@ -22,7 +22,11 @@ func before_all() -> void:
 	var prefs := TestScratch.file("test_match_input_prefs.cfg")
 	for g in [game, game2]:
 		g.menus.shell.prefs_path = prefs
+		# Attach restored HUD/mode from the developer's user://prefs.cfg; point
+		# both at the scratch file and re-read so the suite never inherits a
+		# leftover match view (#164).
 		g.menus.restore_hud()
+		g.menus.restore_mode()
 	game._on_fixture_confirmed("MUN", "MCI")
 	# Every match opens the pre-match briefing first (#157): kick it off.
 	TestBriefing.kick(game)
@@ -248,3 +252,25 @@ func test_skip_through_the_router_advances_a_fast_highlight() -> void:
 	var clock: float = game.engine.clock
 	_key(KEY_S)
 	assert_gt(game.engine.clock, clock, "skip did not advance the highlight")
+
+func test_the_play_keys_stop_at_the_whistle() -> void:
+	# #276: the keys printed on PAUSE, speed and SKIP answer exactly as those
+	# doors do once the match has finished — and the doors that still mean
+	# something (a restart) keep working.
+	var phase_before: String = str(game.engine.phase)
+	game.engine.phase = "full_time"
+	game.mode = "highlights"
+	game.fast_mode = false
+	game.paused = false
+	game.speed = 1.0
+	var clock: float = game.engine.clock
+	_key(KEY_SPACE)
+	assert_false(game.paused, "space paused a finished match")
+	_key(KEY_S)
+	assert_eq(game.engine.clock, clock, "skip moved a finished match on")
+	_key(KEY_4)
+	assert_eq(game.speed, 1.0, "a speed key reached a finished match")
+	game.engine.phase = phase_before
+	_key(KEY_R)
+	assert_true(game.engine != null and str(game.engine.phase) != "full_time",
+		"R stopped playing again after the whistle")

@@ -45,8 +45,8 @@ static func block_fixture(report: Dictionary) -> Dictionary:
 func layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 	# BACK keeps the league's header position on every reading (#162). Results
-	# also carry CONTINUE in the hub's corner: a settled day is exactly when the
-	# season is ready to move on (#180).
+	# also carry CONTINUE in the hub's corner: it leaves the reading for Today's
+	# Fixtures — never settling a second day, which is the hub's door alone (#326).
 	items.append(LeagueExtra.back_item())
 	var roundup: Array = view.get("roundup", [])
 	if not roundup.is_empty():

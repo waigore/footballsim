@@ -140,6 +140,8 @@ suites = [
   "test_attributes.gd",
   "test_engine_rules.gd",
   "test_extra_time.gd",
+  "test_match_contact.gd",
+  "test_kicking.gd",
 ]
 
 [domains.teams]
@@ -208,6 +210,9 @@ suites = [
   "test_german_season.gd",
   # The Relegation, the bands and the membership swap (#240).
   "test_german_relegation.gd",
+  # The English pyramid (#258/#259/#260): five linked tiers, the 2026/27
+  # play-offs and the membership swap that follows them.
+  "test_english_pyramid.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -259,6 +264,18 @@ match = "scripts/sim/commentary.gd*"
 domain = "commentary"
 
 [[rules]]
+match = "scripts/sim/commentary_live.gd*"
+domain = "commentary"
+
+[[rules]]
+match = "scripts/sim/commentary_restarts.gd*"
+domain = "commentary"
+
+[[rules]]
+match = "scripts/sim/commentary_bench.gd*"
+domain = "commentary"
+
+[[rules]]
 match = "scripts/sim/kits.gd*"
 domain = "kits"
 
@@ -269,6 +286,24 @@ domain = "poisson"
 [[rules]]
 match = "scripts/sim/match_engine_actions.gd*"
 domain = "finishing"
+
+[[rules]]
+match = "scripts/sim/match_contact.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "tests/test_match_contact.gd*"
+domain = "match_engine"
+
+# The keeper's own boot (KICKING): read into the long ball he strikes, so the
+# goal-kick lane and the on-ball keeper distribution both mount it.
+[[rules]]
+match = "scripts/sim/match_kicking.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "tests/test_kicking.gd*"
+domain = "match_engine"
 
 [[rules]]
 match = "scripts/sim/match_engine_duels.gd*"
@@ -331,6 +366,12 @@ domain = "match_engine"
 [[rules]]
 match = "scripts/sim/match_ai.gd*"
 domain = "match_engine"
+
+# The marking band is read by the shape (MatchAI) and pinned by the tactics
+# suite: same theme, one boot.
+[[rules]]
+match = "scripts/sim/match_marking.gd*"
+domain = "tactics"
 
 # The on-ball half of the brain shares MatchAI's suite: off it no carrier
 # decision has a test.
@@ -433,6 +474,23 @@ domain = "league"
 match = "scripts/sim/match_manager.gd*"
 domain = "managers"
 
+# Lever maps / apply and bench picks: same dugout as MatchManager, pinned by
+# the managers suite so a split cannot drift from the decision engine.
+[[rules]]
+match = "scripts/sim/match_manager_tactics.gd*"
+domain = "managers"
+
+[[rules]]
+match = "scripts/sim/match_manager_subs.gd*"
+domain = "managers"
+
+# How long a dugout waits between tactical changes: the law's seven-minute floor
+# stretched by the manager's own `patience`. It is pinned by the managers suite
+# beside the decision engine it gates, so the domain is the same one.
+[[rules]]
+match = "scripts/sim/match_cadence.gd*"
+domain = "managers"
+
 [[rules]]
 match = "scripts/sim/attributes.gd*"
 domain = "match_engine"
@@ -475,6 +533,14 @@ domain = "shell"
 
 [[rules]]
 match = "scripts/ui/app_shell.gd*"
+domain = "shell"
+
+[[rules]]
+match = "scripts/ui/app_shell_input.gd*"
+domain = "shell"
+
+[[rules]]
+match = "scripts/ui/app_shell_paint.gd*"
 domain = "shell"
 
 [[rules]]
@@ -522,7 +588,7 @@ match = "scripts/ui/hud_managers.gd*"
 domain = "hud_chrome"
 
 [[rules]]
-match = "scripts/ui/team_select.gd*"
+match = "scripts/ui/team_select*.gd*"
 domain = "league"
 
 [[rules]]
@@ -571,7 +637,8 @@ domain = "hud_chrome"
 match = "scripts/view/match_camera.gd*"
 domain = "hud_chrome"
 
-# The scene's presentation face and input router share main.gd's suite.
+# The scene's presentation face, input router, clock loop and arena build share
+# main.gd's suite.
 [[rules]]
 match = "scripts/view/match_view.gd*"
 domain = "match_input"
@@ -580,9 +647,17 @@ domain = "match_input"
 match = "scripts/view/match_input.gd*"
 domain = "match_input"
 
+[[rules]]
+match = "scripts/view/match_playback.gd*"
+domain = "match_input"
+
+[[rules]]
+match = "scripts/match_scene.gd*"
+domain = "hud_chrome"
+
 # Fixture-picker glue rides the router domain: the same suites drive the sheet.
 [[rules]]
-match = "scripts/view/fixture_sheet.gd*"
+match = "scripts/ui/fixture_sheet.gd*"
 domain = "match_input"
 
 [[rules]]
