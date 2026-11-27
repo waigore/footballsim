@@ -3,7 +3,6 @@ extends RefCounted
 
 
 const HEADER := LeagueChrome.HEADER
-const BAR_H := LeagueChrome.BAR_H
 
 
 const SAVE_NAME := "My League Sim"
@@ -12,6 +11,10 @@ const TOGGLE_H := 40.0
 const TOGGLE_PITCH := 46.0
 const MODE_AFTER := 12.0
 const ADVANCE_AFTER := 14.0
+
+const CREATE_W := 240.0
+const CREATE_H := 46.0
+const CREATE_EDGE := 8.0
 
 var cache := {}
 
@@ -94,10 +97,32 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append({"id": "adv:every_day", "kind": "choice", "label": "EVERY DAY",
 		"rect": Rect2(24.0 + w * 0.52, y, w * 0.48, toggle_h), "selected": str(view.get("advance_mode", "")) == "every_day"})
 	y += toggle_h + ADVANCE_AFTER
-	items.append({"id": "create", "kind": "button", "label": "CREATE SEASON",
-		"rect": Rect2(24.0, y, minf(240.0, w), 46.0), "primary": true})
+	items.append(create_item(vp, y, w, touch))
 	items.append(LeagueExtra.back_item(touch))
 	return items
+
+
+static func create_item(vp: Vector2, y: float, w: float, touch: bool) -> Dictionary:
+	var door_h: float = UiChrome.tap_h(CREATE_H, touch)
+	var door_w: float = minf(CREATE_W, w)
+	if y + door_h <= vp.y - CREATE_EDGE:
+		return {"id": "create", "kind": "button", "label": "CREATE SEASON",
+			"rect": Rect2(24.0, y, door_w, door_h), "primary": true}
+	var bar: float = bar_h(touch)
+	return {"id": "create", "kind": "button", "label": "CREATE SEASON", "primary": true,
+		"pinned": true, "bar": bar,
+		"rect": Rect2(24.0, vp.y - bar + (bar - door_h) * 0.5, door_w, door_h)}
+
+
+static func bar_h(touch: bool) -> float:
+	return UiChrome.tap_h(CREATE_H, touch) + 12.0
+
+
+static func bar_of(items: Array) -> float:
+	for item in items:
+		if str(item.get("id", "")) == "create":
+			return float(item.get("bar", 0.0))
+	return 0.0
 
 
 func load_layout(vp: Vector2, view: Dictionary) -> Array:
@@ -148,7 +173,9 @@ func draw_wizard_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dic
 	LeagueExtra.header(c, vp, fonts, "NEW LEAGUE", "GOD-MODE SEASON SETUP", 0.0, true,
 		bool(view.get("touch", false)), false)
 	if str(view.get("error", "")) != "":
-		UiChrome.text(c, Vector2(24.0, vp.y - BAR_H - 10.0), str(view["error"]), 12, UiChrome.C_DANGER, fonts["med"])
+		var bar: float = bar_h(bool(view.get("touch", false)))
+		UiChrome.text(c, Vector2(24.0, vp.y - bar - 8.0), str(view["error"]), 12,
+			UiChrome.C_DANGER, fonts["med"])
 
 func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()

@@ -234,8 +234,13 @@ static func picker_clubs_line(picker) -> String:
 
 
 static func pinned_door(c: CanvasItem, cache: Dictionary, item: Dictionary,
-		fonts: Dictionary) -> void:
+		fonts: Dictionary, vp: Vector2 = Vector2.ZERO) -> void:
 	var rect: Rect2 = item["rect"]
+	var bar := float(item.get("bar", 0.0))
+	if bar > 0.0 and vp.y > 0.0:
+		var band := Rect2(0.0, vp.y - bar, vp.x, bar)
+		c.draw_rect(band, Color(0.012, 0.020, 0.026, 0.96))
+		c.draw_rect(Rect2(band.position.x, band.position.y, band.size.x, 1.0), Color(1, 1, 1, 0.08))
 	if str(item["kind"]) == "chip":
 		UiChrome.chip(c, cache, rect, str(item["label"]), fonts["bold"])
 	else:

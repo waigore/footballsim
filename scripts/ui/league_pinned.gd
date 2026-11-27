@@ -17,7 +17,8 @@ func _ready() -> void:
 func _draw() -> void:
 	if body == null:
 		return
+	var vp: Vector2 = size
 	for item in body.pinned:
-		LeagueChrome.pinned_door(self, cache, item, fonts)
+		LeagueChrome.pinned_door(self, cache, item, fonts, vp)
 
 # gd-tools: no cover end
