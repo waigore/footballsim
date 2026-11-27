@@ -182,6 +182,7 @@ func _skip() -> void:
 # ------------------------------------------------------------------ loop ----
 
 func _process(delta: float) -> void:
+	view.sync_type_density()
 	playback.tick(delta)
 
 func _advance_ticks(n: int) -> void:

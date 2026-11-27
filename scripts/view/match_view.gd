@@ -36,6 +36,27 @@ func overlay_scale(hud_layer: CanvasLayer, dev) -> Dictionary:
 		"token": 1.5 if compact else 1.0,
 	}
 
+## Design-space scale of the surface that is on screen right now. Only one text
+## layer is ever visible: every sheet hides the overlay while it is up, and the
+## fixture picker draws at the overlay's scale. The glyph atlas density has to
+## follow that surface rather than the larger of the two scales, because an
+## atlas denser than the layer it is drawn in is minified and softens just as a
+## sparser one is magnified (issue #337).
+func visible_scale() -> float:
+	if game.menus != null and game.menus.active():
+		return game.chrome_scale
+	if game.wiki_host != null and game.wiki_host.is_open():
+		return game.chrome_scale
+	if game.prematch != null and game.prematch.is_open():
+		return game.chrome_scale
+	return game.hud_scale
+
+## Point the viewport's glyph atlases at the surface on screen. Called once a
+## frame because a sheet can open or close without a resize; the setter is a
+## no-op while the factor holds.
+func sync_type_density() -> void:
+	TypeDensity.apply(game.get_viewport(), visible_scale())
+
 ## Push the overlay numbers onto every chrome layer the host has opened. Each
 ## sheet keeps its own transform; this module owns the arithmetic.
 func sync_overlays(hud_layer: CanvasLayer, dev: DevCapture) -> void:
@@ -60,6 +81,7 @@ func sync_overlays(hud_layer: CanvasLayer, dev: DevCapture) -> void:
 		game.menus.sync(frame, game.chrome_scale, game.touch)
 	if game.camera != null:
 		game.camera.fit()
+	sync_type_density()
 
 ## Overlay widgets read pointers in design space; a non-match sheet passes its
 ## own reading scale because the chrome layer is scaled separately.
