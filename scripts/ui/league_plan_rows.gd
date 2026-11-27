@@ -35,7 +35,7 @@ static func paint_fixture(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dic
 	InterestNames.run(c, names, str(fx.get("away_club_id", "")), away_name,
 		Vector2(x, line_y), 13, away_ink, bold)
 	if int(fx.get("suggested", 0)) == 1:
-		UiChrome.text_r(c, rect.end.x - 78.0, rect.position.y + rect.size.y * 0.5 - 2.0,
+		UiChrome.text_r(c, rect.end.x - 78.0, rect.position.y + rect.size.y * 0.5 + 2.0,
 			"TOP-6", 10, UiChrome.C_GOLD, bold)
 
 
