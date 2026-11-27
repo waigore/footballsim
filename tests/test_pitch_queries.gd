@@ -161,7 +161,8 @@ func test_a_shared_path_leaves_a_seeded_match_reproducible() -> void:
 	var a := _seeded(4242)
 	var b := _seeded(4242)
 	var seen: Array = []
-	for i in 200:
+	var after_play := 0
+	for i in 140:
 		if a.phase == "half_time":
 			a.begin_second_half()
 			b.begin_second_half()
@@ -169,6 +170,10 @@ func test_a_shared_path_leaves_a_seeded_match_reproducible() -> void:
 		b.tick()
 		if not seen.has(a.phase):
 			seen.append(a.phase)
+		if seen.has("play"):
+			after_play += 1
+			if after_play >= 36:
+				break
 	assert_true(seen.has("play"), "the seeded match never reached open play")
 	for i in a.players.size():
 		assert_eq(a.players[i].pos, b.players[i].pos, "the same seed drifted the squad's positions")

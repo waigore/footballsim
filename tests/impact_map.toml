@@ -337,6 +337,11 @@ domain = "match_stats"
 match = "scripts/sim/match_engine_clock.gd*"
 domain = "match_laws"
 
+# Snapshot serialize peeled off the clock: same laws suites still cover it.
+[[rules]]
+match = "scripts/sim/match_engine_snapshot.gd*"
+domain = "match_laws"
+
 # Extra time and shootouts: the decider lane rides the clock it extends, and
 # its own lines ride with it.
 [[rules]]
