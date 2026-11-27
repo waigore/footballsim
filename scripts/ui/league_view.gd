@@ -86,6 +86,9 @@ static func build(screen) -> Dictionary:
 						"leagues": leagues})
 		return {"name": state.get("name", ""), "complete": bool(state.get("complete", false)),
 			"reports": days, "interests": state.get("interests", []),
+			# The season's own tally, so the empty list can tell an unplayed
+			# season from one the filters emptied (#312).
+			"played": int(state.get("played", 0)),
 			"competitions": state.get("competitions", []), "filters": screen.stats_filter,
 			"leaders": _leaders(season, screen.stats_filter)}
 	if mode == LeagueScreen.MODE_INTEREST:
