@@ -1152,6 +1152,49 @@ class _PaintProbe extends Control:
 		painted = true
 
 
+func test_the_pinned_bar_paints_its_own_ground_under_the_door() -> void:
+	var vp := Vector2(913, 411)
+	var items: Array = LeagueStartSheet.new().wizard_layout(vp,
+		{"name": "S", "competitions": ["PL"], "calendar_mode": "generated",
+			"advance_mode": "fixture_days", "touch": true})
+	var door: Dictionary = _body_item(items, "create")
+	assert_true(bool(door.get("pinned", false)), "the short wizard did not pin CREATE SEASON")
+	assert_gt(float(door.get("bar", 0.0)), 0.0, "the pinned door carries no bar to paint")
+	var body := _body(vp)
+	body.set_sheet(items, vp, true, LeagueStartSheet.bar_of(items))
+	var layer := _PinnedProbe.new()
+	layer.body = body
+	layer.fonts = UiChrome.fonts()
+	layer.size = vp
+	add_child(layer)
+	await get_tree().process_frame
+	assert_true(layer.painted, "the pinned layer never reached its paint")
+
+	var plain := door.duplicate()
+	plain.erase("bar")
+	var probe := _PinnedProbe.new()
+	probe.fonts = UiChrome.fonts()
+	probe.size = vp
+	probe.body = _body(vp)
+	probe.body.pinned = [plain]
+	add_child(probe)
+	await get_tree().process_frame
+	assert_true(probe.painted, "a pinned door with no bar did not paint")
+	layer.queue_free()
+	probe.queue_free()
+
+
+class _PinnedProbe extends Control:
+	var body: LeagueBody = null
+	var fonts: Dictionary = {}
+	var painted := false
+
+	func _draw() -> void:
+		for item in body.pinned:
+			LeagueChrome.pinned_door(self, {}, item, fonts, size)
+		painted = true
+
+
 func test_the_table_sheet_keeps_back_top_left_and_its_doors_on_the_bar() -> void:
 	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
 		var table: Array = LeagueBook.new().table_layout(vp,
@@ -1413,3 +1456,61 @@ func test_a_phone_new_league_lays_its_toggles_for_a_finger() -> void:
 	assert_lte(leagues.end.y, modes.position.y, "the mode toggles sit on the league toggles")
 	assert_lte(modes.end.y, advances.position.y, "the advance toggles sit on the mode toggles")
 	assert_false(leagues.intersects(_item_rect(phone, "name")), "the league toggle sits on the name field")
+
+
+func test_a_short_new_league_pins_create_above_the_scroll() -> void:
+	var sheet := LeagueStartSheet.new()
+	var view := {"name": "S", "competitions": ["PL"], "calendar_mode": "generated",
+		"advance_mode": "fixture_days"}
+	for vp in [Vector2(913, 411), Vector2(640, 360)]:
+		var items: Array = sheet.wizard_layout(vp, view)
+		var create: Dictionary = _body_item(items, "create")
+		assert_false(create.is_empty(), "the wizard lost its CREATE SEASON door at %s" % vp)
+		assert_true(bool(create.get("pinned", false)),
+			"CREATE SEASON was left below the fold at %s" % vp)
+		var rect: Rect2 = create["rect"]
+		assert_lte(rect.end.y, vp.y + 0.01, "CREATE SEASON runs off the sheet at %s" % vp)
+		assert_gte(rect.position.y, vp.y - LeagueStartSheet.bar_h(true),
+			"CREATE SEASON left the bar it is pinned to at %s" % vp)
+		var bar: float = LeagueStartSheet.bar_of(items)
+		assert_gt(bar, 0.0, "the wizard reserved no bar for its own door at %s" % vp)
+		var body := _body(vp)
+		body.set_sheet(items, vp, true, bar)
+		assert_lte(body.position.y + body.size.y, rect.position.y + 0.01,
+			"the scrolling list runs under CREATE SEASON at %s" % vp)
+		assert_true(body.can_scroll(), "the wizard's rows are not scrollable at %s" % vp)
+
+
+func test_a_tall_new_league_leaves_create_in_the_flow() -> void:
+	var sheet := LeagueStartSheet.new()
+	var vp := Vector2(1600, 900)
+	var items: Array = sheet.wizard_layout(vp, {"name": "S", "competitions": ["PL"],
+		"calendar_mode": "generated", "advance_mode": "fixture_days"})
+	var create: Dictionary = _body_item(items, "create")
+	assert_false(bool(create.get("pinned", false)),
+		"a desktop sheet pinned CREATE SEASON although it fits in the flow")
+	assert_eq(LeagueStartSheet.bar_of(items), 0.0, "a desktop sheet reserved a bar it does not draw")
+
+
+func test_the_wizard_names_a_clipped_sheet_with_a_scroll_cue() -> void:
+	var body := _body(Vector2(913, 411))
+	var bound = func(_c: CanvasItem) -> void:
+		pass
+	body.painter = bound
+	var items: Array = LeagueStartSheet.new().wizard_layout(Vector2(913, 411),
+		{"name": "S", "competitions": ["PL"], "calendar_mode": "generated",
+			"advance_mode": "fixture_days"})
+	body.set_sheet(items, Vector2(913, 411), true, LeagueStartSheet.bar_of(items))
+	body.cue = true
+	assert_true(body.can_scroll(), "the wizard does not overflow a 411-unit sheet")
+	assert_true(body.more_below(), "a clipped wizard drew no cue that it continues")
+	body.scroll_to(body.max_scroll())
+	assert_false(body.more_below(), "the cue outlived the last row")
+
+	var tall := _body(Vector2(1600, 900))
+	tall.painter = bound
+	tall.set_sheet(LeagueStartSheet.new().wizard_layout(Vector2(1600, 900),
+		{"name": "S", "competitions": ["PL"], "calendar_mode": "generated",
+			"advance_mode": "fixture_days"}), Vector2(1600, 900), true, 0.0)
+	tall.cue = true
+	assert_false(tall.more_below(), "an unclipped desktop sheet drew a scroll cue")
