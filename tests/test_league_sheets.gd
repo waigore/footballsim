@@ -624,6 +624,28 @@ func test_a_roundup_offers_no_play_doors() -> void:
 	for item in items:
 		assert_ne(str(item["kind"]), "play", "a roundup row offered a play door")
 
+## #309: a real-fixture season stores no kick-off time, so a pending row must not
+## hold a blank gutter for one. Its clubs start at the row's inset — the column
+## the result block puts its home name on — so the day does not jump sideways at
+## the whistle. A generated season's row still starts its clubs after the time it
+## prints, measured rather than at a fixed width.
+func test_a_pending_row_without_a_kickoff_starts_its_clubs_at_the_inset() -> void:
+	var med: Font = UiChrome.fonts()["med"]
+	for row in [Rect2(24.0, 72.0, 1552.0, LeagueChrome.ROW_H),
+			Rect2(24.0, 72.0, 865.0, LeagueChrome.ROW_H)]:
+		var bare := LeaguePlanRows.clubs_x(row, "", med)
+		assert_almost_eq(bare, row.position.x + LeagueBlock.INSET, 0.01,
+			"a row with no kick-off time left a blank gutter at %s" % row)
+		# The same column the block that replaces the row prints its home name in.
+		assert_almost_eq(bare, float(LeagueBlock.columns(row)["home_x"]), 0.01,
+			"the pending row and its result block disagree about the club column at %s" % row)
+		for kick in ["12:30", "15:00", "17:30"]:
+			var ink := InterestNames.width(med, kick, 10)
+			assert_almost_eq(LeaguePlanRows.clubs_x(row, kick, med), row.position.x + 8.0 + ink + 8.0,
+				0.01, "%s did not set its own gutter at %s" % [kick, row])
+			assert_gt(LeaguePlanRows.clubs_x(row, kick, med), row.position.x + 8.0 + ink,
+				"the home name sits on the %s kick-off at %s" % [kick, row])
+
 ## #168: a fixture's events are read as two sides — each row sits under the
 ## club stored on it, and the columns are in minute order. The old mixed run
 ## needed a club label on every entry; a column is the label now.
