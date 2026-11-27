@@ -17,6 +17,13 @@ func test_every_club_has_its_real_manager_and_a_profile() -> void:
 		reacts[snappedf(float(p["reactive"]), 0.05)] = true
 	assert_gte(reacts.size(), 8, "manager profiles are not distinct enough to feel different")
 
+func test_only_the_authored_clubs_carry_a_persona() -> void:
+	for id in ManagerData.PROFILES.keys():
+		assert_true(ManagerData.has_persona(str(id)), "%s lost its authored temperament" % str(id))
+	for id in ["LL-BAR", "BL-FCB", "BL2-BSC"]:
+		assert_false(ManagerData.has_persona(id), "%s claims a temperament the snapshot never recorded" % id)
+	assert_eq(ManagerData.profile("LL-BAR")["name"], "H. Flick", "the snapshot club lost its real manager")
+
 func _timeline(seed_in: int, count: int) -> Array:
 	var r := RandomNumberGenerator.new()
 	r.seed = seed_in

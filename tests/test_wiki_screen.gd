@@ -248,6 +248,19 @@ func test_the_league_table_keeps_the_row_hint() -> void:
 	assert_true(body.has_open_row_in_view(), "the league table's own rows are not read as links")
 	body.free()
 
+func test_the_club_page_opens_its_manager() -> void:
+	wiki.open(WikiModel.TEAM, "MUN")
+	var chip: Dictionary = _chip_with_target("manager")
+	assert_false(chip.is_empty(), "the club page has no door to its manager")
+	var point: Vector2 = wiki.body.position + (chip["rect"] as Rect2).position + Vector2(20.0, 8.0)
+	assert_true(wiki.tap(point), "the manager chip did not answer a tap")
+	assert_eq(str(wiki.current()["page"]), "manager", "the manager chip opened another page")
+	assert_eq(str(wiki.current()["id"]), "MUN", "the manager chip opened another club's manager")
+	assert_eq(str(wiki.page_data["title"]), "R. AMORIM", "the manager page did not render")
+	assert_eq(wiki.crumb_pages().size(), 1, "the club should be one crumb back")
+	wiki.key(KEY_ESCAPE)
+	assert_eq(str(wiki.current()["page"]), "team", "escape did not walk back to the club")
+
 func _first_data_row() -> Dictionary:
 	for row in wiki.body.rows():
 		if str(row["k"]) == "trow" and row.has("target"):
@@ -258,5 +271,12 @@ func _row_with_target(page: String) -> Dictionary:
 	for row in wiki.body.rows():
 		var target: Dictionary = row.get("target", {})
 		if str(row["k"]) == "trow" and str(target.get("page", "")) == page:
+			return row
+	return {}
+
+func _chip_with_target(page: String) -> Dictionary:
+	for row in wiki.body.rows():
+		var target: Dictionary = row.get("target", {})
+		if str(row["k"]) == "chip" and str(target.get("page", "")) == page:
 			return row
 	return {}

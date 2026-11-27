@@ -5,6 +5,7 @@ extends RefCounted
 const LEAGUE := "league"
 const TEAM := "team"
 const PLAYER := "player"
+const MANAGER := "manager"
 
 const STYLE_LABELS := [
 	["possession", "POSSESSION"], ["tempo", "TEMPO"], ["press", "PRESS"],
@@ -19,7 +20,7 @@ static func repo() -> PLRepository:
 static func has_page(page: String, id: String) -> bool:
 	if page == LEAGUE:
 		return id == "" or PLCompetitions.exists(id)
-	if page == TEAM:
+	if page == TEAM or page == MANAGER:
 		return not repo().club(id).is_empty()
 	if page == PLAYER:
 		return not repo().player(id).is_empty()
@@ -31,6 +32,8 @@ static func page(page: String, id: String) -> Dictionary:
 		return team_page(id)
 	if page == PLAYER:
 		return player_page(id)
+	if page == MANAGER:
+		return WikiManager.page(id)
 	return league_page(id)
 
 static func label(page: String, id: String) -> String:
@@ -38,6 +41,8 @@ static func label(page: String, id: String) -> String:
 		return str(repo().club(id).get("abbr", id))
 	if page == PLAYER:
 		return str(repo().player(id).get("name", id))
+	if page == MANAGER:
+		return str(ManagerData.profile(id).get("name", id))
 	var comp := PLCompetitions.one(id if id != "" else PLCompetitions.default_id())
 	return str(comp.get("short_name", "LEAGUE")).to_upper()
 
@@ -140,7 +145,7 @@ static func _club_chips(competition_id: String = "") -> Array:
 		items.append({
 			"text": str(club.get("abbr", id)),
 			"target": {"page": TEAM, "id": str(id)},
-			"accent": _hex(club.get("color", Color.WHITE)),
+			"accent": hex(club.get("color", Color.WHITE)),
 		})
 	return items
 
@@ -161,6 +166,11 @@ static func team_page(club_id: String) -> Dictionary:
 		"blocks": [],
 	}
 	out["blocks"].append(WikiCompetitions.link(str(club.get("competition", ""))))
+	out["blocks"].append({"k": "chips", "items": [{
+		"text": str(club.get("manager", "The manager")).to_upper(),
+		"target": {"page": MANAGER, "id": club_id},
+		"accent": hex(club.get("color", Color.WHITE)),
+	}]})
 	out["blocks"].append({"k": "section", "text": WikiLedger.record_label(str(meta["season_label"]))})
 	out["blocks"].append({
 		"k": "kv",
@@ -354,13 +364,13 @@ static func player_page(player_id: String) -> Dictionary:
 	out["blocks"].append({"k": "chips", "items": [{
 		"text": str(club.get("name", "")).to_upper(),
 		"target": {"page": TEAM, "id": str(p["club_id"])},
-		"accent": _hex(club.get("color", Color.WHITE)),
+		"accent": hex(club.get("color", Color.WHITE)),
 	}]})
 	out["blocks"].append(WikiCompetitions.link(str(club.get("competition", ""))))
 	return out
 
 
-static func _hex(col) -> String:
+static func hex(col: Variant) -> String:
 	var c: Color = col if col is Color else Color.WHITE
 	return c.to_html(false)
 
