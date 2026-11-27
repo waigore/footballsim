@@ -9,7 +9,9 @@ extends SceneTree
 ##   * the league hub's fixture rows, their AUTO / WATCH doors and SUGGEST
 ##     WATCHES,
 ##   * the pre-match briefing's BACK and KICK OFF,
-##   * the encyclopedia's BACK and close doors.
+##   * the encyclopedia's BACK and close doors,
+##   * the Stats chips and month stepper, the calendar's day cells and month
+##     doors, the Teams of Interest rows and REMOVE, and the New League toggles.
 ##
 ## Each pose prints the geometry it shot, so the numbers are checked as well as
 ## the pixels. Writes a PNG per pose into `res://shots/`.
@@ -65,6 +67,7 @@ func _hub() -> void:
 	await _frames(2)
 	await _shot("tap369_hub_360")
 	_print_hub("360")
+	await _extra(league)
 	await _desktop()
 	league.detach_season()
 	league.close()
@@ -135,6 +138,56 @@ func _print_hub(label: String) -> void:
 	print("HUB %s vp=%s mode=%s rows=%s toggles=%s" % [label, str(vp), screen.mode,
 		" ".join(PackedStringArray(rows.slice(0, 2))),
 		" ".join(PackedStringArray(chips.slice(0, 2)))])
+
+func _extra(league: LeagueHost) -> void:
+	var screen = league.screen
+	screen.mode = LeagueScreen.MODE_STATS
+	screen.stats_filter = {"league": "", "month": "", "team": "", "stat": "goals"}
+	screen.refresh()
+	await _frames(2)
+	await _shot("tap369_stats_360")
+	_print_doors("stats", ["statsleague:", "statsmonth:", "statsstat:"])
+
+	LeagueDoors.open_calendar(screen)
+	await _frames(2)
+	await _shot("tap369_calendar_360")
+	_print_doors("calendar", ["day:", "month:"])
+
+	screen.mode = LeagueScreen.MODE_INTEREST
+	LeagueSeasonDoors.set_interest(screen, "MUN", true)
+	screen.interest_query = "man"
+	screen.refresh()
+	await _frames(2)
+	await _shot("tap369_interest_360")
+	_print_doors("interest", ["interest:add:", "club:", "interest:remove:"])
+
+	screen.mode = LeagueScreen.MODE_WIZARD
+	screen.refresh()
+	await _frames(2)
+	await _shot("tap369_wizard_360")
+	_print_doors("wizard", ["wleague:", "mode:", "adv:"])
+
+	screen.mode = LeagueScreen.MODE_HUB
+	screen.refresh()
+	await _frames(2)
+
+func _print_doors(label: String, prefixes: Array) -> void:
+	var screen = scene.menus.league.screen
+	var vp: Vector2 = screen.design_vp()
+	var parts: Array = []
+	for b in screen.buttons:
+		var id := str(b["id"])
+		for p in prefixes:
+			if id.begins_with(str(p)):
+				var rect: Rect2 = b["rect"]
+				parts.append("%s=%.0fx%.0f" % [id, rect.size.x, rect.size.y])
+				break
+	print("TAP %s vp=%s %s" % [label, str(vp), _doors_line(parts)])
+
+func _doors_line(parts: Array) -> String:
+	if parts.size() > 10:
+		parts = parts.slice(0, 7) + ["…"] + parts.slice(parts.size() - 3)
+	return " ".join(PackedStringArray(parts))
 
 func _phone() -> void:
 	var vp: Vector2 = scene.get_viewport().get_visible_rect().size

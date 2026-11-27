@@ -8,6 +8,11 @@ const BAR_H := LeagueChrome.BAR_H
 
 const SAVE_NAME := "My League Sim"
 
+const TOGGLE_H := 40.0
+const TOGGLE_PITCH := 46.0
+const MODE_AFTER := 12.0
+const ADVANCE_AFTER := 14.0
+
 var cache := {}
 
 var hints := DateHints.new()
@@ -49,8 +54,11 @@ static func _league_groups(comps: Array) -> Array:
 	return out
 
 func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
+	var touch := bool(view.get("touch", false))
 	var items: Array = []
 	var w := minf(520.0, vp.x - 48.0)
+	var toggle_h: float = UiChrome.tap_h(TOGGLE_H, touch)
+	var pitch: float = toggle_h + (TOGGLE_PITCH - TOGGLE_H)
 	var y := HEADER + 30.0
 	items.append({"id": "name", "kind": "field", "label": "NAME",
 		"rect": Rect2(24.0, y, w, 38.0), "value": str(view.get("name", ""))})
@@ -73,22 +81,22 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 			var line := i / 2
 			items.append({"id": "wleague:" + cid, "kind": "choice",
 				"label": str(row.get("short_name", row.get("name", cid))),
-				"rect": Rect2(24.0 + float(col) * w * 0.52, y + float(line) * 46.0, w * 0.48, 40.0),
+				"rect": Rect2(24.0 + float(col) * w * 0.52, y + float(line) * pitch, w * 0.48, toggle_h),
 				"selected": chosen.has(cid)})
-		y += 46.0 * float(ceili(float(leagues.size()) / 2.0)) + 6.0
+		y += pitch * float(ceili(float(leagues.size()) / 2.0)) + 6.0
 	items.append({"id": "mode:real", "kind": "choice", "label": "REAL FIXTURES",
-		"rect": Rect2(24.0, y, w * 0.48, 40.0), "selected": str(view.get("calendar_mode", "")) == "real"})
+		"rect": Rect2(24.0, y, w * 0.48, toggle_h), "selected": str(view.get("calendar_mode", "")) == "real"})
 	items.append({"id": "mode:generated", "kind": "choice", "label": "GENERATED",
-		"rect": Rect2(24.0 + w * 0.52, y, w * 0.48, 40.0), "selected": str(view.get("calendar_mode", "")) == "generated"})
-	y += 52.0
+		"rect": Rect2(24.0 + w * 0.52, y, w * 0.48, toggle_h), "selected": str(view.get("calendar_mode", "")) == "generated"})
+	y += toggle_h + MODE_AFTER
 	items.append({"id": "adv:fixture_days", "kind": "choice", "label": "FIXTURE DAYS",
-		"rect": Rect2(24.0, y, w * 0.48, 40.0), "selected": str(view.get("advance_mode", "")) == "fixture_days"})
+		"rect": Rect2(24.0, y, w * 0.48, toggle_h), "selected": str(view.get("advance_mode", "")) == "fixture_days"})
 	items.append({"id": "adv:every_day", "kind": "choice", "label": "EVERY DAY",
-		"rect": Rect2(24.0 + w * 0.52, y, w * 0.48, 40.0), "selected": str(view.get("advance_mode", "")) == "every_day"})
-	y += 54.0
+		"rect": Rect2(24.0 + w * 0.52, y, w * 0.48, toggle_h), "selected": str(view.get("advance_mode", "")) == "every_day"})
+	y += toggle_h + ADVANCE_AFTER
 	items.append({"id": "create", "kind": "button", "label": "CREATE SEASON",
 		"rect": Rect2(24.0, y, minf(240.0, w), 46.0), "primary": true})
-	items.append(LeagueExtra.back_item(bool(view.get("touch", false))))
+	items.append(LeagueExtra.back_item(touch))
 	return items
 
 
@@ -176,7 +184,7 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 			UiChrome.panel(c, cache, rect,
 				UiChrome.C_GOLD.darkened(0.1) if chosen else UiChrome.C_PANEL, 6,
 				UiChrome.C_GOLD if chosen else UiChrome.C_BORDER, 1)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 25.0, str(item["label"]), 12,
+			UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0, str(item["label"]), 12,
 				Color(0.06, 0.06, 0.05) if chosen else UiChrome.C_TEXT, bold)
 		elif kind == "button":
 			UiChrome.button(c, cache, rect, str(item["label"]), bold, bool(item.get("primary", false)))

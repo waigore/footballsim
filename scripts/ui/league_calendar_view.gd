@@ -4,6 +4,33 @@ extends RefCounted
 
 const HEADER := LeagueChrome.HEADER
 
+const COMPACT_H := 620.0
+
+const CELL_H := 30.0
+const CELL_H_TALL := 34.0
+
+const CELL_GAP := 2.0
+
+
+static func cell_pitch(vp: Vector2, touch: bool) -> float:
+	var base: float = CELL_H if vp.y < COMPACT_H else CELL_H_TALL
+	return maxf(base, UiChrome.TAP_H + CELL_GAP) if touch else base
+
+
+static func grid_top(touch: bool) -> float:
+	if touch:
+		return HEADER + 4.0 + UiChrome.TAP_H + 20.0
+	return HEADER + 50.0
+
+
+static func month_door_rects(vp: Vector2, touch: bool) -> Array:
+	if touch:
+		var w: float = UiChrome.TAP_H
+		return [Rect2(vp.x - 24.0 - w * 2.0 - 8.0, HEADER + 4.0, w, w),
+			Rect2(vp.x - 24.0 - w, HEADER + 4.0, w, w)]
+	return [Rect2(vp.x - 24.0 - 132.0, HEADER + 8.0, 28.0, 24.0),
+		Rect2(vp.x - 24.0 - 28.0, HEADER + 8.0, 28.0, 24.0)]
+
 var cache := {}
 
 var hints := DateHints.new()
@@ -11,13 +38,14 @@ var hints := DateHints.new()
 var names := InterestNames.new()
 
 func layout(vp: Vector2, view: Dictionary) -> Array:
+	var touch := bool(view.get("touch", false))
 	var items: Array = []
 	var month := str(view.get("month", ""))
 
 
-	var grid_top := HEADER + 50.0
+	var top := grid_top(touch)
 	var cw := (vp.x - 48.0) / 7.0
-	var ch: float = 30.0 if vp.y < 620.0 else 34.0
+	var ch: float = cell_pitch(vp, touch)
 	var count := LeagueMonth.days(month)
 	var first := LeagueMonth.first_weekday(month)
 	for i in range(count):
@@ -29,9 +57,9 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({
 			"id": "day:" + date, "kind": "cell", "date": date, "day": i + 1,
 			"info": info, "selected": str(view.get("day", "")) == date,
-			"rect": Rect2(24.0 + float(col) * cw, grid_top + float(row) * ch, cw - 2.0, ch - 2.0),
+			"rect": Rect2(24.0 + float(col) * cw, top + float(row) * ch, cw - 2.0, ch - 2.0),
 		})
-	var y := grid_top + 6.0 * ch + 10.0
+	var y := top + 6.0 * ch + 10.0
 	var last_comp := ""
 	for fx in view.get("day_fixtures", []):
 		var comp := str(fx.get("competition_id", ""))
@@ -46,11 +74,10 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": "match:" + str(fx["id"]), "kind": "fixture",
 			"fixture": fx, "rect": Rect2(24.0, y, vp.x - 48.0, h)})
 		y += h + 2.0
-	items.append({"id": "month:-1", "kind": "chip", "label": "<", "pinned": true,
-		"rect": Rect2(vp.x - 24.0 - 132.0, HEADER + 8.0, 28.0, 24.0)})
-	items.append({"id": "month:1", "kind": "chip", "label": ">", "pinned": true,
-		"rect": Rect2(vp.x - 24.0 - 28.0, HEADER + 8.0, 28.0, 24.0)})
-	items.append(LeagueExtra.back_item(bool(view.get("touch", false))))
+	var doors := month_door_rects(vp, touch)
+	items.append({"id": "month:-1", "kind": "chip", "label": "<", "pinned": true, "rect": doors[0]})
+	items.append({"id": "month:1", "kind": "chip", "label": ">", "pinned": true, "rect": doors[1]})
+	items.append(LeagueExtra.back_item(touch))
 	return items
 
 
@@ -84,9 +111,10 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	var labels := ["S", "M", "T", "W", "T", "F", "S"]
+	var rows_y: float = grid_top(bool(view.get("touch", false))) - 8.0
 	for i in range(7):
 		var cw := (vp.x - 48.0) / 7.0
-		UiChrome.text_c(c, 24.0 + cw * float(i) + cw * 0.5, HEADER + 42.0, labels[i], 10, UiChrome.C_DIM, med)
+		UiChrome.text_c(c, 24.0 + cw * float(i) + cw * 0.5, rows_y, labels[i], 10, UiChrome.C_DIM, med)
 	for item in items:
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])

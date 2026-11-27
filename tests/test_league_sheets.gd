@@ -536,8 +536,16 @@ func test_the_month_stepper_binds_its_label_and_chevrons() -> void:
 			"the stepper cells do not share a row at %s" % vp)
 		assert_almost_eq(prev.size.y, read.size.y, 0.01,
 			"the readout left the arrows' height at %s" % vp)
-		assert_gte(goals.position.x - next.end.x, LeagueExtra.STEP_AFTER,
-			"the stat chips crowd the stepper at %s" % vp)
+		if goals.position.y == next.position.y:
+			assert_gte(goals.position.x - next.end.x, LeagueExtra.STEP_AFTER,
+				"the stat chips crowd the stepper at %s" % vp)
+		else:
+			assert_gte(goals.position.y, next.end.y,
+				"the wrapped stat chips sit on the stepper at %s" % vp)
+			assert_almost_eq(goals.position.x, 24.0, 0.01,
+				"the wrapped stat chips left the sheet's inset at %s" % vp)
+		assert_lte(_item_rect(items, "statsstat:assists").end.x, vp.x - 24.0 + 0.01,
+			"the stat chips run off the sheet at %s" % vp)
 		assert_lte(next.end.x, vp.x - 24.0, "the stepper runs off the sheet at %s" % vp)
 
 
@@ -1189,3 +1197,153 @@ func _item(items: Array, id: String) -> Dictionary:
 		if str(item["id"]) == id:
 			return item
 	return {}
+
+
+func test_a_phone_stats_sheet_lays_its_chips_and_stepper_for_a_finger() -> void:
+	var sheet := LeagueExtra.new()
+	var vp := Vector2(913, 411)
+	var filters := {"league": "", "month": "2026-09", "team": "", "stat": "goals"}
+	var view := {"name": "S", "reports": [], "filters": filters,
+		"competitions": [{"id": "PL", "short": "PL"}, {"id": "LL", "short": "LL"}]}
+	var desk: Array = sheet.stats_layout(vp, view)
+	assert_almost_eq(_item_rect(desk, "statsleague:").size.y, 30.0, 0.01,
+		"the desktop league chip left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "statsstat:goals").size.y, LeagueExtra.STEP_H, 0.01,
+		"the desktop stat chip left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "statsmonth:-1").size.y, LeagueExtra.STEP_H, 0.01,
+		"the desktop month arrow left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "statsmonth:-1").size.x, LeagueExtra.STEP_W, 0.01,
+		"the desktop month arrow left its dense width")
+
+	var phone_view: Dictionary = view.duplicate()
+	phone_view["touch"] = true
+	var phone: Array = sheet.stats_layout(vp, phone_view)
+	var chips := 0
+	for item in phone:
+		var id := str(item["id"])
+		var control: bool = id.begins_with("statsleague:") or id.begins_with("statsstat:") \
+			or id.begins_with("statsmonth:")
+		if not control:
+			continue
+		var rect: Rect2 = item["rect"]
+		assert_gte(rect.size.y, UiChrome.TAP_H, "%s is under a finger at %s" % [id, vp])
+		assert_lte(rect.end.x, vp.x - 24.0 + 0.01, "%s runs off the sheet" % id)
+		chips += 1
+	assert_gte(chips, 6, "the phone stats sheet lost a chip")
+	var prev: Rect2 = _item_rect(phone, "statsmonth:-1")
+	var next: Rect2 = _item_rect(phone, "statsmonth:1")
+	var goals: Rect2 = _item_rect(phone, "statsstat:goals")
+	assert_false(prev.intersects(next), "the month arrows share a band")
+	assert_false(next.intersects(goals), "the stat chips sit on the month arrows")
+	assert_gte(goals.position.y, prev.position.y, "the stat chips rose above their row")
+
+
+func test_a_narrow_phone_wraps_the_stat_chips_under_the_month_stepper() -> void:
+	var sheet := LeagueExtra.new()
+	var vp := Vector2(360, 780)
+	var items: Array = sheet.stats_layout(vp, {"name": "S", "reports": [], "touch": true,
+		"filters": {"league": "", "month": "2026-09", "team": "", "stat": "goals"}})
+	var step: Rect2 = _item_rect(items, "statsmonth:1")
+	var goals: Rect2 = _item_rect(items, "statsstat:goals")
+	var assists: Rect2 = _item_rect(items, "statsstat:assists")
+	for rect in [step, goals, assists]:
+		assert_lte(rect.end.x, vp.x - 24.0 + 0.01, "a stats control runs off a 360-wide phone")
+	assert_gte(goals.position.y, step.end.y, "the stat chips still crowd the stepper")
+	assert_false(goals.intersects(assists), "the wrapped stat chips overlap")
+	assert_gte(goals.size.y, UiChrome.TAP_H, "the wrapped stat chip is under a finger")
+
+
+func test_a_phone_calendar_lays_day_cells_and_month_doors_for_a_finger() -> void:
+	var book := LeagueBook.new()
+	var vp := Vector2(913, 411)
+	var view := {"month": "2026-10", "day": "2026-10-17", "days": {}, "day_fixtures": [_fixture(1)]}
+	var desk: Array = book.calendar_layout(vp, view)
+	assert_almost_eq(_item_rect(desk, "day:2026-10-01").size.y, 28.0, 0.01,
+		"the desktop calendar cell left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "month:1").size.y, 24.0, 0.01,
+		"the desktop month door left its dense pitch")
+
+	var phone_view: Dictionary = view.duplicate()
+	phone_view["touch"] = true
+	var phone: Array = book.calendar_layout(vp, phone_view)
+	var back: Rect2 = _item_rect(phone, "back")
+	var cells := 0
+	var first := Rect2()
+	for item in phone:
+		if str(item["kind"]) != "cell":
+			continue
+		var rect: Rect2 = item["rect"]
+		if cells == 0:
+			first = rect
+		cells += 1
+		assert_gte(rect.size.y, UiChrome.TAP_H, "%s is under a finger at %s" % [item["id"], vp])
+		assert_lte(rect.end.x, vp.x - 24.0 + 0.01, "%s runs off the sheet" % item["id"])
+	assert_eq(cells, 31, "October should still have 31 cells")
+	var prev: Rect2 = _item_rect(phone, "month:-1")
+	var next: Rect2 = _item_rect(phone, "month:1")
+	for door in [prev, next]:
+		assert_gte((door as Rect2).size.y, UiChrome.TAP_H, "a month door is under a finger")
+		assert_gte((door as Rect2).size.x, UiChrome.TAP_H, "a month door is narrower than a finger")
+		assert_false((door as Rect2).intersects(back), "a month door sits on BACK")
+		assert_lte((door as Rect2).end.x, vp.x - 24.0 + 0.01, "a month door runs off the sheet")
+	assert_false(prev.intersects(next), "the month doors overlap")
+	assert_lte(prev.end.y, first.position.y, "the grid rose under the month doors")
+
+
+func test_a_phone_interest_sheet_lays_its_rows_and_remove_doors_for_a_finger() -> void:
+	var sheet := LeagueExtra.new()
+	var vp := Vector2(913, 411)
+	var club := {"id": "MUN", "name": "Manchester United", "abbr": "MUN"}
+	var view := {"query": "man", "clubs": [club], "results": [club]}
+	var desk: Array = sheet.interest_layout(vp, view)
+	assert_almost_eq(_item_rect(desk, "interest:add:MUN").size.y, LeagueExtra.ROW_H, 0.01,
+		"the desktop result row left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "club:MUN").size.y, LeagueExtra.ROW_H, 0.01,
+		"the desktop shortlist row left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "interest:remove:MUN").size.y, LeagueExtra.ROW_H - 8.0, 0.01,
+		"the desktop REMOVE door left its dense pitch")
+
+	var phone_view: Dictionary = view.duplicate()
+	phone_view["touch"] = true
+	var phone: Array = sheet.interest_layout(vp, phone_view)
+	var result: Rect2 = _item_rect(phone, "interest:add:MUN")
+	var row: Rect2 = _item_rect(phone, "club:MUN")
+	var door: Rect2 = _item_rect(phone, "interest:remove:MUN")
+	assert_gte(result.size.y, UiChrome.TAP_H, "the result row is under a finger")
+	assert_gte(row.size.y, UiChrome.TAP_H, "the shortlist row is under a finger")
+	assert_gte(door.size.y, UiChrome.TAP_H, "REMOVE is under a finger")
+	assert_true(row.encloses(door), "REMOVE left its row")
+	assert_lte(door.end.x, row.end.x - 8.0 + 0.01, "REMOVE grew into the row's edge")
+	assert_false(result.intersects(row), "the result row sits on the shortlist")
+
+
+func test_a_phone_new_league_lays_its_toggles_for_a_finger() -> void:
+	var sheet := LeagueStartSheet.new()
+	var vp := Vector2(913, 411)
+	var view := {"name": "S", "competitions": ["PL"], "calendar_mode": "generated",
+		"advance_mode": "fixture_days"}
+	var desk: Array = sheet.wizard_layout(vp, view)
+	assert_almost_eq(_item_rect(desk, "mode:real").size.y, LeagueStartSheet.TOGGLE_H, 0.01,
+		"the desktop toggle left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "wleague:PL").size.y, LeagueStartSheet.TOGGLE_H, 0.01,
+		"the desktop league toggle left its dense pitch")
+
+	var phone_view: Dictionary = view.duplicate()
+	phone_view["touch"] = true
+	var phone: Array = sheet.wizard_layout(vp, phone_view)
+	var toggles := 0
+	for item in phone:
+		var id := str(item["id"])
+		if not (id.begins_with("wleague:") or id.begins_with("mode:") or id.begins_with("adv:")):
+			continue
+		var rect: Rect2 = item["rect"]
+		assert_gte(rect.size.y, UiChrome.TAP_H, "%s is under a finger at %s" % [id, vp])
+		assert_lte(rect.end.x, vp.x - 24.0 + 0.01, "%s runs off the sheet" % id)
+		toggles += 1
+	assert_gte(toggles, 4, "the phone wizard drew no toggles")
+	var leagues: Rect2 = _item_rect(phone, "wleague:PL")
+	var modes: Rect2 = _item_rect(phone, "mode:real")
+	var advances: Rect2 = _item_rect(phone, "adv:fixture_days")
+	assert_lte(leagues.end.y, modes.position.y, "the mode toggles sit on the league toggles")
+	assert_lte(modes.end.y, advances.position.y, "the advance toggles sit on the mode toggles")
+	assert_false(leagues.intersects(_item_rect(phone, "name")), "the league toggle sits on the name field")
