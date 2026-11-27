@@ -39,10 +39,11 @@ static func build(screen) -> Dictionary:
 	var mode: String = str(screen.mode)
 	if mode == LeagueScreen.MODE_WIZARD or mode == LeagueScreen.MODE_LOAD:
 		if mode == LeagueScreen.MODE_LOAD:
-			return {"saves": screen.saves}
+			return {"saves": screen.saves, "touch": bool(screen.touch)}
 
 		var wiz: Dictionary = screen.wizard.duplicate()
 		wiz["focus"] = str(screen.focus.kind)
+		wiz["touch"] = bool(screen.touch)
 		return wiz
 	var season = screen.season
 	var rules: Dictionary = season.rules if season != null else LeagueRules.defaults()
@@ -79,14 +80,14 @@ static func build(screen) -> Dictionary:
 
 			"played": int(state.get("played", 0)),
 			"competitions": state.get("competitions", []), "filters": screen.stats_filter,
-			"leaders": _leaders(season, screen.stats_filter)}
+			"leaders": _leaders(season, screen.stats_filter), "touch": bool(screen.touch)}
 	if mode == LeagueScreen.MODE_INTEREST:
 		var marked: Array = state.get("interests", []) if season != null else []
 		return {"query": screen.interest_query, "clubs": LeagueClubs.rows(marked),
 			"results": LeagueClubs.search(screen.interest_query, marked),
 
 
-			"focus": str(screen.focus.kind)}
+			"focus": str(screen.focus.kind), "touch": bool(screen.touch)}
 	if mode == LeagueScreen.MODE_TABLE:
 		var tab := str(screen.book.table.league_tab)
 		var comps: Array = state.get("competitions", [])
@@ -104,22 +105,25 @@ static func build(screen) -> Dictionary:
 			"touch": bool(screen.touch)}
 	if mode == LeagueScreen.MODE_CALENDAR:
 		return {"month": screen.month, "day": screen.day, "days": screen.days_cache,
-			"day_fixtures": screen.day_fixtures, "interests": state.get("interests", [])}
+			"day_fixtures": screen.day_fixtures, "interests": state.get("interests", []),
+			"touch": bool(screen.touch)}
 	if mode == LeagueScreen.MODE_REPORT:
 		if not (screen.roundup as Array).is_empty():
 			var first: Dictionary = screen.roundup[0]
 			return {"roundup": screen.roundup, "interests": state.get("interests", []),
-				"day": str(first["fixture"]["kickoff"]) if first.has("fixture") else ""}
+				"day": str(first["fixture"]["kickoff"]) if first.has("fixture") else "",
+				"touch": bool(screen.touch)}
 		var card: Dictionary = screen.report
 		return {
 			"fixture": card.get("fixture", {}), "events": card.get("events", []),
 			"highlights": card.get("highlights", []),
 			"day": str((card.get("fixture", {}) as Dictionary).get("kickoff", "")),
-			"interests": state.get("interests", []),
+			"interests": state.get("interests", []), "touch": bool(screen.touch),
 		}
 	if mode == LeagueScreen.MODE_PODIUM:
 		return {"summary": state.get("summary", {}), "name": state.get("name", ""),
-			"table": state.get("table", []), "rules": state.get("rules", rules)}
+			"table": state.get("table", []), "rules": state.get("rules", rules),
+			"touch": bool(screen.touch)}
 	var view: Dictionary = state.duplicate()
 
 

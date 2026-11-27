@@ -88,25 +88,31 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	y += 54.0
 	items.append({"id": "create", "kind": "button", "label": "CREATE SEASON",
 		"rect": Rect2(24.0, y, minf(240.0, w), 46.0), "primary": true})
-	items.append(LeagueExtra.back_item())
+	items.append(LeagueExtra.back_item(bool(view.get("touch", false))))
 	return items
 
 
 func load_layout(vp: Vector2, view: Dictionary) -> Array:
+	var touch := bool(view.get("touch", false))
 	var items: Array = []
 	var saves: Array = view.get("saves", [])
 	var w := minf(620.0, vp.x - 48.0)
 	var y := HEADER + 26.0
+	var row_h: float = UiChrome.tap_h(40.0, touch)
+	var del_h: float = UiChrome.tap_h(32.0, touch)
+	var del_w: float = UiChrome.tap_h(40.0, touch)
+	var del_x: float = w - 16.0 - del_w if touch else w - 84.0
 
 	for i in range(saves.size()):
 		var save: Dictionary = saves[i]
-		var row := Rect2(24.0, y, w, 40.0)
+		var row := Rect2(24.0, y, w, row_h)
 		items.append({"id": "open:" + str(save["slug"]), "kind": "save_row",
 			"rect": row, "save": save})
 		items.append({"id": "delete:" + str(save["slug"]), "kind": "delete",
-			"rect": Rect2(row.end.x - 84.0, row.position.y + 4.0, 40.0, 32.0), "slug": str(save["slug"])})
-		y += 46.0
-	items.append(LeagueExtra.back_item())
+			"rect": Rect2(24.0 + del_x, row.position.y + (row_h - del_h) * 0.5, del_w, del_h),
+			"slug": str(save["slug"])})
+		y += row_h + 6.0
+	items.append(LeagueExtra.back_item(touch))
 	return items
 
 
@@ -131,7 +137,8 @@ static func status_label(status: String) -> String:
 
 func draw_wizard_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	LeagueExtra.header(c, vp, fonts, "NEW LEAGUE", "GOD-MODE SEASON SETUP")
+	LeagueExtra.header(c, vp, fonts, "NEW LEAGUE", "GOD-MODE SEASON SETUP", 0.0, true,
+		bool(view.get("touch", false)))
 	if str(view.get("error", "")) != "":
 		UiChrome.text(c, Vector2(24.0, vp.y - BAR_H - 10.0), str(view["error"]), 12, UiChrome.C_DANGER, fonts["med"])
 
@@ -177,7 +184,8 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 
 func draw_load_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, _view: Dictionary,
 		_hints: DateHints) -> void:
-	LeagueExtra.header(c, vp, fonts, "LOAD LEAGUE", "NAMED SEASONS")
+	LeagueExtra.header(c, vp, fonts, "LOAD LEAGUE", "NAMED SEASONS", 0.0, true,
+		bool(_view.get("touch", false)))
 
 func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	hints.clear()
@@ -191,7 +199,7 @@ func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		if str(item["kind"]) == "save_row":
 			var save: Dictionary = item["save"]
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6)
-			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 17.0),
+			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + rect.size.y * 0.5 - 3.0),
 				str(save["name"]), 14, UiChrome.C_TEXT, bold)
 			var current := str(save.get("current_date", ""))
 			var dated: String = FixtureCalendar.day_label(current)
@@ -199,14 +207,16 @@ func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 			var status := status_label(str(save.get("status", "")))
 			var line: String = "%s · %s · %s" % [dated, status, leagues] \
 				if dated != "" else "%s · %s" % [status, leagues]
-			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + 32.0), line, 10,
-				UiChrome.C_DIM, med)
+			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + rect.size.y * 0.5 + 12.0),
+				line, 10, UiChrome.C_DIM, med)
 			if current != "":
 				hints.add(DateHints.strip(med, dated,
-					Vector2(rect.position.x + 12.0, rect.position.y + 32.0), 10), current)
+					Vector2(rect.position.x + 12.0, rect.position.y + rect.size.y * 0.5 + 12.0), 10),
+					current)
 		elif str(item["kind"]) == "delete":
 			UiChrome.panel(c, cache, rect, UiChrome.C_DANGER.darkened(0.35), 5, UiChrome.C_DANGER, 1)
-			UiChrome.text_c(c, rect.get_center().x, rect.position.y + 21.0, "X", 13, UiChrome.C_TEXT, bold)
+			UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0,
+				"X", 13, UiChrome.C_TEXT, bold)
 		elif str(item["kind"]) == "button":
 			UiChrome.button(c, cache, rect, str(item["label"]), bold, bool(item.get("primary", false)))
 

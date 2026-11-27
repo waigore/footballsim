@@ -38,12 +38,13 @@ Shipped (wiki domains playable; DRs accepted):
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Native match hot loop | DR-20261123-02 future tightening under the 120 s budget. Shape-pass shared (DR-20261125-11); tick still GDScript |
+| 1 | Remaining phone tap targets | Stats chips, calendar cells, Interest rows, New League toggles stay under 44 dp; DR-20261128-02 |
+| 2 | Native match hot loop | DR-20261123-02 future tightening under the 120 s budget. Shape-pass shared (DR-20261125-11); tick still GDScript |
 
 ## Next pick
 
-**Native match hot loop** — optional P4 tightening while headless matches sit inside
-the 120 s census budget; no open rules residual after #192.
+**Remaining phone tap targets** (DR-20261128-02), then the **native match hot
+loop**.
 
 ## Out of scope / blocked
 

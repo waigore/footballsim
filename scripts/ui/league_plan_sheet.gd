@@ -9,10 +9,12 @@ var names := InterestNames.new()
 
 
 static func layout(plan: Array, interest: Dictionary, left: float, right: float,
-		top: float) -> Array:
+		top: float, touch := false) -> Array:
 	var items: Array = []
 	var y := top
 	var last_comp := ""
+	var row_h: float = LeagueChrome.plan_row_h(touch)
+	var gap: float = LeagueChrome.plan_row_gap(touch)
 	for fx in plan:
 
 
@@ -24,10 +26,10 @@ static func layout(plan: Array, interest: Dictionary, left: float, right: float,
 			items.append({"id": "", "kind": "league_head",
 				"rect": Rect2(left, y, right - left, 18.0),
 				"competition": comp, "matchday": int(fx.get("matchday", 1))})
-			y += 18.0 + LeagueChrome.ROW_GAP
+			y += 18.0 + gap
 
 
-		var h: float = maxf(LeagueChrome.ROW_H, LeagueBlock.height(fx))
+		var h: float = maxf(row_h, LeagueBlock.height(fx))
 		var row := Rect2(left, y, right - left, h)
 		items.append({"id": "fixture:" + str(fx["id"]), "kind": "row", "rect": row,
 			"fixture": fx,
@@ -36,13 +38,13 @@ static func layout(plan: Array, interest: Dictionary, left: float, right: float,
 
 
 		if str(fx.get("status", "")) != "played":
-			var chip := Rect2(row.end.x - 72.0, y + 2.0, 68.0, LeagueChrome.ROW_H - 4.0)
+			var chip := Rect2(row.end.x - 72.0, y + 2.0, 68.0, h - 4.0)
 
 
 			var followed := LeagueInterestMark.follows(interest, fx)
 			items.append({"id": "" if followed else "toggle:" + str(fx["id"]), "kind": "chip",
 				"rect": chip, "fixture": fx, "followed": followed})
-		y += h + LeagueChrome.ROW_GAP
+		y += h + gap
 	return items
 
 # gd-tools: no cover start

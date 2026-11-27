@@ -21,17 +21,25 @@ var cache := {}
 var hints := DateHints.new()
 
 
-static func back_rect() -> Rect2:
+static func back_rect(touch := false) -> Rect2:
+	if touch:
+		return Rect2(24.0, 6.0, 96.0, UiChrome.TAP_H)
 	return Rect2(24.0, 12.0, 96.0, 32.0)
 
 
-static func back_item() -> Dictionary:
+static func back_item(touch := false) -> Dictionary:
 	return {"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": back_rect()}
+		"rect": back_rect(touch)}
 
 
-static func primary_rect(vp: Vector2, width: float = 140.0) -> Rect2:
+static func primary_rect(vp: Vector2, width: float = 140.0, touch := false) -> Rect2:
+	if touch:
+		return Rect2(vp.x - 24.0 - width, 6.0, width, UiChrome.TAP_H)
 	return Rect2(vp.x - 24.0 - width, 12.0, width, 32.0)
+
+
+static func row_h(touch: bool) -> float:
+	return UiChrome.tap_h(ROW_H, touch)
 
 
 const TITLE_X := 136.0
@@ -67,11 +75,13 @@ static func header_band(vp: Vector2, bold: Font, title: String, caption: String 
 
 
 static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
-		caption: String = "", right: float = 0.0, caps: bool = true) -> Dictionary:
+		caption: String = "", right: float = 0.0, caps: bool = true,
+		touch: bool = false) -> Dictionary:
 	var bold: Font = fonts["bold"]
-	var rect := back_rect()
+	var rect := back_rect(touch)
 	UiChrome.panel(c, header_cache, rect, UiChrome.C_PANEL_LIGHT, 7)
-	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 21.0, "BACK", 12, UiChrome.C_TEXT, bold)
+	UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 5.0,
+		"BACK", 12, UiChrome.C_TEXT, bold)
 	var band := header_band(vp, bold, title, caption, right, caps)
 	UiChrome.text(c, Vector2(TITLE_X, 36.0), str(band["title"]), TITLE_SIZE, UiChrome.C_GOLD, bold)
 	if str(band["caption"]) != "":
@@ -82,7 +92,7 @@ static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
 
 func stats_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
-	items.append(back_item())
+	items.append(back_item(bool(view.get("touch", false))))
 	var filters: Dictionary = view.get("filters", {})
 	var y := HEADER + 10.0
 
@@ -193,7 +203,8 @@ static func _month_label(month: String) -> String:
 
 func draw_stats_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	header(c, vp, fonts, "STATS", str(view.get("name", "")))
+	header(c, vp, fonts, "STATS", str(view.get("name", "")), 0.0, true,
+		bool(view.get("touch", false)))
 
 func draw_stats_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		_view: Dictionary) -> void:
@@ -270,7 +281,7 @@ static func _comp_short(competition_id: String) -> String:
 
 func interest_layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
-	items.append(back_item())
+	items.append(back_item(bool(view.get("touch", false))))
 	var y := HEADER + 10.0
 	items.append({"id": "interest:search", "kind": "field", "value": str(view.get("query", "")),
 		"rect": Rect2(24.0, y, vp.x - 48.0, FIELD_H)})
@@ -302,7 +313,8 @@ func interest_layout(vp: Vector2, view: Dictionary) -> Array:
 
 func draw_interest_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	header(c, vp, fonts, "TEAMS OF INTEREST", "%d MARKED" % (view.get("clubs", []) as Array).size())
+	header(c, vp, fonts, "TEAMS OF INTEREST", "%d MARKED" % (view.get("clubs", []) as Array).size(),
+		0.0, true, bool(view.get("touch", false)))
 
 func draw_interest_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		view: Dictionary) -> void:

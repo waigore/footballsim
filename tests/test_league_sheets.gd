@@ -194,6 +194,64 @@ func test_the_load_list_lays_out_zero_and_many_saves() -> void:
 		"the ninth save was laid over an earlier row")
 
 
+func test_a_phone_load_row_and_its_delete_door_are_finger_sized() -> void:
+	var sheet := LeagueStartSheet.new()
+	var saves: Array = [{"slug": "s0", "name": "Save 0", "status": "in_progress",
+		"current_date": "2026-09-01", "matchday": 1, "path": "", "modified": 0}]
+	var desk: Array = sheet.load_layout(Vector2(913, 411), {"saves": saves})
+	var phone: Array = sheet.load_layout(Vector2(913, 411), {"saves": saves, "touch": true})
+	var desk_row: Rect2 = desk[0]["rect"]
+	var phone_row: Rect2 = phone[0]["rect"]
+	var phone_delete: Rect2 = phone[1]["rect"]
+	assert_lt(desk_row.size.y, UiChrome.TAP_H, "the desktop row grew to a finger's pitch")
+	assert_gte(phone_row.size.y, UiChrome.TAP_H, "the save row is under a finger")
+	assert_gte(phone_delete.size.y, UiChrome.TAP_H, "the delete door is under a finger")
+	assert_true(phone_row.encloses(phone_delete), "the delete door left its row")
+	assert_false(phone_row.intersects(phone[2]["rect"] as Rect2),
+		"two save rows overlap, so one press answers two lanes")
+	assert_gte((phone[phone.size() - 1]["rect"] as Rect2).size.y, UiChrome.TAP_H,
+		"the load list's BACK is under a finger")
+
+
+func test_a_phone_hub_lays_every_row_and_door_for_a_finger() -> void:
+	var sheet := LeagueSheet.new()
+	var plan: Array = []
+	for i in range(6):
+		plan.append(_fixture(i, i % 2, 0))
+	var vp := Vector2(913.0, 411.0)
+	var wide: Array = sheet.hub_layout(vp, _state(plan, _table()))
+	var state := _state(plan, _table())
+	state["touch"] = true
+	var narrow: Array = sheet.hub_layout(vp, state)
+	assert_eq(_item_rect(wide, "fixture:gw01-A0-B0").size.y, LeagueChrome.ROW_H,
+		"the desktop row left its own pitch")
+	for item in narrow:
+		if str(item["kind"]) == "row" or str(item["kind"]) == "chip":
+			assert_gte((item["rect"] as Rect2).size.y, UiChrome.TAP_H,
+				"%s is under a finger at %s" % [item["id"], vp])
+	var first := _item_rect(narrow, "fixture:gw01-A0-B0")
+	var suggest := _item_rect(narrow, "suggest")
+	assert_gte(suggest.size.y, UiChrome.TAP_H, "SUGGEST WATCHES is under a finger")
+	assert_false(suggest.intersects(first), "the suggest door sits on the first fixture")
+	assert_gte(first.position.y, LeagueChrome.HEADER, "the first row rose into the header")
+	assert_gte(_item_rect(narrow, "back").size.y, UiChrome.TAP_H, "the hub's BACK is under a finger")
+	assert_gte(_item_rect(narrow, "continue").size.y, UiChrome.TAP_H, "CONTINUE is under a finger")
+	assert_lte(_item_rect(narrow, "continue").end.x, vp.x, "CONTINUE ran off the sheet")
+	assert_false(_item_rect(narrow, "continue").intersects(_item_rect(narrow, "back")),
+		"the hub's header doors overlap")
+
+
+func test_a_phone_plan_row_keeps_its_toggle_inside_the_row() -> void:
+	var plan: Array = [_fixture(1), _fixture(2)]
+	var items: Array = LeaguePlanSheet.layout(plan, {}, 24.0, 600.0, 72.0, true)
+	var row: Rect2 = items[0]["rect"]
+	var chip: Rect2 = items[1]["rect"]
+	assert_gte(row.size.y, UiChrome.TAP_H, "the phone row is under a finger")
+	assert_gte(chip.size.y, UiChrome.TAP_H, "the AUTO/WATCH door is under a finger")
+	assert_true(row.encloses(chip), "the toggle left its row, so a press can sim the wrong game")
+	assert_false(row.intersects(items[2]["rect"] as Rect2), "two phone rows share a band")
+
+
 func test_the_table_columns_fit_a_phone_and_a_desktop_sheet() -> void:
 	var cols := LeagueTableView.COMPACT_COLS
 	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(873, 393)]:
