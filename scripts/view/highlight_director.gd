@@ -10,11 +10,18 @@ const CAPTURE_WINDOW := 12.0
 
 const MIN_CAPTURE_FRAMES := 4
 
+const LEAD := 6.5
+
+const TAIL := 1.5
+
 var host = null
 var history: Array = []
 var hist_timer := 0.0
 
 var shown: Dictionary = {}
+
+var pending: Dictionary = {}
+var pending_until := -1.0
 
 func _init(owner) -> void:
 	host = owner
@@ -23,6 +30,8 @@ func _init(owner) -> void:
 func restart() -> void:
 	history.clear()
 	shown.clear()
+	pending = {}
+	pending_until = -1.0
 	hist_timer = 0.0
 	snapshot()
 
@@ -39,64 +48,34 @@ func sample() -> void:
 	if hist_timer >= SNAPSHOT_EVERY:
 		hist_timer = 0.0
 		snapshot()
+	if not pending.is_empty():
+		open_pending()
 
 
-func rewind(trigger_clock: float) -> bool:
-	if history.is_empty():
-		return false
-	var target := trigger_clock - 7.0
-	var best: Dictionary = history[0]
-	for s in history:
-		if float(s["clock"]) <= target:
-			best = s
-		else:
-			break
-	if float(best["clock"]) > trigger_clock - 1.0:
-		best = history[0]
-	var trimmed := []
-	for s2 in history:
-		if float(s2["clock"]) <= float(best["clock"]) + 0.01:
-			trimmed.append(s2)
-	history = trimmed
-	host.engine.from_dict(best)
-	host.actors.ball_trail.clear()
-	host.batch_abort = true
-	return true
+func waiting() -> bool:
+	return not pending.is_empty()
 
 
 func on_event(e: Dictionary) -> void:
 	var kind: String = e.get("type", "")
 	var key := "%d|%s|%d" % [int(float(e.get("clock", 0.0)) * 60.0), kind, int(e.get("player_id", -1))]
-
-
 	if kind == "goal" and not shown.has(key):
 		capture(e)
-	if not extends_window(kind):
+	if not opens_replay(kind):
 		return
 	if shown.has(key):
 		return
-	if host.in_highlight:
-
-		host.highlight_until = maxf(host.highlight_until, host.engine.clock + (5.0 if kind == "goal" else 3.0))
-		return
-	if not opens_replay(kind):
-		return
 	shown[key] = true
-	if rewind(host.engine.clock):
-		host.in_highlight = true
-		host.fast_mode = false
-		host.highlight_until = host.engine.clock + 12.0
-		host.replay_banner = 2.2
-		if kind in ["shot", "penalty", "corner"]:
-			host.accumulator = 0.0
-
-
-func extends_window(kind: String) -> bool:
-	if host.mode == "goals":
-		return kind == "goal"
-	if host.mode != "highlights":
-		return false
-	return kind in ["shot", "goal", "penalty", "penalty_taken", "card", "corner"]
+	if host.in_highlight or host.replay != null:
+		return
+	var trigger := float(e.get("clock", host.engine.clock))
+	var until := trigger + TAIL
+	if pending.is_empty():
+		pending = e
+		pending_until = until
+	elif kind == "goal":
+		pending = e
+		pending_until = maxf(pending_until, until)
 
 
 func opens_replay(kind: String) -> bool:
@@ -105,6 +84,58 @@ func opens_replay(kind: String) -> bool:
 	if host.mode != "highlights":
 		return false
 	return kind in ["shot", "goal", "penalty", "corner", "card"]
+
+
+func open_pending(force: bool = false) -> bool:
+	var engine = host.engine
+	if engine == null:
+		return false
+	if not force and float(engine.clock) < pending_until:
+		return false
+	var e := pending
+	pending = {}
+	pending_until = -1.0
+	var clock := float(engine.clock)
+	var from := float(e.get("clock", clock)) - LEAD
+	var window: Array = []
+	for snap in history:
+		var at := float(snap["clock"])
+		if at >= from and at <= clock + 0.01:
+			window.append(snap)
+	if window.size() < MIN_CAPTURE_FRAMES:
+		return false
+	var pack := GoalHighlight.from_snapshots(window, meta(e, engine))
+	if not host.open_live_replay(pack):
+		return false
+	host.batch_abort = true
+	return true
+
+
+func flush() -> bool:
+	if pending.is_empty():
+		return false
+	if str(host.engine.phase) in ["half_time", "et_break"]:
+		return open_pending(true)
+	return false
+
+
+func meta(e: Dictionary, engine: MatchEngine) -> Dictionary:
+	var goal: Dictionary = engine.last_goal
+	var scorer = engine.by_id.get(int(e.get("player_id", -1)), null)
+	var team := clampi(int(e.get("team", 0)), 0, 1)
+	var season := LeagueSeason.active
+	return {
+		"seed": engine.seed_value,
+		"fixture_id": season.watching_fixture if season != null else "",
+		"home": str(engine.teams[0]["id"]), "away": str(engine.teams[1]["id"]),
+		"goal_index": 0, "minute": int(e.get("minute", 0)),
+		"club_id": str(engine.teams[team]["id"]),
+		"scorer_id": str(scorer.key) if scorer != null else "",
+		"scorer_name": str(goal.get("scorer", e.get("player", ""))),
+		"assist_id": "", "assist_name": str(goal.get("assist", "")),
+		"commentary": str(e.get("text", "")),
+		"score_after": [int(engine.score[0]), int(engine.score[1])],
+	}
 
 
 func capture(e: Dictionary) -> void:
@@ -122,18 +153,4 @@ func capture(e: Dictionary) -> void:
 			window.append(snap)
 	if window.size() < MIN_CAPTURE_FRAMES:
 		return
-	var scorer = engine.by_id.get(int(e.get("player_id", -1)), null)
-	var team := int(e.get("team", 0))
-	var goal: Dictionary = engine.last_goal
-	var pack := GoalHighlight.from_snapshots(window, {
-		"seed": engine.seed_value, "fixture_id": season.watching_fixture,
-		"home": str(engine.teams[0]["id"]), "away": str(engine.teams[1]["id"]),
-		"goal_index": 0, "minute": int(e.get("minute", 0)),
-		"club_id": str(engine.teams[team]["id"]),
-		"scorer_id": str(scorer.key) if scorer != null else "",
-		"scorer_name": str(goal.get("scorer", e.get("player", ""))),
-		"assist_id": "", "assist_name": str(goal.get("assist", "")),
-		"commentary": str(e.get("text", "")),
-		"score_after": [int(engine.score[0]), int(engine.score[1])],
-	})
-	season.capture_goal(pack)
+	season.capture_goal(GoalHighlight.from_snapshots(window, meta(e, engine)))
