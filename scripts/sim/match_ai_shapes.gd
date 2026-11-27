@@ -7,7 +7,7 @@ var e = null
 var pq = null
 
 
-func _init(owner) -> void:
+func _init(owner: MatchAI) -> void:
 	brain = owner
 	e = owner.e
 	pq = owner.pq
@@ -61,7 +61,7 @@ func update() -> void:
 	_apply_pressing()
 
 
-func _attack_shape(p, fallback: Vector2) -> Vector2:
+func _attack_shape(p: Variant, fallback: Vector2) -> Vector2:
 	var ball = e.ball
 	var ax = e.attacking_x(p.team, ball.pos)
 	var my_ax = e.attacking_x(p.team, p.pos)
@@ -102,7 +102,7 @@ func _attack_shape(p, fallback: Vector2) -> Vector2:
 	return target
 
 
-func _defence_shape(p, fallback: Vector2, dlines: Dictionary = {}) -> Vector2:
+func _defence_shape(p: Variant, fallback: Vector2, dlines: Dictionary = {}) -> Vector2:
 	var own: Vector2 = e.own_goal_pos(p.team)
 	var ball = e.ball
 	var dist_to_own: float = ball.pos.distance_to(own)
@@ -274,7 +274,7 @@ func assign_marks() -> void:
 				best.mark_id = a.id
 
 
-func _gk_shape(gk) -> void:
+func _gk_shape(gk: Variant) -> void:
 	var own: Vector2 = e.own_goal_pos(gk.team)
 	var ball = e.ball
 	var to_ball: Vector2 = ball.pos - own
