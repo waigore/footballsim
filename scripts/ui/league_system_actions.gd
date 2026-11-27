@@ -35,6 +35,9 @@ static func view(screen) -> Dictionary:
 		"advance_mode": str(state.get("advance_mode", "fixture_days")),
 		# Where the on-screen keyboard is (#201), so the field can paint a caret.
 		"focus": str(screen.focus.kind),
+		# The device the sheet is read on (#310): its ADVANCE hint names the verb
+		# of the pointer that will press it.
+		"touch": bool(screen.touch),
 	}
 
 static func act(screen, id: String) -> void:
