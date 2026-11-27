@@ -188,6 +188,19 @@ func play_goal_clip(pack: Dictionary, on_done := Callable()) -> void:
 	if replay == null and on_done.is_valid():
 		on_done.call()
 
+
+func open_live_replay(pack: Dictionary) -> bool:
+	if pack.is_empty() or replay != null:
+		return false
+	replay = GoalReplay.open_live(self, pack)
+	if replay == null:
+		return false
+	in_highlight = true
+	fast_mode = false
+	highlight_until = -1.0
+	accumulator = 0.0
+	return true
+
 func _on_engine_event(e: Dictionary) -> void:
 	playback.on_engine_event(e)
 

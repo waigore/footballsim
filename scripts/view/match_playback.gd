@@ -30,16 +30,18 @@ func tick(delta: float) -> void:
 		game.view.hover(game.mouse)
 
 	if game.replay != null:
-
-
 		if game.replay.step(delta):
 			game.replay = null
 		return
 	if game.engine.phase == "full_time":
+		if game.highlights.flush():
+			return
 		if not game.result_recorded:
 			game.result_recorded = PLSimStats.record_match(game.engine)
 		return
 	if game.engine.phase == "half_time" or game.engine.phase == "et_break":
+		if game.highlights.flush():
+			return
 		if game.half_time_timer < 0.0:
 			game.half_time_timer = 4.0
 		game.half_time_timer -= delta
@@ -68,11 +70,12 @@ func advance_ticks(n: int) -> void:
 
 func post_tick() -> void:
 	game.replay_banner = maxf(0.0, game.replay_banner - game.get_process_delta_time())
-	if game.in_highlight:
-		if game.engine.clock > game.highlight_until:
-			end_highlight()
-	elif game.mode != "full":
-		game.fast_mode = true
+	if game.replay == null:
+		if game.in_highlight:
+			if game.engine.clock > game.highlight_until:
+				end_highlight()
+		elif game.mode != "full":
+			game.fast_mode = true
 	if game.camera != null:
 		game.camera.update_target()
 	game._apply_camera(false)

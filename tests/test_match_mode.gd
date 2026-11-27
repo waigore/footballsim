@@ -179,19 +179,35 @@ func test_goals_only_replays_only_scored_goals() -> void:
 	var director: HighlightDirector = game.highlights
 	var clock := float(engine.clock)
 	director.on_event({"type": "shot", "clock": clock, "player_id": 7})
-	assert_false(game.in_highlight, "a shot opened a replay in Goals only")
+	assert_false(director.waiting(), "a shot queued a replay in Goals only")
 	director.on_event({"type": "corner", "clock": clock, "player_id": -1})
-	assert_false(game.in_highlight, "a corner opened a replay in Goals only")
+	assert_false(director.waiting(), "a corner queued a replay in Goals only")
 	director.on_event({"type": "card", "clock": clock, "player_id": 8})
-	assert_false(game.in_highlight, "a card opened a replay in Goals only")
+	assert_false(director.waiting(), "a card queued a replay in Goals only")
 	director.on_event({"type": "penalty_taken", "clock": clock, "player_id": 9})
-	assert_false(game.in_highlight, "a penalty that missed opened a replay in Goals only")
+	assert_false(director.waiting(), "a penalty that missed queued a replay in Goals only")
 	director.on_event({"type": "goal", "clock": clock, "player_id": 9, "team": 0, "text": "GOAL!"})
+	assert_true(director.waiting(), "a scored goal did not queue a replay in Goals only")
+	for i in range(180):
+		engine.tick()
+		game.highlights.sample()
+		if game.replay != null:
+			break
 	assert_true(game.in_highlight, "a scored goal did not open a replay in Goals only")
-	game.in_highlight = false
+	assert_not_null(game.replay, "Goals only opened no clip for the goal")
+	game.replay.finish(true)
+	game.replay = null
 	game.view.set_mode("highlights")
-	director.on_event({"type": "shot", "clock": clock + 0.5, "player_id": 10})
+	director.on_event({"type": "shot", "clock": float(engine.clock) + 0.5, "player_id": 10})
+	assert_true(director.waiting(), "Highlights stopped queuing shots")
+	for i in range(180):
+		engine.tick()
+		game.highlights.sample()
+		if game.replay != null:
+			break
 	assert_true(game.in_highlight, "Highlights stopped replaying shots")
+	game.replay.finish(true)
+	game.replay = null
 
 func test_the_state_line_names_the_view() -> void:
 	var band: HudRosterBand = game.hud.roster_band
