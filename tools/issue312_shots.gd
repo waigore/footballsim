@@ -32,6 +32,10 @@ func _initialize() -> void:
 	league.show_season(season)
 	await _frames(3)
 	var screen = league.screen
+	# The UX catalogue grades the league-hub surface, whose CONTINUE is the flow
+	# screen's named CTA; the Stats pose is shot beside it on the evidence page.
+	await _pose(Vector2i(1600, 900))
+	await _shot("issue312_hub_1600")
 	for size in [Vector2i(1600, 900), Vector2i(3024, 1648)]:
 		await _pose(size)
 		screen.click("nav:stats")
