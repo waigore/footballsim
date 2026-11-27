@@ -3,8 +3,11 @@ extends Control
 
 
 const MARGIN := 6.0
+const COMPACT_MARGIN := 0.0
 const GAP := 14.0
+const COMPACT_GAP := 6.0
 const SECTION_H := 30.0
+const SECTION_COMPACT_H := 18.0
 const NOTE_H := 24.0
 const KV_H := 34.0
 const BAR_H := 24.0
@@ -45,7 +48,7 @@ const TAP_ROW_H := 49.0
 static func layout(blocks: Array, width: float, compact: bool = false,
 		touch: bool = false) -> Dictionary:
 	var rows: Array = []
-	var y := MARGIN
+	var y := COMPACT_MARGIN if compact else MARGIN
 	var row_h := 24.0 if compact else 22.0
 	if touch:
 		row_h = TAP_ROW_H
@@ -53,8 +56,9 @@ static func layout(blocks: Array, width: float, compact: bool = false,
 		var kind := str(block.get("k", ""))
 		var x := 0.0
 		if kind == "section":
-			rows.append({"k": kind, "rect": Rect2(x, y, width, SECTION_H), "text": str(block.get("text", ""))})
-			y += SECTION_H
+			var h: float = SECTION_COMPACT_H if compact else SECTION_H
+			rows.append({"k": kind, "rect": Rect2(x, y, width, h), "text": str(block.get("text", ""))})
+			y += h
 		elif kind == "note":
 			rows.append({"k": kind, "rect": Rect2(x, y, width, NOTE_H), "text": str(block.get("text", ""))})
 			y += NOTE_H
@@ -73,6 +77,8 @@ static func layout(blocks: Array, width: float, compact: bool = false,
 				y += BAR_H
 			y += 4.0
 		elif kind == "chips":
+			if bool(block.get("strip", false)) and compact:
+				continue
 			var per := 4 if compact else 8
 			var chips: Array = block.get("items", [])
 			var chip_w := width / float(per)
@@ -105,8 +111,8 @@ static func layout(blocks: Array, width: float, compact: bool = false,
 				})
 				y += row_h
 			y += 6.0
-		y += GAP
-	return {"rows": rows, "height": y + MARGIN}
+		y += COMPACT_GAP if compact else GAP
+	return {"rows": rows, "height": y + (COMPACT_MARGIN if compact else MARGIN)}
 
 static func _widths(block: Dictionary, count: int) -> Array:
 	if block.has("widths"):
@@ -234,9 +240,10 @@ func _process(_d: float) -> void:
 func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 	var kind := str(row["k"])
 	if kind == "section":
-		draw_rect(Rect2(rect.position.x, rect.position.y + 12, 3, 12), Color(0.96, 0.78, 0.30))
-		_text(Vector2(rect.position.x + 12, rect.position.y + 22), str(row["text"]), 11, Color(0.55, 0.64, 0.69), true)
-		draw_line(Vector2(rect.position.x, rect.position.y + 28), Vector2(rect.position.x + rect.size.x, rect.position.y + 28), Color(1, 1, 1, 0.07), 1)
+		var section_h: float = SECTION_COMPACT_H if rect.size.y <= SECTION_COMPACT_H else SECTION_H
+		draw_rect(Rect2(rect.position.x, rect.position.y + section_h * 0.4, 3, 12), Color(0.96, 0.78, 0.30))
+		_text(Vector2(rect.position.x + 12, rect.position.y + section_h * 0.74), str(row["text"]), 11, Color(0.55, 0.64, 0.69), true)
+		draw_line(Vector2(rect.position.x, rect.position.y + section_h - 2.0), Vector2(rect.position.x + rect.size.x, rect.position.y + section_h - 2.0), Color(1, 1, 1, 0.07), 1)
 	elif kind == "note":
 		_text(Vector2(rect.position.x, rect.position.y + 16), _clip(str(row["text"]), 130), 10, Color(0.55, 0.64, 0.69), false)
 	elif kind == "kv":
@@ -262,7 +269,8 @@ func _draw_row(row: Dictionary, rect: Rect2, hovered: bool) -> void:
 		draw_rect(rect, Color(0.075, 0.105, 0.125, 0.95 if not hovered else 1.0), true)
 		draw_rect(Rect2(rect.position, Vector2(4, rect.size.y)), accent)
 		var chip_id := str((row.get("target", {}) as Dictionary).get("id", ""))
-		_text(Vector2(rect.position.x + 14, rect.position.y + 19), str(row["text"]), 13,
+		_text(Vector2(rect.position.x + 14, rect.position.y + 19),
+			WikiChrome.fit(f_bold, str(row["text"]), 13, rect.size.x - 22.0), 13,
 			UiChrome.C_GOLD if followed.has(chip_id) else Color(0.92, 0.95, 0.96), true)
 	elif kind == "thead":
 		var cols: Array = row["cols"]

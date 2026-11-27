@@ -298,3 +298,62 @@ func _chip_with_target(page: String) -> Dictionary:
 		if str(row["k"]) == "chip" and str(target.get("page", "")) == page:
 			return row
 	return {}
+
+
+func test_a_phone_league_page_opens_on_the_table() -> void:
+	for vp in [Vector2(914.0, 411.0), Vector2(640.0, 360.0)]:
+		var box: Rect2 = WikiHeader.body_rect(vp, true, true, true)
+		assert_lt(box.position.y, 120.0,
+			"the phone header still spends the phone's screen on chrome at %s" % vp)
+		var laid := WikiBody.layout(WikiModel.page(WikiModel.LEAGUE, "")["blocks"],
+			box.size.x, true, true)
+		var shown := 0
+		for row in laid["rows"]:
+			var r: Rect2 = row["rect"]
+			if str(row["k"]) == "trow" and r.position.y >= 0.0 and r.end.y <= box.size.y:
+				shown += 1
+		assert_gte(shown, 4, "the phone league page opens on %d club rows at %s" % [shown, vp])
+
+
+func test_a_phone_league_page_keeps_its_competition_doors() -> void:
+	var width: float = WikiHeader.metrics(Vector2(914.0, 411.0), true, true, true)["width"]
+	var chips := WikiPageStrip.items(WikiModel.page(WikiModel.LEAGUE, ""))
+	var built := WikiPageStrip.layout(wiki.f_bold, width, chips)
+	var rects: Array = built["rects"]
+	assert_eq(rects.size(), 8, "the phone strip dropped a competition")
+	var doors := WikiPageStrip.doors(Vector2(24.0, 60.0), rects, chips)
+	assert_eq(doors.size(), 7, "the phone strip lost a door to another competition")
+	for door in doors:
+		var r: Rect2 = door["rect"]
+		assert_gte(r.size.y, 24.0, "a strip door is too short to press")
+		assert_lte(r.end.x, 24.0 + width + 0.5, "a strip door ran off the sheet")
+	var seen: Array = []
+	for row in WikiBody.layout(WikiModel.page(WikiModel.LEAGUE, "")["blocks"], width, true, true)["rows"]:
+		if str(row["k"]) == "chip":
+			seen.append(str(row["text"]))
+	assert_eq(seen.size(), 20, "the phone body still repeats the competition strip's chips")
+
+
+func test_a_phone_strip_names_the_league_it_cannot_fit() -> void:
+	var chips := WikiPageStrip.items(WikiModel.page(WikiModel.LEAGUE, ""))
+	var built := WikiPageStrip.layout(wiki.f_bold, 150.0, chips)
+	assert_true(bool(built["short"]), "a strip narrower than its names kept the long ones")
+	var rects: Array = built["rects"]
+	assert_eq(rects.size(), 8, "the squeezed strip dropped a competition")
+	assert_lte((rects[7] as Rect2).end.x, 150.5, "the squeezed strip ran past its band")
+
+
+func test_the_desktop_header_keeps_its_title_and_dense_rows() -> void:
+	var vp := Vector2(1600.0, 900.0)
+	var box: Rect2 = WikiHeader.body_rect(vp, false, false, true)
+	assert_almost_eq(box.position.y, 168.0, 0.01, "the desktop header moved")
+	assert_almost_eq(box.size.y, vp.y - 168.0 - 34.0, 0.01, "the desktop body moved")
+	var laid := WikiBody.layout(WikiModel.page(WikiModel.LEAGUE, "")["blocks"], box.size.x,
+		false, false)
+	var pitches: Array = []
+	for row in laid["rows"]:
+		if str(row["k"]) == "trow":
+			pitches.append(row["rect"])
+	assert_almost_eq((pitches[1] as Rect2).position.y - (pitches[0] as Rect2).position.y, 22.0,
+		0.01, "the desktop table stopped being dense")
+
