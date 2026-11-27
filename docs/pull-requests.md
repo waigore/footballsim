@@ -29,7 +29,7 @@ Base rules for opening and landing PRs (humans and agents).
 
 Code paths: `scenes/`, `scripts/`, `ui/`, `autoload/`, `tests/`, `addons/`, `project.godot`, `icon.svg` (+ `tools/e2e_smoke.gd`, `tools/smoke/**`). Skills: `.agents/skills/`, `.cursor/skills/`, `.opencode/skill/`, `.grok/skills/`. Docs-only / skills-only OK.
 
-**UI paths (`ux-vlm`):** `scenes/`, `ui/`, `scripts/ui/`, `assets/ui/`, `fonts/`. On change, one desktop wiki URL per affected screen (max 10):
+**UI paths (`ux-vlm`):** `scenes/`, `ui/`, `scripts/ui/`, `assets/ui/`, `fonts/`. On change, one desktop wiki URL per affected screen (max 11):
 
 ```markdown
 ## UX screenshots

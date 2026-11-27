@@ -76,6 +76,19 @@ screens:
       - scripts/ui/hud_managers.gd
       - scripts/ui/hud_player_card.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-l-hud-1600.jpg
+  - id: match-hud-hidden
+    title: Match HUD hidden
+    kind: overlay
+    scripts:
+      - scripts/ui/hud.gd
+      - scripts/ui/hud_chrome.gd
+      - scripts/ui/hud_layout.gd
+      - scripts/ui/hud_paint.gd
+      - scripts/ui/hud_roster_band.gd
+      - scripts/ui/hud_top_band.gd
+      - scripts/ui/hud_controls_band.gd
+      - scripts/ui/hud_banners_band.gd
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261127-l-hud-hidden-1600.png
   - id: league-hub
     title: League hub
     kind: flow
