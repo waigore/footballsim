@@ -33,6 +33,9 @@ func _initialize() -> void:
 	league.show_season(season)
 	await _frames(3)
 	var screen = league.screen
+	# The UX catalogue grades the league-hub surface, whose CONTINUE is the flow
+	# screen's named CTA; the two loci are shot beside it on the evidence page.
+	await _shot("issue310_hub_desktop")
 	# 1. The System sheet's ADVANCE row: desktop, then the phone design space.
 	screen.click("nav:system")
 	await _frames(3)
