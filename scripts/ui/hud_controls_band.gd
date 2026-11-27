@@ -24,7 +24,8 @@ func controls(p: HudPaint, c: CanvasItem, game, touch: bool, mouse: Vector2, f_b
 
 
 		var active: bool = (over and not held and spec[0] == "restart") \
-			or (not over and spec[0] == "mode" and game.mode == "highlights")
+			or (not over and spec[0] == "mode" and game.mode == "highlights") \
+			or (not over and spec[0] == "skip" and game.get("skip_armed") == true)
 		var fill: Color = UiChrome.C_PANEL_LIGHT if hovered else UiChrome.C_PANEL
 		if active:
 			fill = Color(0.16, 0.13, 0.05, 0.96)
@@ -55,7 +56,7 @@ func control_specs(p: HudPaint, game, touch: bool, phase: String = "", held: boo
 		["pause", "PAUSE" if not game.paused else "RESUME", "SPACE", not over],
 		["speed", speed_label(game), speed_hint, not over],
 		["mode", Prefs.mode_label(game.mode), "H", true],
-		["skip", "SKIP", "S", not over],
+		["skip", "STOP" if game.get("skip_armed") == true else "SKIP", "S", not over],
 		["camera", "FOLLOW" if game.camera_follow else "WIDE", "C", true],
 		["league", "LEAGUE", "L", true],
 		["restart", "PLAY AGAIN" if over else "RESTART", "R", not (over and held)],

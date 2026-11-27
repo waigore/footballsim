@@ -83,6 +83,8 @@ var billing: MatchBilling = MatchBilling.new()
 
 var result_hold := false
 
+var skip_armed := false
+
 var back_stamp := -100000
 
 func _ready() -> void:
@@ -131,6 +133,7 @@ func new_match(seed: int) -> void:
 	half_time_timer = -1.0
 	replay_banner = 0.0
 	last_event_notice = 0.0
+	skip_armed = false
 	match_time = 0.0
 	cam.position = Vector2(L * 0.5, W * 0.5 + pitch_shift)
 	cam.zoom = Vector2(base_zoom, base_zoom)

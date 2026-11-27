@@ -36,6 +36,9 @@ func after_each() -> void:
 	if game == null:
 		return
 	game.view.set_mode(Prefs.DEFAULT_MODE)
+	game.skip_armed = false
+	if game.engine != null and str(game.engine.phase) != "play":
+		engine_dirty = true
 	if engine_dirty:
 		game.new_match(1000)
 		engine_dirty = false
@@ -171,6 +174,102 @@ func test_skip_ends_a_live_replay_in_goals_only() -> void:
 	_key(KEY_S)
 	assert_false(game.in_highlight, "Skip did not end the goal replay")
 	assert_true(game.fast_mode, "Skip left Goals only standing still")
+
+
+func test_skip_runs_the_match_on_to_the_next_whistle() -> void:
+	engine_dirty = true
+	game.view.set_mode("highlights")
+	game.paused = false
+	game.engine.added = [1.0, 1.0]
+	game.engine.clock = 2699.4
+	_key(KEY_S)
+	assert_true(game.skip_armed, "a skip press did not arm the skip")
+	assert_gt(float(game.engine.clock), 2699.4, "a skip press moved the match nowhere")
+	var calls := 0
+	while str(game.engine.phase) != "half_time" and calls < 200:
+		game.playback.advance_skip()
+		calls += 1
+	assert_eq(str(game.engine.phase), "half_time", "the skip did not reach the half-time whistle")
+	assert_false(game.skip_armed, "the skip stayed armed past the whistle")
+	assert_gte(float(game.engine.clock), 2700.0, "the skip stopped short of half time")
+
+
+func test_a_skip_spends_one_frame_budget_at_a_time() -> void:
+	engine_dirty = true
+	game.view.set_mode("highlights")
+	game.paused = false
+	game.engine.clock = 60.0
+	_key(KEY_S)
+	var before := float(game.engine.clock)
+	game._process(1.0 / 60.0)
+	var spent := float(game.engine.clock) - before
+	assert_gt(spent, 0.0, "a skip frame moved nothing")
+	assert_lt(spent, 60.0, "one skip frame ran a whole match minute")
+	assert_true(game.skip_armed, "a skip frame ran out of match to skip")
+
+
+func test_a_second_skip_press_stops_it() -> void:
+	engine_dirty = true
+	game.view.set_mode("highlights")
+	game.paused = false
+	game.engine.clock = 120.0
+	_key(KEY_S)
+	assert_true(game.skip_armed, "a skip press did not arm the skip")
+	_key(KEY_S)
+	assert_false(game.skip_armed, "a second press did not stop the skip")
+
+
+func test_pause_stops_a_running_skip() -> void:
+	engine_dirty = true
+	game.view.set_mode("highlights")
+	game.paused = false
+	game.engine.clock = 200.0
+	_key(KEY_S)
+	assert_true(game.skip_armed, "a skip press did not arm the skip")
+	_key(KEY_SPACE)
+	assert_true(game.paused, "space did not pause the match")
+	game._process(1.0 / 60.0)
+	assert_false(game.skip_armed, "a paused match kept skipping")
+
+
+func test_a_finished_match_cannot_skip_and_a_break_holds_the_skip_off() -> void:
+	engine_dirty = true
+	game.engine.phase = "full_time"
+	game.paused = false
+	_key(KEY_S)
+	assert_false(game.skip_armed, "a finished match armed a skip")
+	game.engine.phase = "half_time"
+	_key(KEY_S)
+	assert_false(game.skip_armed, "a half-time break armed a skip")
+	game.engine.phase = "play"
+
+
+func test_the_state_line_and_the_door_name_a_running_skip() -> void:
+	engine_dirty = true
+	var band: HudRosterBand = game.hud.roster_band
+	game.view.set_mode("highlights")
+	game.paused = false
+	game.engine.clock = 300.0
+	assert_eq(band.state_label(game, "SIM", "play"), "HIGHLIGHTS  ·  SIMMING 24x",
+		"the idle Highlights line moved")
+	_key(KEY_S)
+	assert_eq(band.state_label(game, "SIM", "play"), "SKIPPING  ·  TO HALF TIME",
+		"the state line did not name the skip")
+	assert_eq(_band_label("skip"), "STOP", "the door did not offer to stop the skip")
+	_key(KEY_S)
+	assert_eq(_band_label("skip"), "SKIP", "the door did not go back to SKIP")
+
+
+func test_a_skip_in_the_second_half_names_full_time() -> void:
+	engine_dirty = true
+	game.view.set_mode("full")
+	game.paused = false
+	game.engine.half = 2
+	game.engine.clock = 3000.0
+	_key(KEY_S)
+	assert_eq(HudRosterBand.skip_label(game.engine), "SKIPPING  ·  TO FULL TIME",
+		"the second half's skip named the wrong whistle")
+	_key(KEY_S)
 
 func test_goals_only_replays_only_scored_goals() -> void:
 	game.view.set_mode("goals")
