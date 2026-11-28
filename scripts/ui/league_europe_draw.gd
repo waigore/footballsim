@@ -28,8 +28,8 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		y += 12.0
 	var x: float = 24.0 if touch else 24.0 + rail + 18.0
 	var list_w: float = width if touch else width - rail - 18.0
-	var shown := fixtures.size() if done else mini(revealed, fixtures.size())
-	var h := ROW_TOUCH_H if touch else ROW_H
+	var shown: int = fixtures.size() if done else mini(revealed, fixtures.size())
+	var h: float = ROW_TOUCH_H if touch else ROW_H
 	for i in range(shown):
 		items.append({"id": "", "kind": "draw_row", "fixture": fixtures[i],
 			"rect": Rect2(x, y + float(i) * h, list_w, h - 1.0)})

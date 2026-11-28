@@ -75,7 +75,7 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 	var touch := bool(view.get("touch", false))
 	var right: float = LeagueExtra.primary_rect(vp, 140.0, touch).size.x + 12.0
 	var day := str(view.get("day", ""))
-	var caption := "CONTINENTAL NIGHTS" if day == "" else day + " · UEFA NIGHTS"
+	var caption: String = "CONTINENTAL NIGHTS" if day == "" else day + " · UEFA NIGHTS"
 	var band: Dictionary = LeagueExtra.header(c, vp, fonts, "EUROPE", caption, right, true, touch)
 	var date := str(view.get("date", ""))
 	if date != "" and str(band.get("caption", "")) != "":
@@ -134,7 +134,7 @@ func _card(c: CanvasItem, rect: Rect2, card: Dictionary, fonts: Dictionary) -> v
 	UiChrome.text(c, Vector2(rect.position.x + 16.0, rect.position.y + 46.0),
 		str(card.get("stage", "")), 11, UiChrome.C_GOLD, med)
 	var next := str(card.get("next", ""))
-	var tail := "COMPLETE" if bool(card.get("done", false)) else \
+	var tail: String = "COMPLETE" if bool(card.get("done", false)) else \
 		("NEXT " + FixtureCalendar.day_label(next) if next != "" else "NO NIGHT AHEAD")
 	UiChrome.text_r(c, rect.end.x - 12.0, rect.position.y + 26.0, tail, 10,
 		UiChrome.C_SOFT, bold)

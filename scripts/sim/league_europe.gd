@@ -291,8 +291,8 @@ static func score_line(honour: Dictionary) -> String:
 	if int(honour.get("pens_home", -1)) >= 0:
 		var pens_home := int(honour.get("pens_home", 0))
 		var pens_away := int(honour.get("pens_away", 0))
-		var won := pens_home if winner_home else pens_away
-		var lost := pens_away if winner_home else pens_home
+		var won: int = pens_home if winner_home else pens_away
+		var lost: int = pens_away if winner_home else pens_home
 		line += " · %d–%d PENS" % [won, lost]
 	elif bool(honour.get("extra_time", false)):
 		line += " · AET"

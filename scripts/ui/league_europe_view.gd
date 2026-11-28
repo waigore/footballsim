@@ -5,8 +5,8 @@ extends RefCounted
 static func hub(screen: Object) -> Dictionary:
 	var season = screen.season
 	var save: LeagueSave = season.save if season != null else null
-	var ids := LeagueEurope.active_ids(save) if save != null else []
-	var date := save.current_date() if save != null else ""
+	var ids: Array = LeagueEurope.active_ids(save) if save != null else []
+	var date: String = save.current_date() if save != null else ""
 	var plan: Array = []
 	if season != null:
 		for fx in season.plan():
@@ -26,7 +26,7 @@ static func hub(screen: Object) -> Dictionary:
 static func stage(screen: Object) -> Dictionary:
 	var season = screen.season
 	var save: LeagueSave = season.save if season != null else null
-	var ids := LeagueEurope.active_ids(save) if save != null else []
+	var ids: Array = LeagueEurope.active_ids(save) if save != null else []
 	var comp := str(screen.europe.get("comp", ""))
 	if comp == "" or not ids.has(comp):
 		comp = str(ids[0]) if not ids.is_empty() else ""
