@@ -382,6 +382,26 @@ func test_the_readings_refuse_what_they_cannot_settle() -> void:
 	_fresh().close()
 
 
+func test_the_phone_table_reads_the_segunda_bands() -> void:
+	var rows := []
+	var rules := LeagueRules.template("LL2")
+	for i in range(22):
+		rows.append({"club_id": "ESP-T%d" % i, "club_name": "Club %d" % i, "position": i + 1,
+			"played": 6, "won": 3, "drawn": 1, "lost": 2, "gf": 9, "ga": 7, "points": 20 - i,
+			"filial": i == 0})
+	var items: Array = LeagueTableLayout.rows(rows, LeagueTableLayout.places(
+		Rect2(24.0, 60.0, 865.0, 24.0), LeagueTableLayout.COMPACT), {}, {"rules": rules},
+		60.0, 22.0, 865.0)
+	assert_eq(items.size(), 22, "the phone table dropped a Segunda row")
+	assert_eq(str(items[0]["zone"]), "", "a filial's phone row wears a promotion band")
+	assert_eq(str(items[1]["zone"]), "promotion", "the phone table lost its first promotion band")
+	assert_eq(str(items[3]["zone"]), "playoff", "the phone table lost its bracket band")
+	assert_eq(str(items[21]["zone"]), "relegation", "the phone table lost its floor band")
+	assert_eq(LeagueTableChrome.labels_for(
+		LeagueTableChrome.bands_for(rules), true), ["UP", "PLO", "REL"],
+		"the phone legend does not read the Segunda bands")
+
+
 func test_the_ui_names_the_second_tier() -> void:
 	var ll2 := PLRepository.shared().competition("LL2")
 	assert_eq(LeagueChrome.competition_chip_label(ll2, 40.0), "LL2",
