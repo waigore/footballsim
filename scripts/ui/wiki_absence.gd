@@ -7,13 +7,20 @@ const SEPARATOR := "  ·  "
 
 
 static func statuses(club_id: String) -> Dictionary:
-	var out := {}
+	var parts := {}
 	if club_id == "" or not SeasonAvailability.enabled():
-		return out
+		return {}
 	for row in SeasonAvailability.rows(club_id):
 		var text := status(row, club_id)
-		if text != "":
-			out[str(row.get("player_id", ""))] = text
+		if text == "":
+			continue
+		var id := str(row.get("player_id", ""))
+		if not parts.has(id):
+			parts[id] = []
+		parts[id].append(text)
+	var out := {}
+	for id in parts:
+		out[id] = SEPARATOR.join(parts[id])
 	return out
 
 
@@ -35,7 +42,8 @@ static func status(row: Dictionary, club_id: String) -> String:
 
 static func return_text(row: Dictionary, club_id: String) -> String:
 	if str(row.get("kind", "")) == SeasonAvailability.KIND_SUSPENSION:
-		return ban_return(club_id, int(row.get("matches_left", 0)))
+		return ban_return(club_id, int(row.get("matches_left", 0)),
+			str(row.get("competition_id", "")))
 	return injury_return(row)
 
 
@@ -51,10 +59,11 @@ static func injury_return(row: Dictionary) -> String:
 	return "BACK " + label if label != "" else ""
 
 
-static func ban_return(club_id: String, matches_left: int) -> String:
+static func ban_return(club_id: String, matches_left: int,
+		competition_id: String = "") -> String:
 	if matches_left <= 0 or club_id == "":
 		return ""
-	var fixtures := PLRepository.shared().upcoming(club_id, matches_left + 1)
+	var fixtures := PLRepository.shared().upcoming(club_id, matches_left + 1, competition_id)
 	if fixtures.size() <= matches_left:
 		return "BACK AFTER SEASON"
 	var date := str((fixtures[matches_left] as Dictionary).get("kickoff", ""))
