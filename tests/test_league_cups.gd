@@ -94,6 +94,25 @@ func test_the_draw_is_deterministic() -> void:
 	for i in range(first.size()):
 		assert_eq(str(second[i]), str(first[i]), "the same seed drew a different first-round tie")
 
+func test_a_serie_a_save_runs_italys_cups() -> void:
+	var italian := LeagueSeason.create("Italian Cups", "generated", "fixture_days", SEED, ["SA"], true)
+	assert_not_null(italian, "the Serie A cup season was not created")
+	assert_eq(LeagueCup.active_ids(italian.save), ["CI", "SCI"],
+		"a Serie A save does not run Italy's cups")
+	assert_true(LeagueCup.has_round("CI", "PR"), "the Coppa did not draw its preliminary round")
+	var pr := PLDatabase.row(
+		"SELECT COUNT(*) AS n FROM cup_tie WHERE competition_id = 'CI' AND round_id = 'PR';")
+	assert_eq(int(pr["n"]), 4, "the Coppa preliminary round is not four ties")
+	var sci := PLDatabase.row("SELECT COUNT(*) AS n FROM cup_tie WHERE competition_id = 'SCI';")
+	assert_eq(int(sci["n"]), 1, "the Supercoppa is not one match")
+	var seeds := PLDatabase.row(
+		"SELECT COUNT(*) AS n FROM competition_member WHERE competition_id = 'CI' "
+		+ "AND role = 'R16';")
+	assert_eq(int(seeds["n"]), 8, "the Coppa round of sixteen is not eight seeded clubs")
+	italian.close()
+	season.save.ensure_open()
+	PLRepository.shared().invalidate()
+
 func test_the_shield_settles_on_its_day() -> void:
 	var shield := _fixture("CS", "F", 1)
 	assert_false(shield.is_empty(), "the Shield fixture is missing")
