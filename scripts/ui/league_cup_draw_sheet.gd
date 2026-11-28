@@ -18,15 +18,15 @@ var hints := DateHints.new()
 var names := InterestNames.new()
 
 
-static func reveals(screen) -> int:
+static func reveals(screen: LeagueScreen) -> int:
 	return int((screen.draw_state as Dictionary).get("shown", 0))
 
 
-static func settled(screen, view: Dictionary) -> bool:
+static func settled(screen: LeagueScreen, view: Dictionary) -> bool:
 	return reveals(screen) >= (view.get("pairs", []) as Array).size()
 
 
-static func tick(screen, delta: float) -> bool:
+static func tick(screen: LeagueScreen, delta: float) -> bool:
 	var state: Dictionary = screen.draw_state
 	var pairs := (screen.current_view().get("pairs", []) as Array).size()
 	if int(state.get("shown", 0)) >= pairs:
@@ -39,7 +39,7 @@ static func tick(screen, delta: float) -> bool:
 	return true
 
 
-static func settle_all(screen) -> void:
+static func settle_all(screen: LeagueScreen) -> void:
 	var pairs := (screen.current_view().get("pairs", []) as Array).size()
 	screen.draw_state["shown"] = pairs
 	screen.draw_state["clock"] = 0.0

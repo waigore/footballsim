@@ -54,7 +54,7 @@ static func draw_seen(save: LeagueSave, competition_id: String, round_id: String
 		",%s|%s," % [competition_id, round_id]) >= 0
 
 
-static func mark_draw_seen(season, competition_id: String, round_id: String) -> void:
+static func mark_draw_seen(season: LeagueSeason, competition_id: String, round_id: String) -> void:
 	if season == null or season.save == null or round_id == "":
 		return
 	if draw_seen(season.save, competition_id, round_id):
@@ -64,7 +64,7 @@ static func mark_draw_seen(season, competition_id: String, round_id: String) -> 
 	season.save.put_meta(SEEN_KEY, entry if seen == "" else seen + "," + entry)
 
 
-static func pending_draw(season, competition_id: String, round_id: String) -> bool:
+static func pending_draw(season: LeagueSeason, competition_id: String, round_id: String) -> bool:
 	if season == null or round_id == "" or LeagueCupState.winner(competition_id) != "":
 		return false
 	if not LeagueCup.has_round(competition_id, round_id):
@@ -72,7 +72,7 @@ static func pending_draw(season, competition_id: String, round_id: String) -> bo
 	return not draw_seen(season.save, competition_id, round_id)
 
 
-static func card(season, competition_id: String) -> Dictionary:
+static func card(season: LeagueSeason, competition_id: String) -> Dictionary:
 	var stage := LeagueCupState.stage(competition_id)
 	var honour := LeagueCupState.honours(competition_id)
 	return {
@@ -86,7 +86,7 @@ static func card(season, competition_id: String) -> Dictionary:
 	}
 
 
-static func cups(season) -> Array:
+static func cups(season: LeagueSeason) -> Array:
 	var out: Array = []
 	if season == null or season.save == null:
 		return out
@@ -95,7 +95,7 @@ static func cups(season) -> Array:
 	return out
 
 
-static func cup(season, competition_id: String, round_id: String) -> Dictionary:
+static func cup(season: LeagueSeason, competition_id: String, round_id: String) -> Dictionary:
 	var base := {
 		"id": competition_id, "name": short_name(competition_id),
 		"full": long_name(competition_id), "rounds": [], "ties": [], "chosen": "",
@@ -148,7 +148,7 @@ static func cup(season, competition_id: String, round_id: String) -> Dictionary:
 	return base
 
 
-static func draw(season, competition_id: String, round_id: String) -> Dictionary:
+static func draw(season: LeagueSeason, competition_id: String, round_id: String) -> Dictionary:
 	var chosen := round_id if round_id != "" else LeagueCupState.stage(competition_id)
 	var rule := LeagueCup.round_rule(competition_id, chosen)
 	var regional := bool(rule.get("regional", false))

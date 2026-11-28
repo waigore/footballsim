@@ -2,7 +2,7 @@ class_name LeagueCupDoors
 extends RefCounted
 
 
-static func nav(screen, pose: String) -> bool:
+static func nav(screen: LeagueScreen, pose: String) -> bool:
 	if pose != "cups":
 		return false
 	LeagueDoors.go(screen, LeagueScreen.MODE_CUPS)
@@ -10,7 +10,7 @@ static func nav(screen, pose: String) -> bool:
 	return true
 
 
-static func press(screen, id: String) -> bool:
+static func press(screen: LeagueScreen, id: String) -> bool:
 	if id.begins_with("cup:"):
 		open_cup(screen, id.substr(4))
 		return true
@@ -38,7 +38,7 @@ static func split(payload: String) -> Array:
 	return [str(parts[0]), str(parts[1]) if parts.size() > 1 else ""]
 
 
-static func _open_at(screen, payload: String, mode: String, pin: bool) -> void:
+static func _open_at(screen: LeagueScreen, payload: String, mode: String, pin: bool) -> void:
 	var parts := split(payload)
 	if str(parts[0]) == "":
 		return
@@ -50,7 +50,7 @@ static func _open_at(screen, payload: String, mode: String, pin: bool) -> void:
 	screen.refresh()
 
 
-static func open_cup(screen, competition_id: String) -> void:
+static func open_cup(screen: LeagueScreen, competition_id: String) -> void:
 	if competition_id == "":
 		return
 	screen.cup_focus = competition_id
@@ -60,7 +60,7 @@ static func open_cup(screen, competition_id: String) -> void:
 	screen.refresh()
 
 
-static func open_draw(screen, payload: String) -> void:
+static func open_draw(screen: LeagueScreen, payload: String) -> void:
 	var parts := split(payload)
 	screen.cup_focus = str(parts[0])
 	if screen.cup_focus == "":
@@ -76,7 +76,7 @@ static func open_draw(screen, payload: String) -> void:
 	screen.refresh()
 
 
-static func tick(screen, delta: float) -> bool:
+static func tick(screen: LeagueScreen, delta: float) -> bool:
 	if screen.mode != LeagueScreen.MODE_CUP_DRAW:
 		return false
 	if LeagueCupDrawSheet.tick(screen, delta):
@@ -85,7 +85,7 @@ static func tick(screen, delta: float) -> bool:
 	return false
 
 
-static func leave_draw(screen) -> void:
+static func leave_draw(screen: LeagueScreen) -> void:
 	if screen.cup_focus == "":
 		return
 	LeagueCupDrawSheet.settle_all(screen)
