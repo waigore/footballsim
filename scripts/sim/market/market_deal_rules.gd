@@ -157,7 +157,8 @@ static func list_verdict(deal: Dictionary) -> Dictionary:
 		var checked := SquadList.verdict(buyer, str(competition_id), player)
 		if not bool(checked.get("ok", true)):
 			return fail(LIST, "%s: %s" % [
-				LeagueUefa.name_of(str(competition_id)), str(checked.get("detail", ""))])
+				str(PLRepository.shared().competition_name(str(competition_id))),
+				str(checked.get("detail", ""))])
 	return pass_with("")
 
 

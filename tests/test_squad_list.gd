@@ -89,7 +89,7 @@ func _terms(player_id: String, overrides: Dictionary = {}) -> Dictionary:
 
 func _propose(season: LeagueSeason, from: String, to: String, player: String,
 		terms: Dictionary, date: String = DATE) -> String:
-	var out := MarketDeals.propose(season, from, to, player, terms, date)
+	var out := MarketDeals.propose(season.save, from, to, player, terms, date)
 	assert_true(str(out.get("deal", "")) != "", "the deal was not proposed")
 	return str(out.get("deal", ""))
 
