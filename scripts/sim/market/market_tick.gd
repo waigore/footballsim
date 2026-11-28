@@ -9,9 +9,27 @@ static func advance(season: LeagueSeason, from_date: String, to_date: String) ->
 	if season == null or season.save == null or to_date == "" or from_date == to_date:
 		return false
 	walk(season, from_date, to_date)
+	post_months(from_date, to_date)
 	season.market_date = to_date
 	season.market_ticks += 1
 	return true
+
+
+static func post_months(from_date: String, to_date: String) -> int:
+	if from_date.length() < 7 or to_date.length() < 7:
+		return 0
+	var year := int(from_date.substr(0, 4))
+	var month := int(from_date.substr(5, 2))
+	var last_year := int(to_date.substr(0, 4))
+	var last_month := int(to_date.substr(5, 2))
+	var posted := 0
+	while year < last_year or (year == last_year and month < last_month):
+		month += 1
+		if month > 12:
+			month = 1
+			year += 1
+		posted += MarketFinance.month("%04d-%02d-01" % [year, month])
+	return posted
 
 
 static func walk(season: LeagueSeason, from_date: String, to_date: String) -> int:
