@@ -13,8 +13,9 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 	var live := season != null and season.save != null
 	var billing := MatchBilling.new()
 	billing.bind_fixture(home_id, fixture, away_id)
-	var home_xi := StrongestXI.pick(home)
-	var away_xi := StrongestXI.pick(away)
+	var competition_id := str(fixture.get("competition_id", ""))
+	var home_xi := StrongestXI.pick(home, competition_id)
+	var away_xi := StrongestXI.pick(away, competition_id)
 	var seed := _seed(home_id, away_id, fixture)
 	var table := _positions(season) if live else {}
 	var home_pos := int(table.get(home_id, 0))
@@ -42,8 +43,8 @@ static func build(home_id: String, away_id: String, fixture: Dictionary, season:
 		"home": home, "away": away,
 		"home_xi": home_xi, "away_xi": away_xi,
 		"home_captain": _captain(home_xi), "away_captain": _captain(away_xi),
-		"home_absences": SeasonAvailability.absences(home_id) if live else [],
-		"away_absences": SeasonAvailability.absences(away_id) if live else [],
+		"home_absences": SeasonAvailability.absences(home_id, competition_id) if live else [],
+		"away_absences": SeasonAvailability.absences(away_id, competition_id) if live else [],
 		"home_quote": PreMatchCopy.quote(seed, home, away, home_ctx),
 		"away_quote": PreMatchCopy.quote(seed + 17, away, home, away_ctx),
 		"news": PreMatchCopy.news(seed, home, away, ctx),
