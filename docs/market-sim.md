@@ -38,11 +38,10 @@ godot --headless --path . --script res://tools/market_sim.gd -- ai \
   --clubs 172 --days 365 --mode fixture_days
 ```
 
-It plays a season with the market AI on and prints the deal transcript as one
-JSON line: signed count, value spread, the refusal reasons and any club left
-short of eleven. `--mode every_day` must print the same transcript — the
-run exits `1` if a club is stranded or no deal signed. The AI never consumes
-`LeagueSeason.rng`; every draw is keyed `(seed, "market", date, key)`.
+It plays a season with the AI on and prints the signed count, value spread,
+refusals and any stranded club. `--mode every_day` must print the same
+transcript. Draws are keyed `(seed, date, key)`; the AI never consumes
+`LeagueSeason.rng`.
 
 ## The ledger verb
 
@@ -50,11 +49,10 @@ run exits `1` if a club is stranded or no deal signed. The AI never consumes
 godot --headless --path . --script res://tools/market_sim.gd -- ledger --currency EUR
 ```
 
-It opens one save, posts twelve monthly commercial and wage lines, puts a 40m
-fee on the books over four years, books the end-of-season prize curve and
-prints the club's opening envelope, the kinds the ledger now holds and the
-ledger tail as the club page would read it. Money stays in pounds; `--currency`
-only changes the printed display.
+It posts twelve monthly commercial and wage lines, a 40m fee over four years
+and the end-of-season prize curve, then prints the opening envelope, the ledger
+kinds and the tail as the club page reads it. Money stays in pounds; `--currency`
+only changes the display.
 
 ## What a run builds
 
@@ -76,6 +74,3 @@ prove: `none` signs, `list` refuses at the list check, `clearance` fails the
 association wait, `fault` rolls back between the money and the contract, and
 `registration` signs a player the buyer cannot register. The printed JSON is the
 deal's own reading: state, reason, cash and headroom after the move.
-
-The sandbox is development tooling. A player reaches the same code through the
-season, the club page's finances block and the player page's contract block.
