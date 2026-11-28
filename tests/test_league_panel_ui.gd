@@ -381,12 +381,12 @@ func test_the_pinned_doors_paint_on_a_layer_above_the_clipped_body() -> void:
 	var readings := 0
 	for item in screen().buttons:
 		var id := str(item["id"])
-		if id != "tbl:mode:full" and id != "tbl:mode:compact":
+		if not id.begins_with("tbl:mode:"):
 			continue
 		readings += 1
 		assert_true(bool(item.get("pinned", false)), "%s scrolls away" % id)
 		assert_false(tband.encloses(item["rect"]), "%s sits inside the clipped band" % id)
-	assert_eq(readings, 2, "the table lost a reading door")
+	assert_eq(readings, 3, "the table lost a reading door")
 	press_id("back")
 
 func _clean() -> void:

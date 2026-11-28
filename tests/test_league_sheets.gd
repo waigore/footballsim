@@ -618,8 +618,12 @@ func test_the_body_keeps_the_pinned_doors_outside_the_clipped_window() -> void:
 		body.set_sheet(table, vp, true, LeagueChrome.BAR_H)
 		var window := Rect2(body.position, body.size)
 		assert_eq(window.end.y, vp.y - LeagueChrome.BAR_H, "the wrong band is clipped at %s" % vp)
-		assert_eq(body.pinned.size(), 3, "the table lost a pinned door at %s" % vp)
+		assert_eq(body.pinned.size(), 4, "the table lost a pinned door at %s" % vp)
 		assert_gte(reading.position.y, window.end.y, "FULL is inside the scrolling band at %s" % vp)
+		var form: Rect2 = _item_rect(table, "tbl:mode:form")
+		assert_gte(form.position.y, window.end.y, "FORM is inside the scrolling band at %s" % vp)
+		assert_gte(form.position.x, reading.end.x, "the reading doors crowd each other at %s" % vp)
+		assert_lte(form.end.x, vp.x - 24.0, "the form door runs off the sheet at %s" % vp)
 
 		body.scroll_to(400.0)
 		var door := _body_item(body.pinned, "back")
