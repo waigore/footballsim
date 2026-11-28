@@ -50,6 +50,29 @@ func competition(competition_id: String) -> Dictionary:
 	return {}
 
 
+func leagues() -> Array:
+	var out: Array = []
+	for row in competitions():
+		var rules: Dictionary = row.get("rules", {})
+		if str(rules.get("kind", "league")) == "league":
+			out.append(row)
+	return out
+
+
+func cups() -> Array:
+	var out: Array = []
+	for row in competitions():
+		var rules: Dictionary = row.get("rules", {})
+		if str(rules.get("kind", "league")) != "league":
+			out.append(row)
+	return out
+
+
+func competition_kind(competition_id: String) -> String:
+	var rules: Dictionary = competition(competition_id).get("rules", {})
+	return str(rules.get("kind", "league"))
+
+
 func competition_name(competition_id: String) -> String:
 	var row := competition(competition_id)
 	return str(row.get("short_name", row.get("name", competition_id)))
@@ -57,12 +80,13 @@ func competition_name(competition_id: String) -> String:
 
 func club_ids(competition_id: String = "") -> Array:
 	var ids: Array = []
-	var sql := "SELECT id FROM club "
-	var bindings: Array = []
-	if competition_id != "":
-		sql += "WHERE competition_id = ? "
-		bindings.append(competition_id)
-	for row in PLDatabase.rows(sql + "ORDER BY name;", bindings):
+	if competition_id == "":
+		for row in leagues():
+			ids.append_array(club_ids(str(row["id"])))
+		ids.sort()
+		return ids
+	for row in PLDatabase.rows(
+		"SELECT id FROM club WHERE competition_id = ? ORDER BY name;", [competition_id]):
 		ids.append(str(row["id"]))
 	return ids
 

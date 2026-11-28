@@ -43,6 +43,12 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cup_seed_data import (  # noqa: E402
+    CUPS, NAME_POOLS, NORTH_CITIES, PL_EUROPE, PRIORS, SPANISH_NORTH,
+    ENGLISH_STUBS, GERMAN_STUBS, SPANISH_STUBS,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "data" / "pl_snapshot.json"
 SEED_DB = ROOT / "data" / "pl_seed.sqlite"
@@ -456,7 +462,9 @@ CREATE TABLE club (
     shorts TEXT NOT NULL, gk_color TEXT NOT NULL, text_color TEXT NOT NULL,
     style_possession REAL, style_tempo REAL, style_press REAL, style_line REAL,
     style_width REAL, style_directness REAL, style_crossing REAL,
-    style_aggression REAL
+    style_aggression REAL,
+    stub INTEGER NOT NULL DEFAULT 0, tier INTEGER NOT NULL DEFAULT 0,
+    region TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE competition_member (
     competition_id TEXT NOT NULL, member_kind TEXT NOT NULL,
@@ -580,8 +588,10 @@ def upgrade(data: dict) -> dict:
 
 
 def spec_for(competition_id: str) -> dict:
+    if competition_id in CUPS:
+        return CUPS[competition_id]
     if competition_id not in COMPETITIONS:
-        raise SystemExit(f"unknown competition {competition_id}; known: {', '.join(COMPETITIONS)}")
+        raise SystemExit(f"unknown competition {competition_id}; known: {', '.join(list(COMPETITIONS) + list(CUPS))}")
     return COMPETITIONS[competition_id]
 
 
@@ -1089,6 +1099,219 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
     snapshot["clubs"] = kept + seeded
 
 
+STUB_ROLES = [
+    ("GK", "GK"), ("RB", "RB"), ("RCB", "CB"), ("LCB", "CB"), ("LB", "LB"),
+    ("RDM", "CDM"), ("LDM", "CDM"), ("RW", "RW"), ("CAM", "CAM"), ("LW", "LW"),
+    ("ST", "ST"), ("GK", "GK"), ("RCB", "CB"), ("LB", "LB"), ("RDM", "CDM"),
+    ("RW", "RW"), ("LW", "LW"), ("ST", "ST"),
+]
+
+STUB_COLORS = [
+    "#1f4e79", "#7a1f1f", "#1d5c3a", "#5b3a86", "#8a5a00", "#0f5f6e",
+    "#4a4a4a", "#7a2f5a", "#2f5d1f", "#63391f", "#1f3f7a", "#6e1f3f",
+]
+
+
+def _stub_club(cup_id: str, country: str, name: str, abbr: str, city: str,
+               tier: int, region: str, band: int) -> dict:
+    digest = hashlib.sha1(name.encode("utf-8")).hexdigest()
+    h = int(digest[:8], 16)
+    color = STUB_COLORS[h % len(STUB_COLORS)]
+    ground = {"England": "Park", "Germany": "Stadion", "Spain": "Municipal"}[country]
+    style = {k: round(0.5 + _jitter(name + k, 12) / 100.0, 2) for k in STYLE_KEYS}
+    return {
+        "id": f"STUB-{name}",
+        "name": name, "short": city, "abbr": abbr, "nickname": "", "manager": "",
+        "stadium": f"{city} {ground}", "city": city,
+        "capacity": 2500 + (h % 12) * 500, "formation": "4-4-2",
+        "color": color, "color_dark": _shade(color, 0.62), "color_light": _shade(color, 1.35),
+        "shorts": "#ffffff", "gk_color": "#1a1a1a", "text": _ink(color),
+        "style": style,
+        "players": _stub_squad(country, name, band),
+        "competition_id": cup_id, "country": country,
+        "stub": 1, "tier": tier, "region": region,
+    }
+
+
+def _stub_squad(country: str, club_name: str, band: int) -> list[dict]:
+    pool = NAME_POOLS[country]
+    players: list[dict] = []
+    used: set[str] = set()
+    for i, (role, pos) in enumerate(STUB_ROLES):
+        first = pool["first"][(i * 5 + len(club_name)) % len(pool["first"])]
+        last_index = (i * 7 + len(club_name)) % len(pool["last"])
+        player_name = f"{first} {pool['last'][last_index]}"
+        step = 1
+        while player_name in used:
+            last_index = (last_index + 1) % len(pool["last"])
+            player_name = f"{first} {pool['last'][last_index]}"
+            step += 1
+            if step > len(pool["last"]):
+                player_name = f"{first} {pool['last'][last_index]}-{i}"
+        used.add(player_name)
+        attrs = _attributes(band + (1.5 if i < 11 else -3.0), role, player_name + club_name)
+        players.append({
+            "id": f"{club_name}-{i + 1}-{player_name}",
+            "name": player_name, "number": i + 1, "role": role, "pos": pos,
+            "height": 172 + _jitter(club_name + player_name, 8),
+            "squad": "starter" if i < 11 else "bench",
+            "age": 19 + (int(hashlib.sha1(f"{club_name}{player_name}".encode()).hexdigest()[:4], 16) % 16),
+            "nationality": country, "date_of_birth": "",
+            **attrs,
+        })
+    return players
+
+
+def _stub_rows() -> list[tuple[str, str, list]]:
+    return [
+        ("England", "FAC", ENGLISH_STUBS),
+        ("Germany", "DFBP", GERMAN_STUBS),
+        ("Spain", "CDR", SPANISH_STUBS),
+    ]
+
+
+def _club_index(snapshot: dict) -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    for club in snapshot["clubs"]:
+        name = str(club["name"])
+        if name in out and str(out[name].get("competition_id", "")) != str(club.get("competition_id", "")):
+            out[name] = club
+            continue
+        out.setdefault(name, club)
+        out[name] = club
+    return out
+
+
+def _entry_members(snapshot: dict) -> list[dict]:
+    """The cup entry list: one row per (cup, club), role = the round it enters."""
+    by_name = _club_index(snapshot)
+    by_comp: dict[str, list[dict]] = {}
+    for club in snapshot["clubs"]:
+        by_comp.setdefault(str(club.get("competition_id", "")), []).append(club)
+    members: list[dict] = []
+
+    def add(cup_id: str, club: dict, role: str) -> None:
+        members.append({"competition_id": cup_id, "member_id": str(club["id"]), "role": role})
+
+    def club_of(competition_id: str, name: str) -> dict:
+        for candidate in by_comp.get(competition_id, []):
+            if str(candidate["name"]) == name:
+                return candidate
+        if name in by_name:
+            return by_name[name]
+        raise SystemExit(f"cup entrant {name} is not in the {competition_id} pool")
+
+    for cid in ("L1", "L2", "NL"):
+        for club_row in by_comp.get(cid, []):
+            add("FAC", club_row, "R1")
+    for cid in ("PL", "CH"):
+        for club_row in by_comp.get(cid, []):
+            add("FAC", club_row, "R3")
+    for club_row in by_comp.get("FAC", []):
+        add("FAC", club_row, "R1")
+
+    table = {str(r["club_id"]): int(r["position"]) for r in snapshot.get("table", [])
+             if str(r.get("competition_id", "")) == "L2"}
+    for club_row in by_comp.get("L2", []):
+        add("EFLC", club_row, "PR" if table.get(str(club_row["id"]), 99) >= 21 else "R1")
+    for cid in ("L1", "CH"):
+        for club_row in by_comp.get(cid, []):
+            add("EFLC", club_row, "R1")
+    for club_row in by_comp.get("PL", []):
+        add("EFLC", club_row, "R3" if str(club_row["name"]) in PL_EUROPE else "R2")
+
+    supercopa = set(PRIORS["SCE"]["entrants"])
+    for club_row in by_comp.get("LL", []):
+        add("CDR", club_row, "R32" if str(club_row["name"]) in supercopa else "R1")
+    for club_row in by_comp.get("CDR", []):
+        add("CDR", club_row, "PR" if int(club_row.get("tier", 4)) >= 5 else "R1")
+
+    for cid in ("BL", "BL2"):
+        for club_row in by_comp.get(cid, []):
+            add("DFBP", club_row, "R1")
+    for club_row in by_comp.get("DFBP", []):
+        add("DFBP", club_row, "R1")
+
+    for name in PRIORS["CS"]["entrants"]:
+        add("CS", club_of("PL", name), "F")
+    for name in PRIORS["DFLS"]["entrants"]:
+        add("DFLS", club_of("BL", name), "F")
+    for name in PRIORS["SCE"]["entrants"]:
+        add("SCE", club_of("LL", name), "SF")
+    return members
+
+
+def seed_cups(snapshot: dict) -> dict:
+    """Add the cup catalogue, its stubs, entry membership and priors."""
+    for cid, spec in CUPS.items():
+        row = {
+            "id": cid, "name": spec["name"], "short_name": spec["short_name"],
+            "country": spec["country"], "espn": "",
+            "rules": dict(spec["rules"], kind=spec["kind"]),
+        }
+        existing = next((c for c in snapshot["competitions"] if str(c["id"]) == cid), None)
+        if existing is None:
+            snapshot["competitions"].append(row)
+        else:
+            existing.update(row)
+
+    for club in snapshot["clubs"]:
+        if int(club.get("stub", 0)):
+            continue
+        cid = str(club.get("competition_id", ""))
+        city = str(club.get("city", ""))
+        if cid in ("PL", "CH", "L1", "L2", "NL"):
+            club["region"] = "north" if city in NORTH_CITIES else "south"
+            if str(club.get("name", "")) == "Barnsley":
+                club["region"] = "north"
+        elif cid == "LL":
+            club["region"] = "north" if city in SPANISH_NORTH else "south"
+
+    wanted = {row[0] for _, _, rows in _stub_rows() for row in rows}
+    snapshot["clubs"] = [
+        c for c in snapshot["clubs"]
+        if not (int(c.get("stub", 0)) == 1 and str(c["name"]) not in wanted)
+    ]
+    present = {str(c["name"]) for c in snapshot["clubs"]}
+    for country, cup_id, rows in _stub_rows():
+        for name, abbr, city, tier, region, band in rows:
+            if name in present:
+                continue
+            snapshot["clubs"].append(_stub_club(cup_id, country, name, abbr, city, tier, region, band))
+            present.add(name)
+
+    snapshot["members"] = _entry_members(snapshot)
+    snapshot["season_label"] = snapshot.get("season_label", "2026-27")
+    return snapshot
+
+
+def _pin_supercopa(snapshot: dict) -> None:
+    by_name = _club_index(snapshot)
+    for comp in snapshot["competitions"]:
+        if str(comp["id"]) != "SCE":
+            continue
+        pairs = [[str(by_name[name]["id"]) for name in pair] for pair in PRIORS["SCE"]["semi_finals"]]
+        comp["rules"]["semi_finals"] = pairs
+
+
+def cmd_seed_cups(args: argparse.Namespace) -> int:
+    snapshot = load(args.snapshot)
+    snapshot = upgrade(snapshot)
+    seed_cups(snapshot)
+    snapshot = remap_ids(snapshot)
+    _pin_supercopa(snapshot)
+    snapshot["db_version"] = int(snapshot.get("db_version", 1)) + (1 if args.bump_version else 0)
+    snapshot["schema_version"] = SCHEMA_VERSION
+    save(args.snapshot, snapshot)
+    for cid in CUPS:
+        roles: dict[str, int] = {}
+        for row in snapshot["members"]:
+            if row["competition_id"] == cid:
+                roles[row["role"]] = roles.get(row["role"], 0) + 1
+        print(f"{cid}: {sum(roles.values())} entrants {roles}")
+    return 0
+
+
 def cmd_seed(args: argparse.Namespace) -> int:
     snapshot = load(args.snapshot)
     targets = list(COMPETITIONS) if args.competition == "all" else [args.competition]
@@ -1175,7 +1398,7 @@ def build_db(snapshot: dict) -> dict:
         comp_id = str(club.get("competition_id", primary["id"]))
         style = club.get("style", {})
         con.execute(
-            "INSERT INTO club VALUES (" + ",".join("?" * 26) + ")",
+            "INSERT INTO club VALUES (" + ",".join("?" * 29) + ")",
             (
                 club["id"], comp_id, str(club.get("country", "")),
                 club["name"], club["short"], club["abbr"],
@@ -1184,11 +1407,13 @@ def build_db(snapshot: dict) -> dict:
                 club["color"], club["color_dark"], club["color_light"],
                 club["shorts"], club["gk_color"], club["text"],
                 *[float(style.get(k, 0.5)) for k in STYLE_KEYS],
+                int(club.get("stub", 0)), int(club.get("tier", 0)), str(club.get("region", "")),
             ),
         )
-        con.execute(
-            "INSERT INTO competition_member (competition_id, member_kind, member_id, role) "
-            "VALUES (?, 'club', ?, 'member');", (comp_id, club["id"]))
+        if not int(club.get("stub", 0)):
+            con.execute(
+                "INSERT INTO competition_member (competition_id, member_kind, member_id, role) "
+                "VALUES (?, 'club', ?, 'member');", (comp_id, club["id"]))
         for ord, p in enumerate(club["players"]):
             gk = p.get("gk") or {}
             con.execute(
@@ -1204,6 +1429,12 @@ def build_db(snapshot: dict) -> dict:
             con.execute(
                 "INSERT OR IGNORE INTO competition_member (competition_id, member_kind, member_id, role) "
                 "VALUES (?, 'player', ?, 'player');", (comp_id, p["id"]))
+    for member in snapshot.get("members", []):
+        con.execute(
+            "INSERT OR IGNORE INTO competition_member (competition_id, member_kind, member_id, role) "
+            "VALUES (?, 'club', ?, ?);",
+            (str(member["competition_id"]), str(member["member_id"]), str(member.get("role", "member"))),
+        )
     for row in snapshot.get("table", []):
         comp_id = str(row.get("competition_id", primary["id"]))
         con.execute(
@@ -1303,6 +1534,8 @@ def remap_ids(snapshot: dict) -> dict:
             player["id"] = player_map[str(player["id"])]
     for row in snapshot.get("table", []):
         row["club_id"] = club_map.get(str(row["club_id"]), str(row["club_id"]))
+    for member in snapshot.get("members", []):
+        member["member_id"] = club_map.get(str(member["member_id"]), str(member["member_id"]))
     for fixture in snapshot.get("fixtures", []):
         for side in ("home", "away"):
             fixture[side] = club_map.get(str(fixture[side]), str(fixture[side]))
@@ -1407,7 +1640,22 @@ def cmd_verify(args: argparse.Namespace) -> int:
               f"starters {starters}, metadata {meta}")
     else:
         problems.append(f"missing {SEED_DB.relative_to(ROOT)}; run build")
+    known_clubs = {str(c["id"]) for c in snapshot["clubs"]}
     for cid in comps:
+        if cid in CUPS:
+            roles: dict[str, int] = {}
+            for row in snapshot.get("members", []):
+                if str(row.get("competition_id", "")) != cid:
+                    continue
+                roles[str(row.get("role", ""))] = roles.get(str(row.get("role", "")), 0) + 1
+                if str(row.get("member_id", "")) not in known_clubs:
+                    problems.append(f"{cid}: entry {row.get('member_id', '')} has no club")
+            for role, need in CUPS[cid]["rules"].get("entrants", {}).items():
+                if roles.get(role, 0) != need:
+                    problems.append(f"{cid}: {roles.get(role, 0)} entrants in {role}, expected {need}")
+            if cid in ("CS", "DFLS", "SCE") and CUPS[cid]["rules"].get("entrants"):
+                pass
+            continue
         need = CLUB_COUNTS.get(cid, 20)
         clubs = comp_clubs(snapshot, cid)
         if len(clubs) != need:
@@ -1454,6 +1702,10 @@ def main(argv: list[str] | None = None) -> int:
     remap = sub.add_parser("remap", help="mint country-stable club ids and UUID player ids")
     remap.add_argument("--bump-version", action="store_true")
     remap.set_defaults(func=cmd_remap)
+    cups = sub.add_parser("cups", help="add the cup catalogue, stubs, entry pools and priors")
+    cups.add_argument("--season", type=int, default=2026)
+    cups.add_argument("--bump-version", action="store_true")
+    cups.set_defaults(func=cmd_seed_cups)
     build = sub.add_parser("build", help="write data/pl_seed.sqlite from the snapshot")
     build.set_defaults(func=cmd_build)
     verify = sub.add_parser("verify", help="check the shipped seed against the snapshot")

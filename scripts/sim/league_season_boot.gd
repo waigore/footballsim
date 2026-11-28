@@ -3,7 +3,7 @@ extends RefCounted
 
 
 static func create(name: String, calendar_mode: String, advance_mode: String, seed: int = 0,
-		competitions: Array = ["PL"]) -> LeagueSeason:
+		competitions: Array = ["PL"], cups: bool = false) -> LeagueSeason:
 	var saved_mode := calendar_mode if LeagueRules.CALENDAR_MODES.has(calendar_mode) else "generated"
 	var saved_advance := advance_mode if LeagueRules.ADVANCE_MODES.has(advance_mode) else "fixture_days"
 	if seed == 0:
@@ -53,6 +53,11 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	season.rules_by = save.rules_by
 	season.rules = save.rules
 	season.rng.seed = seed
+	save.put_meta("cups", "on" if cups else "off")
+	LeagueCupState.start(season)
+	save.reload()
+	season.rules_by = save.rules_by
+	season.rules = save.rules
 	LeagueSeason.active = season
 	return season
 
@@ -90,6 +95,7 @@ static func open(slug: String) -> LeagueSeason:
 
 
 	season.record.interest.force_watch()
+	LeagueCupState.start(season)
 	season.roll_clock()
 	LeagueSeason.active = season
 	return season

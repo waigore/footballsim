@@ -16,6 +16,7 @@ static func build(season: LeagueSeason) -> Dictionary:
 		return {}
 	var out: Dictionary = (sections[0] as Dictionary).duplicate(true)
 	out["competitions"] = sections
+	out["cups"] = _cups(season)
 	out["one_podium"] = true
 	_end_of_linked_season(season, out)
 	_mark_playouts(out)
@@ -79,6 +80,19 @@ static func _end_of_linked_season(season: LeagueSeason, out: Dictionary) -> void
 		out[key] = payload[key]
 	if not payload.is_empty():
 		season.save.put_meta("linked_end", JSON.stringify(payload))
+
+static func _cups(season: LeagueSeason) -> Array:
+	var out: Array = []
+	for cid in LeagueCup.active_ids(season.save):
+		var honour := LeagueCupState.honours(str(cid))
+		if honour.is_empty():
+			continue
+		var comp := PLRepository.shared().competition(str(cid))
+		honour["name"] = str(comp.get("name", str(cid)))
+		honour["short"] = str(comp.get("short_name", str(cid)))
+		out.append(honour)
+	return out
+
 
 static func _section(season: LeagueSeason, competition_id: String) -> Dictionary:
 	var rows: Array = season.record.standings.table(competition_id)
