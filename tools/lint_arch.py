@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +32,7 @@ ALLOWED_GD_PREFIXES = (
 )
 
 SIZE_ALLOWLIST_PATH = ROOT / "tools" / "arch_size_allowlist.txt"
+SIM_PACKAGES_PATH = ROOT / "tools" / "arch_sim_packages.toml"
 AUTOLOAD_ALLOWLIST_PATH = ROOT / "tools" / "arch_autoload_allowlist.txt"
 AUTOLOAD_CONSUMERS_PATH = ROOT / "tools" / "arch_autoload_consumers.txt"
 UI_ICONS_PATH = ROOT / "tools" / "arch_ui_icons.txt"
@@ -561,6 +563,201 @@ def check_layer_imports(failures: list[str]) -> None:
             )
 
 
+def load_sim_packages() -> dict:
+    """Load tools/arch_sim_packages.toml (packages, edges, ratchets)."""
+    if not SIM_PACKAGES_PATH.is_file():
+        raise ValueError(f"missing {SIM_PACKAGES_PATH.name}")
+    with SIM_PACKAGES_PATH.open("rb") as fh:
+        data = tomllib.load(fh)
+    packages = data.get("packages") or {}
+    edges = data.get("allowed_edges") or {}
+    root = (data.get("root_allowlist") or {}).get("entries") or []
+    edge_allow = (data.get("edge_allowlist") or {}).get("entries") or []
+    if not isinstance(packages, dict) or not packages:
+        raise ValueError("arch_sim_packages.toml: [packages] is empty")
+    return {
+        "packages": {str(k): str(v) for k, v in packages.items()},
+        "edges": {str(k): [str(x) for x in (v or [])] for k, v in edges.items()},
+        "root_allowlist": [str(x) for x in root],
+        "edge_allowlist": [str(x) for x in edge_allow],
+    }
+
+
+SIM_CLASS_RE = re.compile(r"(?m)^class_name\s+(\w+)")
+SIM_EXTENDS_TARGET_RE = re.compile(
+    r"""(?m)^extends\s+["'](res://scripts/sim/[^"']+)["']"""
+)
+
+
+def _sim_package_of(rel: str, prefixes: dict[str, str]) -> str | None:
+    """Return the package name whose prefix owns this sim path, else None."""
+    for pkg, prefix in prefixes.items():
+        if rel.startswith(prefix):
+            return pkg
+    return None
+
+
+def _sim_edges(
+    prefixes: dict[str, str],
+) -> tuple[dict[str, list[tuple[str, str]]], dict[str, list[str]]]:
+    """Return (edges, class_to_pkg).
+
+    edges[src_pkg] -> list of (dst_pkg, detail) for every path/symbol edge the
+    sim tree actually has. A package never points at itself.
+    """
+    sim_root = ROOT / "scripts" / "sim"
+    files = sorted(sim_root.rglob("*.gd"))
+    class_to_pkg: dict[str, str] = {}
+    for path in files:
+        rel = path.relative_to(ROOT).as_posix()
+        pkg = _sim_package_of(rel, prefixes)
+        m = SIM_CLASS_RE.search(path.read_text(encoding="utf-8"))
+        if m and pkg is not None:
+            class_to_pkg[m.group(1)] = pkg
+    edges: dict[str, list[tuple[str, str]]] = {}
+    for path in files:
+        rel = path.relative_to(ROOT).as_posix()
+        src = _sim_package_of(rel, prefixes)
+        if src is None:
+            continue
+        raw = path.read_text(encoding="utf-8")
+        for match in LOAD_RES_RE.finditer(raw):
+            target = match.group(1).replace("res://", "")
+            dst = _sim_package_of(target, prefixes)
+            if dst is not None and dst != src:
+                edges.setdefault(src, []).append((dst, f"load {target}"))
+        for match in SIM_EXTENDS_TARGET_RE.finditer(raw):
+            target = match.group(1).replace("res://", "")
+            dst = _sim_package_of(target, prefixes)
+            if dst is not None and dst != src:
+                edges.setdefault(src, []).append((dst, f"extends {target}"))
+        scanned = _strip_comments_and_strings(raw)
+        for cls, dst in class_to_pkg.items():
+            if dst == src:
+                continue
+            if re.search(rf"\b{re.escape(cls)}\b", scanned):
+                edges.setdefault(src, []).append((dst, f"class_name {cls}"))
+    return edges, class_to_pkg
+
+
+def _would_cycle(edges: dict[str, list[tuple[str, str]]]) -> list[str]:
+    """Return cycle descriptions found in the src->dst package graph."""
+    graph: dict[str, set[str]] = {}
+    for src, items in edges.items():
+        for dst, _detail in items:
+            graph.setdefault(src, set()).add(dst)
+    cycles: list[str] = []
+    state: dict[str, int] = {}
+
+    def visit(node: str, stack: list[str]) -> None:
+        state[node] = 1
+        stack.append(node)
+        for nxt in sorted(graph.get(node, ())):
+            if state.get(nxt, 0) == 1:
+                i = stack.index(nxt)
+                cycles.append(" -> ".join(stack[i:] + [nxt]))
+            elif state.get(nxt, 0) == 0:
+                visit(nxt, stack)
+        stack.pop()
+        state[node] = 2
+
+    for node in sorted(graph):
+        if state.get(node, 0) == 0:
+            visit(node, [])
+    return cycles
+
+
+def check_sim_packages(failures: list[str], manifest: dict) -> None:
+    """RUB-P3-01/REQ-P3-01: sim placement + one-way package edges (#527)."""
+    prefixes: dict[str, str] = manifest["packages"]
+    allowed: dict[str, list[str]] = manifest["edges"]
+    root_allow = manifest["root_allowlist"]
+    edge_allow = set(manifest["edge_allowlist"])
+
+    sim_root = ROOT / "scripts" / "sim"
+    if not sim_root.is_dir():
+        return
+
+    # 1. Placement: every sim .gd maps to exactly one declared package.
+    for path in sorted(sim_root.rglob("*.gd")):
+        rel = path.relative_to(ROOT).as_posix()
+        if _sim_package_of(rel, prefixes) is not None:
+            continue
+        if rel in root_allow:
+            continue
+        failures.append(
+            f"{rel}:1: RUB-P3-01 sim script lives outside a declared package "
+            f"(move it under one of {sorted(prefixes)} or shrink-only "
+            f"root_allowlist in tools/arch_sim_packages.toml)"
+        )
+
+    edges, _class_to_pkg = _sim_edges(prefixes)
+
+    # 2. Weight any declared-but-unlisted edge by package + target.
+    for src, items in edges.items():
+        src_allowed = allowed.get(src, [])
+        for dst, detail in items:
+            if dst in src_allowed:
+                continue
+            key = f"{src}->{dst}"
+            if key in edge_allow:
+                continue
+            failures.append(
+                f"scripts/sim/{src}/:1: RUB-P3-01 illegal sim edge "
+                f"{src} -> {dst} ({detail}); allow it in [allowed_edges] next "
+                f"to a one-way DAG, or shrink-only edge_allowlist"
+            )
+
+    # 3. The declared DAG itself must be acyclic.
+    declared: dict[str, list[tuple[str, str]]] = {
+        src: [(dst, "declared") for dst in dsts]
+        for src, dsts in allowed.items()
+    }
+    for src, dsts in declared.items():
+        for dst, _d in dsts:
+            if src in allowed.get(dst, []):
+                failures.append(
+                    f"tools/arch_sim_packages.toml:1: RUB-P3-01 declared edges "
+                    f"are two-way: {src} -> {dst} and {dst} -> {src}"
+                )
+
+    # 4. Ratchets shrink-only vs base_ref.
+    total_ratchet = len(root_allow) + len(edge_allow)
+    max_ratchet = 5
+    if total_ratchet > max_ratchet:
+        failures.append(
+            f"tools/arch_sim_packages.toml:1: RUB-P3-01 sim allowlists hold "
+            f"{total_ratchet} entries (max {max_ratchet}); finish the move "
+            f"instead of growing the ratchet"
+        )
+
+
+def check_sim_packages_ratchet(failures: list[str], manifest: dict, base_ref: str) -> None:
+    """Shrink-only: the ratchet at HEAD must not exceed the base's."""
+    rel = SIM_PACKAGES_PATH.relative_to(ROOT).as_posix()
+    text = _git_show_text(base_ref, rel)
+    if text is None:
+        return
+    try:
+        base = tomllib.loads(text)
+    except tomllib.TOMLDecodeError:
+        return
+    base_root = set((base.get("root_allowlist") or {}).get("entries") or [])
+    base_edge = set((base.get("edge_allowlist") or {}).get("entries") or [])
+    for entry in manifest["root_allowlist"]:
+        if entry not in base_root:
+            failures.append(
+                f"{rel}:1: RUB-P3-01 root_allowlist grew ({entry!r} not at "
+                f"{base_ref}); the ratchet is shrink-only"
+            )
+    for entry in manifest["edge_allowlist"]:
+        if entry not in base_edge:
+            failures.append(
+                f"{rel}:1: RUB-P3-01 edge_allowlist grew ({entry!r} not at "
+                f"{base_ref}); the ratchet is shrink-only"
+            )
+
+
 def load_autoload_consumers() -> dict[str, list[str]]:
     """Map autoload name -> list of allowed consumer path prefixes/globs."""
     result: dict[str, list[str]] = {}
@@ -689,11 +886,43 @@ def _git_show_text(base_ref: str, rel: str) -> str | None:
         return None
 
 
+def _git_renames(base_ref: str) -> dict[str, str]:
+    """Map new path -> old path for files renamed vs base_ref (follow moves)."""
+    renames: dict[str, str] = {}
+    for cmd in (
+        ["git", "diff", "--name-status", "-M", "--diff-filter=R", f"{base_ref}...HEAD"],
+        ["git", "diff", "--name-status", "-M", "--diff-filter=R", base_ref],
+        ["git", "diff", "--name-status", "-M", "--diff-filter=R", "HEAD"],
+    ):
+        try:
+            out = subprocess.check_output(
+                cmd, cwd=ROOT, text=True, stderr=subprocess.DEVNULL
+            )
+        except subprocess.CalledProcessError:
+            continue
+        for line in out.splitlines():
+            parts = line.split("\t")
+            if len(parts) >= 3 and parts[0].startswith("R"):
+                renames[parts[2].strip()] = parts[1].strip()
+    return renames
+
+
+def _base_text_for(base_ref: str, rel: str, renames: dict[str, str]) -> str | None:
+    text = _git_show_text(base_ref, rel)
+    if text is not None:
+        return text
+    old = renames.get(rel)
+    if old is not None:
+        return _git_show_text(base_ref, old)
+    return None
+
+
 def check_typed_diff(failures: list[str], base_ref: str) -> None:
     """RUB-P3-01: no new untyped func params on changed scripts/** .gd files."""
     changed = _git_changed_paths(base_ref)
     if not changed:
         return
+    renames = _git_renames(base_ref)
     for rel in sorted(changed):
         if not rel.startswith("scripts/") or not rel.endswith(".gd"):
             continue
@@ -702,7 +931,7 @@ def check_typed_diff(failures: list[str], base_ref: str) -> None:
             continue
         head_text = path.read_text(encoding="utf-8")
         head_unt = _untyped_params(head_text)
-        base_text = _git_show_text(base_ref, rel)
+        base_text = _base_text_for(base_ref, rel, renames)
         base_unt = _untyped_params(base_text) if base_text is not None else set()
         new_unt = sorted(head_unt - base_unt)
         for func_name, pname in new_unt:
@@ -966,6 +1195,7 @@ def main(argv: list[str] | None = None) -> int:
         size_allowlist = load_size_allowlist()
         autoload_allowlist = load_autoload_allowlist()
         autoload_consumers = load_autoload_consumers()
+        sim_packages = load_sim_packages()
     except ValueError as exc:
         print(f"Allowlist error: {exc}", file=sys.stderr)
         return 2
@@ -979,6 +1209,8 @@ def main(argv: list[str] | None = None) -> int:
     check_autoload_usage(failures, autoload_consumers)
     check_core_purity(failures)
     check_layer_imports(failures)
+    check_sim_packages(failures, sim_packages)
+    check_sim_packages_ratchet(failures, sim_packages, base_ref)
     check_platform(failures)
     check_no_3d_core(failures)
     check_ui_icons(failures)

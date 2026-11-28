@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_snapshot.gd"
+extends "res://scripts/sim/match_engine/match_engine_snapshot.gd"
 
 
 const ET_FIRST_END := 6300.0
@@ -23,7 +23,7 @@ func _second_half_over() -> void:
 	if requires_winner and int(score[0]) == int(score[1]):
 		phase = "et_break"
 		half_break_timer = 3.0
-		_emit("extra_time", CommentaryExtraTime.extra_time(rng, _short(0), _short(1)), -1, null)
+		_emit("extra_time", _narrate("extra_time", {"a_short": _short(0), "b_short": _short(1)}), -1, null)
 		blackout()
 		return
 	_end_match()
@@ -43,7 +43,7 @@ func _begin_extra_time() -> void:
 	half = 3
 	phase = "restart"
 	setup_kickoff(1 - kickoff_team, true)
-	_emit("extra_time_start", CommentaryExtraTime.extra_time_start(rng, _short(0), _short(1)), -1, null)
+	_emit("extra_time_start", _narrate("extra_time_start", {"a_short": _short(0), "b_short": _short(1)}), -1, null)
 
 func _begin_extra_time_second() -> void:
 	added[3] = 15.0 + rng.randf_range(0.0, 35.0)
@@ -52,14 +52,14 @@ func _begin_extra_time_second() -> void:
 	half = 4
 	phase = "restart"
 	setup_kickoff(1 - kickoff_team, true)
-	_emit("extra_time_second", CommentaryExtraTime.extra_time_second(rng, _short(0), _short(1)), -1, null)
+	_emit("extra_time_second", _narrate("extra_time_second", {"a_short": _short(0), "b_short": _short(1)}), -1, null)
 
 func _tick_extra_time_period() -> void:
 	if half == 3:
 		if clock >= ET_FIRST_END + float(added[2]):
 			phase = "et_break"
 			half_break_timer = 3.0
-			_emit("extra_time_break", CommentaryExtraTime.extra_time_break(), -1, null)
+			_emit("extra_time_break", _narrate("extra_time_break", {}, 0), -1, null)
 			blackout()
 		return
 	if half == 4 and clock >= ET_SECOND_END + float(added[3]):
@@ -76,7 +76,7 @@ func _begin_shootout() -> void:
 	shootout_score = [0, 0]
 	shootout_done = false
 	_build_shootout_order()
-	_emit("shootout_start", CommentaryExtraTime.shootout_start(rng, _short(0)), -1, null)
+	_emit("shootout_start", _narrate("shootout_start", {"team_short": _short(0)}), -1, null)
 
 func _tick_shootout(dt: float) -> void:
 	if shootout_done:
@@ -129,7 +129,7 @@ func _take_shootout_kick() -> void:
 		"scored": scored, "pens": shootout_score.duplicate(),
 	})
 	var kind := "penalty_scored" if scored else "penalty_missed"
-	_emit(kind, CommentaryExtraTime.shootout_kick(rng, who, scored), t, p)
+	_emit(kind, _narrate(kind, {"player": who}), t, p)
 	if _shootout_decided():
 		_finish_shootout()
 
@@ -175,15 +175,16 @@ func _shootout_decided() -> bool:
 func _finish_shootout() -> void:
 	shootout_done = true
 	winner = 0 if int(shootout_score[0]) > int(shootout_score[1]) else 1
-	var line: String = CommentaryExtraTime.shootout_end(_short(winner),
-		int(shootout_score[winner]), int(shootout_score[1 - winner]))
+	var line: String = _narrate("shootout_end", {"team_short": _short(winner),
+		"pens_for": int(shootout_score[winner]), "pens_against": int(shootout_score[1 - winner])}, 0)
 	_emit("shootout_end", line, winner, null)
 	_end_match()
 
 func _full_time_text() -> String:
 	if not shootout.is_empty():
-		return CommentaryExtraTime.full_time_pens(rng, _short(0), int(score[0]),
-			_short(1), int(score[1]), int(shootout_score[0]), int(shootout_score[1]))
+		return _narrate("full_time_pens", {"a_short": _short(0), "a_score": int(score[0]),
+			"b_short": _short(1), "b_score": int(score[1]),
+			"pens_a": int(shootout_score[0]), "pens_b": int(shootout_score[1])}, 0)
 	return super()
 
 

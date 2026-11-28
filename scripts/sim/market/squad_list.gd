@@ -3,6 +3,7 @@ extends RefCounted
 
 
 const TABLE := "player_registration"
+const UEFA_IDS := ["UCL", "UEL", "UECL"]
 
 const REGISTERED := "registered"
 const PROVISIONAL := "provisional"
@@ -53,7 +54,7 @@ static func u21_free() -> bool:
 
 
 static func is_uefa(competition_id: String) -> bool:
-	return LeagueUefa.is_continental(competition_id)
+	return PLRepository.shared().competition_kind(competition_id) == "continental"
 
 
 static func entries(club_id: String) -> Array:
@@ -66,7 +67,7 @@ static func entries(club_id: String) -> Array:
 	var present := {}
 	for row in rows:
 		present[str(row["competition_id"])] = true
-	for cid in LeagueUefa.IDS:
+	for cid in UEFA_IDS:
 		if present.has(str(cid)) and is_uefa(str(cid)):
 			out.append(str(cid))
 	return out
@@ -163,13 +164,13 @@ static func ineligible_ids(club_id: String, competition_id: String) -> Array:
 	return out
 
 
-static func bootstrap(season: LeagueSeason) -> Dictionary:
+static func bootstrap(save: LeagueSave) -> Dictionary:
 	var out := {"ok": false, "lists": 0, "players": 0, "provisional": 0, "skipped": false}
-	if season == null or season.save == null or not season.save.ensure_open():
+	if save == null or not save.ensure_open():
 		return out
-	if not available() or str(season.save.meta.get("uefa", "off")) != "on":
+	if not available() or str(save.meta.get("uefa", "off")) != "on":
 		return out
-	var index := season.save.season_index()
+	var index := save.season_index()
 	if int(PLDatabase.row(
 			"SELECT COUNT(*) AS n FROM player_registration WHERE season_index = ?;",
 			[index]).get("n", 0)) > 0:
@@ -177,7 +178,7 @@ static func bootstrap(season: LeagueSeason) -> Dictionary:
 		out["skipped"] = true
 		return out
 	PLDatabase.transaction("BEGIN TRANSACTION;")
-	for cid in LeagueUefa.IDS:
+	for cid in UEFA_IDS:
 		var list := _bootstrap_competition(str(cid), index)
 		out["lists"] = int(out["lists"]) + 1
 		out["players"] = int(out["players"]) + int(list.get("players", 0))
@@ -211,7 +212,7 @@ static func reading(club_id: String, competition_id: String) -> Dictionary:
 		})
 	return {
 		"competition": competition_id,
-		"name": LeagueUefa.name_of(competition_id),
+		"name": str(PLRepository.shared().competition_name(competition_id)),
 		"slots": slots(),
 		"slots_used": slots_used(club_id, competition_id),
 		"trained": trained_count(club_id, competition_id),

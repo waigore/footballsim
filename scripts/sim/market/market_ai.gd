@@ -2,19 +2,19 @@ class_name MarketAi
 extends RefCounted
 
 
-static func run_day(season: LeagueSeason, day: String) -> Dictionary:
+static func run_day(save: LeagueSave, day: String) -> Dictionary:
 	var out := {"signed": 0, "failed": 0, "cleared": 0}
-	if season == null or season.save == null or day == "" or not MarketDeals.available():
+	if save == null or day == "" or not MarketDeals.available():
 		return out
 	out["cleared"] = resolve_clearances(day)
-	var seed_value := _seed(season)
+	var seed_value := _seed(save)
 	var rate := MarketRules.number("ai", "deals_per_club_day", 0.028)
 	if rate <= 0.0:
 		return out
 	for club_id in MarketTick.clubs():
 		if _unit(seed_value, day, club_id, 1) >= rate:
 			continue
-		var verdict := _attempt(season, day, club_id, seed_value)
+		var verdict := _attempt(save, day, club_id, seed_value)
 		if str(verdict.get("state", "")) == MarketDealRecords.SIGNED:
 			out["signed"] = int(out["signed"]) + 1
 		elif str(verdict.get("state", "")) != "":
@@ -33,7 +33,7 @@ static func resolve_clearances(day: String) -> int:
 	return cleared
 
 
-static func _attempt(season: LeagueSeason, day: String, club_id: String, seed_value: int) -> Dictionary:
+static func _attempt(save: LeagueSave, day: String, club_id: String, seed_value: int) -> Dictionary:
 	var buyer := MarketDealRules.club_row(club_id)
 	if buyer.is_empty():
 		return {}
@@ -51,16 +51,16 @@ static func _attempt(season: LeagueSeason, day: String, club_id: String, seed_va
 	if budget <= 0:
 		return {}
 	var ceiling_ovr := _ceiling_ovr(profile, group)
-	var pick := _pick_candidate(season, day, club_id, group, ceiling_ovr, budget,
+	var pick := _pick_candidate(save, day, club_id, group, ceiling_ovr, budget,
 		int(profile.get("median", 0)), seed_value)
 	if pick.is_empty():
 		return {}
-	return _deal(season, day, club_id, pick, severity_value, budget, seed_value)
+	return _deal(save, day, club_id, pick, severity_value, budget, seed_value)
 
 
-static func _pick_candidate(season: LeagueSeason, day: String, club_id: String, group: String,
+static func _pick_candidate(save: LeagueSave, day: String, club_id: String, group: String,
 		ceiling_ovr: int, budget: int, median: int, seed_value: int) -> Dictionary:
-	for player_id in MarketShortlist.candidates(season, day, club_id, group, ceiling_ovr):
+	for player_id in MarketShortlist.candidates(save, day, club_id, group, ceiling_ovr):
 		var player := PLRepository.shared().player(str(player_id))
 		if player.is_empty():
 			continue
@@ -78,7 +78,7 @@ static func _pick_candidate(season: LeagueSeason, day: String, club_id: String, 
 	return {}
 
 
-static func _deal(season: LeagueSeason, day: String, club_id: String, pick: Dictionary,
+static func _deal(save: LeagueSave, day: String, club_id: String, pick: Dictionary,
 		severity_value: float, budget: int, seed_value: int) -> Dictionary:
 	var player: Dictionary = pick["player"]
 	var player_id := str(pick["player_id"])
@@ -107,7 +107,7 @@ static func _deal(season: LeagueSeason, day: String, club_id: String, pick: Dict
 	}
 	if not _consents(day, club_id, player, current_wage, wage, seed_value):
 		return {}
-	var opened := MarketDeals.propose(season, seller, club_id, player_id, terms, day)
+	var opened := MarketDeals.propose(save, seller, club_id, player_id, terms, day)
 	var deal_id := str(opened.get("deal", ""))
 	if deal_id == "":
 		return {}
@@ -162,7 +162,7 @@ static func _unit(seed_value: int, day: String, key: String, salt: int) -> float
 	return MarketSeed.unit(seed_value, "market|%s|%s" % [day, key], salt)
 
 
-static func _seed(season: LeagueSeason) -> int:
-	if season == null or season.save == null:
+static func _seed(save: LeagueSave) -> int:
+	if save == null:
 		return 0
-	return absi(int(str(season.save.meta.get("seed", "0"))))
+	return absi(int(str(save.meta.get("seed", "0"))))

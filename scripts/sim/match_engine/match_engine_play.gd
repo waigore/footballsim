@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_actions.gd"
+extends "res://scripts/sim/match_engine/match_engine_actions.gd"
 
 
 const SMOTHER_RADIUS := 2.1
@@ -227,7 +227,7 @@ func _ball_interactions(dt: float) -> void:
 				ball.last_touch_id = q.id
 				ball.last_touch_team = q.team
 				q.cooldown = 0.5
-				_emit("block", Commentary.block(rng, q.name, _last_kicker_name(q.team)), q.team, q)
+				_emit("block", _narrate("block", {"player": q.name, "shooter": _last_kicker_name(q.team)}), q.team, q)
 				_flash(0.35)
 				break
 

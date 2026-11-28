@@ -78,7 +78,7 @@ func _terms(player_id: String, overrides: Dictionary = {}) -> Dictionary:
 
 func _loan(season: LeagueSeason, parent: String, loanee: String, player: String,
 		overrides: Dictionary = {}, date: String = DATE) -> Dictionary:
-	var proposed := MarketLoans.propose(season, parent, loanee, player, _terms(player, overrides),
+	var proposed := MarketLoans.propose(season.save, parent, loanee, player, _terms(player, overrides),
 		date)
 	var id := str(proposed.get("loan", ""))
 	assert_true(id != "", "the loan was not proposed")
@@ -129,7 +129,7 @@ func test_the_caps_refuse_the_seventh_out() -> void:
 		if bool(_loan(season, parent, loanee, str(squad[i]["id"])).get("ok", false)):
 			lent += 1
 	assert_eq(lent, 6, "the parent did not lend its six")
-	var seventh := MarketLoans.propose(season, parent, _club_in("PL", 7), str(squad[6]["id"]),
+	var seventh := MarketLoans.propose(season.save, parent, _club_in("PL", 7), str(squad[6]["id"]),
 		_terms(str(squad[6]["id"])), DATE)
 	assert_eq(str(MarketLoans.seal(str(seventh.get("loan", "")), DATE).get("reason", "")),
 		"loan_cap_out", "a seventh loan out was allowed")
@@ -151,7 +151,7 @@ func test_the_in_cap_refuses_a_seventh_at_the_loanee() -> void:
 			taken += 1
 	assert_eq(taken, 6, "the loanee did not take its six")
 	var extra := str(parents[6])
-	var seventh := MarketLoans.propose(season, extra, recipient, _player_at(extra),
+	var seventh := MarketLoans.propose(season.save, extra, recipient, _player_at(extra),
 		_terms(_player_at(extra)), DATE)
 	assert_eq(str(MarketLoans.seal(str(seventh.get("loan", "")), DATE).get("reason", "")),
 		"loan_cap_in", "a seventh loan in was allowed")
@@ -168,7 +168,7 @@ func test_the_pair_cap_refuses_a_third_from_one_club() -> void:
 		if bool(_loan(season, parent, loanee, str(squad[i]["id"])).get("ok", false)):
 			accepted += 1
 	assert_eq(accepted, 2, "the pair's first two loans did not land")
-	var third := MarketLoans.propose(season, parent, loanee, str(squad[2]["id"]),
+	var third := MarketLoans.propose(season.save, parent, loanee, str(squad[2]["id"]),
 		_terms(str(squad[2]["id"])), DATE)
 	var refused := MarketLoans.seal(str(third.get("loan", "")), DATE)
 	assert_eq(str(refused.get("reason", "")), MarketLoanRules.CAP_PAIR,
@@ -180,7 +180,7 @@ func test_a_closed_window_refuses_the_loan() -> void:
 	var parent := _club_in("PL", 0)
 	var loanee := _club_in("PL", 1)
 	var player := _player_at(parent)
-	var proposed := MarketLoans.propose(season, parent, loanee, player, _terms(player), CLOSED)
+	var proposed := MarketLoans.propose(season.save, parent, loanee, player, _terms(player), CLOSED)
 	var refused := MarketLoans.seal(str(proposed.get("loan", "")), CLOSED)
 	assert_eq(str(refused.get("reason", "")), "window_closed", "a closed window loaned")
 	assert_eq(_player_club(player), parent, "a refused loan moved the player")
@@ -198,7 +198,7 @@ func test_an_appearance_trigger_converts_through_the_permanent_path() -> void:
 	PLDatabase.execute(
 		"INSERT OR REPLACE INTO league_player_stat (player_id, competition_id, club_id, "
 		+ "season_index, apps, goals) VALUES (?, 'PL', ?, 0, 10, 2);", [player, loanee])
-	var fired := MarketLoans.fire_obligations(season, "2026-10-01")
+	var fired := MarketLoans.fire_obligations(season.save, "2026-10-01")
 	assert_eq(fired, 1, "the appearance trigger did not fire")
 	var loan := MarketLoanRecords.load(str(out.get("loan", "")))
 	assert_eq(str(loan.get("status", "")), MarketLoanRecords.CONVERTED, "the loan did not convert")
@@ -237,7 +237,7 @@ func test_a_loan_returns_after_the_loanee_s_last_fixture() -> void:
 		"SELECT MAX(kickoff) AS d FROM league_fixture WHERE home_club_id = ? OR away_club_id = ?;",
 		[loanee, loanee]).get("d", ""))
 	assert_true(last != "", "the loanee has no fixture")
-	var reviewed := MarketLoans.review(season, last)
+	var reviewed := MarketLoans.review(season.save, last)
 	assert_eq(int(reviewed.get("returned", 0)), 1, "the loan did not return after the last fixture")
 	assert_eq(_player_club(player), parent, "the loanee kept him past his last fixture")
 
@@ -253,7 +253,7 @@ func test_an_obligation_with_negative_cash_still_commits() -> void:
 	assert_true(bool(out.get("ok", false)), "the season-end obligation loan did not seal")
 	PLDatabase.execute("UPDATE club_finance SET cash = -1 WHERE club_id = ?;", [loanee])
 	PLDatabase.execute("UPDATE league_fixture SET status = 'played' WHERE status <> 'played';")
-	var fired := MarketLoans.fire_obligations(season, "2027-05-24")
+	var fired := MarketLoans.fire_obligations(season.save, "2027-05-24")
 	assert_eq(fired, 1, "the obligation did not fire with the loanee in debt")
 	assert_eq(_player_club(player), loanee, "the debt blocked the obligation")
 	assert_lt(MarketFinance.cash(loanee), 0, "the deal did not let the cash go negative")
@@ -269,7 +269,7 @@ func test_the_isolation_holds_without_the_ai_or_news_module() -> void:
 	assert_eq(int(out.get("wage_parent", 0)) + int(out.get("wage_loanee", 0)),
 		int(MarketDealRecords.active_contract(player).get("wage", 0)),
 		"the sealed loan does not read back its split")
-	assert_true(not MarketLoans.due(season, DATE).has(str(out.get("loan", ""))),
+	assert_true(not MarketLoans.due(season.save, DATE).has(str(out.get("loan", ""))),
 		"a fresh loan is already due")
 
 
@@ -311,7 +311,7 @@ func test_the_engine_refuses_an_empty_loan() -> void:
 	assert_eq(str(MarketLoans.buy("", DATE).get("reason", "")), "no_loan", "an empty loan bought")
 	assert_eq(str(MarketLoans.trigger("", DATE).get("reason", "")), "no_loan",
 		"an empty loan triggered")
-	assert_eq(str(MarketLoans.propose(season, "", "", "", {}, DATE).get("reason", "")),
+	assert_eq(str(MarketLoans.propose(season.save, "", "", "", {}, DATE).get("reason", "")),
 		MarketLoanRules.TERMS, "an empty loan was written")
 	assert_eq(str(MarketLoans.propose(null, parent, loanee, player,
 		{"wage": 1000, "wage_loanee": 1000}, "").get("reason", "")),
@@ -320,35 +320,35 @@ func test_the_engine_refuses_an_empty_loan() -> void:
 	assert_true(MarketLoanRecords.load("").is_empty(), "an empty loan loaded a row")
 	assert_false(MarketLoanRecords.update("", {"fee": 1}), "an empty loan updated")
 	assert_true(MarketLoanRecords.active_for("").is_empty(), "an empty player held a loan")
-	assert_eq(str(MarketLoanRules.validate(season, parent, parent, player, _terms(player), DATE)
+	assert_eq(str(MarketLoanRules.validate(season.save, parent, parent, player, _terms(player), DATE)
 		.get("code", "")), MarketLoanRules.TERMS, "a same-club loan was allowed")
-	assert_eq(str(MarketLoanRules.validate(season, parent, loanee, player,
+	assert_eq(str(MarketLoanRules.validate(season.save, parent, loanee, player,
 		_terms(player, {"option_kind": "obligation", "buy_fee": 0}), DATE).get("code", "")),
 		MarketLoanRules.BUY_TERMS, "an obligation without a fee was allowed")
-	assert_eq(str(MarketLoanRules.validate(season, parent, loanee, player,
+	assert_eq(str(MarketLoanRules.validate(season.save, parent, loanee, player,
 		_terms(player, {"option_kind": "mystery"}), DATE).get("code", "")),
 		MarketLoanRules.BUY_TERMS, "an unknown buy term was allowed")
-	assert_eq(str(MarketLoanRules.validate(season, parent, loanee, player,
+	assert_eq(str(MarketLoanRules.validate(season.save, parent, loanee, player,
 		_terms(player, {"trigger_kind": "mystery"}), DATE).get("code", "")),
 		MarketLoanRules.BUY_TERMS, "an unknown trigger was allowed")
-	assert_eq(str(MarketLoanRules.validate(season, parent, loanee, player,
+	assert_eq(str(MarketLoanRules.validate(season.save, parent, loanee, player,
 		_terms(player, {"end_date": "2026-08-01"}), DATE).get("code", "")),
 		MarketLoanRules.TERMS, "a backwards loan term was allowed")
-	assert_eq(str(MarketLoanRules.validate(season, parent, loanee, player,
+	assert_eq(str(MarketLoanRules.validate(season.save, parent, loanee, player,
 		_terms(player, {"end_date": "2026-09-01"}), DATE).get("code", "")),
 		MarketLoanRules.TERMS, "a short loan term was allowed")
-	assert_eq(str(MarketLoanRules.validate(season, parent, loanee, player,
+	assert_eq(str(MarketLoanRules.validate(season.save, parent, loanee, player,
 		_terms(player, {"option_kind": "option", "buy_fee": -1}), DATE).get("code", "")),
 		MarketLoanRules.BUY_TERMS, "a negative buy fee was allowed")
-	assert_eq(str(MarketLoanRules.validate(season, parent, loanee, player,
+	assert_eq(str(MarketLoanRules.validate(season.save, parent, loanee, player,
 		_terms(player, {"wage": 0}), DATE).get("code", "")),
 		MarketLoanRules.TERMS, "a zero wage was allowed")
-	assert_eq(str(MarketLoanRules.validate(season, parent, loanee, player,
+	assert_eq(str(MarketLoanRules.validate(season.save, parent, loanee, player,
 		_terms(player, {"end_date": "2030-01-01"}), DATE).get("code", "")),
 		MarketLoanRules.TERMS, "an overlong loan term was allowed")
 	var default_terms := _terms(player, {"end_date": "", "days": 180})
 	default_terms["start_date"] = DATE
-	var defaulted := MarketLoanRules.validate(season, parent, loanee, player, default_terms, DATE)
+	var defaulted := MarketLoanRules.validate(season.save, parent, loanee, player, default_terms, DATE)
 	assert_true(bool(defaulted.get("ok", false)), "the default term was refused")
 	assert_eq(str(defaulted.get("end_date", "")), FixtureCalendar.add_days(DATE, 180),
 		"the default term is not 180 days")
@@ -363,18 +363,18 @@ func test_the_engine_refuses_an_empty_loan() -> void:
 	assert_false(MarketLoans.triggered(null, {
 		"trigger_kind": "club_promoted", "loanee_club_id": loanee, "player_id": player}, DATE),
 		"a null-season promotion trigger fired")
-	assert_false(MarketLoans.triggered(season, {
+	assert_false(MarketLoans.triggered(season.save, {
 		"trigger_kind": "league_position", "trigger_value": "0",
 		"loanee_club_id": loanee, "player_id": player}, DATE),
 		"a zero league-position trigger fired")
-	assert_false(MarketLoans.triggered(season, {
+	assert_false(MarketLoans.triggered(season.save, {
 		"trigger_kind": "league_position", "trigger_value": "1",
 		"loanee_club_id": loanee, "player_id": player}, DATE),
 		"an unmet league-position trigger fired")
 	assert_false(MarketLoans.triggered(null, {
 		"trigger_kind": "season_end", "loanee_club_id": loanee, "player_id": player}, DATE),
 		"a null-season season-end trigger fired")
-	assert_false(MarketLoans.triggered(season, {
+	assert_false(MarketLoans.triggered(season.save, {
 		"trigger_kind": "unknown", "loanee_club_id": loanee, "player_id": player}, DATE),
 		"an unknown trigger kind fired")
 	assert_true(str(WikiPlayer._buy_label("obligation", 2_000_000)).begins_with("OBLIGATION"),
@@ -400,18 +400,18 @@ func test_position_and_promotion_triggers_share_one_season() -> void:
 		"option_kind": "obligation", "buy_fee": 1_000_000,
 		"trigger_kind": "league_position", "trigger_value": "99"})
 	assert_true(bool(position.get("ok", false)), "the position loan did not seal")
-	assert_eq(MarketLoans.fire_obligations(season, "2026-10-01"), 1,
+	assert_eq(MarketLoans.fire_obligations(season.save, "2026-10-01"), 1,
 		"the league-position trigger did not fire inside the top 99")
 	assert_eq(_player_club(position_player), loanee, "the position move did not land")
 	var promotion := _loan(season, parent, _club_in("PL", 2), promotion_player, {
 		"option_kind": "obligation", "buy_fee": 1_000_000,
 		"trigger_kind": "club_promoted", "trigger_value": ""})
 	assert_true(bool(promotion.get("ok", false)), "the promotion loan did not seal")
-	assert_eq(MarketLoans.fire_obligations(season, "2026-10-01"), 0,
+	assert_eq(MarketLoans.fire_obligations(season.save, "2026-10-01"), 0,
 		"a promotion fired before the season settled")
 	season.save.put_meta(SeasonSettle.LINKED_KEY, JSON.stringify({
 		"pyramid": {"links": [{"top": "PL", "bottom": "CH", "to_top": [_club_in("PL", 2)]}]}}))
-	assert_eq(MarketLoans.fire_obligations(season, "2027-05-24"), 1,
+	assert_eq(MarketLoans.fire_obligations(season.save, "2027-05-24"), 1,
 		"a promotion did not fire from the settle payload")
 	var manual_parent := _club_in("PL", 3)
 	var manual_loanee := _club_in("PL", 4)

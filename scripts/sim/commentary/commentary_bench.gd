@@ -2,11 +2,11 @@ class_name CommentaryBench
 extends RefCounted
 
 
-static func _pick(rng: RandomNumberGenerator, lines: Array) -> String:
+static func _pick(rng: Variant, lines: Array) -> String:
 	return lines[rng.randi_range(0, lines.size() - 1)]
 
 
-static func injury(rng: RandomNumberGenerator, name: String, continues: bool) -> String:
+static func injury(rng: Variant, name: String, continues: bool) -> String:
 	if continues:
 		return _pick(rng, [
 			"%s is down and can't continue — a change is coming." % name,
@@ -19,7 +19,7 @@ static func injury(rng: RandomNumberGenerator, name: String, continues: bool) ->
 	])
 
 
-static func substitution(rng: RandomNumberGenerator, team_short: String, on_name: String,
+static func substitution(rng: Variant, team_short: String, on_name: String,
 		off_name: String, manager: String = "") -> String:
 	if manager != "":
 		return _pick(rng, [
@@ -33,7 +33,7 @@ static func substitution(rng: RandomNumberGenerator, team_short: String, on_name
 	])
 
 
-static func tactics(rng: RandomNumberGenerator, manager: String, _team_short: String,
+static func tactics(rng: Variant, manager: String, _team_short: String,
 		changes: Array) -> String:
 	var what := _brief(changes)
 	return _pick(rng, [

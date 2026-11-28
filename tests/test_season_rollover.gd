@@ -170,7 +170,7 @@ func test_a_loan_returns_to_the_parent_before_the_new_season() -> void:
 		"SELECT id FROM player WHERE club_id = ? ORDER BY ovr DESC, id LIMIT 1;", [parent]).get(
 		"id", ""))
 	var wage := int(MarketDealRecords.active_contract(player).get("wage", 5000))
-	var proposed := MarketLoans.propose(season, parent, loanee, player, {
+	var proposed := MarketLoans.propose(season.save, parent, loanee, player, {
 		"wage": wage, "wage_loanee": wage, "start_date": str(season.save.current_date()),
 		"end_date": "2027-05-31"}, str(season.save.current_date()))
 	assert_eq(str(MarketLoans.seal(str(proposed.get("loan", "")),

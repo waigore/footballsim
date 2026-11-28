@@ -1,9 +1,11 @@
-extends "res://scripts/sim/match_engine_bench.gd"
+extends "res://scripts/sim/match_engine/match_engine_bench.gd"
 
 
-func _init(seed_in: int = 4242, home_id: String = "ENG-MUN1", away_id: String = "ENG-MCI1") -> void:
+func _init(seed_in: int = 4242, home_id: String = "ENG-MUN1", away_id: String = "ENG-MCI1",
+		narrator_in: Callable = Callable()) -> void:
 	seed_value = seed_in
 	rng.seed = seed_in
+	narrator = narrator_in
 	teams = [
 		{
 			"id": home_id, "data": TeamData.get_team(home_id), "dir": 1, "score": 0,
@@ -75,7 +77,7 @@ func setup_kickoff(kicking_team: int, swap: bool) -> void:
 		ball.last_touch_team = kicking_team
 		taker.has_ball = true
 	brain.on_kickoff()
-	_emit("kickoff", CommentaryRestarts.kickoff(rng, teams[kicking_team]["data"]["name"]), kicking_team, taker)
+	_emit("kickoff", _narrate("kickoff", {"team_name": teams[kicking_team]["data"]["name"]}), kicking_team, taker)
 
 func start() -> void:
 	pass
@@ -142,7 +144,7 @@ func _tick_clock_end() -> void:
 func _end_first_half() -> void:
 	phase = "half_time"
 	half_break_timer = 4.0
-	_emit("half_time", CommentaryRestarts.half_time(rng, teams[0]["data"]["short"], score[0], teams[1]["data"]["short"], score[1]), -1, null)
+	_emit("half_time", _narrate("half_time", {"a_short": teams[0]["data"]["short"], "a_score": score[0], "b_short": teams[1]["data"]["short"], "b_score": score[1]}), -1, null)
 
 	manager.on_half_time()
 	blackout()
@@ -180,8 +182,8 @@ func _end_match() -> void:
 
 
 func _full_time_text() -> String:
-	return CommentaryRestarts.full_time(rng, teams[0]["data"]["short"], score[0],
-		teams[1]["data"]["short"], score[1])
+	return _narrate("full_time", {"a_short": teams[0]["data"]["short"], "a_score": score[0],
+		"b_short": teams[1]["data"]["short"], "b_score": score[1]}, 0)
 
 
 func _second_half_over() -> void:

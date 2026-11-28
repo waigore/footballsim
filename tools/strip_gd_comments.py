@@ -26,7 +26,7 @@ ALLOWED_HASH_LINES = frozenset(
 # file (blank leftovers → inject error 43) and thus fail the patch gate.
 COMPACT_REL_PATHS = frozenset(
     {
-        "scripts/sim/match_engine_actions.gd",
+        "scripts/sim/match_engine/match_engine_actions.gd",
     }
 )
 

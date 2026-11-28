@@ -2,13 +2,13 @@ extends GdToolsTest
 
 
 const PATHS: Array[String] = [
-	"res://scripts/sim/match_engine_play.gd",
-	"res://scripts/sim/strongest_xi.gd",
-	"res://scripts/sim/match_engine_clock.gd",
-	"res://scripts/sim/match_engine_snapshot.gd",
+	"res://scripts/sim/match_engine/match_engine_play.gd",
+	"res://scripts/sim/league/strongest_xi.gd",
+	"res://scripts/sim/match_engine/match_engine_clock.gd",
+	"res://scripts/sim/match_engine/match_engine_snapshot.gd",
 
-	"res://scripts/sim/goal_vignette_ai.gd",
-	"res://scripts/sim/match_engine_duels.gd",
+	"res://scripts/sim/goal/goal_vignette_ai.gd",
+	"res://scripts/sim/match_engine/match_engine_duels.gd",
 	"res://scripts/ui/sheet_pointer.gd",
 	"res://scripts/ui/app_shell_input.gd",
 	"res://scripts/ui/team_select.gd",

@@ -15,8 +15,8 @@ static func reset() -> void:
 	_position = {}
 
 
-static func index(season: LeagueSeason) -> Array:
-	var key := _pool_key(season)
+static func index(save: LeagueSave) -> Array:
+	var key := _pool_key(save)
 	if key == _key and not _pool.is_empty():
 		return _pool
 	_key = key
@@ -54,18 +54,18 @@ static func rebuild_for(player_id: String, new_club: String) -> void:
 	move(player_id, new_club)
 
 
-static func _pool_key(season: LeagueSeason) -> String:
-	if season == null or season.save == null:
+static func _pool_key(save: LeagueSave) -> String:
+	if save == null:
 		return ""
-	return "%s#%d#%s" % [PLDatabase.current_path(), season.save.season_index(),
-		str(season.save.meta.get("seed", "0"))]
+	return "%s#%d#%s" % [PLDatabase.current_path(), save.season_index(),
+		str(save.meta.get("seed", "0"))]
 
 
-static func candidates(season: LeagueSeason, date: String, club_id: String, group: String,
+static func candidates(save: LeagueSave, date: String, club_id: String, group: String,
 		ceiling: int) -> Array:
 	if club_id == "" or group == "":
 		return []
-	index(season)
+	index(save)
 	if not _by_group.has(group):
 		return []
 	var profile := MarketNeeds.profile(club_id)
@@ -78,7 +78,7 @@ static func candidates(season: LeagueSeason, date: String, club_id: String, grou
 	if severity_value >= 0.5:
 		low = median - 1
 	var highest := maxi(ceiling, low + 1)
-	var seed_value := _seed(season)
+	var seed_value := _seed(save)
 	var scored: Array = []
 	for index_in_pool in _by_group[group]:
 		var entry: Dictionary = _pool[int(index_in_pool)]
@@ -100,7 +100,7 @@ static func candidates(season: LeagueSeason, date: String, club_id: String, grou
 	return out
 
 
-static func _seed(season: LeagueSeason) -> int:
-	if season == null or season.save == null:
+static func _seed(save: LeagueSave) -> int:
+	if save == null:
 		return 0
-	return absi(int(str(season.save.meta.get("seed", "0"))))
+	return absi(int(str(save.meta.get("seed", "0"))))

@@ -19,12 +19,12 @@ static func names() -> Dictionary:
 	return _names
 
 
-static func apply(season: LeagueSeason, season_index: int, date: String) -> Dictionary:
-	if season == null or season.save == null or not season.save.ensure_open():
+static func apply(save: LeagueSave, season_index: int, date: String) -> Dictionary:
+	if save == null or not save.ensure_open():
 		return {"ok": false, "reason": "no_save", "clubs": 0, "players": 0}
 	if date == "":
-		date = season.save.current_date()
-	var seed := int(str(season.save.meta.get("seed", "0")))
+		date = save.current_date()
+	var seed := int(str(save.meta.get("seed", "0")))
 	var clubs := 0
 	var players := 0
 	var by_club := {}
@@ -32,7 +32,7 @@ static func apply(season: LeagueSeason, season_index: int, date: String) -> Dict
 	for row in PLDatabase.rows("SELECT * FROM club ORDER BY id;"):
 		var club: Dictionary = row
 		var cid := str(club.get("competition_id", ""))
-		if not season.save.actives.has(cid) or int(club.get("stub", 0)) == 1:
+		if not save.actives.has(cid) or int(club.get("stub", 0)) == 1:
 			continue
 		var club_id := str(club["id"])
 		var count := intake_count(club_id, seed, season_index)

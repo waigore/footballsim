@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_play.gd"
+extends "res://scripts/sim/match_engine/match_engine_play.gd"
 
 
 const ASSIST_WINDOW := 16.0
@@ -51,7 +51,7 @@ func _check_rules() -> void:
 					if was_shot:
 						gk.stats["saves"] += 1
 						stats[goal_team]["saves"] += 1
-						_emit("save", Commentary.save(rng, gk.name, _shot_credit(gk), "goal_line", ball.shot_xg), goal_team, gk)
+						_emit("save", _narrate("save", {"player": gk.name, "credit": _shot_credit(gk), "how": "goal_line", "xg": ball.shot_xg}), goal_team, gk)
 						_flash(1.0)
 					return
 			var lt = by_id.get(ball.last_touch_id, null)
@@ -120,10 +120,12 @@ func _score_goal(conceding_team: int) -> void:
 	if assister != null:
 		goal_extra["assist_key"] = str(assister.key)
 		goal_extra["assist_name"] = str(assister.name)
-	_emit("goal", Commentary.goal(rng, scorer.name if scorer != null else "Unknown",
-		str(last_goal.get("assist", "")), own_goal,
-		teams[scoring_team]["data"]["short"], teams[conceding_team]["data"]["short"],
-		score[scoring_team] - 1, score[conceding_team], minute_of(clock)), scoring_team, scorer,
+	_emit("goal", _narrate("goal", {"player": scorer.name if scorer != null else "Unknown",
+		"assist": str(last_goal.get("assist", "")), "own_goal": own_goal,
+		"team_short": teams[scoring_team]["data"]["short"],
+		"other_short": teams[conceding_team]["data"]["short"],
+		"before_for": score[scoring_team] - 1, "before_against": score[conceding_team],
+		"minute": minute_of(clock)}, 0 if own_goal else 1), scoring_team, scorer,
 		goal_extra)
 	flash = 1.0
 	for p in players:
@@ -174,7 +176,7 @@ func _woodwork(goal_team: int, frame: String) -> bool:
 	ball.loose_t = 0.0
 	if shooter != null:
 		_add_involvement(shooter, "woodwork", "Off the %s" % frame, shooter.pos)
-	_emit("woodwork", Commentary.woodwork(rng, shooter.name if shooter != null else "The shot", frame),
+	_emit("woodwork", _narrate("woodwork", {"player": shooter.name if shooter != null else "The shot", "frame": frame}),
 		shooting, shooter)
 	_flash(0.6)
 	return true
@@ -194,7 +196,7 @@ func _offside(p) -> void:
 	if not p.offside_flag:
 		return
 	stats[p.team]["offsides"] += 1
-	_emit("offside", Commentary.offside(rng, p.name), p.team, p)
+	_emit("offside", _narrate("offside", {"player": p.name}), p.team, p)
 	_add_involvement(p, "offside", "Caught offside", p.pos)
 	for q in players:
 		q.offside_flag = false

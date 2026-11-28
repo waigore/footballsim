@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_decider.gd"
+extends "res://scripts/sim/match_engine/match_engine_decider.gd"
 
 class_name MatchEngine
 
@@ -98,7 +98,9 @@ func _arrange_penalty(team: int, taker, pos: Vector2) -> void:
 
 func _restart_text(kind: String, team: int, taker) -> String:
 	var who: String = taker.name if taker != null else ""
-	return CommentaryRestarts.restart(rng, kind, teams[team]["data"]["short"], who, false)
+	var steps := 0 if (kind == "goal_kick" and who == "") else 1
+	return _narrate("restart", {"restart": kind, "team_short": teams[team]["data"]["short"],
+		"taker": who, "waiting": false}, steps)
 
 func _best_penalty_taker(t: int):
 	var best = null
@@ -141,8 +143,9 @@ func _update_restart(dt: float) -> void:
 			if not bool(restart.get("called_wait", false)):
 				restart["called_wait"] = true
 				_emit("restart_wait",
-					CommentaryRestarts.restart(rng, str(restart["type"]), teams[restart["team"]]["data"]["short"],
-						taker.name if taker != null else "", true), int(restart["team"]), taker)
+					_narrate("restart_wait", {"restart": str(restart["type"]),
+						"team_short": teams[restart["team"]]["data"]["short"],
+						"taker": taker.name if taker != null else ""}), int(restart["team"]), taker)
 			if verbose:
 				_vlog("RESTART WAIT %s ready=%.2f/%.2f waited=%.1f/%.1f" % [restart["type"], ready,
 					MatchRestarts.ready_needed(self, taker), float(restart.get("wait", 0.0)), float(restart.get("patience", 0.0))])
@@ -237,7 +240,7 @@ func _take_penalty(taker, team: int) -> void:
 	shoot_ball(taker, aim_y, aim_z, 0.92, "penalty")
 	ball.pos = restart["pos"]
 	phase = "play"
-	_emit("penalty_taken", CommentaryRestarts.penalty_taken(rng, taker.name), team, taker)
+	_emit("penalty_taken", _narrate("penalty_taken", {"player": taker.name}), team, taker)
 
 func _best_throw_target(team: int, taker):
 	var best = null

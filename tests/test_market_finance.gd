@@ -116,13 +116,13 @@ func test_a_home_fixture_posts_its_gate_on_the_tick() -> void:
 	var fixture: Dictionary = season.record.fixtures.all(1)[0]
 	var home := str(fixture["home_club_id"])
 	LeagueSeasonSim.fixture(season, fixture)
-	assert_eq(MarketFinanceFlows.tick_gates(season, season.save.current_date()), 1,
+	assert_eq(MarketFinanceFlows.tick_gates(season.save, season.save.current_date()), 1,
 		"the tick did not post the one played home fixture")
 	var line := PLDatabase.row(
 		"SELECT amount FROM club_ledger WHERE club_id = ? AND kind = 'gate' LIMIT 1;", [home])
 	assert_false(line.is_empty(), "a home fixture posted no gate")
 	assert_gt(int(line.get("amount", 0)), 0, "the gate line is worth nothing")
-	assert_eq(MarketFinanceFlows.tick_gates(season, season.save.current_date()), 0,
+	assert_eq(MarketFinanceFlows.tick_gates(season.save, season.save.current_date()), 0,
 		"the same fixture posted its gate twice")
 
 
@@ -150,7 +150,7 @@ func test_the_season_end_pays_prize_money_by_place() -> void:
 	PLDatabase.execute("UPDATE league_fixture SET status = 'played', home_goals = 2, "
 		+ "away_goals = 1 WHERE status <> 'played';")
 	season.record.standings.recompute()
-	var paid := MarketFinanceFlows.season_end(season, 1)
+	var paid := MarketFinanceFlows.season_end(season.save, 1)
 	assert_eq(paid, 20, "the season end paid %d clubs" % paid)
 	var rows := PLDatabase.rows(
 		"SELECT amount FROM club_ledger WHERE kind = 'prize' ORDER BY amount DESC;")
@@ -319,7 +319,7 @@ func test_reputation_is_bounded_and_recomputed_at_rollover() -> void:
 	PLDatabase.execute("INSERT OR REPLACE INTO season_archive (season_index, competition_id, "
 		+ "club_id, club_name, position, played, won, drawn, lost, gf, ga, points) "
 		+ "VALUES (?, 'PL', ?, 'Club', 20, 0, 0, 0, 0, 0, 0, 0);", [played, club_id])
-	assert_eq(MarketFinanceFlows.roll(season, season.save.current_date()), 20,
+	assert_eq(MarketFinanceFlows.roll(season.save, season.save.current_date()), 20,
 		"the rollover did not touch every funded club")
 	var revenue := MarketFinance.revenue_base(club_id)
 	assert_eq(MarketFinance.reputation(club_id),
@@ -327,7 +327,7 @@ func test_reputation_is_bounded_and_recomputed_at_rollover() -> void:
 		"the rollover recorded no last-place reputation")
 	PLDatabase.execute("UPDATE season_archive SET position = 1 WHERE season_index = ? "
 		+ "AND club_id = ?;", [played, club_id])
-	MarketFinanceFlows.roll(season, season.save.current_date())
+	MarketFinanceFlows.roll(season.save, season.save.current_date())
 	assert_eq(MarketFinance.reputation(club_id),
 		MarketPurse.reputation(revenue, 1, clubs),
 		"the rollover did not recompute reputation from the archive")

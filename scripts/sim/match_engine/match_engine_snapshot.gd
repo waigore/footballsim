@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_clock.gd"
+extends "res://scripts/sim/match_engine/match_engine_clock.gd"
 
 
 func to_dict() -> Dictionary:

@@ -149,7 +149,7 @@ func test_the_shortlist_reads_about_fifty_not_the_whole_world() -> void:
 	var club_id := str(PLDatabase.row(
 		"SELECT id FROM club WHERE competition_id = 'PL' ORDER BY id LIMIT 1;").get("id", ""))
 	var profile := MarketNeeds.profile(club_id)
-	var ids := MarketShortlist.candidates(season, DATE, club_id, "MID",
+	var ids := MarketShortlist.candidates(season.save, DATE, club_id, "MID",
 		int(profile.get("median", 0)) + 8)
 	assert_gt(ids.size(), 0, "the shortlist found no midfielder")
 	assert_lte(ids.size(), MarketRules.count("ai", "shortlist_cap", 50),
@@ -158,7 +158,7 @@ func test_the_shortlist_reads_about_fifty_not_the_whole_world() -> void:
 	for id in ids:
 		assert_false(seen.has(str(id)), "the shortlist repeats a player")
 		seen[str(id)] = true
-	assert_eq(MarketShortlist.candidates(season, DATE, club_id, "MID",
+	assert_eq(MarketShortlist.candidates(season.save, DATE, club_id, "MID",
 		int(profile.get("median", 0)) + 8), ids, "the same date built another shortlist")
 
 
@@ -167,7 +167,7 @@ func test_a_market_day_signs_a_deal_for_a_wanting_club() -> void:
 	_empty_the_attack(_club())
 	var before := _signed_count()
 	for i in range(60):
-		MarketAi.run_day(season, FixtureCalendar.add_days(DATE, i))
+		MarketAi.run_day(season.save, FixtureCalendar.add_days(DATE, i))
 	assert_gt(_signed_count(), before, "a wanting club signed nobody all window")
 	var row := PLDatabase.row("SELECT * FROM deal WHERE state = 'signed' ORDER BY rowid LIMIT 1;")
 	assert_false(row.is_empty(), "no deal reached the table")
@@ -183,7 +183,7 @@ func test_a_closed_window_stops_the_ai() -> void:
 	_empty_the_attack(_club())
 	var before := _signed_count()
 	for i in range(12):
-		MarketAi.run_day(season, FixtureCalendar.add_days(CLOSED, i))
+		MarketAi.run_day(season.save, FixtureCalendar.add_days(CLOSED, i))
 	assert_eq(_signed_count(), before, "a closed window signed a deal")
 
 
@@ -192,7 +192,7 @@ func test_the_market_never_consumes_the_season_rng() -> void:
 	var state := season.rng.state
 	_empty_the_attack(_club())
 	for i in range(10):
-		MarketTick.step(season, FixtureCalendar.add_days(DATE, i))
+		MarketTick.step(season.save, FixtureCalendar.add_days(DATE, i))
 	assert_eq(season.rng.state, state, "a market tick moved the season RNG")
 
 
@@ -231,10 +231,10 @@ func test_a_completeness_top_up_refills_a_thin_squad() -> void:
 
 func test_the_ai_flag_can_be_switched_off_for_a_save() -> void:
 	var season := _fresh("AI Off")
-	assert_true(MarketTick.enabled(season), "a new save does not run the AI")
+	assert_true(MarketTick.enabled(season.save), "a new save does not run the AI")
 	season.save.put_meta(MarketTick.AI_KEY, "off")
 	season.save.reload()
-	assert_false(MarketTick.enabled(season), "the off switch did not take")
+	assert_false(MarketTick.enabled(season.save), "the off switch did not take")
 
 
 func _club() -> String:

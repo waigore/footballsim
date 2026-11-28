@@ -40,7 +40,7 @@ func _initialize() -> void:
 		"SELECT id FROM player WHERE club_id = ? ORDER BY ovr DESC LIMIT 1;", [parent]).get(
 		"id", ""))
 	var wage := int(MarketDealRecords.active_contract(player).get("wage", 5000))
-	var proposed := MarketLoans.propose(season, parent, loanee, player, {
+	var proposed := MarketLoans.propose(season.save, parent, loanee, player, {
 		"wage": wage, "wage_loanee": wage / 2, "start_date": DATE, "end_date": "2027-05-31",
 		"option_kind": "obligation", "buy_fee": 24_000_000,
 		"trigger_kind": "appearances_n", "trigger_value": "20"}, DATE)

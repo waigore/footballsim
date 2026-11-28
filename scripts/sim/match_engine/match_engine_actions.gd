@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_duels.gd"
+extends "res://scripts/sim/match_engine/match_engine_duels.gd"
 func _try_control(p, d: float) -> void:
 	var speed = ball.vel.length()
 	var q = Attrs.first_touch_quality(p)
@@ -85,7 +85,7 @@ func _gk_claim(gk, d: float) -> void:
 			ball.shot_saved = true
 			gk.stats["saves"] += 1
 			stats[gk.team]["saves"] += 1
-			_emit("save", Commentary.save(rng, gk.name, _shot_credit(gk), "hold", ball.shot_xg), gk.team, gk)
+			_emit("save", _narrate("save", {"player": gk.name, "credit": _shot_credit(gk), "how": "hold", "xg": ball.shot_xg}), gk.team, gk)
 			_flash(0.8)
 		gk.action_t = 0.8
 		gk.state = "gk_hold"
@@ -101,7 +101,7 @@ func _gk_claim(gk, d: float) -> void:
 			ball.shot_saved = true
 			gk.stats["saves"] += 1
 			stats[gk.team]["saves"] += 1
-			_emit("save", Commentary.save(rng, gk.name, _shot_credit(gk), "parry", ball.shot_xg), gk.team, gk)
+			_emit("save", _narrate("save", {"player": gk.name, "credit": _shot_credit(gk), "how": "parry", "xg": ball.shot_xg}), gk.team, gk)
 			_flash(0.8)
 func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, kind: String = "pass") -> void:
 	if p == null:
@@ -157,7 +157,7 @@ func pass_ball(p, target_point: Vector2, lofted: bool = false, receiver = null, 
 		_vlog("PASS %s -> %s aim=(%.1f,%.1f) dist=%.1f loft=%s kind=%s" % [p.name, receiver.name if receiver != null else "-", aim.x, aim.y, dist, str(lofted), kind])
 	if kind == "cross":
 		_add_involvement(p, "cross", "Cross into the box", p.pos)
-		_emit("cross", Commentary.cross(rng, p.name), p.team, p)
+		_emit("cross", _narrate("cross", {"player": p.name}), p.team, p)
 	elif kind == "through":
 		_add_involvement(p, "pass", "Through ball", p.pos)
 	else:
@@ -235,7 +235,7 @@ func shoot_ball(p, aim_y: float, aim_z: float, power: float = 1.0, kind: String 
 	stats[p.team]["xg"] += xg
 	if xg > 0.28:
 		stats[p.team]["big_chances"] += 1
-	_emit("shot", Commentary.shot(rng, p.name, dist, xg, pressure, kind), p.team, p, {"xg": xg})
+	_emit("shot", _narrate("shot", {"player": p.name, "dist": dist, "xg": xg, "pressure": pressure, "shot_kind": kind}), p.team, p, {"xg": xg})
 	var near_def := 0
 	var min_def := 99.0
 	var goal_side_def := 0
@@ -280,7 +280,7 @@ func clear_ball(p, point: Vector2) -> void:
 	p.has_ball = false
 	p.cooldown = 0.35
 	p.state = "clear"
-	_emit("clearance", Commentary.clearance(rng, p.name, false), p.team, p)
+	_emit("clearance", _narrate("clearance", {"player": p.name, "headed": false}), p.team, p)
 	_add_involvement(p, "clearance", "Clearance", p.pos)
 	ball_kicked.emit(0.7)
 func would_be_offside(receiver) -> bool:

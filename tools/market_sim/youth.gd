@@ -21,7 +21,7 @@ static func run(options: Dictionary) -> Dictionary:
 		var index := season.save.season_index() + i
 		var date := FixtureCalendar.add_years(start, i)
 		var aged := SeasonAgeing.apply(season, index, date)
-		var intake := YouthIntake.apply(season, index, date)
+		var intake := YouthIntake.apply(season.save, index, date)
 		var sample := _sample(season, index)
 		log.append({
 			"season": index, "date": date,

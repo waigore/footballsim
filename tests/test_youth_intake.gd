@@ -58,7 +58,7 @@ func _youth(club_id: String, season_index: int = 0) -> Array:
 
 func test_every_club_gains_two_to_eight_youth() -> void:
 	var season := _fresh("Youth Intake")
-	var intake := YouthIntake.apply(season, 0, DATE)
+	var intake := YouthIntake.apply(season.save, 0, DATE)
 	assert_true(bool(intake.get("ok", false)), "the intake refused")
 	assert_eq(int(intake.get("clubs", 0)), 20, "the intake missed a club")
 	for club_id in _clubs():
@@ -71,7 +71,7 @@ func test_every_club_gains_two_to_eight_youth() -> void:
 
 func test_a_youth_is_sixteen_to_eighteen_homegrown_and_on_a_three_year_deal() -> void:
 	var season := _fresh("Youth Shape")
-	YouthIntake.apply(season, 0, DATE)
+	YouthIntake.apply(season.save, 0, DATE)
 	var rows := PLDatabase.rows("SELECT * FROM player WHERE id LIKE 'Y0-%' ORDER BY id;")
 	assert_gt(rows.size(), 0, "the intake wrote no player")
 	for row in rows:
@@ -95,7 +95,7 @@ func test_a_youth_is_sixteen_to_eighteen_homegrown_and_on_a_three_year_deal() ->
 
 func test_no_club_exceeds_its_list_after_intake() -> void:
 	var season := _fresh("Youth Slots")
-	YouthIntake.apply(season, 0, DATE)
+	YouthIntake.apply(season.save, 0, DATE)
 	for club_id in _clubs():
 		assert_lte(MarketLists.slots_used(club_id), MarketLists.SLOTS,
 			"%s passed the list ceiling" % club_id)
@@ -103,12 +103,12 @@ func test_no_club_exceeds_its_list_after_intake() -> void:
 
 func test_a_fixed_seed_produces_the_same_names() -> void:
 	var one := _fresh("Youth Names One")
-	YouthIntake.apply(one, 0, DATE)
+	YouthIntake.apply(one.save, 0, DATE)
 	var first: Array = []
 	for row in PLDatabase.rows("SELECT name FROM player WHERE id LIKE 'Y0-%' ORDER BY id LIMIT 40;"):
 		first.append(str(row["name"]))
 	var two := _fresh("Youth Names Two")
-	YouthIntake.apply(two, 0, DATE)
+	YouthIntake.apply(two.save, 0, DATE)
 	var second: Array = []
 	for row in PLDatabase.rows("SELECT name FROM player WHERE id LIKE 'Y0-%' ORDER BY id LIMIT 40;"):
 		second.append(str(row["name"]))
@@ -118,7 +118,7 @@ func test_a_fixed_seed_produces_the_same_names() -> void:
 
 func test_a_generated_player_can_be_signed_like_any_other() -> void:
 	var season := _fresh("Youth Market")
-	YouthIntake.apply(season, 0, DATE)
+	YouthIntake.apply(season.save, 0, DATE)
 	var from: String = str(_clubs()[0])
 	var to: String = str(_clubs()[1])
 	var row: Dictionary = _youth(from)[0]
@@ -128,7 +128,7 @@ func test_a_generated_player_can_be_signed_like_any_other() -> void:
 		"the probe date is outside the window")
 	var terms := {"fee": 100_000, "wage": wage, "years": 3, "agent_fee": 0,
 		"signing_bonus": 0, "sell_on": 0.0}
-	var deal := MarketDeals.propose(season, from, to, player_id, terms, DATE)
+	var deal := MarketDeals.propose(season.save, from, to, player_id, terms, DATE)
 	var agreed := MarketDeals.agree(str(deal.get("deal", "")), DATE)
 	assert_eq(str(agreed.get("state", "")), MarketDealRecords.AGREED,
 		"the generated player refused the move: %s" % str(agreed.get("reason", "")))
@@ -142,7 +142,7 @@ func test_a_generated_player_can_be_signed_like_any_other() -> void:
 func test_retirement_certainly_takes_a_forty_year_old_and_frees_his_records() -> void:
 	assert_eq(SeasonAgeing.chance(40), 1.0, "a forty-year-old can stay on")
 	var season := _fresh("Youth Retirement")
-	YouthIntake.apply(season, 0, DATE)
+	YouthIntake.apply(season.save, 0, DATE)
 	var row := PLDatabase.row("SELECT id, club_id FROM player WHERE id LIKE 'Y0-%' ORDER BY id LIMIT 1;")
 	var player_id := str(row["id"])
 	PLDatabase.execute("UPDATE player SET age = 40, date_of_birth = '' WHERE id = ?;", [player_id])
@@ -194,7 +194,7 @@ func test_the_isolated_youth_run_repeats_its_names() -> void:
 
 func test_the_list_helpers_read_slots_homegrown_and_exemption() -> void:
 	var season := _fresh("Youth List Helpers")
-	YouthIntake.apply(season, 0, DATE)
+	YouthIntake.apply(season.save, 0, DATE)
 	var club := str(PLDatabase.row(
 		"SELECT club_id FROM player WHERE id LIKE 'Y0-%' ORDER BY id LIMIT 1;").get("club_id", ""))
 	var competition := str(PLDatabase.row(

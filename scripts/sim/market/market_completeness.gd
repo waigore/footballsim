@@ -5,8 +5,8 @@ extends RefCounted
 const MINIMUM := 11
 
 
-static func ensure_day(season: LeagueSeason, day: String) -> int:
-	if season == null or season.save == null or day == "" or not MarketDeals.available():
+static func ensure_day(save: LeagueSave, day: String) -> int:
+	if save == null or day == "" or not MarketDeals.available():
 		return 0
 	var clubs := clubs_on(day)
 	var signed := 0
@@ -55,7 +55,10 @@ static func ensure_club(club_id: String, day: String) -> int:
 static func shortfall(club_id: String) -> Dictionary:
 	var available := 0
 	var keepers := 0
-	var out_ids := SeasonAvailability.unavailable(club_id)
+	var out_ids := {}
+	for row in PLDatabase.rows(
+			"SELECT player_id FROM league_absence WHERE club_id = ?;", [club_id]):
+		out_ids[str(row.get("player_id", ""))] = true
 	for row in PLDatabase.rows(
 			"SELECT p.id, p.pos FROM player p WHERE p.club_id = ?;", [club_id]):
 		var player_id := str(row.get("id", ""))

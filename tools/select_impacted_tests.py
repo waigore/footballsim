@@ -48,19 +48,42 @@ def load_map(path: Path = MAP_PATH) -> dict:
     return {"domains": domains, "rules": rules}
 
 
+def _is_identical_rename(status: str) -> bool:
+    """True for R100 (byte-identical) renames — package moves with no edit."""
+    return status.startswith("R") and status[1:].isdigit() and int(status[1:]) == 100
+
+
 def _git_diff_names(base_ref: str) -> list[str]:
     """Changed paths vs merge-base(base_ref, HEAD), plus working-tree dirt.
 
     Include deletions (D): paths-filter treats removed tests/** as code
     changes, and a deleted suite must still map to its theme domain.
+
+    Skip R100 renames: a pure path move (package layout) does not change
+    behaviour, and expanding every destination domain would blow the
+    tier-1 5 min budget on package-move PRs.
     """
-    cmds = [
-        ["git", "diff", "--name-only", "--diff-filter=ACMRD", f"{base_ref}...HEAD"],
+    paths: set[str] = set()
+    try:
+        out = subprocess.check_output(
+            ["git", "diff", "--name-status", "--diff-filter=ACMRD", f"{base_ref}...HEAD"],
+            cwd=ROOT,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except subprocess.CalledProcessError:
+        out = ""
+    for line in out.splitlines():
+        parts = line.strip().split("\t")
+        if len(parts) < 2:
+            continue
+        if _is_identical_rename(parts[0]):
+            continue
+        paths.add(parts[-1])
+    for cmd in (
         ["git", "diff", "--name-only", "--diff-filter=ACMRD", "HEAD"],
         ["git", "ls-files", "--others", "--exclude-standard"],
-    ]
-    paths: set[str] = set()
-    for cmd in cmds:
+    ):
         try:
             out = subprocess.check_output(cmd, cwd=ROOT, text=True, stderr=subprocess.DEVNULL)
         except subprocess.CalledProcessError:

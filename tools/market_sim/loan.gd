@@ -33,7 +33,7 @@ static func run(options: Dictionary) -> Dictionary:
 		"buy_fee": int(options.get("buy", "3000000")),
 		"trigger_kind": str(trigger["kind"]), "trigger_value": str(trigger["value"]),
 	}
-	var proposed := MarketLoans.propose(season, parent, loanee, player, terms, date)
+	var proposed := MarketLoans.propose(season.save, parent, loanee, player, terms, date)
 	var loan_id := str(proposed.get("loan", ""))
 	print("proposed %s: %s -> %s" % [loan_id, parent, loanee])
 	var sealed := MarketLoans.seal(loan_id, date)
@@ -46,7 +46,7 @@ static func run(options: Dictionary) -> Dictionary:
 			[player, loanee, int(trigger["value"])])
 	if str(trigger["kind"]) == "season_end":
 		PLDatabase.execute("UPDATE league_fixture SET status = 'played' WHERE status <> 'played';")
-	var fired := MarketLoans.fire_obligations(season, str(options.get("trigger_date", "2026-10-01")))
+	var fired := MarketLoans.fire_obligations(season.save, str(options.get("trigger_date", "2026-10-01")))
 	print("obligations fired: %d" % fired)
 	var returned := {}
 	if fired == 0 and str(options.get("return", "1")) != "0":

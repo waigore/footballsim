@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_rules.gd"
+extends "res://scripts/sim/match_engine/match_engine_rules.gd"
 
 
 func _tick_substitutions() -> void:
@@ -121,8 +121,8 @@ func _bring_on(t: int, off, for_gk: bool = false, at_half_time: bool = false, me
 	var info := {"window": int(teams[t]["windows_used"]), "at_half_time": at_half_time}
 	for k in meta.keys():
 		info[k] = meta[k]
-	_emit("substitution", CommentaryBench.substitution(rng, teams[t]["data"]["short"], np.name, off.name,
-		str(meta.get("manager", ""))), t, np, info)
+	_emit("substitution", _narrate("substitution", {"team_short": teams[t]["data"]["short"],
+		"on_name": np.name, "off_name": off.name, "manager": str(meta.get("manager", ""))}), t, np, info)
 	_add_involvement(np, "sub", "On for %s" % off.name, np.pos)
 	return true
 
@@ -154,7 +154,7 @@ func _injure(p) -> void:
 
 	if manager != null and manager.replace_injured(p):
 		return
-	_emit("injury", CommentaryBench.injury(rng, p.name, false), t, p)
+	_emit("injury", _narrate("injury", {"player": p.name, "continues": false}), t, p)
 	_send_off_injured(p)
 
 func _send_off_injured(p) -> void:

@@ -171,3 +171,65 @@ func test_live_line_reads_the_zone_and_the_scoreline() -> void:
 	var gk = eng._gk_of(0)
 	eng.ball.owner_id = gk.id
 	assert_true(CommentaryLive.live(eng).contains("keeper"), "a keeper on the ball was not read as building from the back")
+
+
+func test_render_rebuilds_every_engine_event_line() -> void:
+	var pick := 1234
+	var p := CommentaryPick.new(pick)
+	var cases := [
+		["shot", {"player": "E. Haaland", "dist": 12.0, "xg": 0.4, "pressure": 0.2, "shot_kind": "shot"}, Commentary.shot(p, "E. Haaland", 12.0, 0.4, 0.2, "shot")],
+		["header", {"player": "B. Šeško", "dist": 8.0, "xg": 0.2, "pressure": 0.5}, Commentary.shot(p, "B. Šeško", 8.0, 0.2, 0.5, "header")],
+		["save", {"player": "S. Lammens", "credit": "E. Haaland", "how": "hold", "xg": 0.4}, Commentary.save(p, "S. Lammens", "E. Haaland", "hold", 0.4)],
+		["cross", {"player": "A. Garnacho"}, Commentary.cross(p, "A. Garnacho")],
+		["clearance", {"player": "L. Shaw", "headed": false}, Commentary.clearance(p, "L. Shaw", false)],
+		["block", {"player": "L. Yoro", "shooter": "E. Haaland"}, Commentary.block(p, "L. Yoro", "E. Haaland")],
+		["woodwork", {"player": "J. Doku", "frame": "post"}, Commentary.woodwork(p, "J. Doku", "post")],
+		["foul", {"fouler": "D. Dalot", "victim": "E. Haaland", "penalty": false}, Commentary.foul(p, "D. Dalot", "E. Haaland", false)],
+		["handball", {"player": "D. Dalot", "penalty": true}, Commentary.handball(p, "D. Dalot", true)],
+		["offside", {"player": "B. Šeško"}, Commentary.offside(p, "B. Šeško")],
+		["card", {"player": "L. Yoro", "card": "yellow"}, Commentary.card(p, "L. Yoro", "yellow")],
+		["goal", {"player": "B. Fernandes", "assist": "", "own_goal": false, "team_short": "MUN", "other_short": "MCI", "before_for": 0, "before_against": 1, "minute": 30}, Commentary.goal(p, "B. Fernandes", "", false, "MUN", "MCI", 0, 1, 30)],
+	]
+	for case in cases:
+		var line: String = CommentaryRender.render(str(case[0]), pick, case[1])
+		assert_eq(line, str(case[2]), "render drifted from the helper for " + str(case[0]))
+
+
+func test_render_covers_restarts_bench_and_extra_time() -> void:
+	var pick := 99
+	var p := CommentaryPick.new(pick)
+	var cases := [
+		["kickoff", {"team_name": "Manchester United"}, CommentaryRestarts.kickoff(p, "Manchester United")],
+		["restart", {"restart": "corner", "team_short": "MUN", "taker": ""}, CommentaryRestarts.restart(p, "corner", "MUN", "", false)],
+		["restart_wait", {"restart": "free_kick", "team_short": "MCI", "taker": ""}, CommentaryRestarts.restart(p, "free_kick", "MCI", "", true)],
+		["penalty_taken", {"player": "B. Fernandes"}, CommentaryRestarts.penalty_taken(p, "B. Fernandes")],
+		["half_time", {"a_short": "MUN", "a_score": 1, "b_short": "MCI", "b_score": 0}, CommentaryRestarts.half_time(p, "MUN", 1, "MCI", 0)],
+		["full_time", {"a_short": "MUN", "a_score": 2, "b_short": "MCI", "b_score": 1}, CommentaryRestarts.full_time(p, "MUN", 2, "MCI", 1)],
+		["substitution", {"team_short": "MUN", "on_name": "H. Højlund", "off_name": "C. Eriksen", "manager": "R. Amorim"}, CommentaryBench.substitution(p, "MUN", "H. Højlund", "C. Eriksen", "R. Amorim")],
+		["injury", {"player": "L. Martínez", "continues": true}, CommentaryBench.injury(p, "L. Martínez", true)],
+		["tactics", {"manager": "R. Amorim", "team_short": "MUN", "changes": ["press higher"]}, CommentaryBench.tactics(p, "R. Amorim", "MUN", ["press higher"])],
+		["extra_time", {"a_short": "MUN", "b_short": "MCI"}, CommentaryExtraTime.extra_time(p, "MUN", "MCI")],
+		["extra_time_start", {"a_short": "MUN", "b_short": "MCI"}, CommentaryExtraTime.extra_time_start(p, "MUN", "MCI")],
+		["extra_time_second", {"a_short": "MUN", "b_short": "MCI"}, CommentaryExtraTime.extra_time_second(p, "MUN", "MCI")],
+		["extra_time_break", {}, CommentaryExtraTime.extra_time_break()],
+		["shootout_start", {"team_short": "MUN"}, CommentaryExtraTime.shootout_start(p, "MUN")],
+		["penalty_scored", {"player": "E. Haaland"}, CommentaryExtraTime.shootout_kick(p, "E. Haaland", true)],
+		["penalty_missed", {"player": "E. Haaland"}, CommentaryExtraTime.shootout_kick(p, "E. Haaland", false)],
+		["shootout_end", {"team_short": "MUN", "pens_for": 4, "pens_against": 3}, CommentaryExtraTime.shootout_end("MUN", 4, 3)],
+		["full_time_pens", {"a_short": "MUN", "a_score": 1, "b_short": "MCI", "b_score": 1, "pens_a": 4, "pens_b": 3}, CommentaryExtraTime.full_time_pens(p, "MUN", 1, "MCI", 1, 4, 3)],
+	]
+	for case in cases:
+		var line: String = CommentaryRender.render(str(case[0]), pick, case[1])
+		assert_eq(line, str(case[2]), "render drifted from the helper for " + str(case[0]))
+	assert_eq(CommentaryRender.render("unknown_kind", pick, {}), "", "an unknown kind invented a line")
+
+
+func test_pick_stands_in_for_a_seeded_rng() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4242
+	var stepped: int = rng.randi()
+	var pick := CommentaryPick.new(4242)
+	assert_eq(pick.randi_range(0, stepped % 3 + 1), stepped % (stepped % 3 + 1),
+		"the pick does not mirror randi_range")
+	assert_eq(pick.randi_range(0, 0), 0, "a single-line list should pick index zero")
+

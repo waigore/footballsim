@@ -114,7 +114,7 @@ func new_match(seed: int) -> void:
 		replay = null
 	if engine != null and engine.event_fired.is_connected(_on_engine_event):
 		engine.event_fired.disconnect(_on_engine_event)
-	engine = MatchEngine.new(seed, home_id, away_id)
+	engine = MatchEngine.new(seed, home_id, away_id, CommentaryRender.render)
 	engine.verbose = false
 	engine.event_fired.connect(_on_engine_event)
 	engine.ball_kicked.connect(audio.ball_kicked)
