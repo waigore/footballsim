@@ -668,10 +668,11 @@ match = "tests/test_market_contracts.gd*"
 domain = "league"
 
 # The market's money (#442): revenue anchors, the ledger and the currency
-# display. It rides the market modules it reads.
+# display. Keep it on market_levels so a ledger edit does not pull the full
+# league surface into the 5-minute tier-1 job.
 [[rules]]
 match = "tests/test_market_finance.gd*"
-domain = "league"
+domain = "market_levels"
 
 [[rules]]
 match = "scripts/data/market_currency.gd*"

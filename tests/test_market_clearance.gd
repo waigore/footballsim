@@ -197,7 +197,6 @@ func test_a_cleared_deal_signs_and_moves_the_money() -> void:
 
 
 func test_the_engine_refuses_an_empty_clearance() -> void:
-	var season := _fresh("Clear Empty")
 	assert_eq(str(MarketDeals.resolve_clearance("", DATE).get("reason", "")), "no_deal",
 		"an empty clearance resolved")
 	assert_eq(MarketDeals.clearance_days(""), MarketRules.count("deal", "clearance_days_min", 1)
@@ -205,6 +204,9 @@ func test_the_engine_refuses_an_empty_clearance() -> void:
 			MarketRules.count("deal", "clearance_days_max", 5)
 			- MarketRules.count("deal", "clearance_days_min", 1) + 1, 1),
 		"the empty key did not yield its fixed length")
+	assert_true(MarketDeals._window_open_for(MarketDealRecords.load(""), DATE) == false,
+		"an empty deal read an open window")
+	MarketDeals._close_pending_registration({})
 
 
 func test_the_clearance_verb_pends_clears_and_fails() -> void:
@@ -228,11 +230,7 @@ func test_a_domestic_clearance_never_pends_and_the_free_agent_skips() -> void:
 	var deal := MarketDealRecords.load(_propose(season, from, to, player, _terms(player)))
 	assert_false(MarketDeals.needs_clearance(deal), "a domestic deal needs clearance")
 	assert_true(MarketDeals._window_open_for(deal, DATE), "the domestic window is shut")
-	var empty := MarketDealRecords.load("")
-	assert_true(MarketDeals._window_open_for(empty, DATE) == false,
-		"an empty deal read an open window")
 	var club := _club_in("LL", 0)
 	var cross := _propose(season, club, to, _player_at(club), _terms(_player_at(club)))
 	assert_true(MarketDeals.needs_clearance(MarketDealRecords.load(cross)),
 		"a cross-association deal needs no clearance")
-	MarketDeals._close_pending_registration({})
