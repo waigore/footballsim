@@ -116,13 +116,20 @@ func meta(p: HudPaint, c: CanvasItem, engine, game, touch: bool, mouse: Vector2,
 	p.text(c, Vector2(x + 14, y + 60), "REFEREE", 9, UiChrome.C_DIM, f_bold)
 	p.text(c, Vector2(x + 70, y + 60), engine.referee_name, 10, UiChrome.C_TEXT, f_bold)
 	var btn := Rect2(x + 12, y + 68, 262, 20)
-	var hovered := btn.has_point(mouse)
-	p.panel(c, UiChrome.C_PANEL_LIGHT if hovered else Color(0.05, 0.07, 0.09, 0.92), btn, 5, Color(1, 1, 1, 0.12 if hovered else 0.05))
+	var dead: bool = MatchBilling.league_watch(game)
+	var hovered := not dead and btn.has_point(mouse)
+	var fill: Color = UiChrome.C_PANEL_LIGHT if hovered else Color(0.05, 0.07, 0.09, 0.92)
+	if dead:
+		fill = Color(0.03, 0.045, 0.055, 0.72)
+	p.panel(c, fill, btn, 5, Color(1, 1, 1, 0.12 if hovered else 0.05))
 	var ink: Color = UiChrome.C_TEXT if hovered else Color(0.85, 0.90, 0.92)
+	if dead:
+		ink = Color(UiChrome.C_DIM.r, UiChrome.C_DIM.g, UiChrome.C_DIM.b, 0.55)
 	var cap_y: float = btn.position.y + btn.size.y * 0.5 + 4.0
 	p.text(c, Vector2(btn.position.x + 10.0, cap_y), "CHANGE TEAMS", 11, ink, f_bold)
-	p.text_r(c, btn.end.x - 10.0, cap_y, "T", 10, UiChrome.C_DIM, f_med)
-	p.add_button("teams", btn, "CHANGE TEAMS", "T")
+	if not dead:
+		p.text_r(c, btn.end.x - 10.0, cap_y, "T", 10, UiChrome.C_DIM, f_med)
+		p.add_button("teams", btn, "CHANGE TEAMS", "T")
 
 
 static func billing_name(game, engine) -> String:

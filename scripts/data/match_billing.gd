@@ -74,3 +74,8 @@ static func bind_scene(scene, home_id: String, fixture: Dictionary,
 	var made := MatchBilling.new()
 	made.bind_fixture(home_id, fixture, away_id)
 	return made
+
+
+static func league_watch(scene) -> bool:
+	var binding = scene.get("billing") if scene != null else null
+	return binding is MatchBilling and not (binding as MatchBilling).friendly

@@ -119,7 +119,8 @@ func click(p: Vector2) -> void:
 	elif b == "camera":
 		game.camera_follow = not game.camera_follow
 	elif b == "teams":
-		game.open_select()
+		if not MatchBilling.league_watch(game):
+			game.open_select()
 	elif b == "menu":
 		game.menus.open_menu()
 	elif b == "league":
@@ -135,7 +136,8 @@ func click(p: Vector2) -> void:
 	elif b == "manager_card":
 		game.hud.manager_card.dismiss()
 	elif b == "restart":
-		game.new_match(game.seeded + randi_range(0, 9999))
+		if not MatchBilling.league_watch(game):
+			game.new_match(game.seeded + randi_range(0, 9999))
 	if b != "":
 		return
 
@@ -170,7 +172,8 @@ func _key(k: int) -> void:
 	elif k == KEY_S:
 		game._skip()
 	elif k == KEY_R:
-		game.new_match(game.seeded + randi_range(0, 9999))
+		if not MatchBilling.league_watch(game):
+			game.new_match(game.seeded + randi_range(0, 9999))
 	elif k == KEY_N:
 		game.names_visible = not game.names_visible
 		game.actors.names_visible = game.names_visible
@@ -181,7 +184,8 @@ func _key(k: int) -> void:
 	elif k == KEY_M:
 		game.menus.open_menu()
 	elif k == KEY_T:
-		game.open_select()
+		if not MatchBilling.league_watch(game):
+			game.open_select()
 	elif k == KEY_L:
 		game.wiki_host.open_page(WikiModel.LEAGUE, "")
 	elif k == KEY_ESCAPE:

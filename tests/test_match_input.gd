@@ -264,3 +264,70 @@ func test_the_play_keys_stop_at_the_whistle() -> void:
 	_key(KEY_R)
 	assert_true(game.engine != null and str(game.engine.phase) != "full_time",
 		"R stopped playing again after the whistle")
+
+
+class WatchScene extends Node:
+	var billing := MatchBilling.new()
+	var engine = null
+	var prematch = null
+	var wiki_host = null
+	var menus = null
+	var hud = null
+	var view = null
+	var select_open := false
+	var seeded := 1000
+	var opens := 0
+	var matches := 0
+	func open_select(_from_menu := false) -> void:
+		opens += 1
+		select_open = true
+	func new_match(_seed: int) -> void:
+		matches += 1
+
+
+class WatchView extends RefCounted:
+	var door := ""
+	func button_at(_p: Vector2) -> String:
+		return door
+	func hover(_p: Vector2) -> void:
+		pass
+	func pick(_p: Vector2) -> int:
+		return -1
+
+
+func _keyed(router, code: int) -> void:
+	var ev := InputEventKey.new()
+	ev.keycode = code
+	ev.pressed = true
+	router.handle(ev)
+
+
+func test_a_league_watch_has_no_picker_or_reseed_in_the_router() -> void:
+	var scene := WatchScene.new()
+	var router := MatchInput.new(scene)
+	scene.view = WatchView.new()
+	scene.billing.bind_fixture("MUN", {"matchday": 3})
+	_keyed(router, KEY_T)
+	_keyed(router, KEY_R)
+	scene.view.door = "teams"
+	router.click(Vector2.ZERO)
+	scene.view.door = "restart"
+	router.click(Vector2.ZERO)
+	assert_eq(scene.opens, 0, "T / teams opened the picker over a league watch")
+	assert_eq(scene.matches, 0, "R / restart began a new match over a league watch")
+	assert_false(scene.select_open, "a league watch left the picker open")
+
+	scene.billing.bind_friendly("MUN", "MCI")
+	scene.view.door = "teams"
+	router.click(Vector2.ZERO)
+	assert_eq(scene.opens, 1, "a single match lost its picker door")
+	scene.select_open = false
+	scene.view.door = "restart"
+	router.click(Vector2.ZERO)
+	assert_eq(scene.matches, 1, "a single match lost its restart door")
+	_keyed(router, KEY_R)
+	assert_eq(scene.matches, 2, "a single match lost R")
+	_keyed(router, KEY_T)
+	assert_eq(scene.opens, 2, "T did not open the picker in a single match")
+	assert_false(MatchBilling.league_watch(scene), "a single match reads as a league watch")
+	scene.free()
