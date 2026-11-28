@@ -1,12 +1,10 @@
 # Deferred
 
-Gaps outside the slice. Refresh via
+Refresh via
 [`audit-deferred-agent`](../.agents/skills/audit-deferred-agent/SKILL.md).
-Rules SoT: [wiki](https://github.com/waigore/footballsim/wiki).
+Rules: [wiki](https://github.com/waigore/footballsim/wiki).
 
 ## Already live
-
-Shipped (wiki domains playable):
 
 | Area | Locus |
 |------|-------|
@@ -25,12 +23,13 @@ Shipped (wiki domains playable):
 | UEFA data, sim, hub, stages, draws, encyclopedia | DR-20261128-15; `league_uefa_*.gd`; [#435](https://github.com/waigore/footballsim/issues/435)–[#437](https://github.com/waigore/footballsim/issues/437) |
 | Multi-season settle, archive, age/retire, NEW SEASON | DR-20261128-30; `scripts/sim/market/`; [#440](https://github.com/waigore/footballsim/issues/440) |
 | Contracts, windows and club money | DR-20261128-23 / 24 / 32; `market_*.gd`; [#441](https://github.com/waigore/footballsim/issues/441)–[#443](https://github.com/waigore/footballsim/issues/443) |
+| Deal engine | DR-20261128-23 / 28; `market_deal*.gd`; [#444](https://github.com/waigore/footballsim/issues/444) |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Transfer market (L4+) | L0–L4 live; deals, loans, clauses, clearance, lists, FFP remain — [#438](https://github.com/waigore/footballsim/issues/438), [#444](https://github.com/waigore/footballsim/issues/444)–[#454](https://github.com/waigore/footballsim/issues/454), [#473](https://github.com/waigore/footballsim/issues/473) |
+| 1 | Transfer market (L6+) | loans, clauses, clearance, lists, FFP — [#438](https://github.com/waigore/footballsim/issues/438), [#444](https://github.com/waigore/footballsim/issues/444)–[#454](https://github.com/waigore/footballsim/issues/454), [#473](https://github.com/waigore/footballsim/issues/473) |
 | 2 | Spanish La Liga 2 pyramid | DR-20261128-33 designed; [#496](https://github.com/waigore/footballsim/issues/496)–[#500](https://github.com/waigore/footballsim/issues/500) |
 | 3 | Season-two UEFA fields | Cups done [#506](https://github.com/waigore/footballsim/issues/506); UEFA [#481](https://github.com/waigore/footballsim/issues/481); DR-35 |
 | 4 | Native match hot loop | DR-20261123-02 under 120 s; tick still GDScript |
@@ -38,7 +37,7 @@ Shipped (wiki domains playable):
 
 ## Next pick
 
-**Transfer market: the deal engine** ([#444](https://github.com/waigore/footballsim/issues/444); parent [#438](https://github.com/waigore/footballsim/issues/438)).
+**Loans with options and obligations** ([#445](https://github.com/waigore/footballsim/issues/445); parent [#438](https://github.com/waigore/footballsim/issues/438)).
 
 ## Out of scope / blocked
 
