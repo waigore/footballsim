@@ -74,6 +74,21 @@ func test_the_panel_carries_a_europe_row_with_its_own_icon() -> void:
 		"the Europe icon asset is missing")
 
 
+func test_every_panel_row_fits_a_phone_and_keeps_its_tap() -> void:
+	var panel := LeaguePanel.new()
+	panel.touch = true
+	panel.open()
+	panel.settle()
+	for vp in [PHONE, Vector2(411, 914), Vector2(1024, 600)]:
+		for i in range(LeaguePanel.ITEMS.size()):
+			var row: Dictionary = LeaguePanel.ITEMS[i]
+			var rect: Rect2 = panel.item_rect(vp, i)
+			assert_gte(rect.size.y, 44.0, "%s is below the tap floor at %s" % [row["id"], vp])
+			assert_lte(rect.end.y, vp.y - 12.0, "%s falls off the panel at %s" % [row["id"], vp])
+			assert_eq(panel.hit(rect.get_center(), vp), str(row["id"]),
+				"%s is not hittable at %s" % [row["id"], vp])
+
+
 func test_the_panel_door_opens_the_hub_and_lists_the_three_cards() -> void:
 	_open()
 	LeaguePanelDoors.nav(screen, "europe")

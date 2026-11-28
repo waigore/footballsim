@@ -28,6 +28,24 @@ const TAB_INSET := 16.0
 
 const SLIDE := 0.22
 
+const TAP_FLOOR := 44.0
+
+const TIGHT_HEAD := 66.0
+
+const FOOT := 22.0
+
+
+static func metrics(vp: Vector2, count: int = ITEMS.size()) -> Dictionary:
+	var head := HEAD
+	var gap := ROW_GAP
+	var row := ROW_H
+	if count > 0 and float(count) * (row + gap) - gap > vp.y - head - FOOT:
+		gap = 2.0
+		head = TIGHT_HEAD
+		var fit: float = (vp.y - head - FOOT + gap) / float(count) - gap
+		row = maxf(minf(fit, ROW_H), 28.0)
+	return {"head": head, "row": row, "gap": gap}
+
 
 var slide := 0.0
 var target := 0.0
@@ -85,8 +103,10 @@ func tab_rect(vp: Vector2) -> Rect2:
 	return Rect2(-2.0, vp.y * 0.5 - TAB_H * 0.5, TAB_W, TAB_H)
 
 func item_rect(vp: Vector2, index: int) -> Rect2:
-	return Rect2(panel_rect(vp).position.x + 12.0, HEAD + float(index) * (ROW_H + ROW_GAP),
-		width(vp) - 24.0, ROW_H)
+	var fit := metrics(vp)
+	return Rect2(panel_rect(vp).position.x + 12.0,
+		float(fit["head"]) + float(index) * (float(fit["row"]) + float(fit["gap"])),
+		width(vp) - 24.0, float(fit["row"]))
 
 
 func hit(p: Vector2, vp: Vector2) -> String:
@@ -122,9 +142,10 @@ func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, active_pose: String) ->
 	UiChrome.panel(c, cache, rect, UiChrome.C_BG.lerp(Color(0.02, 0.03, 0.04), 0.5), 0,
 		Color(0.96, 0.78, 0.30, 0.35), 1)
 	c.draw_rect(Rect2(rect.position.x + rect.size.x - 3.0, 0.0, 3.0, vp.y), UiChrome.C_GOLD)
-	UiChrome.text(c, Vector2(rect.position.x + 22.0, 34.0), "LEAGUE", 12, UiChrome.C_GOLD, bold)
-	UiChrome.text(c, Vector2(rect.position.x + 22.0, 54.0), "NAVIGATION", 10, UiChrome.C_DIM, med)
-	c.draw_rect(Rect2(rect.position.x + 22.0, 66.0, rect.size.x - 46.0, 1.0), UiChrome.C_BORDER)
+	var head := float(metrics(vp)["head"])
+	UiChrome.text(c, Vector2(rect.position.x + 22.0, head - 50.0), "LEAGUE", 12, UiChrome.C_GOLD, bold)
+	UiChrome.text(c, Vector2(rect.position.x + 22.0, head - 30.0), "NAVIGATION", 10, UiChrome.C_DIM, med)
+	c.draw_rect(Rect2(rect.position.x + 22.0, head - 18.0, rect.size.x - 46.0, 1.0), UiChrome.C_BORDER)
 	for i in range(ITEMS.size()):
 		_draw_item(c, vp, i, active_pose, fonts)
 	UiChrome.text(c, Vector2(rect.position.x + 22.0, vp.y - 18.0),
