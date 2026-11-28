@@ -147,6 +147,8 @@ screens:
       - scripts/ui/league_europe_view.gd
       - scripts/ui/league_europe_draw.gd
       - scripts/ui/league_europe_actions.gd
+      # The window chips the hub paints, one per association (#443).
+      - scripts/ui/league_windows_view.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-l-hub-1600.jpg
   - id: league-table
     title: League table

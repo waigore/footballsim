@@ -63,6 +63,44 @@ static func interest_view(state: Dictionary) -> Dictionary:
 	return LeagueInterestMark.set_of(state.get("interests", []))
 
 
+const BAND_GAP := 6.0
+
+
+static func window_height(vp: Vector2, rows: Array) -> float:
+	if rows.is_empty():
+		return 0.0
+	var lines := int(ceil(float(rows.size()) / float(LeagueWindowsView.cols(vp))))
+	return float(lines) * LeagueWindowsView.CHIP_H \
+		+ float(lines - 1) * LeagueWindowsView.CHIP_GAP
+
+
+static func plan_top(vp: Vector2, windows: Array, lane_top: float) -> float:
+	var band_h: float = window_height(vp, windows)
+	if band_h <= 0.0:
+		return lane_top
+	return lane_top + band_h + BAND_GAP
+
+
+func _window_band(vp: Vector2, rows: Array, top: float) -> Array:
+	var out: Array = []
+	if rows.is_empty():
+		return out
+	var cols := LeagueWindowsView.cols(vp)
+	var gap := LeagueWindowsView.CHIP_GAP
+	var count := mini(cols, rows.size())
+	var width: float = (vp.x - 48.0 - gap * float(count - 1)) / float(count)
+	for i in range(rows.size()):
+		var col := i % cols
+		var line := int(i / cols)
+		out.append({"id": "", "kind": "window_chip",
+			"rect": Rect2(24.0 + float(col) * (width + gap),
+				top + float(line) * (LeagueWindowsView.CHIP_H + gap),
+				width, LeagueWindowsView.CHIP_H),
+			"text": LeagueWindowsView.chip_text(rows[i]),
+			"open": bool((rows[i] as Dictionary).get("open", false))})
+	return out
+
+
 func _plan_lane(vp: Vector2, touch := false, can_suggest := false) -> Dictionary:
 	var top: float = HEADER + (14.0 if not compact(vp) else 8.0)
 	var suggest_h: float = UiChrome.tap_h(20.0, touch)
@@ -78,8 +116,11 @@ func hub_layout(vp: Vector2, state: Dictionary) -> Array:
 	var lane := _plan_lane(vp, touch, can_suggest)
 	var top := float(lane["chrome_top"])
 	var interest := interest_view(state)
-	var items: Array = LeaguePlanSheet.layout(state.get("plan", []), interest,
-		float(lane["left"]), float(lane["right"]), float(lane["top"]), touch)
+	var windows: Array = state.get("windows", [])
+	var items: Array = _window_band(vp, windows, float(lane["top"]))
+	items.append_array(LeaguePlanSheet.layout(state.get("plan", []), interest,
+		float(lane["left"]), float(lane["right"]),
+		plan_top(vp, windows, float(lane["top"])), touch))
 	if can_suggest:
 		var left_w: float = float(lane["right"]) - 24.0
 		items.append({"id": "suggest", "kind": "chip", "label": "SUGGEST WATCHES",
@@ -116,6 +157,7 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 
 
 	var plan_items: Array = []
+	var window_items: Array = []
 	var suggest: Dictionary = {}
 	for item in items:
 		if str(item.get("id", "")) == "suggest":
@@ -124,14 +166,19 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		match str(item.get("kind", "")):
 			"row", "chip", "league_head":
 				plan_items.append(item)
+			"window_chip":
+				window_items.append(item)
 
 
 	var hint := body_hint(state)
+	var windows: Array = state.get("windows", [])
 	if hint != "":
 		UiChrome.text(c, Vector2(24.0, HEADER + 18.0), hint, 11,
 			UiChrome.C_DIM, fonts["bold"])
+	_paint_windows(c, window_items, fonts)
 	if (state.get("plan", []) as Array).is_empty():
-		UiChrome.text(c, Vector2(24.0, HEADER + 44.0),
+		var empty_y: float = plan_top(vp, windows, float(_plan_lane(vp, false)["top"])) + 6.0
+		UiChrome.text(c, Vector2(24.0, empty_y),
 			"No fixtures on this day — CONTINUE moves the clock.", 12, UiChrome.C_SOFT, fonts["med"])
 	plan.draw(c, plan_items, fonts)
 	if not suggest.is_empty():
@@ -139,5 +186,16 @@ func draw_hub_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		UiChrome.panel(c, cache, rect, UiChrome.C_PANEL_LIGHT, 6, UiChrome.C_GOLD, 1)
 		UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 4.0,
 			"SUGGEST WATCHES", 10, UiChrome.C_GOLD, fonts["bold"])
+
+
+func _paint_windows(c: CanvasItem, items: Array, fonts: Dictionary) -> void:
+	var bold: Font = fonts["bold"]
+	for item in items:
+		var rect: Rect2 = item["rect"]
+		var opened := bool(item.get("open", false))
+		var ink: Color = UiChrome.C_LIVE if opened else UiChrome.C_DANGER
+		UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 4, ink, 1)
+		UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 4.0,
+			str(item["text"]), 8, ink, bold)
 
 # gd-tools: no cover end
