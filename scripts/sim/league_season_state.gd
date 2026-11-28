@@ -20,7 +20,7 @@ static func build(season: LeagueSeason) -> Dictionary:
 		if not rows.is_empty():
 			gw = int(rows[0]["matchday"])
 		gameweeks[str(cid)] = gw
-		var table_rows := season.record.standings.table(str(cid))
+		var table_rows := LeagueFormGuide.decorate(season.record.standings.table(str(cid)), str(cid))
 		tables[str(cid)] = table_rows
 		var comp := PLRepository.shared().competition(str(cid))
 		comps.append({

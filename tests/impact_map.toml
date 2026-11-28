@@ -218,6 +218,9 @@ suites = [
   # The English pyramid (#258/#259/#260): five linked tiers, the 2026/27
   # play-offs and the membership swap that follows them.
   "test_english_pyramid.gd",
+  # The table's form reading (DR-20261128-12): the fold over the ledger's
+  # played fixtures and the rows the season state decorates with it.
+  "test_form_guide.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -767,6 +770,13 @@ domain = "pitch_queries"
 [[rules]]
 match = "tests/test_ux_parity.gd*"
 domain = "shell"
+
+# The table's form reading (DR-20261128-12): the fold over the ledger's played
+# fixtures, the columns that lay the pips and the season state that decorates
+# the table with them. One suite pins the reading against the ledger.
+[[rules]]
+match = "tests/test_form_guide.gd*"
+domain = "league"
 
 # ------------------------------------------------------------- project ---
 
