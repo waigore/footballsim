@@ -6,7 +6,7 @@ const ACCENT := "#f7c948"
 
 const SHORT := {
 	"BL": "BL", "BL2": "2.BL", "CH": "CHAMP", "LL": "LA LIGA",
-	"L1": "L1", "L2": "L2", "NL": "NL", "PL": "PL",
+	"L1": "L1", "L2": "L2", "NL": "NL", "PL": "PL", "SA": "SERIE A", "SB": "SERIE B",
 }
 
 
@@ -22,6 +22,18 @@ static func index(active_id: String) -> Dictionary:
 		if id != active_id:
 			item["target"] = {"page": WikiModel.LEAGUE, "id": id}
 		items.append(item)
+	for comp in PLRepository.shared().cups():
+		var cid := str(comp.get("id", ""))
+		if cid == "" or not LeagueCup.is_cup(cid):
+			continue
+		var cup_item := {
+			"text": str(comp.get("short_name", cid)).to_upper(),
+			"short": str(SHORT.get(cid, str(comp.get("short_name", cid)).to_upper())),
+			"accent": ACCENT if cid == active_id else "",
+		}
+		if cid != active_id:
+			cup_item["target"] = {"page": WikiModel.CUP, "id": cid}
+		items.append(cup_item)
 	return {"k": "chips", "strip": true, "items": items}
 
 

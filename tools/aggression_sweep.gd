@@ -23,7 +23,7 @@ const LEVELS := [0.0, 0.48, 0.535, 0.62, 1.0]
 func _init() -> void:
 	print("aggression | won%  | fouls per 100 lost")
 	for level in LEVELS:
-		var eng := MatchEngine.new(4242, "MUN", "MCI")
+		var eng := MatchEngine.new(4242, "ENG-MUN1", "ENG-MCI1")
 		eng.phase = "play"
 		eng.possession_team = 0
 		var def = null

@@ -112,7 +112,12 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			assert_eq(chosen, 3, "one choice per group should be selected")
 
 
-			assert_eq(items.size(), 19, "the wizard is missing a control")
+			var cups := 0
+			for item in items:
+				if str(item["id"]).begins_with("wcups:"):
+					cups += 1
+			assert_eq(items.size(), 22 + cups, "the wizard is missing a control")
+			assert_eq(cups, 1, "a Premier League form did not offer England's domestic cups")
 
 
 func test_the_wizard_cascades_a_country_chain() -> void:
@@ -128,8 +133,10 @@ func test_the_wizard_cascades_a_country_chain() -> void:
 		elif str(item["kind"]) == "country":
 			countries.append(str(item["label"]))
 	assert_eq(ids, ["wleague:PL", "wleague:CH", "wleague:L1", "wleague:L2", "wleague:NL",
-		"wleague:LL", "wleague:BL", "wleague:BL2"], "the wizard did not list every league")
-	assert_eq(countries, ["ENGLAND", "SPAIN", "GERMANY"], "the country headers are wrong")
+		"wleague:LL", "wleague:BL", "wleague:BL2", "wleague:SA", "wleague:SB"],
+		"the wizard did not list every league")
+	assert_eq(countries, ["ENGLAND", "SPAIN", "GERMANY", "ITALY"],
+		"the country headers are wrong")
 	var screen := FakeWizard.new()
 
 	screen.wizard = {"competitions": ["PL"]}
@@ -155,6 +162,15 @@ func test_the_wizard_cascades_a_country_chain() -> void:
 	screen.wizard = {"competitions": ["BL", "BL2"]}
 	LeagueWizardActions.toggle_league(screen, "BL")
 	assert_eq(screen.wizard["competitions"], ["BL", "BL2"], "the wizard emptied itself")
+	screen.wizard = {"competitions": ["PL"]}
+	LeagueWizardActions.toggle_league(screen, "SB")
+	assert_eq(screen.wizard["competitions"], ["PL", "SA", "SB"],
+		"Serie B did not bring Serie A")
+	LeagueWizardActions.toggle_league(screen, "SA")
+	assert_eq(screen.wizard["competitions"], ["PL"], "the Italian pair did not cascade off")
+	screen.wizard = {"competitions": ["SA", "SB"]}
+	LeagueWizardActions.toggle_league(screen, "SA")
+	assert_eq(screen.wizard["competitions"], ["SA", "SB"], "the wizard emptied itself")
 func test_the_save_keeps_the_leagues_in_the_published_order() -> void:
 	var season := LeagueSeason.create("Order", "real", "every_day", 240, ["BL2", "LL", "BL", "PL"])
 	assert_not_null(season, "the four-league save did not build")
@@ -1161,7 +1177,7 @@ func test_the_table_reads_the_full_club_name_at_every_surface() -> void:
 	var row: Dictionary = _table()[0]
 	assert_eq(LeagueTableView.club_label(row), str(row["club_name"]),
 		"the table dropped the full club name")
-	assert_eq(LeagueTableView.club_label({"club_abbr": "MUN"}), "MUN",
+	assert_eq(LeagueTableView.club_label({"club_abbr": "ENG-MUN1"}), "ENG-MUN1",
 		"a row with no name lost its short form")
 	var fx := _fixture(1)
 	assert_eq(str(fx["home_name"]), "Home 1", "the fixture row lost its full name")
@@ -1213,8 +1229,8 @@ func test_the_podium_lays_out_with_and_without_a_summary() -> void:
 	assert_eq(doors, 3, "the podium lost a door (BACK, TABLE, MAIN MENU)")
 	assert_eq(extent, 1, "the podium lost its measured summary height")
 	var summary := {
-		"champion": {"club": "Arsenal", "club_id": "ARS", "points": 90},
-		"runner_up": {"club": "Liverpool", "club_id": "LIV", "points": 88},
+		"champion": {"club": "Arsenal", "club_id": "ENG-ARS1", "points": 90},
+		"runner_up": {"club": "Liverpool", "club_id": "ENG-LIV1", "points": 88},
 		"europe": [], "relegated": [], "places": LeagueRules.places(LeagueRules.defaults()),
 		"top_scorers": [{"name": "A. Striker", "goals": 24}],
 	}
@@ -1415,7 +1431,7 @@ func test_the_stats_empty_state_names_the_season_not_the_filters() -> void:
 	assert_eq(_note(filtered), "No matchdays match these filters.",
 		"a played season emptied by its filters lost its note")
 	var charted: Array = sheet.layout(vp, {"name": "S", "reports": [],
-		"played": 20, "leaders": [{"name": "A. Scorer", "abbr": "MUN", "stat_value": 3}],
+		"played": 20, "leaders": [{"name": "A. Scorer", "abbr": "ENG-MUN1", "stat_value": 3}],
 		"filters": {"league": "", "month": "", "team": "", "stat": "goals"}})
 	assert_true(_has_caption(charted, "LEADERS  ·  GOALS"), "a chart with rows lost its caption")
 
@@ -1532,22 +1548,22 @@ func test_a_phone_calendar_lays_day_cells_and_month_doors_for_a_finger() -> void
 func test_a_phone_interest_sheet_lays_its_rows_and_remove_doors_for_a_finger() -> void:
 	var sheet := LeagueInterestSheet.new()
 	var vp := Vector2(913, 411)
-	var club := {"id": "MUN", "name": "Manchester United", "abbr": "MUN"}
+	var club := {"id": "ENG-MUN1", "name": "Manchester United", "abbr": "ENG-MUN1"}
 	var view := {"query": "man", "clubs": [club], "results": [club]}
 	var desk: Array = sheet.layout(vp, view)
-	assert_almost_eq(_item_rect(desk, "interest:add:MUN").size.y, LeagueExtra.ROW_H, 0.01,
+	assert_almost_eq(_item_rect(desk, "interest:add:ENG-MUN1").size.y, LeagueExtra.ROW_H, 0.01,
 		"the desktop result row left its dense pitch")
-	assert_almost_eq(_item_rect(desk, "club:MUN").size.y, LeagueExtra.ROW_H, 0.01,
+	assert_almost_eq(_item_rect(desk, "club:ENG-MUN1").size.y, LeagueExtra.ROW_H, 0.01,
 		"the desktop shortlist row left its dense pitch")
-	assert_almost_eq(_item_rect(desk, "interest:remove:MUN").size.y, LeagueExtra.ROW_H - 8.0, 0.01,
+	assert_almost_eq(_item_rect(desk, "interest:remove:ENG-MUN1").size.y, LeagueExtra.ROW_H - 8.0, 0.01,
 		"the desktop REMOVE door left its dense pitch")
 
 	var phone_view: Dictionary = view.duplicate()
 	phone_view["touch"] = true
 	var phone: Array = sheet.layout(vp, phone_view)
-	var result: Rect2 = _item_rect(phone, "interest:add:MUN")
-	var row: Rect2 = _item_rect(phone, "club:MUN")
-	var door: Rect2 = _item_rect(phone, "interest:remove:MUN")
+	var result: Rect2 = _item_rect(phone, "interest:add:ENG-MUN1")
+	var row: Rect2 = _item_rect(phone, "club:ENG-MUN1")
+	var door: Rect2 = _item_rect(phone, "interest:remove:ENG-MUN1")
 	assert_gte(result.size.y, UiChrome.TAP_H, "the result row is under a finger")
 	assert_gte(row.size.y, UiChrome.TAP_H, "the shortlist row is under a finger")
 	assert_gte(door.size.y, UiChrome.TAP_H, "REMOVE is under a finger")

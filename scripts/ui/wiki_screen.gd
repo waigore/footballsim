@@ -105,7 +105,11 @@ func crumb_pages() -> Array:
 
 func _refresh() -> void:
 	var top := current()
-	page_data = WikiModel.page(str(top.get("page", WikiModel.LEAGUE)), str(top.get("id", "")))
+	var page := str(top.get("page", WikiModel.LEAGUE))
+	var mode := ""
+	if page == WikiModel.PLAYER or page == WikiModel.TEAM:
+		mode = Prefs.load_attrs()
+	page_data = WikiModel.page(page, str(top.get("id", "")), mode if mode != "" else "SIMPLIFIED")
 	_strip_sync()
 	if body != null:
 		var box := body_rect(design_vp())
@@ -115,6 +119,15 @@ func _refresh() -> void:
 		body.set_page(page_data, is_compact())
 		body.followed = WikiInterest.followed_set(LeagueSeason.active)
 	queue_redraw()
+
+
+func set_attr_view(mode: String) -> bool:
+	var page := str(current().get("page", ""))
+	if page != WikiModel.PLAYER and page != WikiModel.TEAM:
+		return false
+	Prefs.save_attrs(mode)
+	_refresh()
+	return true
 
 
 func _strip_sync() -> void:

@@ -17,7 +17,7 @@ func after_all() -> void:
 
 
 func _staged(level, seed_in: int = 4242) -> Dictionary:
-	var eng := MatchEngine.new(seed_in, "MUN", "MCI")
+	var eng := MatchEngine.new(seed_in, "ENG-MUN1", "ENG-MCI1")
 	eng.phase = "play"
 	var gk = eng._gk_of(0)
 	var bars: Dictionary = gk.gk.duplicate()

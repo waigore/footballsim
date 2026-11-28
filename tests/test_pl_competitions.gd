@@ -15,7 +15,7 @@ func after_all() -> void:
 
 func test_the_seed_carries_every_competition() -> void:
 	var all := PLCompetitions.all()
-	assert_eq(all.size(), 8, "the shipped seed should carry the whole pyramid")
+	assert_eq(all.size(), 10, "the shipped seed should carry the whole pyramid")
 	var ids: Array = []
 	for comp in all:
 		ids.append(str(comp["id"]))
@@ -23,6 +23,10 @@ func test_the_seed_carries_every_competition() -> void:
 	assert_has(ids, "LL", "the seed's La Liga is missing")
 	assert_has(ids, "BL", "the seed's Bundesliga is missing")
 	assert_has(ids, "BL2", "the seed's 2. Bundesliga is missing")
+	assert_has(ids, "SA", "the seed's Serie A is missing")
+	assert_has(ids, "SB", "the seed's Serie B is missing")
+	assert_eq(int(PLCompetitions.clubs("SA")), 20, "the Serie A club count is wrong")
+	assert_eq(int(PLCompetitions.clubs("SB")), 20, "the Serie B club count is wrong")
 
 	for cid in ["CH", "L1", "L2", "NL"]:
 		assert_has(ids, cid, "the seed's English tier %s is missing" % cid)
@@ -41,11 +45,13 @@ func test_the_shipped_hub_names_its_competition() -> void:
 	assert_eq(str(page["title"]), "PREMIER LEAGUE", "the hub title is not the competition's")
 	assert_true(str(page["subtitle"]).contains("20 CLUBS"), "the hub's club count is hard-coded")
 	var index := _chips(page)
-	assert_eq(index.size(), 8, "the competition index should hold every league")
+	assert_eq(index.size(), _index_size(), "the competition index should hold every league and cup")
 	assert_true(_chip_target(index, "LA LIGA", "LL"),
 		"the Premier League hub does not offer La Liga")
 	assert_true(_chip_target(index, "BUNDESLIGA", "BL"),
 		"the Premier League hub does not offer the Bundesliga")
+	assert_true(_chip_target(index, "SERIE A", "SA"),
+		"the Premier League hub does not offer Serie A")
 	var badge := 0
 	for item in index:
 		if str(item.get("text", "")) == "PREMIER LEAGUE":
@@ -55,17 +61,17 @@ func test_the_shipped_hub_names_its_competition() -> void:
 	assert_eq(badge, 1, "the index lost the competition being read")
 
 func test_a_club_and_its_players_point_at_their_competition() -> void:
-	var club := WikiModel.page(WikiModel.TEAM, "MUN")
+	var club := WikiModel.page(WikiModel.TEAM, "ENG-MUN1")
 	var targets := _targets(club)
 	assert_true(_has_target(targets, WikiModel.LEAGUE, "PL"), "a club page does not link its league")
-	var player := WikiModel.page(WikiModel.PLAYER, "MUN-b-fernandes")
+	var player := WikiModel.page(WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "B. Fernandes"))
 	var player_targets := _targets(player)
 	assert_true(_has_target(player_targets, WikiModel.LEAGUE, "PL"),
 		"a player page does not link its league")
 
 func test_every_competition_gets_its_own_hub() -> void:
 	var all := PLCompetitions.all()
-	assert_eq(all.size(), 8, "the competitions were not all read")
+	assert_eq(all.size(), 10, "the competitions were not all read")
 	assert_eq(PLCompetitions.default_id(), "PL", "the default competition moved")
 	assert_eq(PLCompetitions.clubs("LL"), 20, "La Liga's club count is wrong")
 
@@ -75,7 +81,7 @@ func test_every_competition_gets_its_own_hub() -> void:
 		"the second hub kept the first's club count")
 	assert_eq(_rows_in(theirs, "LEAGUE TABLE"), 20, "the second hub shows the wrong table")
 	var index := _chips(theirs)
-	assert_eq(index.size(), 8, "the index does not list every competition")
+	assert_eq(index.size(), _index_size(), "the index does not list every competition")
 	assert_true(_chip_target(index, "PREMIER LEAGUE", "PL"),
 		"the second hub does not offer the Premier League")
 
@@ -95,7 +101,7 @@ func test_every_competition_gets_its_own_hub() -> void:
 	assert_true(_chip_target(_chips(ours), "2. BUNDESLIGA", "BL2"),
 		"the Premier League hub does not offer the second German tier")
 
-	var club := WikiModel.page(WikiModel.TEAM, "LL-RMA")
+	var club := WikiModel.page(WikiModel.TEAM, "ESP-RMA1")
 	assert_eq(str(club["title"]), "REAL MADRID", "the second league's club page is missing")
 	var club_targets := _targets(club)
 	assert_true(_has_target(club_targets, WikiModel.LEAGUE, "LL"),
@@ -105,6 +111,36 @@ func test_an_unknown_competition_is_rejected() -> void:
 	assert_false(WikiModel.has_page(WikiModel.LEAGUE, "NOPE"), "a made-up competition resolved")
 	assert_eq(WikiModel.label(WikiModel.LEAGUE, ""), "PREMIER LEAGUE",
 		"the crumb numbers the wrong league")
+
+
+func test_a_cup_reads_a_hub_with_a_bracket_not_a_table() -> void:
+	assert_true(WikiModel.has_page(WikiModel.CUP, "FAC"), "the encyclopedia rejects a cup")
+	assert_false(WikiModel.has_page(WikiModel.CUP, "PL"), "a league resolved as a cup")
+	assert_eq(WikiModel.label(WikiModel.CUP, "FAC"), "FA CUP", "the cup crumb names nothing")
+	var page := WikiModel.page(WikiModel.CUP, "FAC")
+	assert_eq(str(page["title"]), "FA CUP", "the cup hub is not the cup's own page")
+	var sections: Array = []
+	for block in page.get("blocks", []):
+		if str((block as Dictionary).get("k", "")) == "section":
+			sections.append(str((block as Dictionary).get("text", "")))
+	assert_false(sections.has("LEAGUE TABLE"), "a cup hub carried a league table")
+	var cups := 0
+	var cup_targets := 0
+	for item in _chips(page):
+		if str((item as Dictionary).get("text", "")) == "FA CUP":
+			cups += 1
+			assert_true((item as Dictionary).get("target", {}).is_empty(),
+				"the cup you are reading should be a badge, not a door to itself")
+		var target: Dictionary = (item as Dictionary).get("target", {})
+		if str(target.get("page", "")) == WikiModel.CUP:
+			cup_targets += 1
+	assert_eq(cups, 1, "the index lost the cup being read")
+	assert_gt(cup_targets, 0, "the index offers no door into another cup")
+	assert_true(sections.has("THE DRAW"), "the cup hub does not read its draw")
+
+
+func _index_size() -> int:
+	return PLCompetitions.all().size() + PLRepository.shared().cups().size()
 
 
 func _chips(page: Dictionary) -> Array:

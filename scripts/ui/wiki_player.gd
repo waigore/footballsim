@@ -2,10 +2,11 @@ class_name WikiPlayer
 extends RefCounted
 
 
-static func page(player_id: String) -> Dictionary:
+static func page(player_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 	var p := WikiModel.repo().player(player_id)
 	if p.is_empty():
 		return WikiLeague.page()
+	var view := AttrView.normalize(mode)
 	var club := WikiModel.repo().club(str(p["club_id"]))
 	var season: Dictionary = p.get("season", {})
 	var career: Dictionary = p.get("career", {})
@@ -25,6 +26,7 @@ static func page(player_id: String) -> Dictionary:
 		"eyebrow": str(club.get("abbr", "")),
 		"subtitle": identity,
 		"accent": club.get("color", Color.WHITE),
+		"view": view,
 		"blocks": [],
 	}
 	var summary: Array = [
@@ -39,14 +41,30 @@ static func page(player_id: String) -> Dictionary:
 		summary.append(["STATUS", absence, false])
 	out["blocks"].append({"k": "kv", "items": summary})
 	out["blocks"].append({"k": "section", "text": "ATTRIBUTES"})
-	var bars: Array = []
-	if str(p["role"]) == "GK":
-		for pair in [["div", "DIVING"], ["han", "HANDLING"], ["kic", "KICKING"], ["ref", "REFLEXES"], ["spd", "SPEED"]]:
-			bars.append([str(pair[1]), float(p["gk"].get(pair[0], 30)) / 100.0])
+	out["blocks"].append({"k": "door", "items": [
+		{"text": "SIMPLIFIED", "id": "attrs:SIMPLIFIED", "accent": WikiModel.hex(club.get("color", Color.WHITE)),
+			"on": view == "SIMPLIFIED"},
+		{"text": "FULL", "id": "attrs:FULL", "accent": WikiModel.hex(club.get("color", Color.WHITE)),
+			"on": view == "FULL"},
+	]})
+	if view == "FULL":
+		out["blocks"].append({
+			"k": "grid", "cols": 3,
+			"groups": AttrView.rows(str(p["role"]), p.get("subs", {})),
+		})
+		var extras := AttrView.extras(p)
+		if not extras.is_empty():
+			out["blocks"].append({"k": "section", "text": "CARD"})
+			out["blocks"].append({"k": "kv", "items": extras})
 	else:
-		for pair in [["pac", "PACE"], ["sho", "SHOOTING"], ["pas", "PASSING"], ["dri", "DRIBBLING"], ["def", "DEFENDING"], ["phy", "PHYSICAL"]]:
-			bars.append([str(pair[1]), float(p[pair[0]]) / 100.0])
-	out["blocks"].append({"k": "bars", "items": bars})
+		var bars: Array = []
+		if str(p["role"]) == "GK":
+			for pair in [["div", "DIVING"], ["han", "HANDLING"], ["kic", "KICKING"], ["ref", "REFLEXES"], ["spd", "SPEED"]]:
+				bars.append([str(pair[1]), float(p["gk"].get(pair[0], 30)) / 100.0])
+		else:
+			for pair in [["pac", "PACE"], ["sho", "SHOOTING"], ["pas", "PASSING"], ["dri", "DRIBBLING"], ["def", "DEFENDING"], ["phy", "PHYSICAL"]]:
+				bars.append([str(pair[1]), float(p[pair[0]]) / 100.0])
+		out["blocks"].append({"k": "bars", "items": bars})
 	var season_label := str(season.get("season_label", ""))
 	var season_head := "SEASON"
 	if season_label != "":

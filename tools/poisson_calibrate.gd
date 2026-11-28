@@ -51,7 +51,7 @@ func _init() -> void:
 	print("time    %.1fs\n" % (float(elapsed) / 1000.0))
 
 	print("λ audit (clear weather)")
-	for pairing in [["MCI", "IPS"], ["MCI", "MUN"], ["MCI", "ARS"], ["MCI", "MCI"], ["IPS", "MCI"]]:
+	for pairing in [["ENG-MCI1", "ENG-IPS1"], ["ENG-MCI1", "ENG-MUN1"], ["ENG-MCI1", "ENG-ARS1"], ["ENG-MCI1", "ENG-MCI1"], ["ENG-IPS1", "ENG-MCI1"]]:
 		var m := PoissonModel.new(0, str(pairing[0]), str(pairing[1]), "clear", {}, cal)
 		var o := m.outcomes()
 		print("  %-3s v %-3s   λ %.2f - %.2f   H/D/A %.2f / %.2f / %.2f" % [

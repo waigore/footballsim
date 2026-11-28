@@ -197,11 +197,11 @@ func _fixture(home: String, away: String, home_goals: int, away_goals: int) -> D
 
 func _rows() -> Array:
 	return [
-		{"position": 1, "club_id": "PL-ARS", "club_name": "Arsenal", "club_abbr": "ARS",
+		{"position": 1, "club_id": "PL-ARS", "club_name": "Arsenal", "club_abbr": "ENG-ARS1",
 			"points": 9, "won": 3, "form": ["W", "D", "L", "W", "W"]},
 		{"position": 2, "club_id": "PL-MUN", "club_name": "Manchester United",
-			"club_abbr": "MUN", "points": 4, "won": 1, "form": ["L"]},
-		{"position": 3, "club_id": "PL-EVE", "club_name": "Everton", "club_abbr": "EVE",
+			"club_abbr": "ENG-MUN1", "points": 4, "won": 1, "form": ["L"]},
+		{"position": 3, "club_id": "PL-EVE", "club_name": "Everton", "club_abbr": "ENG-EVE1",
 			"points": 0, "won": 0, "form": []},
 	]
 

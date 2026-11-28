@@ -15,8 +15,11 @@ func _init(owner: LeagueSave) -> void:
 
 
 func apply(club_id: String, goals_for: int, goals_against: int, rules: Dictionary,
-		side: String) -> void:
+		side: String, competition_id: String = "") -> void:
 	save.ensure_open()
+	var comp := competition_id
+	if comp == "":
+		comp = str(rules.get("competition_id", _default_competition()))
 	var won := 0
 	var drawn := 0
 	var lost := 0
@@ -32,13 +35,18 @@ func apply(club_id: String, goals_for: int, goals_against: int, rules: Dictionar
 		+ "lost = lost + ?, gf = gf + ?, ga = ga + ?, points = points + ?, "
 		+ p + "played = " + p + "played + 1, " + p + "won = " + p + "won + ?, "
 		+ p + "drawn = " + p + "drawn + ?, " + p + "lost = " + p + "lost + ?, "
-		+ p + "gf = " + p + "gf + ?, " + p + "ga = " + p + "ga + ? WHERE club_id = ?;",
+		+ p + "gf = " + p + "gf + ?, " + p + "ga = " + p + "ga + ? "
+		+ "WHERE club_id = ? AND competition_id = ?;",
 		[
 			won, drawn, lost, goals_for, goals_against,
 			LeagueRules.points(goals_for, goals_against, rules),
-			won, drawn, lost, goals_for, goals_against, club_id,
+			won, drawn, lost, goals_for, goals_against, club_id, comp,
 		],
 	)
+
+
+static func _default_competition() -> String:
+	return "PL"
 
 
 func recompute() -> void:
@@ -52,37 +60,61 @@ func recompute() -> void:
 		comps.append(str(row["competition_id"]))
 	if comps.is_empty():
 		return
-	for row in PLDatabase.rows("SELECT id, competition_id FROM club;"):
-		if not comps.has(str(row["competition_id"])):
-			continue
-		var zero := {}
-		for key in TABLE_FIELDS:
-			zero[key] = 0
-		acc[str(row["id"])] = zero
+	for cid in comps:
+		for club_id in _table_clubs(str(cid)):
+			var key := "%s|%s" % [str(club_id), str(cid)]
+			var zero := {}
+			for field in TABLE_FIELDS:
+				zero[field] = 0
+			acc[key] = zero
 	for fx in PLDatabase.rows(
 		"SELECT home_club_id, away_club_id, home_goals, away_goals, competition_id "
 		+ "FROM league_fixture WHERE status = 'played';"
 	):
-		var rules: Dictionary = rules_by.get(str(fx.get("competition_id", "")), save.rules)
-		_tally(acc, str(fx["home_club_id"]), int(fx["home_goals"]), int(fx["away_goals"]),
-			rules, "home")
-		_tally(acc, str(fx["away_club_id"]), int(fx["away_goals"]), int(fx["home_goals"]),
-			rules, "away")
+		var comp := str(fx.get("competition_id", ""))
+		var rules: Dictionary = rules_by.get(comp, save.rules)
+		_tally(acc, "%s|%s" % [str(fx["home_club_id"]), comp],
+			int(fx["home_goals"]), int(fx["away_goals"]), rules, "home")
+		_tally(acc, "%s|%s" % [str(fx["away_club_id"]), comp],
+			int(fx["away_goals"]), int(fx["home_goals"]), rules, "away")
 	PLDatabase.execute("DELETE FROM league_table;")
-	PLDatabase.execute(
-		"INSERT INTO league_table (club_id, competition_id) SELECT id, competition_id FROM club "
-		+ "WHERE competition_id IN (" + ",".join(_placeholders(comps.size())) + ");", comps)
+	for cid in comps:
+		for club_id in _table_clubs(str(cid)):
+			PLDatabase.execute(
+				"INSERT INTO league_table (club_id, competition_id) VALUES (?, ?);",
+				[str(club_id), str(cid)])
 	var sets: Array = []
 	for key in TABLE_FIELDS:
 		sets.append(key + " = ?")
-	var sql := "UPDATE league_table SET " + ", ".join(sets) + " WHERE club_id = ?;"
-	for club_id in acc.keys():
-		var s: Dictionary = acc[club_id]
+	var sql := ("UPDATE league_table SET " + ", ".join(sets)
+		+ " WHERE club_id = ? AND competition_id = ?;")
+	for key in acc.keys():
+		var parts := str(key).split("|", true, 1)
+		var s: Dictionary = acc[key]
 		var bindings: Array = []
-		for key in TABLE_FIELDS:
-			bindings.append(int(s[key]))
-		bindings.append(str(club_id))
+		for field in TABLE_FIELDS:
+			bindings.append(int(s[field]))
+		bindings.append(str(parts[0]))
+		bindings.append(str(parts[1]) if parts.size() > 1 else "")
 		PLDatabase.execute(sql, bindings)
+
+
+func _table_clubs(competition_id: String) -> Array:
+	var out: Array = []
+	if LeagueUefa.is_continental(competition_id):
+		for row in PLDatabase.rows(
+				"SELECT DISTINCT home_club_id AS id FROM league_fixture "
+				+ "WHERE competition_id = ? AND stage = ? "
+				+ "UNION SELECT DISTINCT away_club_id AS id FROM league_fixture "
+				+ "WHERE competition_id = ? AND stage = ? ORDER BY id;",
+				[competition_id, LeagueUefa.LEAGUE_STAGE,
+				 competition_id, LeagueUefa.LEAGUE_STAGE]):
+			out.append(str(row["id"]))
+		return out
+	for row in PLDatabase.rows(
+			"SELECT id FROM club WHERE competition_id = ? ORDER BY id;", [competition_id]):
+		out.append(str(row["id"]))
+	return out
 
 func _placeholders(count: int) -> PackedStringArray:
 	var out := PackedStringArray()

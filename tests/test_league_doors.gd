@@ -129,8 +129,8 @@ func test_the_simple_doors_reach_the_surface_and_the_season() -> void:
 	asked = []
 	screen.club_requested.connect(func(id: String) -> void: asked.append("club:" + id))
 	_hub()
-	screen.click("club:MCI")
-	assert_eq(asked, ["club:MCI"], "a club row did not ask for the team page")
+	screen.click("club:ENG-MCI1")
+	assert_eq(asked, ["club:ENG-MCI1"], "a club row did not ask for the team page")
 	screen.click("suggest")
 	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "the Suggest door moved the surface")
 	screen.click("name")
@@ -254,11 +254,11 @@ func test_the_moved_doors_answer_on_their_own() -> void:
 	assert_false(LeagueGoalDoors.has_clip(screen, 3), "a missing ordinal claimed a clip")
 	_hub()
 	assert_false(LeagueSeasonDoors.set_interest(screen, "", true), "an empty club is never a shortlist entry")
-	assert_true(LeagueSeasonDoors.set_interest(screen, "ARS", true), "an add was refused")
+	assert_true(LeagueSeasonDoors.set_interest(screen, "ENG-ARS1", true), "an add was refused")
 	assert_eq(str(screen.interest_query), "", "an add kept the search")
-	assert_true(LeagueSeasonDoors.set_interest(screen, "ARS", false), "a remove was refused")
+	assert_true(LeagueSeasonDoors.set_interest(screen, "ENG-ARS1", false), "a remove was refused")
 	screen.season = null
-	assert_false(LeagueSeasonDoors.set_interest(screen, "ARS", true), "a surface with no season took a shortlist")
+	assert_false(LeagueSeasonDoors.set_interest(screen, "ENG-ARS1", true), "a surface with no season took a shortlist")
 	screen.mode = LeagueScreen.MODE_STATS
 	LeagueSeasonDoors.open_day(screen, "1990-01-01")
 	assert_eq(screen.mode, LeagueScreen.MODE_STATS, "a day with no season moved the sheet")
@@ -289,6 +289,14 @@ func test_the_panel_doors_jump_pose_and_bind_the_table() -> void:
 	_hub()
 	LeaguePanelDoors.nav(screen, "fixtures")
 	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "Today's Fixtures did not land on the hub")
+	LeaguePanelDoors.nav(screen, "cups")
+	assert_eq(screen.mode, LeagueScreen.MODE_CUPS, "CUPS does not open from its panel row")
+	var held := LeagueSeasonDoors._held([
+		{"id": "a", "watched": 0}, {"id": "b", "watched": 1}, {"id": "c", "watched": 0},
+	])
+	assert_eq(str(held["id"]), "b", "Continue did not prefer the watched tie")
+	var first := LeagueSeasonDoors._held([{"id": "only", "watched": 0}])
+	assert_eq(str(first["id"]), "only", "Continue lost the only pending fixture")
 
 func test_deleting_the_open_save_unloads_it_first() -> void:
 

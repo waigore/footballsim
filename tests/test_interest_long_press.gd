@@ -121,20 +121,20 @@ func _hold(season_in) -> InterestHold:
 	var hold := InterestHold.new()
 	hold.vp = Vector2(1280, 800)
 	hold.club_at = func(p: Vector2) -> String:
-		return "MUN" if p.x < 100.0 else ("MCI" if p.x < 200.0 else "")
+		return "ENG-MUN1" if p.x < 100.0 else ("ENG-MCI1" if p.x < 200.0 else "")
 	hold.season_of = func(): return season_in
 	return hold
 
 
 func test_a_short_tap_is_still_a_click() -> void:
 	var press := InterestPress.new()
-	press.press(Vector2(10, 10), "MUN")
+	press.press(Vector2(10, 10), "ENG-MUN1")
 	assert_true(press.armed(), "the press did not arm on a club name")
 	assert_true(press.release_click(), "a short tap on a name stopped being a click")
 
 func test_the_hold_fires_once_after_its_clock() -> void:
 	var press := InterestPress.new()
-	press.press(Vector2(10, 10), "MUN")
+	press.press(Vector2(10, 10), "ENG-MUN1")
 	assert_false(press.tick(InterestPress.HOLD * 0.5), "the hold fired too early")
 	assert_true(press.tick(InterestPress.HOLD * 0.5 + 0.01), "the hold never fired")
 	assert_false(press.tick(0.5), "the hold fired twice for one press")
@@ -142,7 +142,7 @@ func test_the_hold_fires_once_after_its_clock() -> void:
 
 func test_a_drag_cancels_the_hold() -> void:
 	var press := InterestPress.new()
-	press.press(Vector2(10, 10), "MUN")
+	press.press(Vector2(10, 10), "ENG-MUN1")
 	press.move(Vector2(10 + InterestPress.SLOP + 2.0, 10))
 	assert_false(press.armed(), "travel past the slop left the hold armed")
 	assert_false(press.tick(1.0), "a drag still opened the menu")
@@ -150,7 +150,7 @@ func test_a_drag_cancels_the_hold() -> void:
 
 func test_shaky_travel_below_the_slop_still_holds() -> void:
 	var press := InterestPress.new()
-	press.press(Vector2(10, 10), "MUN")
+	press.press(Vector2(10, 10), "ENG-MUN1")
 	press.move(Vector2(12, 12))
 	assert_true(press.armed(), "a shaky hand cancelled the hold")
 	assert_true(press.tick(InterestPress.HOLD + 0.01), "the hold never fired")
@@ -165,7 +165,7 @@ func test_a_press_on_plain_chrome_never_holds() -> void:
 
 func test_the_menu_stays_inside_the_sheet() -> void:
 	var menu := InterestMenu.new()
-	menu.show("MUN", "Manchester United", "MUN", false, Vector2(1270, 790))
+	menu.show("ENG-MUN1", "Manchester United", "MUN", false, Vector2(1270, 790))
 	var vp := Vector2(1280, 800)
 	var r := menu.rect(vp)
 	assert_true(r.position.x >= InterestMenu.EDGE - 0.01, "the card hung off the left")
@@ -174,14 +174,14 @@ func test_the_menu_stays_inside_the_sheet() -> void:
 
 func test_the_door_says_what_a_press_does() -> void:
 	var menu := InterestMenu.new()
-	menu.show("MUN", "Manchester United", "MUN", false, Vector2(400, 300))
+	menu.show("ENG-MUN1", "Manchester United", "MUN", false, Vector2(400, 300))
 	assert_true(menu.door_label().contains("FOLLOW MUN"), "an unfollowed club's door did not offer the follow")
-	menu.show("MUN", "Manchester United", "MUN", true, Vector2(400, 300))
+	menu.show("ENG-MUN1", "Manchester United", "MUN", true, Vector2(400, 300))
 	assert_true(menu.door_label().contains("STOP FOLLOWING"), "a followed club's door did not offer the release")
 
 func test_every_press_is_answered_by_the_open_menu() -> void:
 	var menu := InterestMenu.new()
-	menu.show("MUN", "Manchester United", "MUN", false, Vector2(400, 300))
+	menu.show("ENG-MUN1", "Manchester United", "MUN", false, Vector2(400, 300))
 	var vp := Vector2(1280, 800)
 	assert_eq(menu.hit(menu.door_rect(vp).get_center(), vp), InterestMenu.TOGGLE, "the door was not a toggle")
 	assert_eq(menu.hit(menu.close_rect(vp).get_center(), vp), InterestMenu.CLOSE, "the ✕ was not a close")
@@ -201,25 +201,25 @@ func test_the_footer_names_the_pointer_that_dismisses() -> void:
 
 func test_strips_name_the_club_under_a_point() -> void:
 	var names := InterestNames.new()
-	names.add(Rect2(10, 10, 40, 20), "MUN")
-	names.add(Rect2(60, 10, 40, 20), "MCI")
-	assert_eq(names.at(Vector2(20, 15)), "MUN", "the home strip lost its club")
-	assert_eq(names.at(Vector2(70, 15)), "MCI", "the away strip lost its club")
+	names.add(Rect2(10, 10, 40, 20), "ENG-MUN1")
+	names.add(Rect2(60, 10, 40, 20), "ENG-MCI1")
+	assert_eq(names.at(Vector2(20, 15)), "ENG-MUN1", "the home strip lost its club")
+	assert_eq(names.at(Vector2(70, 15)), "ENG-MCI1", "the away strip lost its club")
 	assert_eq(names.at(Vector2(200, 15)), "", "a bare point named a club")
 	names.clear()
 	assert_eq(names.at(Vector2(20, 15)), "", "a cleared registry still named a club")
 
 func test_the_same_strip_is_registered_once() -> void:
 	var names := InterestNames.new()
-	names.add(Rect2(10, 10, 40, 20), "MUN")
-	names.add(Rect2(10, 10, 40, 20), "MUN")
+	names.add(Rect2(10, 10, 40, 20), "ENG-MUN1")
+	names.add(Rect2(10, 10, 40, 20), "ENG-MUN1")
 	assert_eq(names.zones.size(), 1, "a repaint that moved nothing grew the list")
 	names.add(Rect2(10, 10, 40, 20), "")
 	assert_eq(names.zones.size(), 1, "an empty club id was registered")
 
 func test_the_strip_matches_the_caption_it_painted() -> void:
 	var font: Font = UiChrome.fonts()["bold"]
-	var strip: Rect2 = InterestNames.strip(font, "MUN", 60.0, 100.0, 13)
+	var strip: Rect2 = InterestNames.strip(font, "ENG-MUN1", 60.0, 100.0, 13)
 	assert_almost_eq(strip.position.x, 60.0, 0.01)
 	assert_true(strip.size.x >= 12.0, "a short abbreviation lost its tap target")
 	assert_true(strip.has_point(Vector2(62.0, 98.0)), "the strip missed the glyphs it painted")
@@ -231,7 +231,7 @@ func test_a_hold_opens_the_menu_for_the_named_club() -> void:
 	assert_true(hold.press_at(Vector2(50, 40)), "a press on a name was not watched")
 	assert_true(hold.tick(InterestPress.HOLD + 0.01), "the hold never opened the menu")
 	assert_true(hold.is_open(), "no menu after the hold")
-	assert_eq(hold.menu.club_id, "MUN", "the menu named the wrong club")
+	assert_eq(hold.menu.club_id, "ENG-MUN1", "the menu named the wrong club")
 	assert_eq(hold.menu.abbr, "MUN", "the menu lost the club's abbreviation")
 
 func test_the_release_that_opened_the_menu_does_not_dismiss_it() -> void:
@@ -249,7 +249,7 @@ func test_the_door_writes_the_shortlist() -> void:
 	hold.tick(InterestPress.HOLD + 0.01)
 	assert_true(hold.click(InterestMenu.TOGGLE), "the door was not consumed")
 	assert_eq(fake.writes.size(), 1, "the door did not write once")
-	assert_eq(fake.writes[0], ["MUN", true], "the door followed the wrong club")
+	assert_eq(fake.writes[0], ["ENG-MUN1", true], "the door followed the wrong club")
 	assert_false(hold.is_open(), "the menu stayed up after the write")
 
 func test_a_press_beside_the_card_dismisses_without_a_write() -> void:
@@ -393,7 +393,7 @@ func test_the_picker_holds_a_club_card() -> void:
 	add_child(picker)
 	picker.ui_scale = 1.0
 	picker.size = Vector2(1280, 800)
-	picker.setup("MUN", "MCI")
+	picker.setup("ENG-MUN1", "ENG-MCI1")
 	await get_tree().process_frame
 	var card := Rect2()
 	for b in picker.buttons:
@@ -404,10 +404,10 @@ func test_the_picker_holds_a_club_card() -> void:
 	assert_true(picker.interest.press_at(at), "a club card was not watched")
 	picker.interest.tick(InterestPress.HOLD + 0.01)
 	assert_true(picker.interest.is_open(), "the picker did not raise the menu")
-	assert_eq(picker.interest.menu.club_id, "MUN", "the picker named the wrong club")
+	assert_eq(picker.interest.menu.club_id, "ENG-MUN1", "the picker named the wrong club")
 	var vp: Vector2 = picker.design_vp()
 	picker.click(picker.button_at(picker.interest.menu.door_rect(vp).get_center()))
-	assert_true(season.record.interest.is_interested("MUN"), "the picker's door did not follow the club")
+	assert_true(season.record.interest.is_interested("ENG-MUN1"), "the picker's door did not follow the club")
 	picker.queue_free()
 
 
@@ -415,7 +415,7 @@ func _match() -> Node2D:
 	var game := Node2D.new()
 	game.set_script(load("res://scripts/main.gd"))
 	add_child(game)
-	game._on_fixture_confirmed("MUN", "MCI")
+	game._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 	TestBriefing.kick(game)
 	game.paused = true
 	game.hud.queue_redraw()
@@ -446,17 +446,17 @@ func test_the_hud_holds_a_club_name() -> void:
 		"the overlay did not watch the club name it was pressed on")
 	game.hud.interest.tick(InterestPress.HOLD + 0.01)
 	assert_true(game.hud.interest.is_open(), "the overlay did not raise the menu")
-	assert_eq(game.hud.interest.menu.club_id, "MUN", "the overlay named the wrong club")
+	assert_eq(game.hud.interest.menu.club_id, "ENG-MUN1", "the overlay named the wrong club")
 	_press_at(game, door, false)
 	assert_true(game.hud.interest.is_open(), "the opening release closed the menu")
 	var vp: Vector2 = game.hud.design_vp()
 	assert_eq(game.hud.button_at(game.hud.interest.menu.door_rect(vp).get_center()),
 		InterestMenu.TOGGLE, "the overlay did not hand the press to the menu")
 	game.hud.interest.click(InterestMenu.TOGGLE)
-	assert_true(season.record.interest.is_interested("MUN"), "the overlay's door did not follow the club")
+	assert_true(season.record.interest.is_interested("ENG-MUN1"), "the overlay's door did not follow the club")
 
 
-	assert_true(bool(game.hud.followed.get("MUN", false)),
+	assert_true(bool(game.hud.followed.get("ENG-MUN1", false)),
 		"the overlay did not pick up the club it just followed")
 	game.queue_free()
 
@@ -464,10 +464,10 @@ func test_the_overlay_follows_a_season_opening_and_closing() -> void:
 	var game := await _match()
 	assert_true(game.hud.followed.is_empty(), "no season, yet the overlay held a shortlist")
 	_fresh()
-	season.set_interest("MUN", true)
+	season.set_interest("ENG-MUN1", true)
 	await get_tree().process_frame
 	await get_tree().process_frame
-	assert_true(bool(game.hud.followed.get("MUN", false)),
+	assert_true(bool(game.hud.followed.get("ENG-MUN1", false)),
 		"the overlay missed the season that opened under it")
 	season.close()
 	season = null
@@ -517,13 +517,13 @@ func test_the_league_page_names_each_club_row() -> void:
 func test_the_team_page_title_is_a_name_and_follows_gold() -> void:
 	_fresh()
 	var screen := _wiki()
-	screen.open(WikiModel.TEAM, "MUN")
+	screen.open(WikiModel.TEAM, "ENG-MUN1")
 	await get_tree().process_frame
 	var zones: Array = screen.names.zones
 	assert_false(zones.is_empty(), "the team page's title was not a name")
-	assert_eq(str(zones[0]["club_id"]), "MUN", "the title named the wrong club")
-	season.set_interest("MUN", true)
-	screen.open(WikiModel.TEAM, "MUN")
+	assert_eq(str(zones[0]["club_id"]), "ENG-MUN1", "the title named the wrong club")
+	season.set_interest("ENG-MUN1", true)
+	screen.open(WikiModel.TEAM, "ENG-MUN1")
 	await get_tree().process_frame
-	assert_true(bool(screen.body.followed.get("MUN", false)), "the followed club was not gold on the page")
+	assert_true(bool(screen.body.followed.get("ENG-MUN1", false)), "the followed club was not gold on the page")
 	screen.queue_free()

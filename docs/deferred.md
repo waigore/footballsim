@@ -14,33 +14,24 @@ Shipped (wiki domains playable; DRs accepted):
 | Added time, injuries, handball, official | DR-20261122-03 |
 | Live tactics + IFAB substitutions | DR-20261122-05; MatchAI |
 | Extra time + pens when a winner is required | DR-20261126-12 |
-| Poisson / Dixon–Coles outcomes | `poisson_model.gd`; DR-20261122-04 |
-| Physics↔Poisson finishing | DR-20261124-08; [#33](https://github.com/waigore/footballsim/issues/33) closed |
-| Poisson λ on the last-10 PL envelope | DR-20261125-19; [#172](https://github.com/waigore/footballsim/issues/172) |
-| Engine λ, keeper dive, openness | DR-20261126-07/08; [#192](https://github.com/waigore/footballsim/issues/192) closed |
-| PL + English pyramid + LL + German pair | `data/`; DR-20261123-01 / 13 / 17 |
+| Poisson / Dixon–Coles; λ envelope; finishing | `poisson_model.gd`; DR-20261122-04 / 24-08 / 25-19 / 26-07/08 |
+| PL + English pyramid + LL + German + Italian pairs | `data/`; DR-20261123-01 / 13 / 17 / 18 |
 | Season saves, calendar, Continue/watch | `league_season.gd`; DR-20261124-01 / 06 |
 | Multi-league save; play-offs; German Relegation | DR-20261126-10 / 14 / 17; [#185](https://github.com/waigore/footballsim/issues/185) |
-| System sheet (Quick Save / Save As / Load / Quit) | DR-20261124-07 |
-| Per-goal report playback packs | DR-20261124-04 |
-| Non-match type / viewport scale | DR-20261124-03 |
-| Live `tempo` on the tactics board | DR-20261122-02; drives play now |
-| Woodwork, interceptions, momentum, stored rating | DR-20261125-01 / 02 |
-| Whistle card lists the goals | `goal_sheet`; DR-20261125-04 |
-| Roundup scorers name their club | [#125](https://github.com/waigore/footballsim/issues/125); DR-20261125-07 |
-| Encyclopedia reads the open season | `league_ledger.gd`; DR-20261125-08 |
-| Teams of Interest: followed games stay on Watch | `league_interest.gd`; DR-20261125-09; [#104](https://github.com/waigore/footballsim/issues/104) |
-| Shape pass shares one ball path per pass | DR-20261125-11 |
-| Encyclopedia competition hubs + index | `pl_competitions.gd`; DR-20261126-01; [#190](https://github.com/waigore/footballsim/issues/190) |
-| One competition per match; places as ordinals | `match_billing.gd`; DR-20261126-06; [#209](https://github.com/waigore/footballsim/issues/209), [#207](https://github.com/waigore/footballsim/issues/207) |
-| Phone tap targets ≥44 dp | DR-20261128-02 / 03; [#369](https://github.com/waigore/footballsim/issues/369) |
-| Match `SKIP` runs on to the next whistle | DR-20261128-05; [#381](https://github.com/waigore/footballsim/issues/381) |
+| System sheet; report packs; non-match type scale | DR-20261124-07 / 04 / 03 |
+| Live `tempo`; woodwork; interceptions; momentum | DR-20261122-02 / 25-01 / 02 |
+| Whistle goals; roundup club names; encyclopedia season | DR-20261125-04 / 07 / 08 |
+| Teams of Interest stay on Watch | DR-20261125-09; [#104](https://github.com/waigore/footballsim/issues/104) |
+| Shape-pass shared path; competition hubs; match billing | DR-20261125-11 / 26-01 / 26-06 |
+| Phone tap ≥44 dp; match `SKIP` to whistle | DR-20261128-02 / 03 / 05 |
+| Club country ids + player UUIDs; watched assist row | DR-20261128-16 / 19 |
+| Domestic cups and supercups | DR-20261128-17; `league_cup_*.gd`; [#455](https://github.com/waigore/footballsim/issues/455)–[#459](https://github.com/waigore/footballsim/issues/459) |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Native match hot loop | DR-20261123-02 future tightening under the 120 s budget. Shape-pass shared (DR-20261125-11); tick still GDScript |
+| 1 | Native match hot loop | DR-20261123-02 under the 120 s budget; tick still GDScript |
 
 ## Next pick
 
@@ -50,11 +41,12 @@ Shipped (wiki domains playable; DRs accepted):
 
 | Item | Why |
 |------|-----|
-| Club-manager career; player tactics / XI | Product non-goal; Match playable-slice Out |
-| Domestic cups, supercups, transfers, finances, training, second season in one save, mid-season seed refresh of a save | Season Out of scope (v1); DR-20261124-01 |
-| UEFA club competitions (UCL / UEL / UECL) | Rules accepted ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15)); [code #433](https://github.com/waigore/footballsim/issues/433) |
-| VAR; weather on the pitch; referee outcome bias | Match playable-slice Out |
-| Concussion subs; extra injury stoppage beyond the added-time formula | Substitutions Out of scope; DR-20261122-05 |
-| Licensed data beyond the shipped English pyramid (PL–National League), La Liga and German pair snapshots | requirements Non-goals; DR-20261123-01 |
+| UEFA club competitions (UCL/UEL/UECL) | Rules accepted ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15); [#434](https://github.com/waigore/footballsim/issues/434)); Italy now ships ([#420](https://github.com/waigore/footballsim/issues/420)), so [#433](https://github.com/waigore/footballsim/issues/433) can start |
+| Club-manager career; player tactics | Product non-goal; Match playable-slice Out |
+| Training, live data, mid-season seed refresh | Season Out of scope (v1) |
+| VAR; weather; referee outcome bias | Match playable-slice Out |
+| Concussion subs; extra injury stoppage beyond added-time | Substitutions Out; DR-20261122-05 |
+| Licensed data beyond English pyramid, La Liga, German and Italian pairs | requirements Non-goals; DR-20261123-01 / DR-20261128-18 |
 | Match HUD under the non-match type rule | DR-20261124-03 |
 | Photoreal / 3D primary | requirements Non-goals |
+| Serie C; German-style Relegation for Italy | Season Out of scope |

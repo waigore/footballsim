@@ -38,6 +38,8 @@ func click(id: String) -> void:
 		screen.back()
 	elif id == "close":
 		screen.close()
+	elif id.begins_with("attrs:"):
+		screen.set_attr_view(id.substr(6))
 	elif id.begins_with("crumb:"):
 		screen.nav.truncate_to(int(id.substr(6)))
 		screen._refresh()
@@ -54,6 +56,10 @@ func click(id: String) -> void:
 func tap(p: Vector2) -> bool:
 	if screen.body == null:
 		return false
+	var door: String = screen.body.button_id(p)
+	if door != "":
+		screen.click(door)
+		return true
 	var target: Dictionary = screen.body.hit(p)
 	if target.is_empty():
 		return false

@@ -109,8 +109,8 @@ func test_the_tie_is_the_sixteenth_against_the_third() -> void:
 	assert_eq(current.record.fixtures.unplayed(), 0, "the season is not played out")
 	var tie := LeagueRelegation.build(current)
 	assert_false(tie.is_empty(), "a finished German pair has no Relegation")
-	assert_true(str(tie["top_club_id"]).begins_with("BL-"), "the tie is not the top-flight club")
-	assert_true(str(tie["second_club_id"]).begins_with("BL2-"),
+	assert_eq(str(PLRepository.shared().club(str(tie["top_club_id"]))["competition_id"]), "BL", "the tie is not the top-flight club")
+	assert_eq(str(PLRepository.shared().club(str(tie["second_club_id"]))["competition_id"]), "BL2",
 		"the tie is not the second-tier club")
 	assert_eq(int(tie["top_position"]), 16, "the Relegation is not the sixteenth place")
 	assert_eq(int(tie["second_position"]), 3, "the Relegation is not the third place")
@@ -136,10 +136,10 @@ func test_a_level_aggregate_goes_to_penalties() -> void:
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242
-	var top := int(LeagueRelegation._shootout(4242, "BL-FCB", "BL2-BSC").x)
-	var again := int(LeagueRelegation._shootout(4242, "BL-FCB", "BL2-BSC").x)
+	var top := int(LeagueRelegation._shootout(4242, "GER-FCB1", "GER-BSC1").x)
+	var again := int(LeagueRelegation._shootout(4242, "GER-FCB1", "GER-BSC1").x)
 	assert_eq(top, again, "the shootout is not deterministic for a seed")
-	var pens := LeagueRelegation._shootout(4242, "BL-FCB", "BL2-BSC")
+	var pens := LeagueRelegation._shootout(4242, "GER-FCB1", "GER-BSC1")
 	assert_ne(pens.x, pens.y, "a shootout finished level")
 
 func test_the_movers_are_two_up_and_three_down() -> void:
@@ -152,9 +152,11 @@ func test_the_movers_are_two_up_and_three_down() -> void:
 	assert_gte(up.size(), 2, "fewer than two clubs go up")
 	assert_gte(down.size(), 2, "fewer than two clubs go down")
 	for club_id in up:
-		assert_true(str(club_id).begins_with("BL"), "%s is not a German club" % club_id)
+		assert_eq(str(PLRepository.shared().club(str(club_id))["country"]), "GER",
+			"%s is not a German club" % club_id)
 	for club_id in down:
-		assert_true(str(club_id).begins_with("BL"), "%s is not a German club" % club_id)
+		assert_eq(str(PLRepository.shared().club(str(club_id))["country"]), "GER",
+			"%s is not a German club" % club_id)
 	var table: Array = current.record.standings.table("BL2")
 	assert_true(up.has(str((table[0] as Dictionary)["club_id"])), "the 2.BL winner does not go up")
 	assert_true(up.has(str((table[1] as Dictionary)["club_id"])), "2.BL's second does not go up")

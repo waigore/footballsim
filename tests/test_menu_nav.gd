@@ -136,7 +136,7 @@ func test_start_sim_opens_the_fixture_sheet_and_back_returns_to_the_menu() -> vo
 
 func test_kick_off_opens_the_briefing_then_closes_the_shell_and_stops_the_music() -> void:
 	game.open_select(true)
-	game._on_fixture_confirmed("ARS", "LIV")
+	game._on_fixture_confirmed("ENG-ARS1", "ENG-LIV1")
 
 	assert_true(TestBriefing.is_open(game), "KICK OFF skipped the pre-match briefing")
 	assert_true(TestBriefing.kick(game), "the briefing's KICK OFF did not start the match")
@@ -145,7 +145,7 @@ func test_kick_off_opens_the_briefing_then_closes_the_shell_and_stops_the_music(
 	assert_true(game.hud_layer.visible, "the match HUD did not come back for kick-off")
 	assert_false(game.paused, "the match stayed paused for kick-off")
 	assert_false(game.menus.shell.music.wanted, "menu music is still wanted under the match")
-	assert_eq(game.home_id, "ARS", "the confirmed home side did not take")
+	assert_eq(game.home_id, "ENG-ARS1", "the confirmed home side did not take")
 
 
 func test_escape_on_the_match_raises_a_confirm_and_cancel_returns() -> void:
@@ -436,12 +436,12 @@ func test_the_backdrop_falls_back_and_crossfades() -> void:
 
 func test_fixture_flags_parse_without_the_scene() -> void:
 	var known: Array = TeamData.team_ids()
-	var f := FixtureArgs.parse(PackedStringArray(["--seed=42", "--home=ars", "--away=liv"]), known, {"seed": 1000, "home": "MUN", "away": "MCI"})
+	var f := FixtureArgs.parse(PackedStringArray(["--seed=42", "--home=eng-ars1", "--away=eng-liv1"]), known, {"seed": 1000, "home": "ENG-MUN1", "away": "ENG-MCI1"})
 	assert_eq(int(f["seed"]), 42, "the seed flag did not parse")
-	assert_eq(str(f["home"]), "ARS", "the home flag did not normalise")
-	assert_eq(str(f["away"]), "LIV", "the away flag did not normalise")
+	assert_eq(str(f["home"]), "ENG-ARS1", "the home flag did not normalise")
+	assert_eq(str(f["away"]), "ENG-LIV1", "the away flag did not normalise")
 	assert_true(bool(f["given"]), "a given fixture was not marked")
-	var bad := FixtureArgs.parse(PackedStringArray(["--home=NOPE"]), known, {"seed": 7, "home": "MUN", "away": "MCI"})
-	assert_eq(str(bad["home"]), "MUN", "an unknown club replaced the default side")
+	var bad := FixtureArgs.parse(PackedStringArray(["--home=NOPE"]), known, {"seed": 7, "home": "ENG-MUN1", "away": "ENG-MCI1"})
+	assert_eq(str(bad["home"]), "ENG-MUN1", "an unknown club replaced the default side")
 	assert_false(bool(bad["given"]), "an unknown club marked the fixture as given")
 	assert_eq(int(bad["seed"]), 7, "an untouched seed changed")

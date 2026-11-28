@@ -59,8 +59,8 @@ var pitch_shift := 0.0
 var touch := false
 var dev: DevCapture = null
 
-var home_id := "MUN"
-var away_id := "MCI"
+var home_id := "ENG-MUN1"
+var away_id := "ENG-MCI1"
 var select_open := false
 var selector = null
 var sel_layer: CanvasLayer

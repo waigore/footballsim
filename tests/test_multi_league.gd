@@ -329,8 +329,19 @@ func test_a_pre_multi_save_is_migrated_on_open() -> void:
 	PLDatabase.execute("DROP TABLE save_competition;")
 	PLDatabase.execute("DELETE FROM save_meta WHERE key = 'competitions';")
 	PLDatabase.execute("DROP INDEX IF EXISTS league_fixture_comp_idx;")
-	for table in ["league_fixture", "league_table", "league_player_stat"]:
+	for table in ["league_fixture", "league_player_stat"]:
 		PLDatabase.execute("ALTER TABLE %s DROP COLUMN competition_id;" % table)
+	PLDatabase.execute("ALTER TABLE league_table RENAME TO league_table_two;")
+	PLDatabase.execute(
+		"CREATE TABLE league_table (club_id TEXT PRIMARY KEY, "
+		+ "played INTEGER NOT NULL DEFAULT 0, won INTEGER NOT NULL DEFAULT 0, "
+		+ "drawn INTEGER NOT NULL DEFAULT 0, lost INTEGER NOT NULL DEFAULT 0, "
+		+ "gf INTEGER NOT NULL DEFAULT 0, ga INTEGER NOT NULL DEFAULT 0, "
+		+ "points INTEGER NOT NULL DEFAULT 0);")
+	PLDatabase.execute(
+		"INSERT INTO league_table (club_id, played, won, drawn, lost, gf, ga, points) "
+		+ "SELECT club_id, played, won, drawn, lost, gf, ga, points FROM league_table_two;")
+	PLDatabase.execute("DROP TABLE league_table_two;")
 	season.close()
 	var reopened := LeagueSave.open(slug)
 	assert_not_null(reopened, "the legacy save did not open")

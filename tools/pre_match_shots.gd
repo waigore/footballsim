@@ -59,7 +59,7 @@ func _initialize() -> void:
 	# A single-match kick-off: the friendly caption, KICK OFF and no absences.
 	scene.dev.ui_scale = 0.0
 	scene._sync_overlay_scale()
-	scene.prematch.ask(PreMatchModel.build("MUN", "MCI", {}, null), Callable(), Callable())
+	scene.prematch.ask(PreMatchModel.build("ENG-MUN1", "ENG-MCI1", {}, null), Callable(), Callable())
 	await _shot("prematch_friendly")
 	print("EXIT season=", season.save.slug, " date=", date)
 	quit()

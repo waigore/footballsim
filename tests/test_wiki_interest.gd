@@ -4,7 +4,7 @@ extends GdToolsTest
 var SAVE_DIR := TestScratch.dir("saves_test_wiki_interest")
 var CACHE_DIR := TestScratch.dir("cache_test_wiki_interest")
 const SEED := 2029
-const CLUB := "MUN"
+const CLUB := "ENG-MUN1"
 
 var season: LeagueSeason = null
 var wiki = null

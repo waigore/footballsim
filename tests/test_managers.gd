@@ -20,9 +20,9 @@ func test_every_club_has_its_real_manager_and_a_profile() -> void:
 func test_only_the_authored_clubs_carry_a_persona() -> void:
 	for id in ManagerData.PROFILES.keys():
 		assert_true(ManagerData.has_persona(str(id)), "%s lost its authored temperament" % str(id))
-	for id in ["LL-BAR", "BL-FCB", "BL2-BSC"]:
+	for id in ["ESP-BAR1", "GER-FCB1", "GER-BSC1"]:
 		assert_false(ManagerData.has_persona(id), "%s claims a temperament the snapshot never recorded" % id)
-	assert_eq(ManagerData.profile("LL-BAR")["name"], "H. Flick", "the snapshot club lost its real manager")
+	assert_eq(ManagerData.profile("ESP-BAR1")["name"], "H. Flick", "the snapshot club lost its real manager")
 
 func _timeline(seed_in: int, count: int) -> Array:
 	var r := RandomNumberGenerator.new()
@@ -185,7 +185,7 @@ func test_push_falls_back_without_a_manager() -> void:
 			p = q
 			break
 	eng.manager = null
-	assert_eq(eng.push_of(p), Attrs.role_push(p.role), "push_of did not fall back without a manager")
+	assert_eq(eng.push_of(p), AttrRoles.role_push(p.role), "push_of did not fall back without a manager")
 
 
 func test_patience_sets_the_wait_above_the_legal_floor() -> void:

@@ -1,7 +1,7 @@
 extends "res://scripts/sim/match_engine_bench.gd"
 
 
-func _init(seed_in: int = 4242, home_id: String = "MUN", away_id: String = "MCI") -> void:
+func _init(seed_in: int = 4242, home_id: String = "ENG-MUN1", away_id: String = "ENG-MCI1") -> void:
 	seed_value = seed_in
 	rng.seed = seed_in
 	teams = [

@@ -8,7 +8,7 @@ signal state_changed
 static var active: LeagueSeason = null
 
 
-const COMPETITION_ORDER: Array = ["PL", "CH", "L1", "L2", "NL", "LL", "BL", "BL2"]
+const COMPETITION_ORDER: Array = ["PL", "CH", "L1", "L2", "NL", "LL", "BL", "BL2", "SA", "SB"]
 
 var save: LeagueSave = null
 var record: LeagueRecord = null
@@ -28,8 +28,10 @@ var last_advance: Dictionary = {}
 
 
 static func create(name: String, calendar_mode: String, advance_mode: String, seed: int = 0,
-		competitions: Array = ["PL"]) -> LeagueSeason:
-	return LeagueSeasonBoot.create(name, calendar_mode, advance_mode, seed, competitions)
+		competitions: Array = ["PL"], cups: bool = false,
+		cup_countries: Array = [], uefa: bool = false) -> LeagueSeason:
+	return LeagueSeasonBoot.create(name, calendar_mode, advance_mode, seed, competitions, cups,
+		cup_countries, uefa)
 
 
 static func open(slug: String) -> LeagueSeason:

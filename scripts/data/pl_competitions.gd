@@ -10,15 +10,15 @@ static func active_ids() -> Array:
 
 
 static func active() -> Array:
-	var all := PLRepository.shared().competitions()
+	var leagues := PLRepository.shared().leagues()
 	if not LeagueLedger.bound():
-		return all
+		return leagues
 	var actives: Array = LeagueLedger.competition_ids()
 	var out: Array = []
-	for row in all:
+	for row in leagues:
 		if actives.has(str(row["id"])):
 			out.append(row)
-	return out if not out.is_empty() else all
+	return out if not out.is_empty() else leagues
 
 
 static func all() -> Array:
@@ -26,6 +26,8 @@ static func all() -> Array:
 	for row in PLDatabase.rows(
 		"SELECT id, name, short_name, season_label FROM competition ORDER BY name;"
 	):
+		if PLRepository.shared().competition_kind(str(row["id"])) != "league":
+			continue
 		out.append({
 			"id": str(row["id"]),
 			"name": str(row["name"]),

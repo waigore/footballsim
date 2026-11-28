@@ -29,7 +29,7 @@ func _initialize() -> void:
 	await _frames(3)
 	scene.menus.close()
 	scene.hud_layer.visible = true
-	scene._on_fixture_confirmed("MUN", "LIV")
+	scene._on_fixture_confirmed("ENG-MUN1", "ENG-LIV1")
 	_kick_briefing()
 	await _frames(2)
 	scene.paused = true

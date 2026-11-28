@@ -71,7 +71,7 @@ func defensive_line(t: int) -> Vector2:
 	for p in e.players:
 		if p.team != t or p.sent_off or p.is_gk:
 			continue
-		if not Attrs.is_defender(p.role):
+		if not AttrRoles.is_defender(p.role):
 			continue
 		var ax = e.attacking_x(t, p.pos)
 		if ax < bx:

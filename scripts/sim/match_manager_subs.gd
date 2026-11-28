@@ -39,7 +39,7 @@ static func candidate(m: MatchManager, t: int):
 		if p.id >= 200:
 			continue
 		var score: float = 1.0 - float(p.stamina)
-		if chasing and Attrs.is_defender(p.role):
+		if chasing and AttrRoles.is_defender(p.role):
 			score += 0.22
 		if p.yellow >= 1:
 			score += 0.06

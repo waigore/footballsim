@@ -75,7 +75,7 @@ func _other(club: String) -> String:
 	for id in TeamData.team_ids():
 		if str(id) != club:
 			return str(id)
-	return "MCI"
+	return "ENG-MCI1"
 
 func _hud_door(game, id: String) -> Rect2:
 	for b in game.hud.buttons:

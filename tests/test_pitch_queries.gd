@@ -2,7 +2,7 @@ extends GdToolsTest
 
 
 func _engine(seed_in: int = 31) -> MatchEngine:
-	var eng := MatchEngine.new(seed_in, "MUN", "MCI")
+	var eng := MatchEngine.new(seed_in, "ENG-MUN1", "ENG-MCI1")
 	eng.phase = "play"
 	eng.possession_team = 0
 	return eng
@@ -111,7 +111,7 @@ func test_the_defensive_line_is_the_deepest_outfield_back() -> void:
 		var deepest = null
 		var deepest_ax := 1.0e9
 		for p in eng.players:
-			if p.team != t or p.sent_off or p.is_gk or not Attrs.is_defender(p.role):
+			if p.team != t or p.sent_off or p.is_gk or not AttrRoles.is_defender(p.role):
 				continue
 			var ax: float = eng.attacking_x(t, p.pos)
 			if ax < deepest_ax:
@@ -127,7 +127,7 @@ func test_the_defensive_line_is_shared_within_one_shape_pass() -> void:
 	var pq := PitchQueries.new(eng)
 	var shared := {}
 	for p in eng.players:
-		if p.team != 0 or p.sent_off or p.is_gk or not Attrs.is_defender(p.role):
+		if p.team != 0 or p.sent_off or p.is_gk or not AttrRoles.is_defender(p.role):
 			continue
 		if not shared.has(p.team):
 			shared[p.team] = pq.defensive_line(p.team)
@@ -143,7 +143,7 @@ func test_the_line_follows_the_bodies_rather_than_a_stale_read() -> void:
 	var before: Vector2 = pq.defensive_line(1)
 	var backs: Array = []
 	for p in eng.players:
-		if p.team == 1 and not p.sent_off and not p.is_gk and Attrs.is_defender(p.role):
+		if p.team == 1 and not p.sent_off and not p.is_gk and AttrRoles.is_defender(p.role):
 			backs.append(p)
 	assert_gt(backs.size(), 1, "side 1 did not field a back four")
 

@@ -3,8 +3,8 @@ extends RefCounted
 
 
 const DERBIES := [
-	["MUN", "MCI"], ["LIV", "EVE"], ["ARS", "TOT"], ["NEW", "SUN"],
-	["CHE", "FUL"], ["AVL", "WOL"], ["NFO", "LEI"],
+	["ENG-MUN1", "ENG-MCI1"], ["ENG-LIV1", "ENG-EVE1"], ["ENG-ARS1", "ENG-TOT1"], ["ENG-NEW1", "ENG-SUN1"],
+	["ENG-CHE1", "ENG-FUL1"], ["ENG-AVL1", "ENG-WOL1"], ["ENG-NFO1", "ENG-LEI1"],
 ]
 
 const DERBY_LINES := [

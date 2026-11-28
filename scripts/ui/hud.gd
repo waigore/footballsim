@@ -166,9 +166,20 @@ func _draw() -> void:
 
 		if hud_visible and card != null:
 			card.touch = touch
+			card.mode = Prefs.load_attrs()
 			card.draw(self, vp, f_bold, f_med, engine, game)
 			if card.player(engine, game) != null:
 				chrome.add_button("profile", card.profile_rect(vp), "PROFILE", "")
+				var door: Rect2 = card.attrs_rect(vp)
+				if HudLayout.is_compact(vp):
+					chrome.add_button("attrs:sheet", door, "FULL SHEET", "")
+				else:
+					var half: float = (door.size.x - 6.0) * 0.5
+					chrome.add_button("attrs:SIMPLIFIED",
+						Rect2(door.position, Vector2(half, door.size.y)), "SIMPLE", "")
+					chrome.add_button("attrs:FULL",
+						Rect2(door.position + Vector2(half + 6.0, 0.0), Vector2(half, door.size.y)),
+						"FULL", "")
 			roster_band.tooltip(p, self, engine, game, f_bold, f_med)
 		draw_set_transform(Vector2.ZERO)
 

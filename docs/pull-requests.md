@@ -2,14 +2,14 @@
 
 Base rules for opening and landing PRs (humans and agents).
 
-**Tooling:** [`gh`](https://cli.github.com/) for all GitHub PR ops.  
+**Tooling:** [`gh`](https://cli.github.com/) for all PR ops.  
 **Gate docs:** map rules changes to [`requirements.md`](requirements.md) / [`rubric.md`](rubric.md).
 
 ## Principles
 
 1. **Small and focused** — one concern; stack PRs over mixed work.
 2. **Use `gh`** — create, inspect, merge via CLI.
-3. **Respect checks** — required status checks are the merge gate; never bypass or force-merge.
+3. **Respect checks** — required checks gate the merge; never bypass or force-merge.
 4. **Prefer auto-merge** — squash auto-merge when ready; let GitHub land when green.
 
 ## Required checks (main)
@@ -18,14 +18,15 @@ Base rules for opening and landing PRs (humans and agents).
 
 | Check | Workflow | Meaning |
 |-------|----------|---------|
-| `tests` | [CI](../.github/workflows/ci.yml) | Tier 1 impacted + 80% patch; no-op if no code/project; `main` push skips |
+| `tests` | [CI](../.github/workflows/ci.yml) | Tier 1 impacted + 80% patch; no-op without code; `main` push skips |
 | `build` | [CI](../.github/workflows/ci.yml) | Headless import/compile; else no-op |
 | `e2e-smoke` | [CI](../.github/workflows/ci.yml) | Needs `build`; smoke when present; else no-op |
 | `docs-lint` | [CI](../.github/workflows/ci.yml) | Docs ≤ 500 words — always |
 | `no-comments-lint` | [CI](../.github/workflows/ci.yml) | Ban `#`/`##`/`//`/`/* */` in scripts/tests/playtests `.gd` |
 | `tools-hygiene` | [CI](../.github/workflows/ci.yml) | Ban `issueN_`/`probe`/`tools/test_*` leftovers — always |
 | `arch-lint` | [CI](../.github/workflows/ci.yml) | P3 + static P1 (2D/icons/hover) — always |
-| `skills-isolation` | [CI](../.github/workflows/ci.yml) | PR-only: fail if code **and** skills both change |
+| `data-ids` | [CI](../.github/workflows/ci.yml) | Ids: no club lookup by abbr, UUID players — always |
+| `skills-isolation` | [CI](../.github/workflows/ci.yml) | Fail if code **and** skills both change |
 | `ai-bench-report` | [CI](../.github/workflows/ci.yml) | PR AI paths: hills ≥ baseline; else no-op |
 | `ux-vlm` | [CI](../.github/workflows/ci.yml) | UI paths: desktop wiki shots; VLM rubrics; no-op if no UI |
 
@@ -44,18 +45,18 @@ Missing links or VLM fail → fail (no sticky). Rubrics: [wiki](https://github.c
 
 **Tier 2** ([ci-tier2](../.github/workflows/tier2.yml)): every **8h** — full suite + 90% + catalogue UX VLM. Not a PR check. Sticky `ci-tier2`+`todo` → fix-tests.
 
-Budgets ([testing.md](testing.md)): `tests` ≤5 min; smoke ≤4 min; `ux-vlm` ≤1 min/10. Squash only; delete branches; auto-merge on.
+Budgets ([testing.md](testing.md)): `tests` ≤5 min; smoke ≤4 min; `ux-vlm` ≤1 min/10. Squash only; delete branches.
 
 ### Respecting checks
 
 - Confirm with `gh pr checks` / `gh pr view --json statusCheckRollup,mergeStateStatus`.
 - Do not merge while required checks fail, pend, or skip incompletely.
 - No `--admin` / overrides / rule disablement. Fix forward; don’t close/reopen to clear red.
-- Keep the branch current with `main` under strict status policy.
+- Keep the branch current with `main`.
 
 ## Workflow with `gh`
 
-**Before:** up-to-date `main`; branch `feat/…` / `fix/…` / `docs/…`; run tests + docs/arch lints when relevant; clean `git status`.
+**Before:** up-to-date `main`; branch `feat/…` / `fix/…` / `docs/…`; run tests + docs/arch lints; clean `git status`.
 
 **Create:**
 
@@ -72,7 +73,7 @@ EOF
 )"
 ```
 
-Prefer draft until reviewable. Title/body say **why**; cite `REQ-*`/`RUB-*` when relevant.
+Prefer draft while reviewable. Title/body say **why**; cite `REQ-*`/`RUB-*`.
 
 **While open:** `gh pr checks` · `gh pr view` · `gh pr comment`. Push fixes; avoid force-push on shared drafts.
 

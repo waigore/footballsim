@@ -36,6 +36,8 @@ static func build(season: LeagueSeason, competition_id: String) -> Dictionary:
 		return {}
 	var rules := season.save.rules_for(competition_id)
 	var format := str(rules.get("playoff_format", ""))
+	if format == LeagueSerieB.FORMAT:
+		return LeagueSerieB.build(season, competition_id, rules)
 	if not FORMATS.has(format):
 		return {}
 	var need := int((FORMATS[format] as Dictionary)["places"])
@@ -104,7 +106,7 @@ static func _seeds(season: LeagueSeason, competition_id: String, up: int,
 		var row: Dictionary = table[i]
 		out.append({
 			"club_id": str(row["club_id"]), "name": str(row["club_name"]),
-			"position": i + 1,
+			"position": i + 1, "points": int(row["points"]),
 		})
 	return out
 

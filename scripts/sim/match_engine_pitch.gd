@@ -16,10 +16,10 @@ func line_save_chance(gk: Player, defending_team: int, cross_y: float, speed: fl
 		return 0.0
 	var gpos := Vector2(own_goal_pos(defending_team).x, cross_y)
 	var gd: float = gk.pos.distance_to(gpos)
-	var reach: float = Attrs.gk_dive_reach(gk) + 1.05
+	var reach: float = AttrKeeper.dive_reach(gk) + 1.05
 	if gd >= reach + 3.2:
 		return 0.0
-	var save_p: float = 0.91 + (reach - gd) * 0.06 + (Attrs.gk_handling(gk) - 0.8) * 0.25 - speed * 0.003
+	var save_p: float = 0.91 + (reach - gd) * 0.06 + (AttrKeeper.handling(gk) - 0.8) * 0.25 - speed * 0.003
 	return clampf(save_p, 0.18, 0.985)
 
 func to_world(t: int, norm: Vector2) -> Vector2:

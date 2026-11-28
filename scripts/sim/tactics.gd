@@ -51,9 +51,9 @@ static func from_team(data: Dictionary, profile: Dictionary = {}) -> Tactics:
 	return t
 
 static func _default_duty(role: String) -> String:
-	if Attrs.is_defender(role) or role == "GK":
+	if AttrRoles.is_defender(role) or role == "GK":
 		return "defend"
-	if Attrs.role_push(role) >= 0.7:
+	if AttrRoles.role_push(role) >= 0.7:
 		return "attack"
 	return "support"
 

@@ -26,7 +26,7 @@ func test_a_save_is_a_self_contained_copy_of_the_seed() -> void:
 	assert_true(save.path.begins_with(SAVE_DIR), "the save escaped its directory")
 	assert_eq(PLDatabase.current_path(), save.path, "the connection is not on the save")
 	var clubs := PLDatabase.row("SELECT COUNT(*) AS n FROM club;")
-	assert_eq(int(clubs["n"]), 172, "the save did not copy every competition's clubs")
+	assert_eq(int(clubs["n"]), 560, "the save did not copy every competition's clubs")
 	var players := PLDatabase.row("SELECT COUNT(*) AS n FROM player;")
 	assert_gte(int(players["n"]), 1000, "the save did not copy the squads")
 	for table in ["save_meta", "league_rules", "league_fixture", "league_table", "match_event", "league_player_stat"]:
@@ -199,9 +199,9 @@ func test_a_report_keeps_its_penalty_tag_across_a_reopen() -> void:
 	var record := LeagueRecord.new(save)
 	record.report.add_events([
 		{"fixture_id": "tag-fx", "minute": 12, "kind": "goal", "player_id": "p1",
-			"club_id": "MCI", "detail": "A. Striker", "penalty": true},
+			"club_id": "ENG-MCI1", "detail": "A. Striker", "penalty": true},
 		{"fixture_id": "tag-fx", "minute": 40, "kind": "goal", "player_id": "p2",
-			"club_id": "MCI", "detail": "B. Winger"},
+			"club_id": "ENG-MCI1", "detail": "B. Winger"},
 	])
 	LeagueSave.close()
 	var reopened := LeagueSave.open(save.slug)

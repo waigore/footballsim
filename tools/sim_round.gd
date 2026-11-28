@@ -5,8 +5,8 @@ extends SceneTree
 ## Prints a results table plus aggregate score/shot statistics.
 
 const FIXTURES := [
-	["ARS", "CHE"], ["LIV", "MUN"], ["MCI", "TOT"], ["NEW", "AVL"], ["BHA", "CRY"],
-	["FUL", "BRE"], ["BOU", "EVE"], ["COV", "NFO"], ["HUL", "LEE"], ["IPS", "SUN"],
+	["ENG-ARS1", "ENG-CHE1"], ["ENG-LIV1", "ENG-MUN1"], ["ENG-MCI1", "ENG-TOT1"], ["ENG-NEW1", "ENG-AVL1"], ["ENG-BHA1", "ENG-CRY1"],
+	["ENG-FUL1", "ENG-BRE1"], ["ENG-BOU1", "ENG-EVE1"], ["ENG-COV1", "ENG-NFO1"], ["ENG-HUL1", "ENG-LEE1"], ["ENG-IPS1", "ENG-SUN1"],
 ]
 
 func _init() -> void:

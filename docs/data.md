@@ -1,78 +1,89 @@
 # Data — multi-competition snapshot
 
-The competitions, their clubs and players ship as one SQLite database. The
-match engine, the fixture picker and the encyclopedia all read it, so a squad
-change lands everywhere at once.
+The competitions, clubs and players ship as one SQLite database; the match
+engine, picker and encyclopedia all read it, so a squad change lands everywhere.
 
 ## Files
 
 | Path | Role |
 |------|------|
-| `data/pl_snapshot.json` | Readable snapshot: competitions, clubs, players, tables, fixtures, season/career figures, `db_version` |
-| `data/pl_seed.sqlite` | Shipped seed built from the JSON; `res://` and read-only |
-| `data/pl_scoring_envelope.json` | Last-10 PL scoring bands and the frozen pre-tune 1X2 baseline for the Poisson calibration |
+| `data/pl_snapshot.json` | Snapshot: competitions, clubs, players, tables, fixtures, `db_version` |
+| `data/pl_seed.sqlite` | Shipped seed built from the JSON; `res://`, read-only |
+| `data/fc_sheet.csv` | Sofifa EA FC 26 sheet: sub-stats and card extras |
+| `data/fc_ratings.json` | Face weights, positional weights, synthesis |
+| `data/pl_scoring_envelope.json` | Last-10 PL scoring bands and the frozen 1X2 baseline for Poisson |
 | `user://cache/pl_seed_v<N>.sqlite` | Per-version working copy: in-sim stats are written here |
 
-`PLDatabase` copies the seed into the cache on first use and deletes copies from
-older seeds, so a `db_version` bump both replaces the cache and clears in-sim
-stats (accepted: the sim ledger belongs to one snapshot).
+A `db_version` bump replaces the cache and clears in-sim stats.
 
 ## Competitions
 
-Eight competitions: England's five linked tiers (`PL`, `CH`, `L1`, `L2`, `NL`),
-La Liga (`LL`) and Germany's pair (`BL`, `BL2`) — 172 clubs. Each owns an id
-namespace (`LL-BAR`, `CH-BIR`). The English lower tiers play 24 clubs over 46
-matchdays, the German tiers 18 over 34; auto-sim reuses the PL envelope.
+Ten leagues: England's five linked tiers (`PL`, `CH`, `L1`, `L2`, `NL`), La
+Liga (`LL`), Germany's pair (`BL`, `BL2`) and Italy's pair (`SA`, `SB`) — 212
+league clubs, 354 with cup stubs. Ids are country-stable (`ENG-MUN1`, `ITA-INT1`)
+and player ids are UUIDs, minted once and kept. Rules: wiki
+[DR-20261128-16](https://github.com/waigore/footballsim/wiki/dr-20261128-16) /
+[18](https://github.com/waigore/footballsim/wiki/dr-20261128-18).
+
+Seven cups and supercups ship beside them: `FAC`, `EFLC`, `CS`, `CDR`, `SCE`,
+`DFBP`, `DFLS`. The wiki is their rules source of truth
+([Domestic cups](https://github.com/waigore/footballsim/wiki/domestic-cups)).
+Their pools need 142 **stub** clubs outside the shipped tiers: identity,
+colours, a tier band and a synthetic squad. A stub never matches the sheet; its
+invented names would pair with real players.
 
 ## Tool
 
 ```bash
 python tools/pl_snapshot.py seed --competition LL --season 2026
 python tools/pl_snapshot.py fetch --source espn --season 2026 --competition all
+python tools/pl_snapshot.py remap
+python tools/pl_snapshot.py cups --bump-version
+python tools/pl_snapshot.py ratings --bump-version
 python tools/pl_snapshot.py build
 python tools/pl_snapshot.py verify
 ```
 
-- **One source per run.** ESPN is preferred; a refresh never mixes sources.
-- `seed` creates a competition's clubs and squads from ESPN rosters the first
-  time a league ships (real clubs and squads, role-based ratings). Ratings
-  survive a league refresh.
-- `fetch` stamps `snapshot_date`, `season_label` and `source`, and rewrites the
-  table, fixtures, player identity (age/nationality/DOB) and season figures.
-- `build` writes the seed; `verify` checks counts, unique ids across leagues,
-  eleven starters per club and that the seed's version matches the JSON.
-- Commit both files together. Bump `db_version` whenever the content changes.
+- **One source per run.** `seed` creates a league's clubs and squads from ESPN
+  rosters; ratings survive a refresh.
+- `fetch` rewrites the table, fixtures, identity and season figures.
+- `cups` adds the catalogue, stubs and entry pools.
+- `ratings` remaps squads from `data/fc_sheet.csv`, synthesizes the rest and
+  derives every card.
+- `build` writes the seed; `verify` checks counts, ids, eleven starters per club,
+  cup entry pools, all 34 sub-stats, that every stored card re-derives, and the
+  version.
 
-Refreshing the snapshot is an agent workflow:
-[`update-pl-data-snapshot`](../.agents/skills/update-pl-data-snapshot/SKILL.md).
-Source policy: wiki
+Refresh is an agent task:
+[`update-pl-data-snapshot`](../.agents/skills/update-pl-data-snapshot/SKILL.md);
+source policy wiki
 [DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01).
 
 ## Poisson scoring envelope
 
-`data/pl_scoring_envelope.json` carries the last-10 Premier League scoring bands
-and the frozen pre-tune win/draw/loss mix. It is the source of truth for the
-Poisson model's λ, and the only gate a constant change has to pass:
+`data/pl_scoring_envelope.json` carries the scoring bands and the frozen
+win/draw/loss mix: the source of truth for the Poisson λ.
 
 ```bash
 godot --headless --path . --script res://tools/poisson_calibrate.gd
 ```
 
-The report audits λ for fixed pairings, then samples whole seasons and checks
-the league's goals, home share, champion goals, blowout rate and 1X2 drift.
+The report audits λ for fixed pairings then samples whole seasons.
 
 ## Schema
 
 | Table | Holds |
 |-------|-------|
 | `metadata` | `db_version`, `schema_version`, `season_label`, `snapshot_date`, `source`, `ratings_source`, `competition_ids` |
-| `competition`, `club` | League identity and its rules JSON; club identity, kit colours, formation, style profile |
-| `competition_member` | club/player ↔ competition membership, ready for cups and internationals |
-| `player` | Identity, shirt number, role, ratings, keeper stats, `squad` (`starter`/`bench`), `ord` |
-| `table_row`, `fixture` | The 2026-27 table at snapshot date and every fixture, each with `competition_id`; `played` marks the results already in |
-| `season_stat`, `career_stat` | Real-world season and career figures (`-1` = not in the snapshot) |
+| `competition`, `club` | Competition rules JSON; club identity, kit, formation, style, `stub`/`tier`/`region` |
+| `competition_member` | Club/player ↔ competition membership: league squads and cup entry pools |
+| `player` | Identity, role, ratings, keeper stats, `subs`, `extras`, `ratings_matched`, `squad`, `ord` |
+| `table_row`, `fixture` | The 2026-27 table at snapshot date and every fixture, each with `competition_id` |
+| `season_stat`, `career_stat` | Real-world figures (`-1` = not in the snapshot) |
 | `sim_player_stat`, `sim_club_stat` | Footballsim's own record, written after full time |
 
-Reads go through `PLRepository` (`scripts/data/pl_repository.gd`); league-wide
-reads take an optional competition id. `TeamData` stays the engine-facing
-facade, so the sim never talks SQL.
+Reads go through `PLRepository`, keyed by stable ids; `TeamData` stays the
+engine-facing facade, so the sim never talks SQL. Every card re-derives from its
+own `subs` through `FCRatings`; the wiki
+[player-attributes](https://github.com/waigore/footballsim/wiki/player-attributes)
+page is the formula SoT, and the sim reads face bars only.
