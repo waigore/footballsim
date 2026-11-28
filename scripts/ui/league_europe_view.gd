@@ -15,9 +15,10 @@ static func hub(screen: Object) -> Dictionary:
 	var cards: Array = []
 	for cid in ids:
 		cards.append(LeagueEurope.card(save, str(cid)))
+	var draws: Array = LeagueEurope.pending_draws(save) if save != null else []
 	return {"date": date, "day": FixtureCalendar.day_label(date) if date != "" else "",
 		"cards": cards, "tonight": plan,
-		"draws": LeagueEurope.pending_draws(save) if save != null else [],
+		"draws": draws.slice(0, 1), "draws_more": maxi(draws.size() - 1, 0),
 		"interests": season.record.interest.interests() if season != null else [],
 		"touch": bool(screen.touch)}
 
@@ -30,6 +31,10 @@ static func stage(screen: Object) -> Dictionary:
 	if comp == "" or not ids.has(comp):
 		comp = str(ids[0]) if not ids.is_empty() else ""
 	var stage := LeagueEurope.stage_of(comp)
+	var draw_round := ""
+	if save != null and stage != "" and LeagueEurope.drawn(comp, stage) \
+			and LeagueEurope.seen(save, comp, stage):
+		draw_round = stage
 	var tab := str(screen.europe.get("tab", ""))
 	if tab == "":
 		tab = "table" if stage == LeagueUefa.LEAGUE_STAGE else "qualifying"
@@ -46,6 +51,7 @@ static func stage(screen: Object) -> Dictionary:
 	]
 	return {"comp": comp, "short": _short(comp), "stage": LeagueEurope.stage_label(comp),
 		"tab": tab, "comps": comps, "tabs": tabs, "touch": bool(screen.touch),
+		"draw_round": draw_round,
 		"table": PLRepository.shared().table(comp) if season != null else [],
 		"qualifying": LeagueEuropeTies.qualifying(comp) if season != null else [],
 		"bracket": LeagueEuropeTies.bracket(comp) if season != null else [],
@@ -63,7 +69,7 @@ static func draw(screen: Object) -> Dictionary:
 	out["revealed"] = int(screen.europe_draw.get("revealed", 0))
 	out["done"] = bool(screen.europe_draw.get("done", false))
 	out["touch"] = bool(screen.touch)
-	out["stage"] = LeagueEurope.stage_label(competition_id)
+	out["stage"] = LeagueEurope.badge(round_id)
 	return out
 
 

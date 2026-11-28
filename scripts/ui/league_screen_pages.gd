@@ -142,6 +142,8 @@ func refresh() -> void:
 	screen.pinned.queue_redraw()
 	screen.body.frozen = screen.delete_confirm_open()
 	screen.panel.active = LeagueView.panel_reading(screen.mode)
+	var save: LeagueSave = screen.season.save if screen.season != null else null
+	screen.panel.europe_on = LeagueEurope.runs(save)
 
 
 	if screen.panel.active == "":

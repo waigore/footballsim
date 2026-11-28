@@ -16,6 +16,7 @@ static func open(screen: Object) -> void:
 		return
 	screen.europe = {"comp": str(active[0]), "tab": "", "round": ""}
 	LeagueDoors.go(screen, LeagueScreen.MODE_EUROPE)
+	screen.refresh()
 
 
 static func open_stage(screen: Object, competition_id: String = "") -> void:
@@ -35,12 +36,17 @@ static func open_stage(screen: Object, competition_id: String = "") -> void:
 		screen.europe["tab"] = "qualifying"
 	screen.europe["round"] = ""
 	LeagueDoors.go(screen, LeagueScreen.MODE_EUROPE_STAGE)
+	screen.refresh()
 
 
 static func open_draw(screen: Object, competition_id: String, round_id: String) -> void:
+	var save: LeagueSave = screen.season.save if screen.season != null else null
+	var settled := LeagueEurope.seen(save, competition_id, round_id)
+	var count := LeagueEurope.pairs(competition_id, round_id).size()
 	screen.europe_draw = {"competition": competition_id, "round": round_id,
-		"revealed": 0, "done": false, "t": 0.0}
+		"revealed": count if settled else 0, "done": settled, "t": 0.0}
 	LeagueDoors.go(screen, LeagueScreen.MODE_EUROPE_DRAW)
+	screen.refresh()
 
 
 static func press(screen: Object, id: String) -> bool:

@@ -50,6 +50,12 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 				"label": str(draw.get("label", "")),
 				"rect": Rect2(24.0, y, minf(width, 320.0), chip_h(touch))})
 			y += chip_h(touch) + 6.0
+		var more := int(view.get("draws_more", 0))
+		if more > 0:
+			items.append({"id": "", "kind": "note",
+				"label": "%d MORE DRAW%s WAITING" % [more, "" if more == 1 else "S"],
+				"rect": Rect2(24.0, y, width, 18.0)})
+			y += 24.0
 	items.append({"id": "", "kind": "caption", "label": "TONIGHT",
 		"rect": Rect2(24.0, y, width, 16.0)})
 	y += CAPTION_H

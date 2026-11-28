@@ -38,6 +38,7 @@ var active := "nav:fixtures"
 var touch := false
 var cache := {}
 var icons := {}
+var europe_on := true
 
 func open() -> void:
 	target = 1.0
@@ -84,14 +85,24 @@ func tab_rect(vp: Vector2) -> Rect2:
 		return Rect2(TAB_INSET, vp.y * 0.5 - TAP_DOOR * 0.5, TAP_DOOR, TAP_DOOR)
 	return Rect2(-2.0, vp.y * 0.5 - TAB_H * 0.5, TAB_W, TAB_H)
 
+func items() -> Array:
+	if europe_on:
+		return ITEMS
+	var out: Array = []
+	for item in ITEMS:
+		if str(item["id"]) != "nav:europe":
+			out.append(item)
+	return out
+
+
 func item_rect(vp: Vector2, index: int) -> Rect2:
-	return Rect2(panel_rect(vp).position.x + 12.0, HEAD + float(index) * (row_h(vp) + ROW_GAP),
-		width(vp) - 24.0, row_h(vp))
+	return Rect2(panel_rect(vp).position.x + 12.0, HEAD + float(index) * (row_h(vp, items().size()) + ROW_GAP),
+		width(vp) - 24.0, row_h(vp, items().size()))
 
 
-static func row_h(vp: Vector2) -> float:
+static func row_h(vp: Vector2, count: int = ITEMS.size()) -> float:
 	var room: float = vp.y - HEAD - 14.0
-	return minf(ROW_H, maxf(30.0, room / float(ITEMS.size()) - ROW_GAP))
+	return minf(ROW_H, maxf(30.0, room / float(count) - ROW_GAP))
 
 
 func hit(p: Vector2, vp: Vector2) -> String:
@@ -102,9 +113,10 @@ func hit(p: Vector2, vp: Vector2) -> String:
 	var rect := panel_rect(vp)
 	if not rect.has_point(p):
 		return "panel:close"
-	for i in range(ITEMS.size()):
+	var list := items()
+	for i in range(list.size()):
 		if item_rect(vp, i).has_point(p):
-			return str(ITEMS[i]["id"])
+			return str(list[i]["id"])
 
 
 	return ""
@@ -130,13 +142,14 @@ func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, active_pose: String) ->
 	UiChrome.text(c, Vector2(rect.position.x + 22.0, 34.0), "LEAGUE", 12, UiChrome.C_GOLD, bold)
 	UiChrome.text(c, Vector2(rect.position.x + 22.0, 54.0), "NAVIGATION", 10, UiChrome.C_DIM, med)
 	c.draw_rect(Rect2(rect.position.x + 22.0, 66.0, rect.size.x - 46.0, 1.0), UiChrome.C_BORDER)
-	for i in range(ITEMS.size()):
-		_draw_item(c, vp, i, active_pose, fonts)
+	var list := items()
+	for i in range(list.size()):
+		_draw_item(c, vp, list[i], i, active_pose, fonts)
 	UiChrome.text(c, Vector2(rect.position.x + 22.0, vp.y - 18.0),
 		"LONG-PRESS A TEAM NAME TO MARK IT", 8, UiChrome.C_DIM, med)
 
-func _draw_item(c: CanvasItem, vp: Vector2, index: int, active_pose: String, fonts: Dictionary) -> void:
-	var item: Dictionary = ITEMS[index]
+func _draw_item(c: CanvasItem, vp: Vector2, item: Dictionary, index: int, active_pose: String,
+		fonts: Dictionary) -> void:
 	var rect := item_rect(vp, index)
 	var on := str(item["pose"]) == active_pose
 	if on:

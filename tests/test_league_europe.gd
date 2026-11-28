@@ -99,6 +99,34 @@ func test_qualifying_drops_and_the_bracket_keep_their_reading() -> void:
 	season.close()
 
 
+func test_a_watched_tie_aggregates_both_legs() -> void:
+	var season := _season()
+	var tie := PLDatabase.row(
+		"SELECT * FROM cup_tie WHERE competition_id = 'UCL' AND round_id = 'Q1' AND tie_index = 0;")
+	assert_false(tie.is_empty(), "the UCL Q1 has no first tie")
+	var home := str(tie["home_club_id"])
+	var away := str(tie["away_club_id"])
+	var leg_one := PLDatabase.row(
+		"SELECT * FROM league_fixture WHERE id = 'uefa-UCL-Q1-00-1';")
+	var leg_two := PLDatabase.row(
+		"SELECT * FROM league_fixture WHERE id = 'uefa-UCL-Q1-00-2';")
+	assert_false(leg_one.is_empty(), "the UCL Q1 tie has no first leg")
+	assert_false(leg_two.is_empty(), "the UCL Q1 tie has no second leg")
+	LeagueUefaState.record_engine(season, leg_one, 2, 1)
+	var after_one := PLDatabase.row(
+		"SELECT * FROM cup_tie WHERE competition_id = 'UCL' AND round_id = 'Q1' AND tie_index = 0;")
+	assert_eq(int(after_one["home_goals"]), 2, "the first leg was not added to the aggregate")
+	assert_eq(str(after_one["winner_club_id"]), "", "a half-played tie named a winner")
+	LeagueUefaState.record_engine(season, leg_two, 0, 1)
+	var after_two := PLDatabase.row(
+		"SELECT * FROM cup_tie WHERE competition_id = 'UCL' AND round_id = 'Q1' AND tie_index = 0;")
+	assert_eq(int(after_two["home_goals"]), 3, "the second leg was added to the wrong side")
+	assert_eq(int(after_two["away_goals"]), 1, "the second leg gave the away side the wrong goals")
+	assert_eq(str(after_two["winner_club_id"]), home, "the aggregate did not settle the tie")
+	assert_true(str(after_two["winner_club_id"]) != away, "the losing side was called the winner")
+	season.close()
+
+
 func test_a_complete_bracket_keeps_its_table_and_names_three_winners() -> void:
 	var season := _season()
 	for cid in LeagueUefa.IDS:

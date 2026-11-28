@@ -11,7 +11,7 @@ const COL_GAP := 10.0
 const TIE_H := 62.0
 const TIE_TOUCH_H := 68.0
 const ROW_H := 22.0
-const ROW_TOUCH_H := 38.0
+const ROW_TOUCH_H := 44.0
 const NUM_W := 26.0
 const NUM_GAP := 2.0
 const NUM_COLS := 8
@@ -30,6 +30,12 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 	y += CHIP_H + 6.0
 	items.append_array(_tabs(vp, view, y, touch))
 	y += TAB_H + 8.0
+	var draw_round := str(view.get("draw_round", ""))
+	if draw_round != "":
+		items.append({"id": "europe:draw:%s:%s" % [str(view.get("comp", "")), draw_round],
+			"kind": "chip", "label": "DRAW", "selected": false,
+			"rect": Rect2(vp.x - 24.0 - 76.0, y, 76.0, UiChrome.tap_h(CHIP_H, touch))})
+		y += UiChrome.tap_h(CHIP_H, touch) + 6.0
 	var tab := str(view.get("tab", ""))
 	if tab == "table":
 		items.append_array(_table(vp, view, y, touch))
@@ -127,6 +133,15 @@ func _column(x: float, y: float, w: float, round: Dictionary, touch: bool) -> Ar
 		out.append({"id": id, "kind": "eu_tie", "tie": tie,
 			"rect": Rect2(x, top, w, h)})
 		out.append_array(_names(Rect2(x, top, w, h), tie, touch))
+		var badge := LeagueEuropeTies.drop_label(tie.get("drop", {}))
+		var target := str((tie.get("drop", {}) as Dictionary).get("to", ""))
+		if badge == "":
+			badge = LeagueEuropeTies.arrival_label(tie.get("arrival", {}))
+			target = str((tie.get("arrival", {}) as Dictionary).get("competition", ""))
+		if badge != "" and target != "":
+			var bw: float = UiChrome.text_width(UiChrome.fonts()["bold"], badge, 8)
+			out.append({"id": "europe:comp:" + target, "kind": "eu_badge",
+				"rect": Rect2(x + w - 8.0 - bw, top + h - 16.0, bw, 12.0)})
 		top += h + 6.0
 	return out
 
@@ -178,15 +193,11 @@ func _table(vp: Vector2, view: Dictionary, y: float, touch: bool) -> Array:
 
 
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
-		hints_out: DateHints) -> void:
+		_hints_out: DateHints) -> void:
 	var touch := bool(view.get("touch", false))
 	var comp := str(view.get("short", ""))
 	var caption := str(view.get("stage", ""))
-	var band: Dictionary = LeagueExtra.header(c, vp, fonts, "EUROPE · " + comp, caption, 0.0,
-		true, touch)
-	if str(band.get("caption", "")) != "":
-		hints_out.clear()
-
+	LeagueExtra.header(c, vp, fonts, "EUROPE · " + comp, caption, 0.0, true, touch)
 
 func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		view: Dictionary) -> void:

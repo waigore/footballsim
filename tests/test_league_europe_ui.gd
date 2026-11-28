@@ -66,6 +66,8 @@ func test_the_hub_and_draw_lay_out_on_desktop_and_phone() -> void:
 	var view: Dictionary = LeagueEuropeView.hub(fake)
 	assert_eq((view["cards"] as Array).size(), 3, "the hub does not read three cards")
 	assert_gte((view["tonight"] as Array).size(), 1, "the hub has no UEFA night on its opening day")
+	assert_eq((view["draws"] as Array).size(), 1, "the hub does not show one pending draw door")
+	assert_eq(int(view["draws_more"]), 2, "the hub does not count the other pending draws")
 	var sheet := LeagueEuropeSheet.new()
 	for touch in [false, true]:
 		fake.touch = touch
@@ -116,13 +118,25 @@ func test_the_wizard_offers_europe_and_the_panel_fits_a_phone() -> void:
 	var row := LeaguePanel.row_h(Vector2(913, 411))
 	assert_lte(84.0 + float(LeaguePanel.ITEMS.size()) * (row + LeaguePanel.ROW_GAP), 411.0,
 		"the drawer's items do not fit a phone")
+	var panel := LeaguePanel.new()
+	panel.europe_on = false
+	assert_eq(panel.items().size(), LeaguePanel.ITEMS.size() - 1,
+		"the drawer still offers EUROPE on a domestic-only save")
+	panel.europe_on = true
+	assert_eq(panel.items().size(), LeaguePanel.ITEMS.size(),
+		"the drawer lost a door on a European save")
 
 
 func test_the_stage_reads_its_table_qualifying_and_bracket() -> void:
 	var fake := _screen(false)
 	_run_to(fake.season, "UCL", "LP")
 	assert_true(LeagueUefa.has_stage("UCL", "KOPO"), "the knockout play-off never opened")
+	LeagueEurope.mark_seen(fake.season.save, "UCL", "KOPO")
 	var stage := LeagueEuropeStage.new()
+	var settled: Dictionary = LeagueEuropeView.stage(fake)
+	assert_eq(str(settled["draw_round"]), "KOPO", "a shown draw has no re-read door")
+	assert_true(_ids(stage.layout(Vector2(1600, 900), settled)).has("europe:draw:UCL:KOPO"),
+		"the stage has no door to the settled draw")
 	fake.europe["tab"] = "table"
 	var view: Dictionary = LeagueEuropeView.stage(fake)
 	assert_eq((view["table"] as Array).size(), 36, "the league phase table lost a club")
@@ -157,6 +171,9 @@ func test_the_stage_reads_its_table_qualifying_and_bracket() -> void:
 		if str(item["kind"]) == "eu_col":
 			phone_cols += 1
 			assert_eq(str(item["round"]["id"]), "Q1", "the phone shows the wrong round")
+		if str(item["kind"]) == "eu_badge":
+			assert_true(str(item["id"]).begins_with("europe:comp:"),
+				"a drop badge is not a door")
 	assert_eq(phone_cols, 1, "the phone stacks every qualifying round at once")
 	fake.europe["tab"] = "table"
 	var touch_rows: Array = stage.layout(Vector2(913, 411), LeagueEuropeView.stage(fake))
