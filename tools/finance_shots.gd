@@ -16,11 +16,18 @@ var design := Vector2i(1600, 900)
 var scale := 1
 var touch := false
 var tag := "desktop"
+var currency := "GBP"
+var restored := ""
 
 
 func _initialize() -> void:
 	_parse_args()
 	tag = "phone" if touch else "desktop"
+	if currency != "GBP":
+		tag = "%s_%s" % [tag, currency.to_lower()]
+	Prefs._currency_cache = ""
+	restored = Prefs.load_currency()
+	Prefs.save_currency(currency)
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
 	root.size = design * scale
 	DisplayServer.window_set_size(design * scale)
@@ -59,6 +66,8 @@ func _initialize() -> void:
 	var slug := season.save.slug
 	season.close()
 	LeagueSaveCatalog.remove(slug)
+	Prefs._currency_cache = ""
+	Prefs.save_currency(restored if restored != "" else "GBP")
 	quit()
 
 
@@ -71,6 +80,8 @@ func _parse_args() -> void:
 			scale = int(raw.substr(8))
 		elif raw == "--touch=1":
 			touch = true
+		elif raw.begins_with("--currency="):
+			currency = raw.substr(11).to_upper()
 
 
 func _shot(name: String) -> void:
