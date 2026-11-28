@@ -61,7 +61,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 			y += 18.0
 		var row := Rect2(24.0, y, vp.x - 48.0, LeagueBlock.height(fx) + 10.0)
 		items.append({"id": "match:" + str(fx.get("id", "")), "kind": "result",
-			"report": report, "rect": row})
+			"report": report, "rect": row, "centered_score": true})
 		y += row.size.y + 6.0
 	if not (view.get("roundup", []) as Array).is_empty():
 		return items
@@ -167,7 +167,8 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 			var away_id := str(block.get("away_club_id", ""))
 			LeagueBlock.paint(c, rect, block, fonts, names,
 				LeagueInterestMark.ink(interest, home_id),
-				LeagueInterestMark.ink(interest, away_id))
+				LeagueInterestMark.ink(interest, away_id), false,
+				bool(item.get("centered_score", false)))
 		elif kind == "event":
 			_draw_event(c, rect, item, fonts, interest)
 
