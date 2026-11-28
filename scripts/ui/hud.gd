@@ -1,10 +1,10 @@
 extends Control
 
 
-const C_PANEL := UiChrome.C_PANEL
-const C_TEXT := UiChrome.C_TEXT
-const C_DIM := UiChrome.C_DIM
-const C_GOLD := UiChrome.C_GOLD
+var C_PANEL: Color = UiChrome.C_PANEL
+var C_TEXT: Color = UiChrome.C_TEXT
+var C_DIM: Color = UiChrome.C_DIM
+var C_GOLD: Color = UiChrome.C_GOLD
 
 var game = null
 var engine = null
@@ -55,9 +55,9 @@ var banners_band := HudBannersBand.new()
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
-	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
-	f_body = load("res://fonts/Inter-Regular.ttf")
+	f_bold = UiTheme.bold()
+	f_med = UiTheme.medium()
+	f_body = UiTheme.body()
 	ticker = HudCommentary.new(C_PANEL, C_GOLD, C_TEXT, C_DIM)
 	manager_card = HudManagers.new(C_PANEL, C_GOLD, C_TEXT, C_DIM)
 	card = HudPlayerCard.new(C_PANEL, C_GOLD, C_TEXT, C_DIM)
