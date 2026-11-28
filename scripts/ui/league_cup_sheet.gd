@@ -68,6 +68,10 @@ func cup_layout(vp: Vector2, view: Dictionary) -> Array:
 	if rounds.is_empty():
 		items.append({"id": "", "kind": "note", "label": "No round has been drawn yet.",
 			"rect": Rect2(24.0, y, w, 24.0)})
+	if str(view.get("field", "")) != "":
+		items.append({"id": "", "kind": "field", "label": str(view["field"]),
+			"rect": Rect2(24.0, y, w, 24.0)})
+		y += 26.0
 	for row in rounds:
 		var round_row: Dictionary = row
 		items.append({"id": "cupround:%s:%s" % [str(view["id"]), str(round_row["id"])],
@@ -136,6 +140,9 @@ func draw_cup_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 			"note":
 				UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), str(item["label"]),
 					11, UiChrome.C_SOFT, med)
+			"field":
+				UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0), str(item["label"]),
+					10, UiChrome.C_GOLD, bold)
 			"round":
 				var row: Dictionary = item["round"]
 				UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 13.0),

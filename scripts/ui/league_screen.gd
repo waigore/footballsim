@@ -40,20 +40,66 @@ var mouse := Vector2(-1000, -1000)
 
 var holding := false
 
-var mode := MODE_WIZARD
+var state := LeagueUiState.new()
+var bus: UiBus = null
 var season: LeagueSeason = null
-var wizard := {"name": "", "calendar_mode": "generated", "advance_mode": "fixture_days",
-	"competitions": ["PL"], "uefa": true, "error": ""}
-var saves: Array = []
+
+var mode: String:
+	get:
+		return state.mode
+	set(value):
+		state.set_mode(value)
+		if bus != null:
+			bus.announce_screen("league" if value != "" else "")
+
+var wizard: Dictionary:
+	get:
+		return state.wizard
+	set(value):
+		state.wizard = value
+
+var saves: Array:
+	get:
+		return state.saves
+	set(value):
+		state.saves = value
 
 var delete := LeagueDelete.new()
-var report: Dictionary = {}
-var roundup: Array = []
-var report_filter := {"league": "", "interest": false}
-var month := ""
-var day := ""
-var day_fixtures: Array = []
-var days_cache := {}
+var report: Dictionary:
+	get:
+		return state.report
+	set(value):
+		state.report = value
+var roundup: Array:
+	get:
+		return state.roundup
+	set(value):
+		state.roundup = value
+var report_filter: Dictionary:
+	get:
+		return state.report_filter
+	set(value):
+		state.report_filter = value
+var month: String:
+	get:
+		return state.month
+	set(value):
+		state.month = value
+var day: String:
+	get:
+		return state.day
+	set(value):
+		state.day = value
+var day_fixtures: Array:
+	get:
+		return state.day_fixtures
+	set(value):
+		state.day_fixtures = value
+var days_cache: Dictionary:
+	get:
+		return state.days_cache
+	set(value):
+		state.days_cache = value
 
 var buttons: Array:
 	get:
@@ -75,26 +121,62 @@ var sheet_europe := LeagueEuropeSheet.new()
 var sheet_europe_stage := LeagueEuropeStage.new()
 var sheet_europe_draw := LeagueEuropeDraw.new()
 
-var europe := {"comp": "", "tab": "", "round": ""}
-var europe_draw := {"competition": "", "round": "", "revealed": 0, "done": false, "t": 0.0}
+var europe: Dictionary:
+	get:
+		return state.europe
+	set(value):
+		state.europe = value
+var europe_draw: Dictionary:
+	get:
+		return state.europe_draw
+	set(value):
+		state.europe_draw = value
 
-var calendar_filter := ""
+var calendar_filter: String:
+	get:
+		return state.calendar_filter
+	set(value):
+		state.calendar_filter = value
 
 var sheet_cups := LeagueCupsSheet.new()
 var sheet_cup := LeagueCupSheet.new()
 var sheet_bracket := LeagueCupBracket.new()
 var sheet_cup_draw := LeagueCupDrawSheet.new()
 
-var cups_round := ""
-var cup_focus := ""
+var cups_round: String:
+	get:
+		return state.cups_round
+	set(value):
+		state.cups_round = value
+var cup_focus: String:
+	get:
+		return state.cup_focus
+	set(value):
+		state.cup_focus = value
 
-var draw_state := {"shown": 0, "clock": 0.0}
+var draw_state: Dictionary:
+	get:
+		return state.draw_state
+	set(value):
+		state.draw_state = value
 
-var interest_query := ""
+var interest_query: String:
+	get:
+		return state.interest_query
+	set(value):
+		state.interest_query = value
 
 
-var stats_filter := {"league": "", "month": "", "team": "", "stat": "goals"}
-var report_back := MODE_HUB
+var stats_filter: Dictionary:
+	get:
+		return state.stats_filter
+	set(value):
+		state.stats_filter = value
+var report_back: String:
+	get:
+		return state.report_back
+	set(value):
+		state.report_back = value
 
 
 var nav := LeagueNavStack.new()
@@ -103,9 +185,17 @@ var panel := LeaguePanel.new()
 var overlay: LeagueOverlay = null
 
 
-var sys := {"status": "", "error": "", "naming": false, "name": ""}
+var sys: Dictionary:
+	get:
+		return state.sys
+	set(value):
+		state.sys = value
 
-var load_from := "menu"
+var load_from: String:
+	get:
+		return state.load_from
+	set(value):
+		state.load_from = value
 
 var hints := DateHints.new()
 var rows_hints: DateHints = null
@@ -226,6 +316,19 @@ func current_view() -> Dictionary:
 func refresh() -> void:
 	if pages != null:
 		pages.refresh()
+
+
+func on_season_changed() -> void:
+	if pages == null or not is_open():
+		return
+	if mode == MODE_LOAD or mode == MODE_WIZARD:
+		return
+	refresh()
+
+
+func on_session_changed() -> void:
+	if bus != null and season != null and bus.season != season:
+		bus.bind_season(season)
 
 
 func delete_confirm_open() -> bool:

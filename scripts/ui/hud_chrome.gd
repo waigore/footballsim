@@ -2,7 +2,7 @@ class_name HudChrome
 extends RefCounted
 
 
-const BORDER := Color(1, 1, 1, 0.085)
+const BORDER := UiChrome.C_BORDER
 
 
 var buttons: Array = []

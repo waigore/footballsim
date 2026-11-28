@@ -45,9 +45,9 @@ var stack: Array:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
-	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
-	f_body = load("res://fonts/Inter-Regular.ttf")
+	f_bold = UiTheme.bold()
+	f_med = UiTheme.medium()
+	f_body = UiTheme.body()
 	body = WikiBody.new()
 	body.name = "Body"
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -126,6 +126,14 @@ func set_attr_view(mode: String) -> bool:
 	if page != WikiModel.PLAYER and page != WikiModel.TEAM:
 		return false
 	Prefs.save_attrs(mode)
+	_refresh()
+	return true
+
+
+func set_currency(code: String) -> bool:
+	if not MarketCurrency.currencies().has(code):
+		return false
+	Prefs.save_currency(code)
 	_refresh()
 	return true
 
