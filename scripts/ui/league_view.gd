@@ -154,6 +154,7 @@ static func build(screen) -> Dictionary:
 		}
 	if mode == LeagueScreen.MODE_PODIUM:
 		return {"summary": state.get("summary", {}), "name": state.get("name", ""),
+			"season": state.get("season_label", ""),
 			"table": state.get("table", []), "rules": state.get("rules", rules),
 			"continental": state.get("continental", []),
 			"touch": bool(screen.touch)}

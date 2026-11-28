@@ -104,7 +104,8 @@ static func draw_stage(season: LeagueSeason, competition_id: String, round_id: S
 	if pairs.is_empty():
 		return false
 	var position := LeagueUefa.round_ids(competition_id).find(round_id) + 1
-	LeagueCupTie.install_round(competition_id, round_id, position, pairs, rule, "uefa")
+	LeagueCupTie.install_round(competition_id, round_id, position, pairs, rule, "uefa",
+		season.save.season_index())
 	season.save.set_status("in_progress")
 	return true
 

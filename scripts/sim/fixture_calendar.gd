@@ -212,6 +212,27 @@ static func add_days(date: String, days: int) -> String:
 	return date_from(days_from(date) + days)
 
 
+static func add_years(date: String, years: int) -> String:
+	if date.length() < 10 or years == 0:
+		return date
+	var d := Time.get_datetime_dict_from_datetime_string(date.substr(0, 10) + "T00:00:00", true)
+	if d.is_empty():
+		return date
+	var year := int(d["year"]) + years
+	var month := int(d["month"])
+	var day := mini(int(d["day"]), days_in_month(year, month))
+	return "%04d-%02d-%02d" % [year, month, day]
+
+
+static func days_in_month(year: int, month: int) -> int:
+	if month == 2:
+		var leap := year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+		return 29 if leap else 28
+	if month == 4 or month == 6 or month == 9 or month == 11:
+		return 30
+	return 31
+
+
 static func day_label(date: String) -> String:
 	var d := _parts(date)
 	if d.is_empty():

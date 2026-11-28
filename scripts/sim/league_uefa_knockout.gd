@@ -9,7 +9,7 @@ static func seed(season: LeagueSeason, competition_id: String) -> bool:
 	if table.size() < 24:
 		return false
 	var play_off := _ties(table, 8, 24)
-	if not _install(competition_id, "KOPO", play_off):
+	if not _install(competition_id, "KOPO", play_off, season.save.season_index()):
 		return false
 	return true
 
@@ -30,14 +30,14 @@ static func after_round(season: LeagueSeason, competition_id: String, round_id: 
 		for i in range(8):
 			pairs.append({"home": seeded[i], "away": winners[7 - i] if 7 - i < winners.size()
 				else winners[i % maxi(winners.size(), 1)]})
-		_install(competition_id, "R16", pairs)
+		_install(competition_id, "R16", pairs, season.save.season_index())
 		return
 	var pairs: Array = []
 	var i := 0
 	while i + 1 < winners.size():
 		pairs.append({"home": winners[i], "away": winners[i + 1]})
 		i += 2
-	_install(competition_id, next, pairs)
+	_install(competition_id, next, pairs, season.save.season_index())
 
 
 static func _ties(table: Array, low: int, high: int) -> Array:
@@ -75,7 +75,8 @@ static func _orient(competition_id: String, pairs: Array, legs: int) -> Array:
 	return pairs
 
 
-static func _install(competition_id: String, round_id: String, pairs: Array) -> bool:
+static func _install(competition_id: String, round_id: String, pairs: Array,
+		season_index: int) -> bool:
 	if pairs.is_empty():
 		return false
 	var rule := LeagueUefa.round_rule(competition_id, round_id)
@@ -84,5 +85,6 @@ static func _install(competition_id: String, round_id: String, pairs: Array) -> 
 	var legs := int(rule.get("legs", 2))
 	pairs = _orient(competition_id, pairs, legs)
 	var position := LeagueUefa.round_ids(competition_id).find(round_id) + 1
-	LeagueCupTie.install_round(competition_id, round_id, position, pairs, rule, "uefa")
+	LeagueCupTie.install_round(competition_id, round_id, position, pairs, rule, "uefa",
+		season_index)
 	return true
