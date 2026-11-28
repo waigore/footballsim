@@ -100,6 +100,8 @@ static func press(screen, id: String) -> void:
 		return
 	if LeagueStatsActions.press(screen, id):
 		return
+	if LeagueReportActions.press(screen, id):
+		return
 	if id.begins_with("match:"):
 		screen.show_report(id.substr(6))
 	elif id.begins_with("goal:"):

@@ -156,7 +156,7 @@ func test_the_settings_switch_reads_and_writes_the_same_pref() -> void:
 	game.menus.open_settings()
 	var shell = game.menus.shell
 	assert_true(shell.hud_visible, "the settings sheet did not read the shown default")
-	var r: Rect2 = SettingsScreen.hud_toggle_rect(shell.design_vp())
+	var r: Rect2 = SettingsLayout.hud_toggle_rect(shell.design_vp())
 	assert_gte(r.size.y, 44.0, "the HUD switch is too short to tap")
 	assert_true(shell.button_at(r.get_center()) == "hud", "the switch did not answer a press")
 	shell.click(r.get_center())
@@ -170,10 +170,10 @@ func test_the_settings_switch_reads_and_writes_the_same_pref() -> void:
 
 func test_the_settings_card_holds_both_rows() -> void:
 	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
-		var card: Rect2 = SettingsScreen.card_rect(vp)
-		assert_true(card.encloses(SettingsScreen.hud_toggle_rect(vp)), "the HUD switch left the card at %s" % vp)
-		assert_true(card.encloses(SettingsScreen.track_rect(vp)), "the volume track left the card at %s" % vp)
-		assert_false(SettingsScreen.hud_toggle_rect(vp).intersects(SettingsScreen.track_rect(vp)),
+		var card: Rect2 = SettingsLayout.card_rect(vp)
+		assert_true(card.encloses(SettingsLayout.hud_toggle_rect(vp)), "the HUD switch left the card at %s" % vp)
+		assert_true(card.encloses(SettingsLayout.track_rect(vp)), "the volume track left the card at %s" % vp)
+		assert_false(SettingsLayout.hud_toggle_rect(vp).intersects(SettingsLayout.track_rect(vp)),
 			"the two rows overlap at %s" % vp)
 
 func test_a_saved_choice_is_restored_without_animating() -> void:

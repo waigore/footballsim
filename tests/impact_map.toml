@@ -606,6 +606,10 @@ match = "scripts/ui/settings_screen.gd*"
 domain = "shell"
 
 [[rules]]
+match = "scripts/ui/settings_layout.gd*"
+domain = "shell"
+
+[[rules]]
 match = "scripts/ui/confirm_prompt.gd*"
 domain = "shell"
 

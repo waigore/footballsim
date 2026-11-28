@@ -75,6 +75,167 @@ func test_the_roundup_groups_by_league() -> void:
 			single_heads += 1
 	assert_eq(single_heads, 0, "a one-league roundup does not need a head")
 
+func test_a_mixed_roundup_offers_league_chips() -> void:
+	var reports := _day_reports()
+	assert_gt(reports.size(), 1, "the opening day has no fixtures")
+	var items: Array = LeagueReportSheet.new().layout(Vector2(1000.0, 1400.0),
+		{"roundup": reports})
+	var chips := _choice_chips(items)
+	assert_true(chips.has("resultleague:"), "a mixed roundup has no ALL chip")
+	assert_true(chips.has("resultleague:PL"), "a mixed roundup has no PL chip")
+	assert_true(chips.has("resultleague:LL"), "a mixed roundup has no LL chip")
+	assert_true(bool(chips["resultleague:"]["selected"]), "a fresh roundup did not select ALL")
+	assert_false(bool(chips["resultleague:PL"]["selected"]),
+		"a fresh roundup pre-selected a league")
+	assert_true(bool(chips["resultleague:PL"].get("pinned", false)),
+		"a league chip scrolls away with the list")
+	for vp in [Vector2(1000.0, 1400.0), Vector2(913.0, 411.0)]:
+		var touch_items: Array = LeagueReportSheet.new().layout(vp,
+			{"roundup": reports, "touch": true})
+		for chip in _choice_chips(touch_items).values():
+			var rect: Rect2 = chip["rect"]
+			assert_gte(rect.size.y, UiChrome.TAP_H,
+				"a result chip is too short for a thumb at %s" % vp)
+			assert_lte(rect.end.x, vp.x - 20.0, "a result chip runs off the sheet at %s" % vp)
+
+func test_a_league_chip_cuts_the_roundup() -> void:
+	var reports := _day_reports()
+	var full: Array = _result_rows(LeagueReportSheet.new().layout(Vector2(1000.0, 4000.0),
+		{"roundup": reports}))
+	assert_gt(full.size(), 1, "the opening day laid out no result rows")
+	var ll: Array = _result_rows(LeagueReportSheet.new().layout(Vector2(1000.0, 4000.0),
+		{"roundup": reports, "filters": {"league": "LL"}}))
+	assert_eq(ll.size(), full.size() / 2, "the LL chip kept the wrong number of results")
+	for row in ll:
+		assert_eq(str((row["report"]["fixture"] as Dictionary)["competition_id"]), "LL",
+			"the LL chip kept another league's result")
+	var restored: Array = _result_rows(LeagueReportSheet.new().layout(Vector2(1000.0, 4000.0),
+		{"roundup": reports, "filters": {"league": ""}}))
+	assert_eq(restored.size(), full.size(), "ALL did not restore the whole day")
+
+func test_a_single_league_day_hides_the_competition_chips() -> void:
+	var one: Array = [{"fixture": season.plan()[0], "events": []}]
+	for filters in [{}, {"league": "PL"}]:
+		var items: Array = LeagueReportSheet.new().layout(Vector2(1000.0, 800.0),
+			{"roundup": one, "filters": filters})
+		assert_true(_choice_chips(items).is_empty(),
+			"a one-league day drew a competition chip")
+
+func test_the_interest_filter_keeps_only_followed_clubs() -> void:
+	var reports := _day_reports()
+	var club := ""
+	for report in reports:
+		var fx: Dictionary = report["fixture"]
+		if str(fx["competition_id"]) == "LL":
+			club = str(fx["home_club_id"])
+			break
+	assert_true(club != "", "the opening day has no La Liga fixture")
+	var marks := [club]
+	var bare: Array = LeagueReportSheet.new().layout(Vector2(1000.0, 4000.0),
+		{"roundup": reports})
+	assert_false(_choice_chips(bare).has("resultinterest"),
+		"the day showed an interest filter for an empty shortlist")
+	var chips := _choice_chips(LeagueReportSheet.new().layout(Vector2(1000.0, 4000.0),
+		{"roundup": reports, "interests": marks}))
+	assert_true(chips.has("resultinterest"), "a followed club raised no interest chip")
+	assert_false(bool(chips["resultinterest"]["selected"]), "the interest filter started on")
+	var kept: Array = _result_rows(LeagueReportSheet.new().layout(Vector2(1000.0, 4000.0),
+		{"roundup": reports, "interests": marks, "filters": {"interest": true}}))
+	assert_eq(kept.size(), 1, "the interest filter kept more than the followed match")
+	var followed: Dictionary = kept[0]["report"]["fixture"]
+	assert_true(str(followed["home_club_id"]) == club or str(followed["away_club_id"]) == club,
+		"the interest filter kept a match with no followed club")
+	var combined: Array = _result_rows(LeagueReportSheet.new().layout(Vector2(1000.0, 4000.0),
+		{"roundup": reports, "interests": marks,
+			"filters": {"league": "LL", "interest": true}}))
+	assert_eq(combined.size(), 1, "the league and interest filters did not combine")
+	var blocked: Array = LeagueReportSheet.new().layout(Vector2(1000.0, 4000.0),
+		{"roundup": reports, "interests": marks,
+			"filters": {"league": "PL", "interest": true}})
+	assert_true(_result_rows(blocked).is_empty(), "a combined filter kept an unfollowed league")
+	var notes := 0
+	for item in blocked:
+		if str(item.get("kind", "")) == "note":
+			notes += 1
+	assert_eq(notes, 1, "an empty filtered roundup said nothing")
+
+func test_the_screen_presses_the_chips_into_a_short_list() -> void:
+	var world := LeagueSeason.create("Chip World", "generated", "fixture_days", SEED + 9,
+		["PL", "LL"])
+	assert_not_null(world, "the chip season was not created")
+	var chip_screen := LeagueScreen.new()
+	add_child(chip_screen)
+	chip_screen.season = world
+	chip_screen.mode = LeagueScreen.MODE_HUB
+	chip_screen.visible = true
+	chip_screen.refresh()
+	chip_screen.click("continue")
+	assert_eq(chip_screen.mode, LeagueScreen.MODE_REPORT,
+		"a mixed day did not open its roundup")
+	var ids := {}
+	for item in chip_screen.buttons:
+		ids[str(item["id"])] = true
+	assert_true(ids.has("resultleague:PL") and ids.has("resultleague:LL"),
+		"the live roundup drew no league chips")
+	var full: Array = _match_rows(chip_screen.buttons)
+	assert_gt(full.size(), 1, "the live roundup laid out no rows")
+	chip_screen.click("resultleague:LL")
+	assert_eq(str(chip_screen.report_filter["league"]), "LL", "the LL chip was not recorded")
+	var ll: Array = _match_rows(chip_screen.buttons)
+	assert_eq(ll.size(), full.size() / 2, "the LL chip did not halve the day")
+	for fx in ll:
+		assert_eq(str(fx["competition_id"]), "LL", "the live roundup kept a PL row")
+	chip_screen.click("resultleague:LL")
+	assert_eq(str(chip_screen.report_filter["league"]), "", "the LL chip did not toggle back")
+	assert_eq(_match_rows(chip_screen.buttons).size(), full.size(),
+		"ALL did not restore the live day")
+
+	var club := str((chip_screen.roundup[0]["fixture"] as Dictionary)["home_club_id"])
+	assert_true(world.set_interest(club, true), "the shortlist refused a club")
+	chip_screen.refresh()
+	chip_screen.click("resultinterest")
+	assert_eq(_match_rows(chip_screen.buttons).size(), 1,
+		"the live interest filter kept more than one match")
+	assert_true(world.set_interest(club, false), "the shortlist kept a club")
+	chip_screen.refresh()
+	chip_screen.click("continue")
+	chip_screen.click("continue")
+	assert_eq(chip_screen.mode, LeagueScreen.MODE_REPORT,
+		"a second Continue did not settle a new day")
+	assert_eq(str(chip_screen.report_filter["league"]), "",
+		"the new day kept the old league filter")
+	assert_false(bool(chip_screen.report_filter["interest"]),
+		"the new day kept the old interest filter")
+	chip_screen.queue_free()
+	world.close()
+
+func _day_reports() -> Array:
+	var reports: Array = []
+	for fx in season.plan():
+		reports.append({"fixture": fx, "events": []})
+	return reports
+
+func _choice_chips(items: Array) -> Dictionary:
+	var chips := {}
+	for item in items:
+		if str(item.get("kind", "")) == "choice":
+			chips[str(item["id"])] = item
+	return chips
+
+func _result_rows(items: Array) -> Array:
+	var rows: Array = []
+	for item in items:
+		if str(item.get("kind", "")) == "result":
+			rows.append(item)
+	return rows
+
+func _match_rows(items: Array) -> Array:
+	var rows: Array = []
+	for item in items:
+		if str(item.get("id", "")).begins_with("match:"):
+			rows.append(item["report"]["fixture"])
+	return rows
+
 func test_continue_sims_every_league_on_the_shared_clock() -> void:
 	var before := season.state()
 	var result := season.advance()

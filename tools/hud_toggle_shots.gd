@@ -61,9 +61,9 @@ func _initialize() -> void:
 	scene.hud.set_hud_visible(true)
 	scene.menus.open_settings()
 	await _shot("issue158_settings_on")
-	scene.menus.shell.click(SettingsScreen.hud_toggle_rect(scene.menus.shell.design_vp()).get_center())
+	scene.menus.shell.click(SettingsLayout.hud_toggle_rect(scene.menus.shell.design_vp()).get_center())
 	await _shot("issue158_settings_off")
-	scene.menus.shell.click(SettingsScreen.hud_toggle_rect(scene.menus.shell.design_vp()).get_center())
+	scene.menus.shell.click(SettingsLayout.hud_toggle_rect(scene.menus.shell.design_vp()).get_center())
 	scene.menus.close()
 	scene.hud_layer.visible = true
 	# Phone design space: the same two poses at the overlay scale a handset gets.

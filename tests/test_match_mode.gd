@@ -385,7 +385,7 @@ func test_settings_shows_and_sets_the_same_view() -> void:
 	game.menus.open_settings()
 	var shell = game.menus.shell
 	assert_eq(shell.match_mode, "highlights", "the sheet did not read the saved view")
-	var segs: Array = SettingsScreen.seg_rects(shell.design_vp())
+	var segs: Array = SettingsLayout.seg_rects(shell.design_vp())
 	shell.click((segs[1] as Rect2).get_center())
 	assert_eq(shell.match_mode, "goals", "the Goals only segment did not take")
 	assert_eq(Prefs.load_mode(PREFS), "goals", "the segment did not save the view")
@@ -409,16 +409,16 @@ func test_settings_keys_reach_the_three_views() -> void:
 
 func test_the_segments_are_finger_sized_and_on_the_card() -> void:
 	for vp in _vps():
-		var card: Rect2 = SettingsScreen.card_rect(vp)
-		var segs: Array = SettingsScreen.seg_rects(vp)
+		var card: Rect2 = SettingsLayout.card_rect(vp)
+		var segs: Array = SettingsLayout.seg_rects(vp)
 		assert_eq(segs.size(), 3, "the view row is not three segments at %s" % vp)
 		for i in range(segs.size()):
 			var r: Rect2 = segs[i]
 			assert_gte(r.size.y, 44.0, "a segment is under the 44-unit tap floor at %s" % vp)
 			assert_true(card.encloses(r), "a segment left the card at %s" % vp)
-			assert_false(r.intersects(SettingsScreen.track_rect(vp)), "a segment covers the volume track at %s" % vp)
-			assert_false(r.intersects(SettingsScreen.hud_toggle_rect(vp)), "a segment covers the HUD switch at %s" % vp)
-			assert_false(r.intersects(SettingsScreen.minus_rect(vp)), "a segment covers a volume step at %s" % vp)
-			assert_false(r.intersects(SettingsScreen.back_rect(vp)), "a segment covers BACK at %s" % vp)
+			assert_false(r.intersects(SettingsLayout.track_rect(vp)), "a segment covers the volume track at %s" % vp)
+			assert_false(r.intersects(SettingsLayout.hud_toggle_rect(vp)), "a segment covers the HUD switch at %s" % vp)
+			assert_false(r.intersects(SettingsLayout.minus_rect(vp)), "a segment covers a volume step at %s" % vp)
+			assert_false(r.intersects(SettingsLayout.back_rect(vp)), "a segment covers BACK at %s" % vp)
 			assert_eq(game.menus.shell.settings.button_at(r.get_center(), vp), "mode:%s" % Prefs.MODES[i],
 				"segment %d did not answer a press at %s" % [i, vp])
