@@ -1,0 +1,38 @@
+{
+  "associations": {
+    "ENG": {"code": "FA", "name": "England"},
+    "ESP": {"code": "RFEF", "name": "Spain"},
+    "GER": {"code": "DFB", "name": "Germany"},
+    "ITA": {"code": "FIGC", "name": "Italy"}
+  },
+  "defaults": [
+    {"id": "summer", "open": "06-10", "close": "09-01"},
+    {"id": "winter", "open": "01-01", "close": "02-02"}
+  ],
+  "real": {
+    "ENG": {
+      "2026-27": [
+        {"id": "summer", "open": "2026-06-10", "close": "2026-09-01"},
+        {"id": "winter", "open": "2027-01-01", "close": "2027-02-02"}
+      ]
+    },
+    "ESP": {
+      "2026-27": [
+        {"id": "summer", "open": "2026-07-01", "close": "2026-09-01"},
+        {"id": "winter", "open": "2027-01-02", "close": "2027-02-02"}
+      ]
+    },
+    "GER": {
+      "2026-27": [
+        {"id": "summer", "open": "2026-07-01", "close": "2026-09-01"},
+        {"id": "winter", "open": "2027-01-01", "close": "2027-02-02"}
+      ]
+    },
+    "ITA": {
+      "2026-27": [
+        {"id": "summer", "open": "2026-07-01", "close": "2026-09-01"},
+        {"id": "winter", "open": "2027-01-02", "close": "2027-02-02"}
+      ]
+    }
+  }
+}
