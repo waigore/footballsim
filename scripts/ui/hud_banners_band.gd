@@ -192,7 +192,12 @@ func paused(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 	if not game.paused:
 		return
 	var docked: bool = chrome_hidden and engine.phase not in ["half_time", "full_time", "goal"]
-	var w := 300.0 if docked else 260.0
+	var w := 260.0
+	var hint := "PRESS SPACE TO RESUME"
+	if touch:
+		hint = "TAP RESUME TO CARRY ON"
+	if docked:
+		w = 300.0
 	var h := 54.0
 	var x := p.vp.x * 0.5 - w * 0.5
 	var y := p.vp.y * 0.5 - h * 0.5
@@ -205,10 +210,10 @@ func paused(p: HudPaint, c: CanvasItem, engine, game, f_bold: Font, f_med: Font)
 		var door := Rect2(x + w - 140.0, y + 13.0, 116.0, 28.0)
 		p.panel(c, Color(0.96, 0.78, 0.30, 0.16), door, 8, Color(0.96, 0.78, 0.30, 0.80))
 		p.text_c(c, door.position.x + door.size.x * 0.5, door.position.y + 19.0, "RESUME", 14, UiChrome.C_GOLD, f_bold)
-		p.add_button("pause", r, "RESUME", "" if touch else "SPACE")
+		p.add_button("pause", r, "RESUME", hint)
 		return
 	p.text_c(c, p.vp.x * 0.5, y + 25, "PAUSED", 20, UiChrome.C_GOLD, f_bold)
-	p.text_c(c, p.vp.x * 0.5, y + 42, "TAP RESUME TO CARRY ON" if touch else "PRESS SPACE TO RESUME", 9, UiChrome.C_DIM, f_med)
+	p.text_c(c, p.vp.x * 0.5, y + 42, hint, 9, UiChrome.C_DIM, f_med)
 
 func vignette(p: HudPaint, c: CanvasItem) -> void:
 
