@@ -26,6 +26,8 @@ static func nav(screen, pose: String) -> void:
 		return
 	elif pose == "stats":
 		LeagueDoors.go(screen, LeagueScreen.MODE_STATS)
+	elif pose == "transfers":
+		LeagueDoors.go(screen, LeagueScreen.MODE_TRANSFERS)
 	screen.refresh()
 
 

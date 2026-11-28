@@ -29,6 +29,7 @@ invariant.
 | `clearance` | a cross-association move | pending, failure, the window close |
 | `youth` | ageing, retirement and intake for N seasons | the intake shape, the exit, names |
 | `news` | scripted deals build the rumour feed | rumour threshold, news kinds, cap |
+| `ui-fixture` | writes a canned market save | the market UI suites' shared world |
 
 Each verb owns a file under `tools/market_sim/`; `tools/market_sim.gd` only
 parses flags, loads the verb and prints its dictionary.

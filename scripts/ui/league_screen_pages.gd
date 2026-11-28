@@ -119,6 +119,12 @@ func sheet(pose: Array) -> RefCounted:
 			return screen.sheet_bracket
 		"draw":
 			return screen.sheet_cup_draw
+		"transfers":
+			return screen.sheet_transfers
+		"deal":
+			return screen.sheet_deal
+		"news":
+			return screen.sheet_news
 	return screen.hub
 
 

@@ -226,11 +226,15 @@ static func _write_pending_registration(deal: Dictionary) -> void:
 	var competition_id := str(club.get("competition_id", ""))
 	if player_id == "" or competition_id == "":
 		return
+	var age := int(PLDatabase.row("SELECT age FROM player WHERE id = ?;", [player_id]).get(
+		"age", 0))
+	var exempt := 1 if MarketLists.player_exempt(player_id) or (age > 0 and age < 21) else 0
 	PLDatabase.execute(
 		"INSERT OR REPLACE INTO player_registration (player_id, competition_id, club_id, kind, "
-		+ "state, reason, deal_id, season_index) VALUES (?, ?, ?, ?, 'pending', 'clearance', ?, ?);",
+		+ "state, reason, deal_id, season_index, u21_exempt) "
+		+ "VALUES (?, ?, ?, ?, 'pending', 'clearance', ?, ?, ?);",
 		[player_id, competition_id, buyer, str(deal.get("kind", PERMANENT)),
-			str(deal.get("id", "")), int(deal.get("season_index", 0))])
+			str(deal.get("id", "")), int(deal.get("season_index", 0)), exempt])
 
 
 static func _close_pending_registration(deal: Dictionary) -> void:
