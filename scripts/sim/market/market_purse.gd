@@ -29,3 +29,10 @@ static func reputation(revenue: int, position: int, clubs: int) -> int:
 	if clubs > 0 and position > 0:
 		form = 12.0 * (1.0 - float(position - 1) / float(clubs))
 	return clampi(int(round(6.0 + float(revenue) / 1500000.0 + form)), 1, 99)
+
+
+static func marks(count: int) -> PackedStringArray:
+	var out := PackedStringArray()
+	for i in range(count):
+		out.append("?")
+	return out

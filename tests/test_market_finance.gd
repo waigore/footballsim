@@ -6,6 +6,7 @@ var CACHE_DIR := TestScratch.dir("cache_market_finance_442")
 const SEED := 6420
 
 var opened: Array = []
+var shared: LeagueSeason = null
 
 
 func before_all() -> void:
@@ -20,6 +21,7 @@ func after_all() -> void:
 	for season in opened:
 		(season as LeagueSeason).close()
 	opened.clear()
+	shared = null
 	_clean()
 	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR
@@ -39,13 +41,20 @@ func _fresh(name: String) -> LeagueSeason:
 	return season
 
 
+func _shared() -> LeagueSeason:
+	if shared != null and LeagueSeason.active == shared:
+		return shared
+	shared = _fresh("Finance Read")
+	return shared
+
+
 func _club() -> String:
 	return str(PLDatabase.row(
 		"SELECT id FROM club WHERE competition_id = 'PL' ORDER BY name LIMIT 1;").get("id", ""))
 
 
 func test_every_league_club_opens_solvent_and_inside_its_envelope() -> void:
-	var season := _fresh("Finance Envelope")
+	var season := _shared()
 	var clubs := 0
 	for row in PLDatabase.rows("SELECT * FROM club_finance ORDER BY club_id;"):
 		var club_id := str(row["club_id"])
@@ -172,7 +181,7 @@ func test_the_currency_setting_never_moves_a_stored_amount() -> void:
 	Prefs._currency_cache = ""
 	assert_true(Prefs.save_currency("EUR", path), "the currency setting did not save")
 	assert_eq(Prefs.load_currency(path), "EUR", "the currency setting did not read back")
-	var season := _fresh("Finance Currency")
+	var season := _shared()
 	var club_id := _club()
 	var budget := MarketFinance.wage_budget(club_id)
 	var cash := MarketFinance.cash(club_id)
@@ -219,7 +228,7 @@ func test_the_bootstrap_runs_once_and_never_rewrites_a_funded_club() -> void:
 
 
 func test_money_reads_a_club_s_affordability_and_reputation() -> void:
-	var season := _fresh("Finance Purse")
+	var season := _shared()
 	var club_id := _club()
 	assert_true(MarketFinance.can_afford(club_id, MarketFinance.cash(club_id)),
 		"a club cannot afford its own cash")
@@ -244,7 +253,7 @@ func test_signed_and_blank_amounts_still_read() -> void:
 
 
 func test_an_unfunded_club_reads_no_finances_block() -> void:
-	var season := _fresh("Finance Unfunded")
+	var season := _shared()
 	var cup_club := str(PLDatabase.row(
 		"SELECT id FROM club WHERE competition_id = 'FAC' ORDER BY id LIMIT 1;").get("id", ""))
 	assert_true(cup_club != "", "the seed has no cup club")

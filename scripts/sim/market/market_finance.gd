@@ -162,35 +162,57 @@ static func tick_gates(season: LeagueSeason, date: String) -> int:
 	for cid in comps:
 		marks.append("?")
 		bindings.append(str(cid))
-	var by_club := {}
+	var spec := MarketRules.section("finance")
+	var attendance := float(spec.get("attendance", 0.92))
+	var swing := float(spec.get("form_swing", 0.06))
+	var values: Array = []
+	var rows: Array = []
+	var totals := {}
 	for row in PLDatabase.rows(
-			"SELECT home_club_id, kickoff FROM league_fixture WHERE status = 'played' "
-			+ "AND kickoff > ? AND kickoff <= ? AND competition_id IN (" + ",".join(marks) + ") "
-			+ "ORDER BY home_club_id, kickoff;", bindings):
-		var club_id := str(row["home_club_id"])
-		if not by_club.has(club_id):
-			by_club[club_id] = []
-		(by_club[club_id] as Array).append(str(row["kickoff"]))
-	var posted := 0
-	PLDatabase.transaction("BEGIN TRANSACTION;")
-	for club_id in by_club.keys():
-		var amount := gate(str(club_id), form_factor(str(club_id)))
+			"SELECT f.home_club_id AS club_id, f.kickoff AS kickoff, c.capacity AS capacity, "
+			+ "c.competition_id AS cid, t.points AS points, t.played AS played "
+			+ "FROM league_fixture f JOIN club c ON c.id = f.home_club_id "
+			+ "LEFT JOIN league_table t ON t.club_id = f.home_club_id "
+			+ "AND t.competition_id = f.competition_id "
+			+ "WHERE f.status = 'played' AND f.kickoff > ? AND f.kickoff <= ? "
+			+ "AND f.competition_id IN (" + ",".join(marks) + ") "
+			+ "ORDER BY f.kickoff, f.home_club_id;", bindings):
+		var played := int(row.get("played", 0) or 0)
+		var form := 0.0
+		if played > 0:
+			form = clampf((float(row.get("points", 0)) / float(played) / 3.0) * 2.0 - 1.0,
+				-1.0, 1.0)
+		var cid := str(row.get("cid", ""))
+		var factor := clampf(attendance + swing * form, 0.0, 1.0)
+		var amount := int(round(float(row.get("capacity", 0)) * factor
+			* float(MarketRules.ticket_price(cid)) * MarketRules.revenue_multiplier(cid)))
 		if amount <= 0:
 			continue
-		var values: Array = []
-		var rows_bindings: Array = []
-		for kickoff in by_club[club_id]:
-			values.append("(?, ?, ?, 'gate', ?, 'gate', '', '')")
-			rows_bindings.append_array([season.save.season_index(), str(kickoff), str(club_id),
-				amount])
-		PLDatabase.execute("INSERT INTO club_ledger (season_index, date, club_id, kind, amount, "
-			+ "counterparty, player_id, deal_id) VALUES " + ", ".join(values) + ";", rows_bindings)
-		PLDatabase.execute("UPDATE club_finance SET cash = cash + ?, updated_on = ? "
-			+ "WHERE club_id = ?;", [amount * (by_club[club_id] as Array).size(), date, str(club_id)])
-		posted += (by_club[club_id] as Array).size()
+		var club_id := str(row["club_id"])
+		values.append("(?, ?, ?, 'gate', ?, 'gate', '', '')")
+		rows.append_array([season.save.season_index(), str(row["kickoff"]), club_id, amount])
+		totals[club_id] = int(totals.get(club_id, 0)) + amount
+	if values.is_empty():
+		season.save.put_meta("gates_through", date)
+		return 0
+	var cases := PackedStringArray()
+	var ids: Array = []
+	var binds: Array = []
+	for club_id in totals.keys():
+		cases.append("WHEN ? THEN ?")
+		binds.append_array([str(club_id), int(totals[club_id])])
+		ids.append(str(club_id))
+	binds.append(date)
+	binds.append_array(ids)
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	PLDatabase.execute("INSERT INTO club_ledger (season_index, date, club_id, kind, amount, "
+		+ "counterparty, player_id, deal_id) VALUES " + ", ".join(values) + ";", rows)
+	PLDatabase.execute("UPDATE club_finance SET cash = cash + CASE club_id "
+		+ " ".join(cases) + " ELSE 0 END, updated_on = ? WHERE club_id IN ("
+		+ ",".join(MarketPurse.marks(ids.size())) + ");", binds)
 	PLDatabase.transaction("COMMIT;")
 	season.save.put_meta("gates_through", date)
-	return posted
+	return values.size()
 
 
 static func form_factor(club_id: String) -> float:
