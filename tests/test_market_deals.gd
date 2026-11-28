@@ -268,6 +268,46 @@ func test_the_ffp_validator_returns_its_own_code() -> void:
 	assert_eq(_ledger_rows(), 0, "an FFP refusal moved money")
 
 
+func test_each_validator_reports_its_reason_code() -> void:
+	var season := _fresh("Deal Reasons")
+	var pair := _pair()
+	var from_club := str(pair[0])
+	var to_club := str(pair[1])
+	var player_id := _player_at(from_club)
+	var cases := {
+		"window_closed": MarketDealRecords.WINDOW_CLOSED,
+		"not_at_club": MarketDealRecords.NOT_AT_CLUB,
+		"live_deal": MarketDealRecords.LIVE_DEAL,
+		"terms": MarketDealRecords.TERMS_INCOMPLETE,
+		"consent": MarketDealRecords.REFUSED_CONSENT,
+		"cash": MarketDealRecords.NO_CASH,
+		"ffp": MarketDealRecords.FFP,
+		"clearance": MarketDealRecords.NO_CLEARANCE,
+	}
+	for inject in cases:
+		var deal_id := _stage(season, _offer(season, from_club, to_club, player_id))
+		var result := _sign(season, deal_id, {"inject": inject})
+		assert_eq(str(result.get("reason", "")), str(cases[inject]),
+			"the %s validator named no reason" % inject)
+		assert_eq(str(result.get("state", "")), MarketDealRecords.FAILED,
+			"the %s refusal did not fail the deal" % inject)
+
+
+func test_a_free_agent_cannot_carry_a_fee() -> void:
+	var season := _fresh("Deal Free Agent Fee")
+	var pair := _pair()
+	var to_club := str(pair[1])
+	var player_id := _player_at(str(pair[0]))
+	PLDatabase.execute("UPDATE player SET club_id = '' WHERE id = ?;", [player_id])
+	PLDatabase.execute(
+		"UPDATE player_contract SET status = 'expired' WHERE player_id = ? AND status = 'active';",
+		[player_id])
+	var deal_id := _stage(season, _offer(season, "", to_club, player_id, {"fee": 1}))
+	var result := _sign(season, deal_id)
+	assert_eq(str(result.get("reason", "")), MarketDealRecords.TERMS_INCOMPLETE,
+		"a free agent was permitted a fee")
+
+
 func test_a_refused_list_signs_the_player_ineligible() -> void:
 	var season := _fresh("Deal List")
 	var pair := _pair()
