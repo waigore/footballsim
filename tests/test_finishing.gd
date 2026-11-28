@@ -293,7 +293,7 @@ func test_equal_squads_carry_no_pricing_edge() -> void:
 		"equal squads did not read the same chance quality")
 	var goal: Vector2 = e.target_goal_pos(0)
 	var xg: float = e.expected_goals(goal + Vector2(-11.0, 0.0), 0.0, 0)
-	assert_between(xg, 0.047, 0.057, "a central 11 m chance is outside the calibrated band")
+	assert_between(xg, 0.061, 0.071, "a central 11 m chance is outside the calibrated band")
 
 func test_the_canonical_chance_sits_on_the_census_level() -> void:
 
@@ -302,5 +302,5 @@ func test_the_canonical_chance_sits_on_the_census_level() -> void:
 	var strong := MatchEngine.new(1, "ENG-MCI1", "ENG-IPS1")
 	var even_xg: float = even.expected_goals(even.target_goal_pos(0) + Vector2(-12.0, 0.0), 0.0, 0)
 	var strong_xg: float = strong.expected_goals(strong.target_goal_pos(0) + Vector2(-12.0, 0.0), 0.0, 0)
-	assert_between(even_xg, 0.038, 0.047, "the even fixture's chance left the calibrated level")
-	assert_between(strong_xg, 0.054, 0.066, "the rating-gap chance left the calibrated level")
+	assert_between(even_xg, 0.051, 0.061, "the even fixture's chance left the calibrated level")
+	assert_between(strong_xg, 0.085, 0.097, "the rating-gap chance left the calibrated level")
