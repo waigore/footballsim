@@ -68,14 +68,17 @@ func recompute() -> void:
 				zero[field] = 0
 			acc[key] = zero
 	for fx in PLDatabase.rows(
-		"SELECT home_club_id, away_club_id, home_goals, away_goals, competition_id "
+		"SELECT home_club_id, away_club_id, home_goals, away_goals, competition_id, stage "
 		+ "FROM league_fixture WHERE status = 'played';"
 	):
 		var comp := str(fx.get("competition_id", ""))
-		var rules: Dictionary = rules_by.get(comp, save.rules)
-		_tally(acc, "%s|%s" % [str(fx["home_club_id"]), comp],
+		if LeagueUefa.is_continental(comp) and str(fx.get("stage", "")) != LeagueUefa.LEAGUE_STAGE:
+			continue
+		var cid_key := str(fx["competition_id"])
+		var rules: Dictionary = rules_by.get(cid_key, save.rules)
+		_tally(acc, "%s|%s" % [str(fx["home_club_id"]), cid_key],
 			int(fx["home_goals"]), int(fx["away_goals"]), rules, "home")
-		_tally(acc, "%s|%s" % [str(fx["away_club_id"]), comp],
+		_tally(acc, "%s|%s" % [str(fx["away_club_id"]), cid_key],
 			int(fx["away_goals"]), int(fx["home_goals"]), rules, "away")
 	PLDatabase.execute("DELETE FROM league_table;")
 	for cid in comps:
