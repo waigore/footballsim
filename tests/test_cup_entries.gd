@@ -7,6 +7,8 @@ const SEED := 4242
 
 var open_seasons: Array = []
 
+var current: LeagueSeason
+
 
 func before_all() -> void:
 	PLDatabase.cache_dir = CACHE_DIR
@@ -36,6 +38,7 @@ func _finished(name: String, cups: bool = true) -> LeagueSeason:
 	var season := LeagueSeason.create(name, "generated", "fixture_days", SEED, ["PL"], cups)
 	assert_not_null(season, "%s was not created" % name)
 	open_seasons.append(season)
+	current = season
 	for row in PLDatabase.rows("SELECT id, home_club_id, away_club_id FROM league_fixture;"):
 		var home := str(row["home_club_id"])
 		var away := str(row["away_club_id"])
@@ -59,10 +62,10 @@ func _crown(cup_id: String, winner: String, loser: String) -> void:
 
 
 func _placed(place: int) -> String:
-	var row := PLDatabase.row(
-		"SELECT club_id FROM season_archive WHERE season_index = 0 "
-		+ "AND competition_id = 'PL' AND position = ?;", [place])
-	return str(row.get("club_id", ""))
+	for row in current.record.standings.table("PL"):
+		if int(row.get("position", 0)) == place:
+			return str(row.get("club_id", ""))
+	return ""
 
 
 func _champion() -> String:
@@ -127,27 +130,31 @@ func test_the_carabao_byes_follow_the_league_places_when_europe_is_off() -> void
 
 func test_the_shield_names_last_seasons_champion_and_cup_winner() -> void:
 	var season := _finished("Shield")
+	var champion := _placed(1)
 	var cup_winner := _placed(5)
 	_crown("FAC", cup_winner, _placed(6))
 	SeasonRollover.apply(season)
 	var field := _members("CS", "F")
 	assert_eq(field.size(), 2, "the Community Shield is not two clubs")
-	assert_true(field.has(_champion()), "the Community Shield left the champion out")
+	assert_true(field.has(champion), "the Community Shield left the champion out")
 	assert_true(field.has(cup_winner), "the Community Shield left the cup winner out")
 	var note := LeagueCupEntries.note(season.save, "CS")
 	assert_true(note.find("FA CUP WINNER") >= 0, "the shield does not name the cup winner")
-	assert_true(note.find("PL 1ST") >= 0, "the shield does not name the champion's place")
+	assert_true(note.find("1ST") >= 0, "the shield does not name the champion's place")
 	season.close()
 
 
 func test_a_double_falls_back_to_the_league_runner_up() -> void:
 	var season := _finished("Double")
-	_crown("FAC", _champion(), _placed(7))
+	var champion := _placed(1)
+	var runner_up := _placed(2)
+	var beaten := _placed(7)
+	_crown("FAC", champion, beaten)
 	SeasonRollover.apply(season)
 	var field := _members("CS", "F")
-	assert_true(field.has(_champion()), "the shield left the champion out")
-	assert_true(field.has(_placed(2)), "a double did not fall back to the runner-up")
-	assert_true(not field.has(_placed(7)), "a double still fielded the beaten finalist")
+	assert_true(field.has(champion), "the shield left the champion out")
+	assert_true(field.has(runner_up), "a double did not fall back to the runner-up")
+	assert_true(not field.has(beaten), "a double still fielded the beaten finalist")
 	var note := LeagueCupEntries.note(season.save, "CS")
 	assert_true(note.find("WINNER IN") >= 0, "the shield does not read the double")
 	season.close()
@@ -155,10 +162,12 @@ func test_a_double_falls_back_to_the_league_runner_up() -> void:
 
 func test_a_missing_cup_winner_falls_back_to_the_next_place() -> void:
 	var season := _finished("No Cup")
+	var champion := _placed(1)
+	var runner_up := _placed(2)
 	SeasonRollover.apply(season)
 	var field := _members("CS", "F")
-	assert_true(field.has(_champion()), "the shield left the champion out")
-	assert_true(field.has(_placed(2)), "a cup that never ran did not fall back")
+	assert_true(field.has(champion), "the shield left the champion out")
+	assert_true(field.has(runner_up), "a cup that never ran did not fall back")
 	var note := LeagueCupEntries.note(season.save, "CS")
 	assert_true(note.find("FA CUP OFF") >= 0, "the shield does not name the missing cup")
 	season.close()

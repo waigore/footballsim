@@ -12,7 +12,7 @@ static func regenerate(season: LeagueSeason, played_index: int, cups: Dictionary
 	var ids := LeagueCup.active_ids(season.save)
 	if ids.is_empty() or not _has_spec(ids):
 		return out
-	var ctx := _context(played_index, cups)
+	var ctx := _context(season.save, played_index, cups)
 	var carried: Array = []
 	var entries := {}
 	for cid in ids:
@@ -76,9 +76,9 @@ static func _stored(save: LeagueSave) -> Dictionary:
 	return parsed if parsed is Dictionary else {}
 
 
-static func _context(played_index: int, cups: Dictionary) -> Dictionary:
+static func _context(save: LeagueSave, played_index: int, cups: Dictionary) -> Dictionary:
 	var ctx := {"places": {}, "ranked": {}, "rank": {}, "names": {},
-		"europe": _europe(), "stubs": {}, "cups": cups}
+		"europe": _europe(save), "stubs": {}, "cups": cups}
 	for row in PLRepository.shared().leagues():
 		var cid := str(row.get("id", ""))
 		if cid == "":
@@ -117,8 +117,10 @@ static func _before(rank: Dictionary) -> Callable:
 		return str(a) < str(b)
 
 
-static func _europe() -> Array:
+static func _europe(save: LeagueSave) -> Array:
 	var out: Array = []
+	if save == null or str(save.meta.get("uefa", "off")) != "on":
+		return out
 	for cid in LeagueUefa.IDS:
 		for round_id in LeagueUefa.round_ids(str(cid)):
 			for club_id in LeagueUefa.entrants(str(cid), str(round_id)):
@@ -152,7 +154,7 @@ static func _field(competition_id: String, ctx: Dictionary) -> Dictionary:
 				continue
 			picks.append(club_id)
 			notes[club_id] = _pair_label(slot, ctx)
-		picks = _top_up(picks, target, places, notes, pending)
+		picks = _top_up(picks, target, places, notes, pending, league, ctx)
 		for club_id in picks:
 			labels[club_id] = {"round": str(round_id),
 				"source": str(notes.get(club_id, place_name(league, ctx, club_id))),
@@ -162,7 +164,7 @@ static func _field(competition_id: String, ctx: Dictionary) -> Dictionary:
 
 
 static func _top_up(picks: Array, target: int, places: Array, notes: Dictionary,
-		pending: String) -> Array:
+		pending: String, league: String, ctx: Dictionary) -> Array:
 	var head := pending
 	for club_id in places:
 		if picks.size() >= target:
@@ -170,11 +172,7 @@ static func _top_up(picks: Array, target: int, places: Array, notes: Dictionary,
 		if picks.has(club_id):
 			continue
 		picks.append(club_id)
-		var place := club_id
-		for i in range(places.size()):
-			if str(places[i]) == str(club_id):
-				place = "%s %s" % [place, LeagueEuropeEntries.ordinal(i + 1)]
-				break
+		var place := place_name(league, ctx, club_id)
 		notes[club_id] = place if head == "" else head + " · " + place
 		head = ""
 	return picks
@@ -305,7 +303,7 @@ static func _slot(slot: Dictionary, competition_id: String, ctx: Dictionary,
 		var club := str(club_id)
 		if taken.has(club):
 			continue
-		var place := int((ctx.rank.get(league, {}) as Dictionary).get(club, 999))
+		var place := ranked.find(club) + 1
 		if slot.has("to") and place > int(slot["to"]):
 			continue
 		if slot.has("from") and place < int(slot["from"]):

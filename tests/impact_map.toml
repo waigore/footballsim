@@ -237,6 +237,9 @@ suites = [
   "test_league_cups.gd",
   "test_cup_season.gd",
   "test_league_cup_ui.gd",
+  # Season two's cup pools and supercup pairings (#506): the entry slots the
+  # rollover reads and the field each supercup names.
+  "test_cup_entries.gd",
   # Multi-season (#440): the season-scoped schema, the one settle step, the
   # rollover, the archives and the podium's NEW SEASON door.
   "test_season_rollover.gd",
@@ -487,6 +490,10 @@ domain = "league"
 
 [[rules]]
 match = "tests/test_season_rollover.gd*"
+domain = "league"
+
+[[rules]]
+match = "tests/test_cup_entries.gd*"
 domain = "league"
 
 [[rules]]
