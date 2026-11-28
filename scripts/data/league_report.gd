@@ -86,6 +86,7 @@ func add_player_lines(rows: Array) -> void:
 	var values: Array = []
 	var bindings: Array = []
 	var comp_of := {}
+	var season_index := save.season_index()
 	for row in rows:
 		var player_id := str(row.get("player_id", ""))
 		var club_id := str(row.get("club_id", ""))
@@ -95,18 +96,19 @@ func add_player_lines(rows: Array) -> void:
 			var club := PLDatabase.row("SELECT competition_id FROM club WHERE id = ?;", [club_id])
 			comp_of[club_id] = str(club.get("competition_id", ""))
 		var line: Dictionary = row.get("line", {})
-		values.append("(?, ?, ?, ?, ?, ?, ?, ?)")
+		values.append("(?, ?, ?, ?, ?, ?, ?, ?, ?)")
 		bindings.append_array([
-			player_id, str(comp_of[club_id]), club_id, int(line.get("apps", 1)),
+			player_id, str(comp_of[club_id]), club_id, season_index, int(line.get("apps", 1)),
 			int(line.get("goals", 0)), int(line.get("assists", 0)),
 			int(line.get("yellow", 0)), int(line.get("red", 0)),
 		])
 	if values.is_empty():
 		return
 	PLDatabase.execute(
-		"INSERT INTO league_player_stat (player_id, competition_id, club_id, apps, goals, "
-		+ "assists, yellow, red) VALUES " + ", ".join(values)
-		+ " ON CONFLICT(player_id) DO UPDATE SET "
+		"INSERT INTO league_player_stat (player_id, competition_id, club_id, season_index, apps, "
+		+ "goals, assists, yellow, red) VALUES " + ", ".join(values)
+		+ " ON CONFLICT(player_id, competition_id, club_id) DO UPDATE SET "
+		+ "season_index = excluded.season_index, "
 		+ "apps = apps + excluded.apps, goals = goals + excluded.goals, "
 		+ "assists = assists + excluded.assists, yellow = yellow + excluded.yellow, "
 		+ "red = red + excluded.red;",

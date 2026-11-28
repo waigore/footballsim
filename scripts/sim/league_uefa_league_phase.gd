@@ -27,8 +27,8 @@ static func draw(season: LeagueSeason, competition_id: String) -> bool:
 	var pairs := _schedule(season, competition_id, pots, matches)
 	if pairs.is_empty():
 		return false
-	_install_table(competition_id, clubs)
-	_install_fixtures(competition_id, ranked, pairs, matches)
+	_install_table(competition_id, clubs, season.save.season_index())
+	_install_fixtures(competition_id, ranked, pairs, matches, season.save.season_index())
 	season.save.set_status("in_progress")
 	return true
 
@@ -164,21 +164,23 @@ static func _seed(season: LeagueSeason, competition_id: String) -> int:
 	return base + h
 
 
-static func _install_table(competition_id: String, clubs: Array) -> void:
+static func _install_table(competition_id: String, clubs: Array, season_index: int) -> void:
 	PLDatabase.execute(
 		"DELETE FROM league_table WHERE competition_id = ?;", [competition_id])
 	for club_id in clubs:
 		PLDatabase.execute(
-			"INSERT OR IGNORE INTO league_table (club_id, competition_id) VALUES (?, ?);",
-			[str(club_id), competition_id])
+			"INSERT OR IGNORE INTO league_table (club_id, competition_id, season_index) "
+			+ "VALUES (?, ?, ?);",
+			[str(club_id), competition_id, season_index])
 
 
 static func _install_fixtures(competition_id: String, ranked: Array, pairs: Array,
-		matches: int) -> void:
+		matches: int, season_index: int) -> void:
 	PLDatabase.execute(
 		"DELETE FROM league_fixture WHERE competition_id = ? AND stage = ?;",
 		[competition_id, LeagueUefa.LEAGUE_STAGE])
-	var dates := _matchdays(matches)
+	var anchor := str(LeagueUefa.round_rule(competition_id, LeagueUefa.LEAGUE_STAGE).get("date", ""))
+	var dates := _matchdays(matches, anchor)
 	var per := maxi(int(ceil(float(pairs.size()) / float(maxi(matches, 1)))), 1)
 	for i in range(pairs.size()):
 		var pair: Dictionary = pairs[i]
@@ -186,16 +188,16 @@ static func _install_fixtures(competition_id: String, ranked: Array, pairs: Arra
 		var date: String = dates[mini(matchday - 1, dates.size() - 1)]
 		PLDatabase.execute(
 			"INSERT OR REPLACE INTO league_fixture (id, competition_id, matchday, kickoff, "
-			+ "kickoff_time, home_club_id, away_club_id, status, watched, suggested, stage, leg) "
-			+ "VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, 0);",
+			+ "kickoff_time, home_club_id, away_club_id, status, watched, suggested, stage, "
+			+ "leg, season_index) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, 0, ?);",
 			["uefa-%s-lp-%03d" % [competition_id, i], competition_id, matchday, date,
 			 FixtureCalendar.KICKOFF_TIMES[i % FixtureCalendar.KICKOFF_TIMES.size()],
-			 str(pair["home"]), str(pair["away"]), LeagueUefa.LEAGUE_STAGE])
+			 str(pair["home"]), str(pair["away"]), LeagueUefa.LEAGUE_STAGE, season_index])
 
 
-static func _matchdays(matches: int) -> Array:
+static func _matchdays(matches: int, anchor: String) -> Array:
 	var out: Array = []
-	var day := FixtureCalendar.days_from("2026-09-15")
+	var day := FixtureCalendar.days_from(anchor if anchor != "" else "2026-09-15")
 	for i in range(matches):
 		out.append(FixtureCalendar.date_from(day + i * 28))
 	return out

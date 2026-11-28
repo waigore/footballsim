@@ -180,6 +180,8 @@ static func press(screen, id: String) -> void:
 		screen.refresh()
 	elif id == "system":
 		LeagueSystemActions.open(screen)
+	elif id == "season:new":
+		start_season(screen)
 	elif id == "create":
 		create(screen)
 
@@ -248,6 +250,21 @@ static func read_podium(screen) -> void:
 	screen.refresh()
 
 
+static func start_season(screen: Object) -> void:
+	if screen.season == null:
+		return
+	var result := SeasonRollover.apply(screen.season)
+	if not bool(result.get("ok", false)):
+		screen.refresh()
+		return
+	screen.nav.clear()
+	screen.report = {}
+	screen.roundup = []
+	screen.mode = screen.MODE_HUB
+	screen.month = LeagueMonth.state_month(screen.season, screen.month)
+	screen.refresh()
+
+
 static func create(screen) -> void:
 	var comps: Array = screen.wizard.get("competitions", ["PL"])
 	if comps.is_empty():
@@ -275,7 +292,8 @@ static func open_save(screen, slug: String) -> void:
 	LeagueSystemActions.unload(screen)
 	var opened: LeagueSeason = LeagueSeason.open(slug)
 	if opened == null:
-		screen.wizard["error"] = "That save could not be opened."
+		screen.wizard["error"] = LeagueSave.last_error if LeagueSave.last_error != "" \
+			else "That save could not be opened."
 		screen.mode = screen.MODE_WIZARD
 		screen.refresh()
 		return

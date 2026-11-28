@@ -41,7 +41,8 @@ static func draw_round(season: LeagueSeason, competition_id: String, round_id: S
 	if pairs.is_empty():
 		return false
 	var position := LeagueCup.round_index(competition_id, round_id) + 1
-	LeagueCupTie.install_round(competition_id, round_id, position, pairs, rule, "cup")
+	LeagueCupTie.install_round(competition_id, round_id, position, pairs, rule, "cup",
+		season.save.season_index())
 	season.save.set_status("in_progress")
 	return true
 
