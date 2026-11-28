@@ -27,41 +27,29 @@ invariant.
 | `loan` | a loan split, trigger and return | registration, splits, caps, obligations |
 | `clauses` | clause, sell-on, agent, solidarity | the money beyond the fee |
 | `clearance` | a cross-association move | pending, failure, the window close |
+| `register` | lists and permits | slots, homegrown, non-EU, U21, permit, freeze |
+| `ffp` | the rolling three-year measure | the measure, the embargo, the deduction |
 
 Each verb owns a file under `tools/market_sim/`; `tools/market_sim.gd` only
 parses flags, loads the verb and prints its dictionary.
 
-## The ai verb
+## The ai and ledger verbs
 
 ```bash
-godot --headless --path . --script res://tools/market_sim.gd -- ai \
-  --clubs 172 --days 365 --mode fixture_days
-```
-
-It plays a season with the market AI on and prints the deal transcript as one
-JSON line: signed count, value spread, the refusal reasons and any club left
-short of eleven. `--mode every_day` must print the same transcript — the
-run exits `1` if a club is stranded or no deal signed. The AI never consumes
-`LeagueSeason.rng`; every draw is keyed `(seed, "market", date, key)`.
-
-## The ledger verb
-
-```bash
+godot --headless --path . --script res://tools/market_sim.gd -- ai --clubs 172 --days 365
 godot --headless --path . --script res://tools/market_sim.gd -- ledger --currency EUR
 ```
 
-It opens one save, posts twelve monthly commercial and wage lines, puts a 40m
-fee on the books over four years, books the end-of-season prize curve and
-prints the club's opening envelope, the kinds the ledger now holds and the
-ledger tail as the club page would read it. Money stays in pounds; `--currency`
-only changes the printed display.
+`ai` plays one season with the market AI on and prints the deal transcript;
+`--mode every_day` must print the same transcript and exit `1` if a club is
+stranded or no deal signed. `ledger` posts a season of commercial, wage,
+amortisation and prize lines and prints the club's envelope and ledger tail.
+Money stays in pounds; `--currency` only changes the display.
 
 ## What a run builds
 
-`LeagueSeason.create` from `data/pl_seed.sqlite`, then the market bootstrap
-writes a contract per player and a finance row per league club. The seed itself
-stays untouched; a run copies it into the save directory it names, so two runs
-never share a file.
+`LeagueSeason.create` from `data/pl_seed.sqlite`. The seed stays untouched; a run
+copies it into the save directory it names, so two runs never share a file.
 
 ## The deal verb
 
@@ -70,12 +58,31 @@ godot --headless --path . --script res://tools/market_sim.gd -- deal \
   --from ESP-ALA1 --to ENG-ARS1 --fee 500000 --inject clearance
 ```
 
-It proposes one permanent move on `--date` (default `2026-08-20`), runs the
-validator pipeline and seals it in one transaction. `--inject` names the path to
-prove: `none` signs, `list` refuses at the list check, `clearance` fails the
-association wait, `fault` rolls back between the money and the contract, and
-`registration` signs a player the buyer cannot register. The printed JSON is the
-deal's own reading: state, reason, cash and headroom after the move.
+One permanent move through the validator pipeline and one transaction.
+`--inject` names the path: `none` signs, `list` refuses at the list check,
+`clearance` fails the wait, `fault` rolls back, and `registration` signs a player
+the buyer cannot register. The JSON is state, reason, cash and headroom.
 
-The sandbox is development tooling. A player reaches the same code through the
-season, the club page's finances block and the player page's contract block.
+## The register verb
+
+```bash
+godot --headless --path . --script res://tools/market_sim.gd -- register \
+  --competition ucl --inject homegrown_min
+```
+
+Prints the club's list, then one verdict per rule — slots, under-21, homegrown,
+non-EU, association-trained and permit — and proves one `--inject` path: `none`,
+`list_full`, `homegrown_min`, `non_eu_cap`, `u21` or `permit`.
+
+## The ffp verb
+
+```bash
+godot --headless --path . --script res://tools/market_sim.gd -- ffp --inject deduction
+```
+
+Three seasons of revenue, wages and amortisation, the rolling measure term by
+term, and season-one monitoring. `--inject embargo` refuses an incoming
+registration; `--inject deduction` books and applies the points once.
+
+The sandbox is development tooling; a player reaches the same code through the
+season and the club and player pages.

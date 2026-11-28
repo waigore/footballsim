@@ -9,8 +9,10 @@ const VERBS := {
 	"clearance": "res://tools/market_sim/clearance.gd",
 	"contracts": "res://tools/market_sim/contracts.gd",
 	"deal": "res://tools/market_sim/deal.gd",
+	"ffp": "res://tools/market_sim/ffp.gd",
 	"ledger": "res://tools/market_sim/ledger.gd",
 	"loan": "res://tools/market_sim/loan.gd",
+	"register": "res://tools/market_sim/register.gd",
 	"season": "res://tools/market_sim/season.gd",
 	"windows": "res://tools/market_sim/windows.gd",
 }

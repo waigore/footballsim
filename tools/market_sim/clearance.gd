@@ -27,18 +27,18 @@ static func run(options: Dictionary) -> Dictionary:
 	}
 	var proposed := MarketDeals.propose(season, from, to, player, terms, date)
 	var deal_id := str(proposed.get("deal", ""))
-	var agreed := MarketDeals.agree(deal_id, date)
+	var agreed := MarketDeals.agree(deal_id, date, {"allow_all_list": true})
 	var inject := str(options.get("inject", ""))
 	var outcome := {}
 	match inject:
 		"clearance":
 			outcome = MarketDeals.resolve_clearance(deal_id,
-				str(agreed.get("clears_on", date)), {"clearance": "fail"})
+				str(agreed.get("clears_on", date)), {"clearance": "fail", "allow_all_list": true})
 		"window":
-			outcome = MarketDeals.resolve_clearance(deal_id, "2026-09-10", {})
+			outcome = MarketDeals.resolve_clearance(deal_id, "2026-09-10", {"allow_all_list": true})
 		_:
 			outcome = MarketDeals.resolve_clearance(deal_id,
-				str(agreed.get("clears_on", date)), {"clearance": "pass"})
+				str(agreed.get("clears_on", date)), {"clearance": "pass", "allow_all_list": true})
 	print("agreed: %s, clears on %s" % [str(agreed.get("state", "")),
 		str(agreed.get("clears_on", ""))])
 	print("outcome: %s (%s)" % [str(outcome.get("state", "")), str(outcome.get("reason", ""))])

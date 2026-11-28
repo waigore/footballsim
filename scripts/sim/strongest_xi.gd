@@ -22,6 +22,8 @@ static func pick(team: Dictionary, competition_id: String = "") -> Array:
 	var out_ids := SeasonAvailability.unavailable(str(team.get("id", "")), competition_id)
 	for player_id in SquadList.ineligible_ids(str(team.get("id", "")), competition_id):
 		out_ids[str(player_id)] = true
+	for id in MarketRegistration.ineligible_ids(str(team.get("id", "")), competition_id):
+		out_ids[str(id)] = true
 	var fit: Array = []
 	var unfit: Array = []
 	for p in pool:

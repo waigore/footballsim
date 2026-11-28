@@ -27,6 +27,10 @@ static func run() -> void:
 	LeagueSaveSchema.add_column("player", "homegrown_club_id", "TEXT NOT NULL DEFAULT ''")
 	PLDatabase.execute(
 		"UPDATE player SET homegrown_club_id = club_id WHERE homegrown_club_id = '';")
+	LeagueSaveSchema.add_column("player_registration", "homegrown_club_id", "TEXT NOT NULL DEFAULT ''")
+	LeagueSaveSchema.add_column("player_registration", "association", "TEXT NOT NULL DEFAULT ''")
+	LeagueSaveSchema.add_column("player_registration", "permit_state", "TEXT NOT NULL DEFAULT 'ok'")
+	LeagueSaveSchema.add_column("player_registration", "permit_reason", "TEXT NOT NULL DEFAULT ''")
 
 
 static func ensure(save: LeagueSave) -> void:

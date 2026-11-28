@@ -15,7 +15,6 @@ const CLEARANCE := "no_clearance"
 const BLOCKED := "god_blocked"
 const ORDER := ["window", "club", "terms", "consent", "cash", "ffp", "list"]
 
-
 static func validate(deal: Dictionary, date: String, mode: Dictionary = {}) -> Dictionary:
 	if deal.is_empty():
 		return fail(TERMS, "no deal")
@@ -126,11 +125,9 @@ static func ffp(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
 		return pass_with("ffp_override")
 	if is_obligation(deal):
 		return pass_with("obligation_breach")
-	var buyer := str(deal.get("to_club_id", ""))
-	var cost := MarketFinance.amortisation(int(deal.get("fee", 0)), int(deal.get("years", 1))) \
-		+ int(deal.get("wage", 0)) * 52 + int(deal.get("agent_fee", 0))
-	if MarketFinance.ffp_headroom(buyer) - cost < 0:
-		return fail(FFP, "the deal breaches the club's headroom")
+	var verdict := MarketFFP.check_at_commit(deal, mode)
+	if not bool(verdict.get("ok", false)):
+		return fail(FFP, str(verdict.get("note", "the deal breaches the club's headroom")))
 	return pass_with("")
 
 
@@ -142,6 +139,8 @@ static func is_obligation(deal: Dictionary) -> bool:
 static func list_check(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
 	if str(mode.get("list", "")) == "refuse":
 		return fail(LIST, "the squad list refuses the registration")
+	if bool(mode.get("allow_all_list", false)):
+		return pass_with("")
 	if bool(mode.get("force", false)):
 		return pass_with("forced")
 	var verdict := list_verdict(deal)
@@ -158,6 +157,11 @@ static func list_verdict(deal: Dictionary) -> Dictionary:
 		if not bool(checked.get("ok", true)):
 			return fail(LIST, "%s: %s" % [
 				LeagueUefa.name_of(str(competition_id)), str(checked.get("detail", ""))])
+	var domestic := str(club_row(buyer).get("competition_id", ""))
+	if domestic != "" and player != "":
+		var listed := MarketRegistration.admit(player, buyer, domestic)
+		if not bool(listed.get("ok", false)):
+			return fail(LIST, str(listed.get("code", "list_full")))
 	return pass_with("")
 
 

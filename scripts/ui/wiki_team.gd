@@ -74,6 +74,7 @@ static func page(club_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 	out["blocks"].append({"k": "section", "text": "SQUAD"})
 	var squad := WikiModel.repo().squad(club_id)
 	var absences := WikiAbsence.statuses(club_id)
+	var registrations := WikiRegistration.flags(club_id)
 	var view := AttrView.normalize(mode)
 	var full := view == "FULL"
 	out["blocks"].append({"k": "door", "items": [
@@ -106,11 +107,37 @@ static func page(club_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 		for i in range(squad_rows.size()):
 			var row: Dictionary = squad_rows[i]
 			row["cells"].append(str(absences.get(str(squad[i]["id"]), "")))
+	if not registrations.is_empty():
+		squad_head.append("LIST")
+		if absences.is_empty():
+			squad_widths = [0.08, 0.46, 0.16, 0.13, 0.17]
+			squad_text = [1, 2, 4]
+		else:
+			squad_widths = [0.07, 0.30, 0.12, 0.09, 0.26, 0.16]
+			squad_text = [1, 2, 4, 5]
+		for i in range(squad_rows.size()):
+			var row: Dictionary = squad_rows[i]
+			row["cells"].append(str(registrations.get(str(squad[i]["id"]), "")))
 	out["blocks"].append({
 		"k": "table", "cols": squad_head,
 		"widths": squad_widths, "text_cols": squad_text,
 		"rows": squad_rows,
 	})
+	var registration := WikiRegistration.summary(club_id)
+	if not registration.is_empty():
+		out["blocks"].append({"k": "section", "text": "REGISTRATION"})
+		var lines: Array = [
+			["STATE", str(registration["state"]).to_upper(), true],
+			["SLOTS", "%d / %d" % [int(registration["slots"]), int(registration["slots_max"])], false],
+			["HOMEGROWN", "%d / %d" % [int(registration["homegrown"]),
+				int(registration["homegrown_min"])], false],
+			["ASSOCIATION", "%d / %d" % [int(registration["association"]),
+				int(registration["association_min"])], false],
+		]
+		if int(registration["non_eu_cap"]) >= 0:
+			lines.append(["NON-EU", "%d / %d" % [int(registration["non_eu"]),
+				int(registration["non_eu_cap"])], false])
+		out["blocks"].append({"k": "kv", "items": lines})
 	out["blocks"].append_array(uefa_lists(club_id))
 	out["blocks"].append({"k": "section", "text": "RESULTS  ·  %s" % WikiLedger.ledger_label()})
 	var results: Array = []

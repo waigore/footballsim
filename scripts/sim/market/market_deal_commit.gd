@@ -97,28 +97,37 @@ static func _write_registration(deal: Dictionary, date: String, mode: Dictionary
 	var seller := str(deal.get("from_club_id", ""))
 	var club := MarketDealRules.club_row(buyer)
 	var competition_id := str(club.get("competition_id", ""))
+	var season_index := int(deal.get("season_index", 0))
+	var kind := str(deal.get("kind", "permanent"))
+	if seller != "":
+		MarketRegistration.close(player_id, seller, str(deal.get("id", "")))
 	var state := SquadList.REGISTERED
-	var reason := ""
 	if str(mode.get("registration", "")) == "refuse":
 		state = SquadList.INELIGIBLE
-		reason = MarketDealRules.LIST
-	if seller != "":
-		PLDatabase.execute(
-			"UPDATE player_registration SET state = 'closed', reason = 'moved', deal_id = ? "
-			+ "WHERE club_id = ? AND player_id = ? AND state <> 'closed';",
-			[str(deal.get("id", "")), seller, player_id])
-	var kind := str(deal.get("kind", "permanent"))
-	SquadList.register(buyer, competition_id, player_id, state, reason,
-		str(deal.get("id", "")), int(deal.get("season_index", 0)), kind)
+	if not MarketRegistration.available():
+		return state
+	if state == SquadList.INELIGIBLE:
+		var player := MarketRegistration.player_of(player_id)
+		MarketRegistration.write(player_id, competition_id, buyer, kind,
+			SquadList.INELIGIBLE, MarketDealRules.LIST, str(deal.get("id", "")), season_index,
+			str(player.get("homegrown_club_id", "")),
+			MarketEligibility.association_of_club(club), SquadList.INELIGIBLE,
+			MarketDealRules.LIST)
+	else:
+		var registered := MarketRegistration.register(player_id, buyer, competition_id, kind,
+			str(deal.get("id", "")), season_index, date, MarketDealRules.is_free_agent(deal))
+		state = str(registered.get("state", SquadList.REGISTERED))
+		if not bool(registered.get("ok", false)):
+			return state
 	var refused := state == SquadList.INELIGIBLE
-	for listed in SquadList.entries(buyer):
-		if str(listed) == competition_id:
+	for listed_id in SquadList.entries(buyer):
+		if str(listed_id) == competition_id:
 			continue
-		var ok := bool(SquadList.verdict(buyer, str(listed), player_id).get("ok", true))
-		SquadList.register(buyer, str(listed), player_id,
+		var ok := bool(SquadList.verdict(buyer, str(listed_id), player_id).get("ok", true))
+		SquadList.register(buyer, str(listed_id), player_id,
 			SquadList.REGISTERED if ok and not refused else SquadList.INELIGIBLE,
 			"" if ok and not refused else MarketDealRules.LIST,
-			str(deal.get("id", "")), int(deal.get("season_index", 0)), kind)
+			str(deal.get("id", "")), season_index, kind)
 	return state
 
 

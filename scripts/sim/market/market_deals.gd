@@ -141,7 +141,7 @@ static func resolve_clearance(deal_id: String, date: String, mode: Dictionary = 
 		var cleared := answer(deal_id)
 		cleared["ok"] = true
 		return cleared
-	return seal(deal_id, date, {})
+	return seal(deal_id, date, {"allow_all_list": bool(mode.get("allow_all_list", false))})
 
 
 static func block(deal_id: String, date: String, note: String = "") -> Dictionary:

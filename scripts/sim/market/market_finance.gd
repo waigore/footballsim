@@ -106,7 +106,7 @@ static func amortisation_season(club_id: String, season_index: int = -1) -> int:
 
 
 static func ffp_headroom(club_id: String) -> int:
-	return revenue_base(club_id) - annual_wages(club_id) - amortisation_season(club_id)
+	return MarketFFP.headroom(club_id)
 
 
 static func ledger_tail(club_id: String, limit: int = 8) -> Array:

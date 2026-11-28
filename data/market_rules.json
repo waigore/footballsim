@@ -195,5 +195,29 @@
       {"to_age": 21, "amount": 150000},
       {"to_age": 30, "amount": 90000}
     ]
+  },
+  "registration": {
+    "slots": 25,
+    "homegrown_min": 8,
+    "u21_age": 21,
+    "uefa_association_trained_min": 4,
+    "italy_club_trained_min": 4,
+    "italy_association_trained_min": 8,
+    "eu_associations": ["ESP", "GER", "ITA"],
+    "eu_nationalities": [
+      "France", "Portugal", "Netherlands", "Belgium", "Croatia", "Poland",
+      "Sweden", "Denmark", "Austria", "Republic of Ireland", "Ireland",
+      "Finland", "Greece", "Czechia", "Slovakia", "Slovenia", "Hungary",
+      "Romania", "Bulgaria", "Lithuania", "Latvia", "Estonia", "Luxembourg",
+      "Malta", "Cyprus"
+    ],
+    "non_eu_cap": {"ESP": 3, "ITA": 2, "GER": 0},
+    "permit_min_ovr": {"ENG": 72}
+  },
+  "ffp": {
+    "window_years": 3,
+    "allowed_loss": {"ENG": 105000000, "ESP": 90000000, "GER": 90000000, "ITA": 90000000},
+    "default_allowed_loss": 45000000,
+    "deduction_points": 6
   }
 }
