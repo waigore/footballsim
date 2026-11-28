@@ -243,6 +243,9 @@ suites = [
   # Contracts (#441): the bootstrap envelope, expiry, options and the free-agent
   # pool the rollover opens.
   "test_market_contracts.gd",
+  # Windows and association calendars (#443): the four associations, the state a
+  # date alone decides, the per-date market tick and the buying-club rule.
+  "test_market_windows.gd",
 ]
 
 # Europe's own destination (#437): the hub read models, the two sheets and the
@@ -488,6 +491,16 @@ domain = "league"
 
 [[rules]]
 match = "tests/test_market_contracts.gd*"
+domain = "league"
+
+# The market's window rules (#443): the association dates, the state derived
+# from a date and the deals a window refuses.
+[[rules]]
+match = "scripts/data/market_windows.gd*"
+domain = "league"
+
+[[rules]]
+match = "tests/test_market_windows.gd*"
 domain = "league"
 
 # Season availability and the pre-match briefing (#155–#157): the absence model,

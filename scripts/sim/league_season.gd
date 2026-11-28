@@ -28,6 +28,8 @@ var last_advance: Dictionary = {}
 
 var market_ticks := 0
 var market_date := ""
+var market_days := 0
+var market_day := ""
 
 
 static func create(name: String, calendar_mode: String, advance_mode: String, seed: int = 0,
