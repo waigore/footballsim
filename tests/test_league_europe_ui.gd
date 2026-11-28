@@ -186,6 +186,14 @@ func test_the_stage_reads_its_table_qualifying_and_bracket() -> void:
 		if str(item["kind"]) == "eu_row":
 			rows.append(item)
 	assert_eq(rows.size(), 36, "the table laid out %d rows" % rows.size())
+	var head_w := 0.0
+	for item in items:
+		if str(item["kind"]) == "eu_head":
+			head_w = (item["rect"] as Rect2).size.x
+	assert_gt(head_w, 0.0, "the league phase table has no header rig")
+	for row in rows:
+		assert_eq((row["rect"] as Rect2).size.x, head_w,
+			"a table row does not share the header's column rig")
 	for i in range(rows.size()):
 		var zone := str(rows[i]["zone"])
 		var want := "r16" if i < 8 else ("kopo" if i < 24 else "out")
