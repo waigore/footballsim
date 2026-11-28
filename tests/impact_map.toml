@@ -895,7 +895,7 @@ domain = "hud_chrome"
 
 [[rules]]
 match = "scripts/ui/team_select*.gd*"
-domain = "league"
+domain = "league_ui"
 
 [[rules]]
 match = "scripts/ui/hud_player_card.gd*"

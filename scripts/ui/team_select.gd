@@ -6,12 +6,12 @@ signal cancelled()
 
 signal browse(page: String, id: String)
 
-const C_PANEL := Color(0.035, 0.055, 0.070, 0.97)
-const C_PANEL_LIGHT := Color(0.075, 0.105, 0.125, 0.97)
-const C_BORDER := Color(1, 1, 1, 0.085)
-const C_TEXT := Color(0.92, 0.95, 0.96)
-const C_DIM := Color(0.55, 0.64, 0.69)
-const C_GOLD := Color(0.96, 0.78, 0.30)
+const C_PANEL := UiChrome.C_PANEL
+const C_PANEL_LIGHT := UiChrome.C_PANEL_LIGHT
+const C_BORDER := UiChrome.C_BORDER
+const C_TEXT := UiChrome.C_TEXT
+const C_DIM := UiChrome.C_DIM
+const C_GOLD := UiChrome.C_GOLD
 
 var ids: Array = []
 

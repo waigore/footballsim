@@ -31,6 +31,12 @@ func test_the_generated_palette_matches_the_theme() -> void:
 
 
 func test_the_forks_point_at_the_same_palette() -> void:
+	assert_eq(WikiChrome.PANEL, UiTheme.color(&"panel"), "the encyclopedia kept a second palette")
+	assert_eq(WikiChrome.PANEL_LIGHT, UiTheme.color(&"panel_light"), "the encyclopedia kept a second panel")
+	assert_eq(WikiChrome.BORDER, UiTheme.color(&"border"), "the encyclopedia kept a second border")
+	assert_eq(WikiChrome.TEXT, UiTheme.color(&"text"), "the encyclopedia kept its own ink")
+	assert_eq(WikiChrome.GOLD, UiTheme.color(&"gold"), "the encyclopedia kept its own gold")
+	assert_eq(WikiChrome.DIM, UiTheme.color(&"soft"), "the encyclopedia kept a third dim")
 	assert_eq(HudChrome.BORDER, UiTheme.color(&"border"), "the HUD kept a second border")
 	assert_eq(MenuScreen.FOOT, UiTheme.color(&"soft"), "the menu kept its own footer ink")
 
@@ -103,3 +109,15 @@ func test_the_chrome_exposes_the_shared_theme() -> void:
 	assert_eq(UiChrome.theme(), UiTheme.theme(), "UiChrome reached a different Theme")
 	assert_true(UiChrome.theme().has_stylebox(&"panel", &"Panel"),
 		"the shared Theme has no panel style")
+
+
+func test_the_picker_reads_the_shared_palette() -> void:
+	var script: Script = load("res://scripts/ui/team_select.gd")
+	assert_not_null(script, "the fixture picker script did not load")
+	var consts := script.get_script_constant_map()
+	assert_eq(consts.get("C_PANEL"), UiTheme.color(&"panel"), "the picker kept a second panel")
+	assert_eq(consts.get("C_PANEL_LIGHT"), UiTheme.color(&"panel_light"), "the picker kept a third panel")
+	assert_eq(consts.get("C_BORDER"), UiTheme.color(&"border"), "the picker kept a second border")
+	assert_eq(consts.get("C_TEXT"), UiTheme.color(&"text"), "the picker kept its own ink")
+	assert_eq(consts.get("C_DIM"), UiTheme.color(&"dim"), "the picker kept its own dim")
+	assert_eq(consts.get("C_GOLD"), UiTheme.color(&"gold"), "the picker kept its own gold")
