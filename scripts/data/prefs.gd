@@ -81,7 +81,36 @@ const KEY_ATTRS := "attribute_view"
 const ATTR_MODES := ["SIMPLIFIED", "FULL"]
 const DEFAULT_ATTRS := "SIMPLIFIED"
 
+const KEY_CURRENCY := "currency"
+const DEFAULT_CURRENCY := "GBP"
+
 static var _attrs_cache := ""
+static var _currency_cache := ""
+
+static func normalize_currency(code: String) -> String:
+	var spec: Dictionary = MarketRules.section("currency")
+	var rates: Dictionary = spec.get("rates", {})
+	var fallback := str(spec.get("default", DEFAULT_CURRENCY))
+	return code if rates.has(code) else fallback
+
+static func load_currency(path: String = PATH) -> String:
+	if path == PATH and _currency_cache != "":
+		return _currency_cache
+	var raw = _read(path).get_value(SECTION_UI, KEY_CURRENCY, DEFAULT_CURRENCY)
+	var code: String = normalize_currency(str(raw)) if typeof(raw) == TYPE_STRING else DEFAULT_CURRENCY
+	code = normalize_currency(code)
+	if path == PATH:
+		_currency_cache = code
+	return code
+
+static func save_currency(code: String, path: String = PATH) -> bool:
+	var cfg := _read(path)
+	var value := normalize_currency(code)
+	cfg.set_value(SECTION_UI, KEY_CURRENCY, value)
+	if path == PATH:
+		_currency_cache = value
+	return cfg.save(path) == OK
+
 
 static func normalize_attrs(mode: String) -> String:
 	return "FULL" if mode == "FULL" else DEFAULT_ATTRS

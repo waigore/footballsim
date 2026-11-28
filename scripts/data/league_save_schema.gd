@@ -107,6 +107,15 @@ const TABLES := [
 	+ "option_years INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'active', "
 	+ "deal_id TEXT NOT NULL DEFAULT '', declined INTEGER NOT NULL DEFAULT 0, "
 	+ "PRIMARY KEY (player_id, start_date));",
+	"CREATE TABLE IF NOT EXISTS club_finance (club_id TEXT PRIMARY KEY, "
+	+ "cash INTEGER NOT NULL DEFAULT 0, reputation INTEGER NOT NULL DEFAULT 0, "
+	+ "revenue_base INTEGER NOT NULL DEFAULT 0, wage_budget INTEGER NOT NULL DEFAULT 0, "
+	+ "updated_on TEXT NOT NULL DEFAULT '', season_index INTEGER NOT NULL DEFAULT 0);",
+	"CREATE TABLE IF NOT EXISTS club_ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+	+ "season_index INTEGER NOT NULL DEFAULT 0, date TEXT NOT NULL DEFAULT '', "
+	+ "club_id TEXT NOT NULL, kind TEXT NOT NULL, amount INTEGER NOT NULL DEFAULT 0, "
+	+ "counterparty TEXT NOT NULL DEFAULT '', player_id TEXT NOT NULL DEFAULT '', "
+	+ "deal_id TEXT NOT NULL DEFAULT '', amortisation INTEGER NOT NULL DEFAULT 0);",
 ]
 
 const INDEXES := [
@@ -116,6 +125,8 @@ const INDEXES := [
 	"CREATE INDEX IF NOT EXISTS goal_highlight_fixture_idx ON goal_highlight (fixture_id);",
 	"CREATE INDEX IF NOT EXISTS cup_tie_round_idx ON cup_tie (competition_id, round_id);",
 	"CREATE INDEX IF NOT EXISTS player_contract_club_idx ON player_contract (club_id, status);",
+	"CREATE INDEX IF NOT EXISTS club_ledger_club_idx ON club_ledger (club_id, season_index);",
+	"CREATE INDEX IF NOT EXISTS club_ledger_season_idx ON club_ledger (season_index, date);",
 ]
 
 

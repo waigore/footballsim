@@ -264,6 +264,9 @@ suites = [
   # Windows and association calendars (#443): the four associations, the state a
   # date alone decides, the per-date market tick and the buying-club rule.
   "test_market_windows.gd",
+  # Club money (#442): the opening envelope, the ledger's kinds, amortisation,
+  # the prize curve, the currency setting and the club page's finances block.
+  "test_market_finance.gd",
 ]
 
 # Europe's own destination (#437): the hub read models, the two sheets and the
@@ -509,6 +512,16 @@ domain = "league"
 
 [[rules]]
 match = "tests/test_market_contracts.gd*"
+domain = "league"
+
+# The market's money (#442): revenue anchors, the ledger and the currency
+# display. It rides the market modules it reads.
+[[rules]]
+match = "tests/test_market_finance.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/data/market_currency.gd*"
 domain = "league"
 
 # The market's window rules (#443): the association dates, the state derived

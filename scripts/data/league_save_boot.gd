@@ -55,6 +55,12 @@ static func create(name: String, rules: Dictionary, seed: int = 0,
 		PLDatabase.reset()
 		return null
 	LeagueSave.current = save
+	var money := MarketFinance.bootstrap(save)
+	if not bool(money.get("ok", false)):
+		LeagueSave.last_error = "the club finances could not be written"
+		PLDatabase.reset()
+		LeagueSave.current = null
+		return null
 	return save
 
 
