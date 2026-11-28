@@ -34,7 +34,7 @@ var holding := false
 
 var mode := MODE_WIZARD
 var season: LeagueSeason = null
-var wizard := {"name": LeagueStartSheet.SAVE_NAME, "calendar_mode": "generated", "advance_mode": "fixture_days",
+var wizard := {"name": "", "calendar_mode": "generated", "advance_mode": "fixture_days",
 	"competitions": ["PL"], "error": ""}
 var saves: Array = []
 

@@ -7,6 +7,11 @@ const HEADER := LeagueChrome.HEADER
 
 const SAVE_NAME := "My League Sim"
 
+
+static func save_name(typed: String) -> String:
+	var name := typed.strip_edges()
+	return name if name != "" else SAVE_NAME
+
 const TOGGLE_H := 40.0
 const TOGGLE_PITCH := 46.0
 const MODE_AFTER := 12.0
@@ -204,7 +209,8 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_GOLD, 1)
 			var value := str(item["value"])
 			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
-				value if value != "" else SAVE_NAME, 15, UiChrome.C_TEXT, bold)
+				value if value != "" else SAVE_NAME, 15,
+				UiChrome.C_TEXT if value != "" else UiChrome.C_DIM, bold)
 			LeagueFieldFocus.caret(c, rect, value, bold, 15, live)
 		elif kind == "choice":
 			var chosen := bool(item["selected"])

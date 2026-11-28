@@ -528,10 +528,10 @@ func test_every_plan_group_opens_with_its_league_heading() -> void:
 			"a %d-league day is not headed by its league" % count)
 
 
-func test_a_new_league_opens_on_my_league_sim() -> void:
+func test_a_new_league_opens_on_a_blank_field_naming_my_league_sim() -> void:
 	assert_eq(LeagueStartSheet.SAVE_NAME, "My League Sim", "the wizard's default name moved")
-	assert_eq(str(LeagueScreen.new().wizard["name"]), LeagueStartSheet.SAVE_NAME,
-		"a fresh screen does not open on the wizard's default name")
+	assert_eq(str(LeagueScreen.new().wizard["name"]), "",
+		"a fresh screen opens on a name instead of letting the player type one")
 	var start := LeagueStartSheet.new()
 	var field := {}
 	for item in start.wizard_layout(Vector2(1280, 720),
@@ -540,6 +540,23 @@ func test_a_new_league_opens_on_my_league_sim() -> void:
 			field = item
 	assert_true(not field.is_empty(), "the wizard laid out no name field")
 	assert_eq(str(field["value"]), "", "an empty field paints its placeholder state")
+	for vp in [Vector2(1280, 720), Vector2(913, 411)]:
+		var rect := Rect2()
+		for item in start.wizard_layout(vp,
+				{"name": "", "calendar_mode": "generated", "advance_mode": "fixture_days"}):
+			if str(item["id"]) == "name":
+				rect = item["rect"]
+		assert_gt(rect.size.y, 0.0, "the blank field lost its box at %s" % vp)
+
+
+func test_an_untouched_name_falls_back_to_my_league_sim() -> void:
+	assert_eq(LeagueStartSheet.save_name(""), LeagueStartSheet.SAVE_NAME,
+		"a player who types nothing does not get the suggested name")
+	assert_eq(LeagueStartSheet.save_name("   "), LeagueStartSheet.SAVE_NAME,
+		"a field holding only spaces made a nameless save")
+	assert_eq(LeagueStartSheet.save_name("  Winter League  "), "Winter League",
+		"the typed name kept padding a table header would print")
+	assert_eq(LeagueStartSheet.save_name("Q"), "Q", "a one-letter name was rewritten")
 
 
 func test_the_load_row_status_reads_as_player_copy() -> void:
