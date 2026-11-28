@@ -289,6 +289,14 @@ func test_the_panel_doors_jump_pose_and_bind_the_table() -> void:
 	_hub()
 	LeaguePanelDoors.nav(screen, "fixtures")
 	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "Today's Fixtures did not land on the hub")
+	LeaguePanelDoors.nav(screen, "cups")
+	assert_eq(screen.mode, LeagueScreen.MODE_CUPS, "CUPS does not open from its panel row")
+	var held := LeagueSeasonDoors._held([
+		{"id": "a", "watched": 0}, {"id": "b", "watched": 1}, {"id": "c", "watched": 0},
+	])
+	assert_eq(str(held["id"]), "b", "Continue did not prefer the watched tie")
+	var first := LeagueSeasonDoors._held([{"id": "only", "watched": 0}])
+	assert_eq(str(first["id"]), "only", "Continue lost the only pending fixture")
 
 func test_deleting_the_open_save_unloads_it_first() -> void:
 
