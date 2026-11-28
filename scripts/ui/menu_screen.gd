@@ -15,7 +15,7 @@ const STILL_COUNT := 5
 const SLOT := 11.0
 const FADE := 1.8
 
-const FOOT := Color(0.66, 0.73, 0.77)
+const FOOT := UiChrome.C_SOFT
 
 
 const TITLE_AIR := 9.0
