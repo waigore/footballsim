@@ -262,6 +262,22 @@ suites = [
   "test_market_ai.gd",
 ]
 
+# The market's league surfaces (#452/#453): the transfer hub, inspector and
+# news sheet plus the navigation they hang on. Kept narrow so a UI edit does
+# not drag the whole league surface into the five-minute tier-1 job.
+[domains.market_ui]
+suites = [
+  "test_market_ui.gd",
+  "test_market_news.gd",
+  "test_league_ui.gd",
+  "test_league_sheets.gd",
+  "test_league_doors.gd",
+  "test_league_panel_ui.gd",
+  "test_league_nav_stack.gd",
+  "test_wiki_render.gd",
+  "test_squad_list.gd",
+]
+
 # Player encyclopedia page only: attributes, contracts, TRANSFER. Kept off the
 # full wiki domain so a player-page edit stays inside the tier-1 budget.
 [domains.wiki_player]
@@ -442,6 +458,57 @@ suites = [
 suites = [
   "test_position_race.gd",
 ]
+
+# The market's league surfaces (#452/#453): their own sheets, the navigation
+# they add to, and the pages that read their lists. Ahead of the league/wiki
+# rules so a market UI edit rides the narrow market_ui domain.
+[[rules]]
+match = "scripts/ui/league_transfer_sheet.gd*"
+domain = "market_ui"
+
+[[rules]]
+match = "scripts/ui/league_market_view.gd*"
+domain = "market_ui"
+
+[[rules]]
+match = "scripts/ui/league_deal_sheet.gd*"
+domain = "market_ui"
+
+[[rules]]
+match = "scripts/ui/league_news_sheet.gd*"
+domain = "market_ui"
+
+[[rules]]
+match = "scripts/ui/league_doors.gd*"
+domain = "market_ui"
+
+[[rules]]
+match = "scripts/ui/league_panel*.gd*"
+domain = "market_ui"
+
+[[rules]]
+match = "scripts/ui/league_report_sheet.gd*"
+domain = "market_ui"
+
+[[rules]]
+match = "scripts/ui/league_nav_stack.gd*"
+domain = "market_ui"
+
+[[rules]]
+match = "scripts/ui/league_screen*.gd*"
+domain = "market_ui"
+
+[[rules]]
+match = "scripts/ui/league_view.gd*"
+domain = "market_ui"
+
+[[rules]]
+match = "scripts/ui/wiki_player.gd*"
+domain = "market_ui"
+
+[[rules]]
+match = "scripts/ui/wiki_team.gd*"
+domain = "market_ui"
 
 # ----------------------------------------------------------------- sim ---
 
