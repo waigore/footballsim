@@ -315,14 +315,18 @@ func test_a_phone_league_page_opens_on_the_table() -> void:
 		assert_gte(shown, 4, "the phone league page opens on %d club rows at %s" % [shown, vp])
 
 
+func _strip_size() -> int:
+	return PLCompetitions.all().size() + PLRepository.shared().cups().size()
+
+
 func test_a_phone_league_page_keeps_its_competition_doors() -> void:
 	var width: float = WikiHeader.metrics(Vector2(914.0, 411.0), true, true, true)["width"]
 	var chips := WikiPageStrip.items(WikiModel.page(WikiModel.LEAGUE, ""))
 	var built := WikiPageStrip.layout(wiki.f_bold, width, chips)
 	var rects: Array = built["rects"]
-	assert_eq(rects.size(), 10, "the phone strip dropped a competition")
+	assert_eq(rects.size(), _strip_size(), "the phone strip dropped a competition")
 	var doors := WikiPageStrip.doors(Vector2(24.0, 60.0), rects, chips)
-	assert_eq(doors.size(), 9, "the phone strip lost a door to another competition")
+	assert_eq(doors.size(), _strip_size() - 1, "the phone strip lost a door to another competition")
 	for door in doors:
 		var r: Rect2 = door["rect"]
 		assert_gte(r.size.y, 24.0, "a strip door is too short to press")
@@ -355,9 +359,8 @@ func test_a_phone_strip_names_the_league_it_cannot_fit() -> void:
 	var built := WikiPageStrip.layout(wiki.f_bold, 150.0, chips)
 	assert_true(bool(built["short"]), "a strip narrower than its names kept the long ones")
 	var rects: Array = built["rects"]
-	assert_eq(rects.size(), 10, "the squeezed strip dropped a competition")
-	assert_lte((rects[rects.size() - 1] as Rect2).end.x, 150.5,
-		"the squeezed strip ran past its band")
+	assert_eq(rects.size(), _strip_size(), "the squeezed strip dropped a competition")
+	assert_lte((rects[7] as Rect2).end.x, 150.5, "the squeezed strip ran past its band")
 
 
 func test_the_desktop_header_keeps_its_title_and_dense_rows() -> void:

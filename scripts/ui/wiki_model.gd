@@ -6,6 +6,7 @@ const LEAGUE := "league"
 const TEAM := "team"
 const PLAYER := "player"
 const MANAGER := "manager"
+const CUP := "cup"
 
 
 static func repo() -> PLRepository:
@@ -13,6 +14,8 @@ static func repo() -> PLRepository:
 
 
 static func has_page(page: String, id: String) -> bool:
+	if page == CUP:
+		return id != "" and LeagueCup.is_cup(id)
 	if page == LEAGUE:
 		return id == "" or PLCompetitions.exists(id)
 	if page == TEAM or page == MANAGER:
@@ -23,6 +26,8 @@ static func has_page(page: String, id: String) -> bool:
 
 
 static func page(page: String, id: String) -> Dictionary:
+	if page == CUP:
+		return WikiCup.page(id)
 	if page == TEAM:
 		return team_page(id)
 	if page == PLAYER:
@@ -39,6 +44,8 @@ static func label(page: String, id: String) -> String:
 		return str(repo().player(id).get("name", id))
 	if page == MANAGER:
 		return str(ManagerData.profile(id).get("name", id))
+	if page == CUP:
+		return str(repo().competition(id).get("short_name", id)).to_upper()
 	var comp := PLCompetitions.one(id if id != "" else PLCompetitions.default_id())
 	return str(comp.get("short_name", "LEAGUE")).to_upper()
 

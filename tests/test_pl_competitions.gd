@@ -45,7 +45,7 @@ func test_the_shipped_hub_names_its_competition() -> void:
 	assert_eq(str(page["title"]), "PREMIER LEAGUE", "the hub title is not the competition's")
 	assert_true(str(page["subtitle"]).contains("20 CLUBS"), "the hub's club count is hard-coded")
 	var index := _chips(page)
-	assert_eq(index.size(), 10, "the competition index should hold every league")
+	assert_eq(index.size(), _index_size(), "the competition index should hold every league and cup")
 	assert_true(_chip_target(index, "LA LIGA", "LL"),
 		"the Premier League hub does not offer La Liga")
 	assert_true(_chip_target(index, "BUNDESLIGA", "BL"),
@@ -81,7 +81,7 @@ func test_every_competition_gets_its_own_hub() -> void:
 		"the second hub kept the first's club count")
 	assert_eq(_rows_in(theirs, "LEAGUE TABLE"), 20, "the second hub shows the wrong table")
 	var index := _chips(theirs)
-	assert_eq(index.size(), 10, "the index does not list every competition")
+	assert_eq(index.size(), _index_size(), "the index does not list every competition")
 	assert_true(_chip_target(index, "PREMIER LEAGUE", "PL"),
 		"the second hub does not offer the Premier League")
 
@@ -111,6 +111,10 @@ func test_an_unknown_competition_is_rejected() -> void:
 	assert_false(WikiModel.has_page(WikiModel.LEAGUE, "NOPE"), "a made-up competition resolved")
 	assert_eq(WikiModel.label(WikiModel.LEAGUE, ""), "PREMIER LEAGUE",
 		"the crumb numbers the wrong league")
+
+
+func _index_size() -> int:
+	return PLCompetitions.all().size() + PLRepository.shared().cups().size()
 
 
 func _chips(page: Dictionary) -> Array:
