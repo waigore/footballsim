@@ -84,6 +84,22 @@ func _seal(season: LeagueSeason, from: String, to: String, player: String,
 	return MarketDeals.seal(deal, date)
 
 
+func _transfer_items(page: Dictionary) -> Dictionary:
+	var wanted := false
+	for block in page.get("blocks", []):
+		var row: Dictionary = block
+		if str(row.get("k", "")) == "section" and str(row.get("text", "")) == "TRANSFER":
+			wanted = true
+			continue
+		if wanted and str(row.get("k", "")) == "kv":
+			var out := {}
+			for item in row.get("items", []):
+				var pair: Array = item
+				out[str(pair[0])] = pair[1]
+			return out
+	return {}
+
+
 func test_a_fee_at_the_clause_signs_without_seller_consent() -> void:
 	var season := _fresh("Clause Meets")
 	var from := _club_in("PL", 0)
@@ -223,17 +239,46 @@ func test_a_seeded_player_has_a_homegrown_club_and_no_invented_spells() -> void:
 
 func test_the_inspector_itemises_fee_agent_bonus_sell_on_and_solidarity() -> void:
 	var season := _fresh("Inspector")
-	var from := _club_in("PL", 0)
-	var to := _club_in("PL", 1)
-	var player := _player_at(from)
-	var deal := _propose(season, from, to, player,
-		_terms(player, {"fee": 3_000_000, "agent_fee": 150_000, "signing_bonus": 100_000}))
-	var extras := MarketAttribution.extras(MarketDealRecords.load(deal))
-	assert_true(extras.has("sell_on"), "the extras do not carry the sell-on")
-	assert_true(extras.has("solidarity"), "the extras do not carry the solidarity")
-	assert_true(extras.has("training"), "the extras do not carry the training fee")
-	var cost := MarketAttribution.buyer_cost(MarketDealRecords.load(deal))
-	assert_gte(cost, 3_250_000, "the buyer cost omits the agent or the bonus")
+	var first := _club_in("PL", 0)
+	var middle := _club_in("PL", 1)
+	var last := _club_in("PL", 2)
+	var youth := _club_in("PL", 5)
+	var player := _player_at(first)
+	var birth := str(PLDatabase.row("SELECT date_of_birth FROM player WHERE id = ?;",
+		[player]).get("date_of_birth", ""))
+	PLDatabase.execute("DELETE FROM player_history WHERE player_id = ?;", [player])
+	PLDatabase.execute(
+		"INSERT INTO player_history (player_id, season_index, club_id, competition_id, kind, "
+		+ "from_date, to_date) VALUES (?, 0, ?, 'PL', 'spell', ?, ?);",
+		[player, youth, _aged(birth, 13), _aged(birth, 17)])
+	var sold := _seal(season, first, middle, player,
+		_terms(player, {"fee": 2_000_000, "sell_on": 0.1}))
+	assert_eq(str(sold.get("state", "")), MarketDealRecords.SIGNED, "the first sale did not sign")
+	var second := _seal(season, middle, last, player,
+		_terms(player, {"fee": 8_000_000, "agent_fee": 150_000, "signing_bonus": 100_000}))
+	assert_eq(str(second.get("state", "")), MarketDealRecords.SIGNED, "the second sale did not sign")
+	var second_id := str(second.get("deal", ""))
+	var extras := MarketAttribution.extras(MarketDealRecords.load(second_id))
+	assert_false((extras.get("sell_on", {}) as Dictionary).is_empty(), "the extras lost the sell-on")
+	assert_false((extras.get("solidarity", []) as Array).is_empty(), "the extras lost the solidarity")
+	var items := _transfer_items(WikiPlayer.page(player))
+	assert_eq(str(items.get("FEE", "")), MarketCurrency.format(8_000_000), "the page lost the fee")
+	assert_eq(str(items.get("AGENT", "")), MarketCurrency.format(150_000), "the page lost the agent")
+	assert_eq(str(items.get("BONUS", "")), MarketCurrency.format(100_000), "the page lost the bonus")
+	var sell_line := str(items.get("SELL-ON", ""))
+	assert_true(sell_line.contains("800K"), "the page lost the sell-on share: %s" % sell_line)
+	assert_true(sell_line.contains("10%"), "the page lost the sell-on rate: %s" % sell_line)
+	var total := 0
+	for row in extras.get("solidarity", []):
+		total += int((row as Dictionary).get("amount", 0))
+	assert_eq(str(items.get("SOLIDARITY", "")), MarketCurrency.format(total),
+		"the page lost the solidarity")
+	var future_player := _player_at(_club_in("PL", 6))
+	_propose(season, _club_in("PL", 6), _club_in("PL", 7), future_player,
+		_terms(future_player, {"fee": 3_000_000, "sell_on": 0.25}))
+	var future := _transfer_items(WikiPlayer.page(future_player))
+	assert_true(str(future.get("SELL-ON", "")).contains("ON NEXT SALE"),
+		"the page lost the future sell-on term: %s" % str(future.get("SELL-ON", "")))
 
 
 func _aged(birth: String, years: int) -> String:
