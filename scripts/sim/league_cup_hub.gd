@@ -20,10 +20,31 @@ static func competitions(season: LeagueSeason) -> Array:
 			"stage": LeagueCupState.stage(str(cid)),
 			"winner": LeagueCupState.winner(str(cid)),
 			"runner_up": LeagueCupState.runner_up(str(cid)),
+			"score": _score_text(str(cid)),
 			"alive": _alive(str(cid)),
 			"next": _next_night(season, str(cid)),
 		})
 	return out
+
+
+static func _score_text(competition_id: String) -> String:
+	var tie := LeagueCupState.final(competition_id)
+	if tie.is_empty() or str(tie.get("winner_club_id", "")) == "":
+		return ""
+	var home := str(tie.get("home_club_id", ""))
+	var away := str(tie.get("away_club_id", ""))
+	var home_goals := int(tie.get("home_goals", 0))
+	var away_goals := int(tie.get("away_goals", 0))
+	var line := "%d–%d" % [home_goals, away_goals]
+	if home_goals < away_goals:
+		line = "%d–%d" % [away_goals, home_goals]
+	if int(tie.get("pens_home", -1)) >= 0:
+		var pens_home := int(tie.get("pens_home", 0))
+		var pens_away := int(tie.get("pens_away", 0))
+		var winner_pens := pens_home if str(tie.get("winner_club_id", "")) == home else pens_away
+		var loser_pens := pens_away if str(tie.get("winner_club_id", "")) == home else pens_home
+		line += "  %d–%d PENS" % [winner_pens, loser_pens]
+	return line
 
 
 static func _alive(competition_id: String) -> int:

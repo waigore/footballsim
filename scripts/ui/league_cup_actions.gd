@@ -2,7 +2,7 @@ class_name LeagueCupActions
 extends RefCounted
 
 
-static func view(screen) -> Dictionary:
+static func view(screen: Variant) -> Dictionary:
 	var season: LeagueSeason = screen.season
 	var state: Dictionary = screen.cups
 	var out := {
@@ -31,13 +31,13 @@ static func view(screen) -> Dictionary:
 	return out
 
 
-static func open(screen) -> void:
+static func open(screen: Variant) -> void:
 	screen.cups = {"cup": "", "round": ""}
 	LeagueDoors.go(screen, LeagueScreen.MODE_CUPS)
 	screen.refresh()
 
 
-static func press(screen, id: String) -> bool:
+static func press(screen: Variant, id: String) -> bool:
 	if not id.begins_with("cup:") and not id.begins_with("round:"):
 		return false
 	if id.begins_with("cup:"):
@@ -50,7 +50,7 @@ static func press(screen, id: String) -> bool:
 	return true
 
 
-static func back(screen) -> bool:
+static func back(screen: Variant) -> bool:
 	var state: Dictionary = screen.cups
 	if str(state.get("round", "")) != "":
 		state["round"] = ""

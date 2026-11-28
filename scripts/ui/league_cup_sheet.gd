@@ -112,7 +112,10 @@ func _paint_card(c: CanvasItem, rect: Rect2, cup: Dictionary, bold: Font, med: F
 	UiChrome.text(c, Vector2(rect.position.x + 14.0, rect.position.y + 42.0),
 		stage_label.to_upper(), 10, UiChrome.C_GOLD, bold)
 	var alive := int(cup.get("alive", 0))
-	var tail := "%d CLUBS IN" % alive if alive > 0 else "SETTLED"
+	var tail := "%d CLUBS IN" % alive if alive > 0 and not done else "SETTLED"
+	if done:
+		tail = "%s BEAT %s" % [LeagueCup.name_of(str(cup["winner"])),
+			LeagueCup.name_of(str(cup.get("runner_up", "")))]
 	UiChrome.text(c, Vector2(rect.position.x + 14.0, rect.position.y + 60.0),
 		tail, 10, UiChrome.C_DIM, med)
 	var next := str(cup.get("next", ""))
@@ -121,7 +124,7 @@ func _paint_card(c: CanvasItem, rect: Rect2, cup: Dictionary, bold: Font, med: F
 			FixtureCalendar.day_label(next), 10, UiChrome.C_SOFT, bold)
 	if done:
 		UiChrome.text_r(c, rect.end.x - 14.0, rect.position.y + 60.0,
-			LeagueCup.name_of(str(cup["winner"])), 11, UiChrome.C_GOLD, bold)
+			str(cup.get("score", "")), 11, UiChrome.C_GOLD, bold)
 
 func _paint_round(c: CanvasItem, rect: Rect2, item: Dictionary, bold: Font, med: Font) -> void:
 	var round_row: Dictionary = item["round"]

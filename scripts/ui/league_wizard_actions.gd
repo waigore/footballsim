@@ -2,7 +2,7 @@ class_name LeagueWizardActions
 extends RefCounted
 
 
-static func toggle_league(screen, competition_id: String) -> void:
+static func toggle_league(screen: Variant, competition_id: String) -> void:
 	if competition_id == "":
 		return
 	var chosen: Array = (screen.wizard.get("competitions", ["PL"]) as Array).duplicate()
