@@ -48,16 +48,16 @@ func test_the_hub_reads_three_competitions_and_their_pending_draws() -> void:
 		assert_gte(int(card["alive"]), 2, "a competition has no clubs alive")
 		assert_true(str(card["next"]) != "", "a competition has no next UEFA night")
 	assert_eq(str(save.current_date()), "2026-07-07", "the shared clock does not open on UEFA Q1")
-	assert_eq(LeagueEurope.pending_draws(save).size(), 3, "the first-round draws are not pending")
-	LeagueEurope.mark_seen(save, "UCL", "Q1")
-	assert_eq(LeagueEurope.pending_draws(save).size(), 2, "a shown draw is still pending")
+	assert_eq(LeagueEuropeDraws.pending_draws(save).size(), 3, "the first-round draws are not pending")
+	LeagueEuropeDraws.mark_seen(save, "UCL", "Q1")
+	assert_eq(LeagueEuropeDraws.pending_draws(save).size(), 2, "a shown draw is still pending")
 	assert_eq(str(LeagueEurope.stage_of("UCL")), "Q1", "the UCL stage is not its first round")
 	assert_eq(str(LeagueEurope.stage_label("UCL")), "QUALIFYING Q1", "the stage label is not Q1")
 	assert_eq(str(LeagueEurope.stage_label("")), "NOT DRAWN", "an empty competition still has a stage")
 	assert_eq(str(LeagueEurope.next_night(null)), "", "a missing save still names a UEFA night")
 	assert_eq(LeagueEurope.tonight(null), [], "a missing save still lists tonight's ties")
 	assert_eq(int(LeagueEurope.alive("")), 0, "an empty competition still has clubs alive")
-	var data := LeagueEurope.draw_data(save, "UCL", "Q1")
+	var data := LeagueEuropeDraws.draw_data(save, "UCL", "Q1")
 	assert_true(str(data["title"]).contains("FIRST QUALIFYING ROUND"), "the draw lost its round")
 	assert_eq((data["pots"] as Array).size(), 1, "a qualifying draw is not one pool")
 	var ties := PLDatabase.row(
@@ -66,8 +66,8 @@ func test_the_hub_reads_three_competitions_and_their_pending_draws() -> void:
 	var first: Dictionary = (data["fixtures"] as Array)[0]
 	assert_true(str(first["home_name"]) != "", "a drawn pair has no home name")
 	assert_true(str(first["away_name"]) != "", "a drawn pair has no away name")
-	assert_true(LeagueEurope.seen(save, "UCL", "Q1"), "a shown round is not marked")
-	assert_false(LeagueEurope.seen(save, "UCL", "Q2CH"), "an unseen round reads as shown")
+	assert_true(LeagueEuropeDraws.seen(save, "UCL", "Q1"), "a shown round is not marked")
+	assert_false(LeagueEuropeDraws.seen(save, "UCL", "Q2CH"), "an unseen round reads as shown")
 	season.close()
 
 
@@ -75,7 +75,7 @@ func test_qualifying_drops_and_the_bracket_keep_their_reading() -> void:
 	var season := _season()
 	_run_to(season, "UCL", "KOPO")
 	assert_true(LeagueUefa.has_stage("UCL", "KOPO"), "the UCL knockout play-off never opened")
-	assert_true(LeagueEurope.pending_draws(season.save).size() >= 1, "the knockout draw is not pending")
+	assert_true(LeagueEuropeDraws.pending_draws(season.save).size() >= 1, "the knockout draw is not pending")
 	var drops := 0
 	for round in LeagueEuropeTies.qualifying("UCL"):
 		for tie in round["ties"]:
@@ -180,7 +180,7 @@ func test_a_complete_bracket_keeps_its_table_and_names_three_winners() -> void:
 		_run_to(season, str(cid), "F")
 	var seeded := LeagueUefaBands.pot_bands("UCL")
 	assert_gte(seeded.size(), 36, "the seed carries no frozen bands")
-	var pots := LeagueEurope.pots(season.save, "UCL", LeagueUefa.LEAGUE_STAGE)
+	var pots := LeagueEuropeDraws.pots(season.save, "UCL", LeagueUefa.LEAGUE_STAGE)
 	assert_eq(pots.size(), 4, "the league phase is not four pots")
 	var last := 0
 	for pot in pots:

@@ -34,7 +34,7 @@ func _initialize() -> void:
 	screen.refresh()
 	await _shot("issue437_qualifying")
 	_settle(season, "UCL", "LP")
-	LeagueEurope.mark_seen(season.save, "UCL", "KOPO")
+	LeagueEuropeDraws.mark_seen(season.save, "UCL", "KOPO")
 	screen.europe["tab"] = "bracket"
 	screen.europe["round"] = "KOPO"
 	screen.refresh()

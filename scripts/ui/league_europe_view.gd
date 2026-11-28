@@ -15,7 +15,7 @@ static func hub(screen: Object) -> Dictionary:
 	var cards: Array = []
 	for cid in ids:
 		cards.append(LeagueEurope.card(save, str(cid)))
-	var draws: Array = LeagueEurope.pending_draws(save) if save != null else []
+	var draws: Array = LeagueEuropeDraws.pending_draws(save) if save != null else []
 	return {"date": date, "day": FixtureCalendar.day_label(date) if date != "" else "",
 		"cards": cards, "tonight": plan,
 		"carried": LeagueEuropeEntries.carried(save) if save != null else [],
@@ -33,8 +33,8 @@ static func stage(screen: Object) -> Dictionary:
 		comp = str(ids[0]) if not ids.is_empty() else ""
 	var stage := LeagueEurope.stage_of(comp)
 	var draw_round := ""
-	if save != null and stage != "" and LeagueEurope.drawn(comp, stage) \
-			and LeagueEurope.seen(save, comp, stage):
+	if save != null and stage != "" and LeagueEuropeDraws.drawn(comp, stage) \
+			and LeagueEuropeDraws.seen(save, comp, stage):
 		draw_round = stage
 	var tab := str(screen.europe.get("tab", ""))
 	if tab == "":
@@ -67,7 +67,7 @@ static func draw(screen: Object) -> Dictionary:
 	var save: LeagueSave = season.save if season != null else null
 	var competition_id := str(screen.europe_draw.get("competition", ""))
 	var round_id := str(screen.europe_draw.get("round", ""))
-	var out: Dictionary = LeagueEurope.draw_data(save, competition_id, round_id) \
+	var out: Dictionary = LeagueEuropeDraws.draw_data(save, competition_id, round_id) \
 		if save != null else {}
 	out["revealed"] = int(screen.europe_draw.get("revealed", 0))
 	out["done"] = bool(screen.europe_draw.get("done", false))
