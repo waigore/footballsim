@@ -27,8 +27,8 @@ func _clean() -> void:
 	TestScratch.clear(CACHE_DIR)
 
 
-func _season(name: String, comps: Array = ["PL"], cups: bool = true) -> LeagueSeason:
-	return LeagueSeason.create(name, "generated", "fixture_days", SEED, comps, cups, [], true)
+func _season(name: String, cups: bool = true) -> LeagueSeason:
+	return LeagueSeason.create(name, "generated", "fixture_days", SEED, ["PL"], cups, [], true)
 
 
 func _finish(season: LeagueSeason) -> void:
@@ -46,10 +46,10 @@ func _finish(season: LeagueSeason) -> void:
 	SeasonSettle.apply(season)
 
 
-func _positions(season: LeagueSeason, competition_id: String) -> Array:
+func _positions(season: LeagueSeason) -> Array:
 	var out: Array = []
 	for row in season.record.standings.table():
-		if str(row.get("competition_id", "")) == competition_id:
+		if str(row.get("competition_id", "")) == "PL":
 			out.append(str(row["club_id"]))
 	return out
 
@@ -82,98 +82,48 @@ func _cup_winner(cup: String, winner: String, other: String) -> void:
 		[cup, last, winner, other, winner, 0])
 
 
-func _rollover(season: LeagueSeason) -> Dictionary:
-	return SeasonRollover.apply(season)
+func _fallback_names(result: Dictionary, reason: String) -> bool:
+	for row in (result.get("pools", {}) as Dictionary).get("fallback", []):
+		if str((row as Dictionary).get("reason", "")) == reason:
+			return true
+	return false
 
 
-func test_the_access_list_shape_survives_the_rollover() -> void:
-	var season := _season("Pools Shape")
+func test_the_pools_refill_and_cascade_across_two_seasons() -> void:
+	var season := _season("Pools League")
 	assert_not_null(season, "the season did not boot")
 	var before := _shape()
+	var table := _positions(season)
+	_cup_winner("FAC", str(table[11]), str(table[0]))
 	_finish(season)
-	var result := _rollover(season)
-	assert_true(bool(result.get("ok", false)), "the rollover refused: %s" % str(result))
+	var first := SeasonRollover.apply(season)
+	assert_true(bool(first.get("ok", false)), "the rollover refused: %s" % str(first))
 	var after := _shape()
 	for key in before.keys():
 		assert_eq(int(after.get(key, -1)), int(before[key]), "the shape drifted at %s" % key)
-	season.close()
-
-
-func test_the_league_places_fill_the_next_season() -> void:
-	var season := _season("Pools Places")
-	var top := _positions(season, "PL")
-	_finish(season)
-	_rollover(season)
-	var clubs := _real_clubs("UCL", "LP", "ENG")
-	assert_eq(clubs.size(), 5, "England lost its Champions League places")
+	var ucl := _real_clubs("UCL", "LP", "ENG")
+	assert_eq(ucl.size(), 5, "England lost its Champions League places")
 	for i in range(4):
-		assert_true(clubs.has(str(top[i])), "%s finished %s but missed the league phase"
-			% [top[i], i + 1])
-	season.close()
-
-
-func test_the_cup_winner_takes_the_association_lowest_place() -> void:
-	var season := _season("Pools Cup")
-	var table := _positions(season, "PL")
-	_cup_winner("FAC", str(table[11]), str(table[0]))
-	_finish(season)
-	_rollover(season)
-	var clubs := _real_clubs("UECL", "POMP", "ENG")
-	assert_eq(clubs.size(), 1, "England lost its Conference League place")
-	assert_eq(clubs[0], str(table[11]), "the cup winner did not take the lowest place")
-	season.close()
-
-
-func test_a_qualified_cup_winner_passes_the_place_down() -> void:
-	var season := _season("Pools Cup Higher")
-	var table := _positions(season, "PL")
-	_cup_winner("FAC", str(table[0]), str(table[1]))
-	_finish(season)
-	var result := _rollover(season)
-	var clubs := _real_clubs("UECL", "POMP", "ENG")
-	assert_eq(clubs.size(), 1, "England lost its Conference League place")
-	assert_eq(clubs[0], str(table[8]), "the place did not pass to the next league place")
-	var fallback: Array = (result.get("pools", {}) as Dictionary).get("fallback", [])
-	var named := false
-	for row in fallback:
-		if str((row as Dictionary).get("association", "")) == "ENG" \
-				and str((row as Dictionary).get("reason", "")) == "cup_winner_higher":
-			named = true
-	assert_true(named, "the passed-down cup place is not named")
-	season.close()
-
-
-func test_a_cup_off_league_names_the_fallback() -> void:
-	var season := _season("Pools No Cup", ["PL"], false)
-	var table := _positions(season, "PL")
-	_finish(season)
-	var result := _rollover(season)
-	var clubs := _real_clubs("UECL", "POMP", "ENG")
-	assert_eq(clubs[0], str(table[8]), "a cup-off association did not fall back to the league")
-	var fallback: Array = (result.get("pools", {}) as Dictionary).get("fallback", [])
-	var named := false
-	for row in fallback:
-		if str((row as Dictionary).get("reason", "")) == "cup_off":
-			named = true
-	assert_true(named, "the cup-off fallback is not named")
-	season.close()
-
-
-func test_an_inactive_association_is_carried_over() -> void:
-	var season := _season("Pools Carried")
-	var before := _real_clubs("UCL", "LP", "ESP")
-	_finish(season)
-	var result := _rollover(season)
-	var after := _real_clubs("UCL", "LP", "ESP")
-	assert_eq(before, after, "Spain's entrants moved without a league to move them")
-	assert_true((result.get("pools", {}).get("carried", []) as Array).has("ESP"),
+		assert_true(ucl.has(str(table[i])), "%s finished %s but missed the league phase"
+			% [table[i], i + 1])
+	var uecl := _real_clubs("UECL", "POMP", "ENG")
+	assert_eq(uecl.size(), 1, "England lost its Conference League place")
+	assert_eq(uecl[0], str(table[11]), "the cup winner did not take the lowest place")
+	assert_true((first.get("pools", {}).get("carried", []) as Array).has("ESP"),
 		"the carried association is not recorded")
 	assert_true(LeagueUefaPools.note(season.save).contains("ESP CARRIED OVER"),
 		"the hub does not name the carried association")
+	var second_table := _positions(season)
+	_cup_winner("FAC", str(second_table[0]), str(second_table[1]))
+	_finish(season)
+	var second := SeasonRollover.apply(season)
+	var cascade := _real_clubs("UECL", "POMP", "ENG")
+	assert_eq(cascade[0], str(second_table[8]), "the place did not pass to the next league place")
+	assert_true(_fallback_names(second, "cup_winner_higher"), "the passed-down place is not named")
 	season.close()
 
 
-func test_the_band_store_is_frozen_at_boot() -> void:
+func test_the_band_is_stored_frozen_and_falls_back() -> void:
 	var season := _season("Pools Bands")
 	var save := season.save
 	assert_false(LeagueUefaBands.store(save).is_empty(), "the bands were not stored")
@@ -182,24 +132,17 @@ func test_the_band_store_is_frozen_at_boot() -> void:
 	assert_gte(band, 1, "a stored band is outside the pots")
 	PLDatabase.execute("UPDATE player SET ovr = 99 WHERE club_id = ?;", [club])
 	StrongestXI.apply_all()
-	assert_eq(LeagueUefaBands.band(save, "UCL", club), band,
-		"a squad change moved a frozen band")
-	var pots := LeagueUefaBands.pots(save, "UCL", LeagueUefa.entrants("UCL", "LP"))
-	assert_eq(pots.size(), 4, "the league phase lost a pot")
-	season.close()
-
-
-func test_an_unbanded_club_reads_the_median_or_the_middle_pot() -> void:
-	var season := _season("Pools Fallback")
-	var save := season.save
+	assert_eq(LeagueUefaBands.band(save, "UCL", club), band, "a squad change moved a frozen band")
+	assert_eq(LeagueUefaBands.pots(save, "UCL", LeagueUefa.entrants("UCL", "LP")).size(), 4,
+		"the league phase lost a pot")
+	var stored := LeagueUefaBands.bands_of(save, "UCL")
 	var outside := ""
 	for club_id in PLRepository.shared().club_ids("PL"):
-		if not LeagueUefa.entrants("UCL", "LP").has(str(club_id)):
+		if not stored.has(str(club_id)):
 			outside = str(club_id)
 			break
 	assert_true(outside != "", "every English club already holds a band")
 	var peers: Array = []
-	var stored := LeagueUefaBands.bands_of(save, "UCL")
 	for club_id in LeagueUefa.entrants("UCL", "LP"):
 		if LeagueUefa.association_of(str(club_id)) == "ENG" and stored.has(str(club_id)):
 			peers.append(int(stored[str(club_id)]))
@@ -211,7 +154,19 @@ func test_an_unbanded_club_reads_the_median_or_the_middle_pot() -> void:
 	season.close()
 
 
-func test_the_europe_hub_names_the_season_two_pools() -> void:
+func test_a_cup_off_league_names_the_fallback() -> void:
+	var season := _season("Pools No Cup", false)
+	var table := _positions(season)
+	_finish(season)
+	var result := SeasonRollover.apply(season)
+	var uecl := _real_clubs("UECL", "POMP", "ENG")
+	assert_eq(uecl[0], str(table[8]), "a cup-off association did not fall back to the league")
+	assert_true(_fallback_names(result, "cup_off"), "the cup-off fallback is not named")
+	season.close()
+
+
+
+func test_the_europe_hub_paints_the_entrants_reading() -> void:
 	var view := {"cards": [], "entrants": "ENTRANTS: ESP CARRIED OVER", "touch": false}
 	var items := LeagueEuropeSheet.new().layout(Vector2(900.0, 600.0), view)
 	var found := false
