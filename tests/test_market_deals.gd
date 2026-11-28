@@ -114,6 +114,8 @@ func test_an_open_window_signs_a_domestic_deal() -> void:
 	var done := MarketDeals.seal(deal, DATE)
 	assert_eq(str(done.get("state", "")), MarketDealRecords.SIGNED,
 		"the deal did not sign: %s" % str(done.get("reason", "")))
+	assert_eq(str(done.get("registration", "")), "registered",
+		"the commit module did not report registration")
 	assert_eq(_player_club(player), to, "the player did not move")
 	assert_eq(MarketFinance.cash(to), cash_to - 5_000_000, "the buyer did not pay the fee")
 	assert_eq(MarketFinance.cash(from), cash_from + 5_000_000, "the seller was not paid")
