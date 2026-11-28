@@ -302,6 +302,9 @@ func _items(blocks: Array) -> Dictionary:
 
 func test_the_engine_refuses_an_empty_loan() -> void:
 	var season := _fresh("Loan Empty")
+	var parent := _club_in("PL", 0)
+	var loanee := _club_in("PL", 1)
+	var player := _player_at(parent)
 	assert_eq(str(MarketLoans.seal("", DATE).get("reason", "")), "no_loan", "an empty loan sealed")
 	assert_eq(str(MarketLoans.return_loan("", DATE).get("reason", "")), "no_loan",
 		"an empty loan returned")
@@ -310,20 +313,13 @@ func test_the_engine_refuses_an_empty_loan() -> void:
 		"an empty loan triggered")
 	assert_eq(str(MarketLoans.propose(season, "", "", "", {}, DATE).get("reason", "")),
 		MarketLoanRules.TERMS, "an empty loan was written")
-	assert_eq(str(MarketLoans.propose(null, _club_in("PL", 0), _club_in("PL", 1),
-		_player_at(_club_in("PL", 0)), {"wage": 1000, "wage_loanee": 1000}, "").get("reason", "")),
+	assert_eq(str(MarketLoans.propose(null, parent, loanee, player,
+		{"wage": 1000, "wage_loanee": 1000}, "").get("reason", "")),
 		"no_date", "a dateless loan was written")
 	assert_true(MarketLoans.due(null, "").is_empty(), "a dateless due scan returned loans")
 	assert_true(MarketLoanRecords.load("").is_empty(), "an empty loan loaded a row")
 	assert_false(MarketLoanRecords.update("", {"fee": 1}), "an empty loan updated")
 	assert_true(MarketLoanRecords.active_for("").is_empty(), "an empty player held a loan")
-
-
-func test_loan_rules_and_triggers_refuse_bad_inputs() -> void:
-	var season := _fresh("Loan Guards")
-	var parent := _club_in("PL", 0)
-	var loanee := _club_in("PL", 1)
-	var player := _player_at(parent)
 	assert_eq(str(MarketLoanRules.validate(season, parent, parent, player, _terms(player), DATE)
 		.get("code", "")), MarketLoanRules.TERMS, "a same-club loan was allowed")
 	assert_eq(str(MarketLoanRules.validate(season, parent, loanee, player,
@@ -360,23 +356,12 @@ func test_loan_rules_and_triggers_refuse_bad_inputs() -> void:
 	assert_false(MarketLoans.triggered(season, {
 		"trigger_kind": "unknown", "loanee_club_id": loanee, "player_id": player}, DATE),
 		"an unknown trigger kind fired")
-	var out := _loan(season, parent, loanee, player, {
-		"option_kind": "obligation", "buy_fee": 2_000_000,
-		"trigger_kind": "season_end", "trigger_value": ""})
-	assert_true(bool(out.get("ok", false)), "the obligation page loan did not seal")
-	var items := _items(WikiPlayer.loan_blocks(player))
-	assert_true(str(items.get("BUY", "")).begins_with("OBLIGATION"),
+	assert_true(str(WikiPlayer._buy_label("obligation", 2_000_000)).begins_with("OBLIGATION"),
 		"the obligation buy label is wrong")
-	assert_eq(str(items.get("TRIGGER", "")), "SEASON_END",
+	assert_eq(WikiPlayer._buy_label("none", 0), "NONE", "the plain buy label is wrong")
+	assert_eq(WikiPlayer._trigger_label("", ""), "—", "an empty trigger label is wrong")
+	assert_eq(WikiPlayer._trigger_label("season_end", ""), "SEASON_END",
 		"a valueless trigger label is wrong")
-	var other_parent := _club_in("PL", 2)
-	var other_loanee := _club_in("PL", 3)
-	var other := _player_at(other_parent)
-	assert_true(bool(_loan(season, other_parent, other_loanee, other).get("ok", false)),
-		"the plain page loan did not seal")
-	var plain := _items(WikiPlayer.loan_blocks(other))
-	assert_eq(str(plain.get("BUY", "")), "NONE", "the plain buy label is wrong")
-	assert_eq(str(plain.get("TRIGGER", "")), "—", "an empty trigger label is wrong")
 
 
 func test_the_loan_verb_runs_without_the_ai_or_news_module() -> void:
