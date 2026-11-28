@@ -168,6 +168,13 @@
     "seller_floor_max": 1.15,
     "clearance_batch": 40
   },
+  "list": {
+    "uefa": {
+      "slots": 25,
+      "trained_min": 4,
+      "u21_free": 1
+    }
+  },
   "loan": {
     "cap_in": 6,
     "cap_out": 6,
