@@ -168,17 +168,51 @@ static func transfer_blocks(player_id: String) -> Array:
 	if deal.is_empty():
 		return []
 	var out: Array = [{"k": "section", "text": "TRANSFER"}]
+	var state := str(deal.get("state", ""))
 	var items: Array = [
-		["STATE", MarketDealCopy.state(str(deal.get("state", ""))), true],
+		["STATE", MarketDealCopy.state(state), true],
 		["FROM", _club_name(str(deal.get("from_club_id", ""))), false],
 		["TO", _club_name(str(deal.get("to_club_id", ""))), false],
 		["FEE", MarketCurrency.format(int(deal.get("fee", 0))), false],
 	]
+	if state == MarketDealRecords.CLEARANCE_PENDING and str(deal.get("clears_on", "")) != "":
+		items.append(["CLEARS", str(deal.get("clears_on", "")), false])
+	items.append(["AGENT", MarketCurrency.format(int(deal.get("agent_fee", 0))), false])
+	items.append(["BONUS", MarketCurrency.format(int(deal.get("signing_bonus", 0))), false])
+	var extra := MarketAttribution.extras(deal)
+	items.append(["SELL-ON", _sell_on_line(deal, extra.get("sell_on", {})), false])
+	items.append(["SOLIDARITY", _solidarity_line(extra.get("solidarity", [])), false])
+	var training: Dictionary = extra.get("training", {})
+	if not training.is_empty() and int(training.get("amount", 0)) > 0:
+		items.append(["TRAINING", MarketCurrency.format(int(training["amount"])), false])
 	var reason := str(deal.get("reason", ""))
 	if reason != "":
 		items.append(["REASON", MarketDealCopy.reason(reason), false])
 	out.append({"k": "kv", "items": items})
 	return out
+
+
+static func _sell_on_line(deal: Dictionary, share: Dictionary) -> String:
+	if not share.is_empty() and int(share.get("amount", 0)) > 0:
+		return "%s TO %s (%s)" % [MarketCurrency.format(int(share["amount"])),
+			_club_name(str(share.get("club_id", ""))), _percent(float(share.get("rate", 0.0)))]
+	var rate := float(deal.get("sell_on", 0.0))
+	if rate > 0.0:
+		return "%s ON NEXT SALE" % _percent(rate)
+	return "NONE"
+
+
+static func _solidarity_line(rows: Array) -> String:
+	var total := 0
+	for row in rows:
+		total += int((row as Dictionary).get("amount", 0))
+	if total <= 0:
+		return "NONE"
+	return MarketCurrency.format(total)
+
+
+static func _percent(rate: float) -> String:
+	return "%d%%" % int(round(rate * 100.0))
 
 
 static func loan_blocks(player_id: String) -> Array:
