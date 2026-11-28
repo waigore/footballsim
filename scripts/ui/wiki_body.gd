@@ -41,9 +41,9 @@ var names := InterestNames.new()
 var followed := {}
 
 func _ready() -> void:
-	f_bold = UiTheme.bold()
-	f_med = UiTheme.medium()
-	f_body = UiTheme.body()
+	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
+	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
+	f_body = load("res://fonts/Inter-Regular.ttf")
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
 

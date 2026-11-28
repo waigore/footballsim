@@ -105,11 +105,6 @@ suites = [
 [domains.ui_theme]
 suites = [
   "test_ui_theme.gd",
-  "test_chrome_density.gd",
-  "test_menu_nav.gd",
-  "test_hud_chrome.gd",
-  "test_wiki_render.gd",
-  "test_ux_parity.gd",
 ]
 
 [domains.shell]

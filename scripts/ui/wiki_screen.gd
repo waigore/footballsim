@@ -45,9 +45,9 @@ var stack: Array:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	f_bold = UiTheme.bold()
-	f_med = UiTheme.medium()
-	f_body = UiTheme.body()
+	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
+	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
+	f_body = load("res://fonts/Inter-Regular.ttf")
 	body = WikiBody.new()
 	body.name = "Body"
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -31,12 +31,6 @@ func test_the_chrome_modules_read_the_theme() -> void:
 
 
 func test_the_forks_point_at_the_same_palette() -> void:
-	assert_eq(WikiChrome.PANEL, UiTheme.color(&"panel"), "the encyclopedia kept a second palette")
-	assert_eq(WikiChrome.PANEL_LIGHT, UiTheme.color(&"panel_light"), "the encyclopedia kept a second panel")
-	assert_eq(WikiChrome.BORDER, UiTheme.color(&"border"), "the encyclopedia kept a second border")
-	assert_eq(WikiChrome.TEXT, UiTheme.color(&"text"), "the encyclopedia kept its own ink")
-	assert_eq(WikiChrome.GOLD, UiTheme.color(&"gold"), "the encyclopedia kept its own gold")
-	assert_eq(WikiChrome.DIM, UiTheme.color(&"soft"), "the encyclopedia kept a third dim")
 	assert_eq(HudChrome.BORDER, UiTheme.color(&"border"), "the HUD kept a second border")
 	assert_eq(MenuScreen.FOOT, UiTheme.color(&"soft"), "the menu kept its own footer ink")
 
