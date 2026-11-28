@@ -133,7 +133,7 @@ const TABLES := [
 	+ "competition_id TEXT NOT NULL, club_id TEXT NOT NULL DEFAULT '', "
 	+ "kind TEXT NOT NULL DEFAULT 'permanent', state TEXT NOT NULL DEFAULT 'registered', "
 	+ "reason TEXT NOT NULL DEFAULT '', deal_id TEXT NOT NULL DEFAULT '', "
-	+ "season_index INTEGER NOT NULL DEFAULT 0, "
+	+ "season_index INTEGER NOT NULL DEFAULT 0, u21_exempt INTEGER NOT NULL DEFAULT 0, "
 	+ "PRIMARY KEY (player_id, competition_id));",
 	"CREATE TABLE IF NOT EXISTS player_loan (id TEXT PRIMARY KEY, "
 	+ "player_id TEXT NOT NULL, parent_club_id TEXT NOT NULL, "
@@ -144,6 +144,13 @@ const TABLES := [
 	+ "buy_fee INTEGER NOT NULL DEFAULT 0, trigger_kind TEXT NOT NULL DEFAULT '', "
 	+ "trigger_value TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'active', "
 	+ "deal_id TEXT NOT NULL DEFAULT '', returned_on TEXT NOT NULL DEFAULT '');",
+	"CREATE TABLE IF NOT EXISTS market_news (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+	+ "season_index INTEGER NOT NULL DEFAULT 0, date TEXT NOT NULL DEFAULT '', "
+	+ "kind TEXT NOT NULL, deal_id TEXT NOT NULL DEFAULT '', "
+	+ "player_id TEXT NOT NULL DEFAULT '', from_club_id TEXT NOT NULL DEFAULT '', "
+	+ "to_club_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL DEFAULT '', "
+	+ "dedupe_key TEXT NOT NULL DEFAULT '', "
+	+ "UNIQUE (dedupe_key));",
 ]
 
 const INDEXES := [

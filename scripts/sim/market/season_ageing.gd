@@ -71,5 +71,7 @@ static func release(player_id: String, club_id: String, season_index: int, date:
 		[player_id, season_index, club_id, competition_id, date])
 	for table in ["league_absence", "league_discipline"]:
 		PLDatabase.execute("DELETE FROM %s WHERE player_id = ?;" % table, [player_id])
+	PLDatabase.execute("DELETE FROM player_contract WHERE player_id = ?;", [player_id])
+	PLDatabase.execute("DELETE FROM player_registration WHERE player_id = ?;", [player_id])
 	PLDatabase.execute("DELETE FROM player WHERE id = ?;", [player_id])
 	return 1
