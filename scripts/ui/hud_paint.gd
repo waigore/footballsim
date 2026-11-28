@@ -2,7 +2,7 @@ class_name HudPaint
 extends RefCounted
 
 
-const BORDER := HudChrome.BORDER
+static var BORDER: Color = HudChrome.BORDER
 
 var ink: HudChrome = null
 var vp := Vector2(1600, 900)
@@ -17,7 +17,7 @@ func _init(surface: HudChrome, viewport_size: Vector2) -> void:
 func compact() -> bool:
 	return HudLayout.is_compact(vp)
 
-func panel(c: CanvasItem, fill: Color, r: Rect2, radius: int = 10, border: Color = BORDER) -> void:
+func panel(c: CanvasItem, fill: Color, r: Rect2, radius: int = 10, border: Color = Color(-1, -1, -1, -1)) -> void:
 	ink.panel(c, fill, r, radius, border)
 
 func text(c: CanvasItem, pos: Vector2, s: String, size: int, color: Color, font: Font, outline: int = 0, outline_col: Color = Color(0, 0, 0, 0.5)) -> void:
