@@ -169,6 +169,68 @@ func test_a_cup_fixture_takes_a_watch_flag() -> void:
 	assert_eq(int(row.get("watched", 0)), 1, "a cup fixture dropped its watch flag")
 	assert_true(season.set_watch(str(fx["id"]), false), "a cup watch could not be cleared")
 
+
+func test_a_watched_cup_tie_settles_through_the_engine() -> void:
+	var shared_slug := season.save.slug
+	var run := LeagueSeason.create("Watched Cup", "generated", "fixture_days", SEED + 41,
+		["PL"], true)
+	assert_not_null(run, "the watched-cup season could not be created")
+	var fx := PLDatabase.row(
+		"SELECT * FROM league_fixture WHERE competition_id = 'CS' AND stage = 'F' "
+		+ "AND status = 'pending' LIMIT 1;")
+	assert_false(fx.is_empty(), "the Shield fixture is missing")
+	var fixture_id := str(fx["id"])
+	var before := PLDatabase.row(
+		"SELECT SUM(played) AS n FROM league_table WHERE competition_id = 'PL';")
+	assert_true(run.set_watch(fixture_id, true), "the cup watch was refused")
+	var watch := run.start_watch(fixture_id)
+	assert_eq(str(watch.get("fixture_id", "")), fixture_id, "the cup watch did not open")
+	var engine := MatchEngine.new(SEED + 11, str(watch["home"]), str(watch["away"]))
+	engine.score[0] = 1
+	engine.score[1] = 1
+	engine.phase = "full_time"
+	run.record_engine(engine)
+	var stored := run.report(fixture_id)
+	assert_true(bool(stored.get("played", false)), "the watched cup tie stayed unplayed")
+	assert_true(LeagueCupState.winner("CS") != "", "the watched Shield kept no winner")
+	var after := PLDatabase.row(
+		"SELECT SUM(played) AS n FROM league_table WHERE competition_id = 'PL';")
+	assert_eq(int(after["n"]), int(before["n"]), "a watched cup tie moved the league table")
+	assert_true(LeagueCupTie.record_engine(run, {}, 0, 0).is_empty(),
+		"an unknown cup fixture claimed a result")
+	var rows := PLDatabase.rows(
+		"SELECT * FROM league_fixture WHERE competition_id = 'FAC' AND stage = 'R1' "
+		+ "AND status = 'pending' ORDER BY id LIMIT 2;")
+	assert_gte(rows.size(), 2, "FA Cup first round lost its pending ties")
+	var fa: Dictionary = rows[0]
+	var flipped := fa.duplicate()
+	flipped["home_club_id"] = str(fa["away_club_id"])
+	flipped["away_club_id"] = str(fa["home_club_id"])
+	var away_side := LeagueCupTie.record_engine(run, flipped, 2, 0)
+	assert_true(str(away_side.get("winner", "")) != "",
+		"an away-legged watch did not crown a winner")
+	var level := LeagueCupTie.record_engine(run, rows[1], 0, 0)
+	assert_true(bool(level.get("extra_time", false)) or int((level.get("pens", Vector2i(-1, -1)) as Vector2i).x) >= 0,
+		"a level FA Cup watch skipped extra time and penalties")
+	assert_true(str(level.get("winner", "")) != "", "a level FA Cup watch crowned no winner")
+	var league_fx := PLDatabase.row(
+		"SELECT * FROM league_fixture WHERE stage = '' AND status = 'pending' "
+		+ "ORDER BY kickoff, id LIMIT 1;")
+	assert_false(league_fx.is_empty(), "no league fixture is pending")
+	assert_true(run.set_watch(str(league_fx["id"]), true), "a league watch was refused")
+	var league_watch := run.start_watch(str(league_fx["id"]))
+	var league_engine := MatchEngine.new(SEED + 13, str(league_watch["home"]),
+		str(league_watch["away"]))
+	league_engine.score[0] = 1
+	league_engine.score[1] = 0
+	league_engine.phase = "full_time"
+	run.record_engine(league_engine)
+	assert_true(bool(run.report(str(league_fx["id"])).get("played", false)),
+		"a watched league fixture stayed unplayed")
+	run.close()
+	season = LeagueSeason.open(shared_slug)
+	assert_not_null(season, "the shared cup season did not reopen")
+
 func test_a_cup_result_leaves_the_league_ledger_alone() -> void:
 	var fx := _pending_cup_fixture()
 	assert_false(fx.is_empty(), "no cup fixture is pending")
