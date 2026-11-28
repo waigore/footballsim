@@ -249,3 +249,55 @@ func test_the_picker_draws_its_league_door() -> void:
 	assert_true(game.select_open, "closing the sheet should return to the picker")
 	game._close_select()
 	game.paused = true
+
+
+func test_the_player_page_opens_full_and_its_door_flips_it() -> void:
+	Prefs.save_attrs("SIMPLIFIED")
+	var who := TestSquad.id_of("ENG-MUN1", "B. Fernandes")
+	game.wiki_host.open_page(WikiModel.PLAYER, who)
+	await get_tree().process_frame
+	var screen := _screen()
+	assert_true(screen.body.max_scroll() > 0.0, "the player page did not lay out")
+	screen.body.queue_redraw()
+	await get_tree().process_frame
+	var door: Dictionary = {}
+	for row in screen.body.rows():
+		if str(row.get("k", "")) == "door" and str(row.get("id", "")) == "attrs:FULL":
+			door = row
+			break
+	assert_false(door.is_empty(), "the player page drew no attribute door")
+	var at: Vector2 = screen.body.position + (door["rect"] as Rect2).get_center()
+	assert_eq(screen.body.button_id(at), "attrs:FULL", "the door does not answer its own press")
+	screen.click("attrs:FULL")
+	assert_eq(Prefs.load_attrs(), "FULL", "the door did not flip the reading")
+	await get_tree().process_frame
+	var grid: Dictionary = {}
+	for row in screen.body.rows():
+		if str(row.get("k", "")) == "gridrow":
+			grid = row
+			break
+	assert_false(grid.is_empty(), "the Full reading drew no grid")
+	assert_gte(int(grid.get("cols", 0)), 2, "the grid is not multi-column")
+	await get_tree().process_frame
+	screen.click("attrs:SIMPLIFIED")
+	assert_eq(Prefs.load_attrs(), "SIMPLIFIED", "the door did not flip back")
+	Prefs.save_attrs("SIMPLIFIED")
+	game.wiki_host.close()
+
+
+func test_the_keeper_page_draws_the_glove_grid() -> void:
+	Prefs.save_attrs("FULL")
+	game.wiki_host.open_page(WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "S. Lammens"))
+	await get_tree().process_frame
+	var screen := _screen()
+	var grid: Dictionary = {}
+	for row in screen.body.rows():
+		if str(row.get("k", "")) == "gridrow":
+			grid = row
+			break
+	assert_false(grid.is_empty(), "the keeper page drew no glove grid")
+	assert_eq((grid.get("groups", []) as Array).size(), 1, "the keeper grid is not one glove band")
+	screen.body.queue_redraw()
+	await get_tree().process_frame
+	Prefs.save_attrs("SIMPLIFIED")
+	game.wiki_host.close()

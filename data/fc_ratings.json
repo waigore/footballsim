@@ -1,5 +1,5 @@
 {
- "source": "EA SPORTS FC 26 \u2014 Sofifa-sourced player sheet (update 2025-09-19)",
+ "source": "EA SPORTS FC 26 — Sofifa-sourced player sheet (update 2025-09-19)",
  "sub_stats": [
   "acceleration",
   "sprint_speed",
@@ -309,6 +309,25 @@
    "slot_bias": 0.0
   },
   "ST": {
+   "weights": {
+    "acceleration": 3,
+    "sprint_speed": 5,
+    "reactions": 9,
+    "ball_control": 11,
+    "dribbling": 7,
+    "finishing": 20,
+    "heading_accuracy": 10,
+    "long_shots": 6,
+    "short_passing": 5,
+    "volleys": 3,
+    "aggression": 1,
+    "positioning": 14,
+    "strength": 5,
+    "sliding_tackle": 1
+   },
+   "slot_bias": 1.0
+  },
+  "CF": {
    "weights": {
     "acceleration": 3,
     "sprint_speed": 5,

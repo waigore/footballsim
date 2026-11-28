@@ -631,3 +631,22 @@ func test_a_league_watch_takes_away_the_picker_and_restart() -> void:
 			restart_live = bool(spec[3])
 	assert_true(restart_live, "a single match lost its RESTART")
 	hud.queue_free()
+
+func test_the_card_draws_the_full_sheet_on_a_desktop_and_keeps_its_bars_on_a_phone() -> void:
+	var eng := MatchEngine.new(41)
+	var hud := _hud(eng)
+	hud.game.focus_id = eng.players[2].id
+	hud.ui_scale = 1.0
+	hud.card.mode = "FULL"
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_gt(hud.card.rect_for(hud.design_vp()).size.y, 300.0, "the Full reading left the desktop column")
+	assert_gte(hud.card._subs(eng.players[2]).size(), 30, "the card found no sub-stat sheet")
+	var door: Rect2 = hud.card.attrs_rect(hud.design_vp())
+	assert_true(door.size.x > 100.0, "the desktop door is too narrow for its pair")
+	hud.card.mode = "SIMPLIFIED"
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_eq(hud.card.rect_for(hud.design_vp()), hud.card.rect_for(hud.design_vp()),
+		"the card moved when the reading changed")
+	hud.queue_free()

@@ -95,3 +95,37 @@ func test_a_keeper_synthesis_keeps_the_outfield_bars_low() -> void:
 	var keeper := FCRatings.synthesize(74.0, "GK", 0)
 	assert_lt(int(keeper["finishing"]), 45, "a synthesized keeper can finish")
 	assert_gt(int(keeper["gk_reflexes"]), 60, "a synthesized keeper cannot save")
+
+
+func test_the_synthesis_profiles_cover_every_position_the_game_uses() -> void:
+	var book := FCRatings.model()
+	var roles: Dictionary = (book.get("synthesis", {}) as Dictionary).get("roles", {})
+	assert_eq(roles.size(), 12, "the synthesis table lost a position")
+	for position in ["GK", "CB", "RB", "LB", "CDM", "CM", "CAM", "RM", "LM", "RW", "LW", "ST"]:
+		assert_true(roles.has(position), "%s has no synthesis profile" % position)
+		var profile: Dictionary = roles[position]
+		assert_eq(profile.size(), 34, "%s does not synthesize all 34 stats" % position)
+
+
+func test_every_role_maps_to_a_position_with_weights() -> void:
+	var book := FCRatings.model()
+	var table: Dictionary = book.get("role_position", {})
+	assert_gt(table.size(), 12, "the role map lost entries")
+	for role in table:
+		var position := str(table[role])
+		var spec: Dictionary = (book.get("positions", {}) as Dictionary).get(position, {})
+		assert_false(spec.is_empty(), "%s maps to %s with no weights" % [role, position])
+		var total := 0
+		for key in spec.get("weights", {}):
+			total += int((spec["weights"] as Dictionary)[key])
+		assert_eq(total, 100, "%s does not sum to 100" % position)
+
+
+func test_a_card_never_leaves_the_printable_range() -> void:
+	for goal_base in [40.0, 60.0, 78.0, 95.0]:
+		var subs := FCRatings.synthesize(goal_base, "ST", 0)
+		var card := FCRatings.card(subs, "ST", 5)
+		assert_between(int(card["ovr"]), 1, 99, "an overall escaped the printable range")
+		for face in card["face"]:
+			assert_between(int((card["face"] as Dictionary)[face]), 1, 99,
+				"a face bar escaped the printable range")
