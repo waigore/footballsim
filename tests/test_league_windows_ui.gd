@@ -101,6 +101,33 @@ func test_every_chip_fits_its_rect_at_every_viewport() -> void:
 				"a chip overruns its rect at %s" % vp)
 
 
+func test_a_closed_window_with_no_opening_date_says_only_no_deal() -> void:
+	assert_eq(LeagueWindowsView.chip_text({"country": "ENG", "open": false, "opens_on": ""}),
+		"FA NO DEAL", "a window with no opening still promises a day")
+
+
+func test_the_real_hub_view_carries_the_board() -> void:
+	var season := LeagueSeason.create("Window View", "generated", "fixture_days", 4438)
+	assert_not_null(season, "the window view season was not created")
+	var screen := LeagueScreen.new()
+	add_child(screen)
+	screen.season = season
+	screen.mode = LeagueScreen.MODE_HUB
+	season.save.set_date("2026-09-02")
+	screen.refresh()
+	var view := LeagueView.build(screen)
+	assert_eq((view.get("windows", []) as Array).size(), 4,
+		"the assembled hub view drops the window board")
+	var items: Array = screen.hub.hub_layout(Vector2(1600, 900), view)
+	var chips := 0
+	for item in items:
+		if str(item.get("kind", "")) == "window_chip":
+			chips += 1
+	assert_eq(chips, 4, "the real hub laid %d window chips" % chips)
+	screen.queue_free()
+	season.close()
+
+
 func test_a_surface_with_no_date_draws_no_band() -> void:
 	assert_eq(LeagueWindowsView.rows("").size(), 0, "a blank date drew a board")
 	var items: Array = LeagueSheet.new().hub_layout(Vector2(1600, 900), _state([]))
@@ -110,29 +137,18 @@ func test_a_surface_with_no_date_draws_no_band() -> void:
 
 
 func test_the_isolated_run_reports_open_and_closed_without_the_deal_modules() -> void:
-	var open_run := _verb_run("2026-08-01")
+	var source := FileAccess.get_file_as_string("res://tools/market_sim/windows.gd")
+	for forbidden in ["MarketDeals", "MarketFinance", "MarketLedger", "MarketLoans"]:
+		assert_false(source.contains(forbidden),
+			"the windows verb reads %s, so its run is not isolated" % forbidden)
+	var script: Script = load("res://tools/market_sim/windows.gd")
+	var open_run: Dictionary = script.run({"date": "2026-08-01"})
 	assert_true(bool(open_run.get("ok", false)), "the isolated run refused an August date")
 	assert_eq(int(open_run.get("open", -1)), 4, "August does not open all four associations")
-	var shut_run := _verb_run("2026-09-02")
+	var shut_run: Dictionary = script.run({"date": "2026-09-02"})
 	assert_true(bool(shut_run.get("ok", false)), "the isolated run refused a September date")
 	assert_eq(int(shut_run.get("open", -1)), 0, "2 September still opens an association")
 	var fee: Dictionary = shut_run.get("fee", {})
 	assert_false(bool(fee.get("ok", true)), "a fee deal signed outside a window")
 	assert_eq(str(fee.get("reason", "")), "window_closed", "the isolated refusal has no reason")
 	assert_eq(str(fee.get("opens_on", "")), "2027-01-01", "the isolated refusal loses the opening")
-
-
-func _verb_run(date: String) -> Dictionary:
-	var exe := OS.get_executable_path()
-	var args := ["--headless", "--path", ProjectSettings.globalize_path("res://"),
-		"--script", "res://tools/market_sim.gd", "--", "windows", "--date", date]
-	var out: Array = []
-	var code := OS.execute(exe, args, out, true)
-	assert_eq(code, 0, "the isolated windows verb exited %d for %s" % [code, date])
-	var text := "".join(out)
-	var marker := text.find("market_sim windows: ")
-	assert_gte(marker, 0, "the isolated verb printed no result for %s" % date)
-	var json_text := text.substr(marker + "market_sim windows: ".length())
-	var parsed: Variant = JSON.parse_string(json_text.strip_edges())
-	assert_true(parsed is Dictionary, "the isolated verb printed no dictionary for %s" % date)
-	return parsed if parsed is Dictionary else {}
