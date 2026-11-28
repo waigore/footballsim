@@ -36,6 +36,8 @@ static func zone_color(band: String) -> Color:
 		return Color(0.45, 0.85, 0.55)
 	if band == "playoff":
 		return Color(0.93, 0.68, 0.34)
+	if band == "playout":
+		return Color(0.86, 0.50, 0.36)
 	if band == "relegation":
 		return UiChrome.C_DANGER
 	return UiChrome.C_DIM
@@ -50,6 +52,10 @@ static func competition_chip_label(row: Dictionary, width: float) -> String:
 			return "BL"
 		"BL2":
 			return "2.BL"
+		"SA":
+			return "SA"
+		"SB":
+			return "SB"
 		"PL":
 			return "PL"
 		"LL":

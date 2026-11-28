@@ -80,16 +80,16 @@ static func team_strength(team: Dictionary) -> Dictionary:
 			def_num += keeper * 1.6
 			def_w += 1.6
 			continue
-		var push: float = Attrs.role_push(role)
+		var push: float = AttrRoles.role_push(role)
 
 		attack_num += (sho * 0.60 + dri * 0.30 + pas * 0.10) * (0.25 + push)
 		attack_w += 0.25 + push
-		if Attrs.is_mid(role):
+		if AttrRoles.is_mid(role):
 			mid_sum += pas * 0.45 + dri * 0.30 + dfn * 0.25
 			mid_n += 1
-		if Attrs.is_defender(role) or role in ["RDM", "LDM", "CDM"]:
-			def_num += (dfn * 0.70 + phy * 0.20 + ovr * 0.10) * (1.15 if Attrs.is_defender(role) else 0.65)
-			def_w += 1.15 if Attrs.is_defender(role) else 0.65
+		if AttrRoles.is_defender(role) or role in ["RDM", "LDM", "CDM"]:
+			def_num += (dfn * 0.70 + phy * 0.20 + ovr * 0.10) * (1.15 if AttrRoles.is_defender(role) else 0.65)
+			def_w += 1.15 if AttrRoles.is_defender(role) else 0.65
 
 	var midfield := mid_sum / float(mid_n) if mid_n > 0 else (attack_num / maxf(attack_w, 0.01) + def_num / maxf(def_w, 0.01)) * 0.5
 	return {

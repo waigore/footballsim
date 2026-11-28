@@ -6,7 +6,7 @@ const ACCENT := "#f7c948"
 
 const SHORT := {
 	"BL": "BL", "BL2": "2.BL", "CH": "CHAMP", "LL": "LA LIGA",
-	"L1": "L1", "L2": "L2", "NL": "NL", "PL": "PL",
+	"L1": "L1", "L2": "L2", "NL": "NL", "PL": "PL", "SA": "SERIE A", "SB": "SERIE B",
 }
 
 

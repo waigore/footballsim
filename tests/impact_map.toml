@@ -175,6 +175,9 @@ suites = [
   # The Relegation and the membership swap (#240): the tie, the bands and the
   # save's new tiers.
   "test_german_relegation.gd",
+  # The Italian pair (#420): the seed's Serie A and Serie B, their bands and the
+  # season that promotes three and drops three.
+  "test_italian_pyramid.gd",
 ]
 
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
@@ -218,6 +221,9 @@ suites = [
   # The English pyramid (#258/#259/#260): five linked tiers, the 2026/27
   # play-offs and the membership swap that follows them.
   "test_english_pyramid.gd",
+  # The Italian pyramid (#420): the Serie A/Serie B pair, its six-team bracket,
+  # the 14-point skip, the 16th-17th play-out and the three-up three-down swap.
+  "test_italian_pyramid.gd",
   # The table's form reading (DR-20261128-12): the fold over the ledger's
   # played fixtures and the rows the season state decorates with it.
   "test_form_guide.gd",
@@ -532,6 +538,14 @@ match = "scripts/sim/attributes.gd*"
 domain = "match_engine"
 
 [[rules]]
+match = "scripts/sim/attr_roles.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "scripts/sim/attr_keeper.gd*"
+domain = "match_engine"
+
+[[rules]]
 match = "scripts/sim/pitch_queries.gd*"
 domain = "pitch_queries"
 
@@ -787,6 +801,12 @@ domain = "shell"
 # the table with them. One suite pins the reading against the ledger.
 [[rules]]
 match = "tests/test_form_guide.gd*"
+domain = "league"
+
+# The Italian pyramid's own suite (#420): the pair's tiers, rules, bracket,
+# play-out and swap, pinned against the shipped seed.
+[[rules]]
+match = "tests/test_italian_pyramid.gd*"
 domain = "league"
 
 # ------------------------------------------------------------- project ---

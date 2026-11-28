@@ -107,7 +107,7 @@ func _defence_shape(p: Variant, fallback: Vector2, dlines: Dictionary = {}) -> V
 	var ball = e.ball
 	var dist_to_own: float = ball.pos.distance_to(own)
 	var target: Vector2 = fallback
-	var is_back: bool = Attrs.is_defender(p.role)
+	var is_back: bool = AttrRoles.is_defender(p.role)
 	var is_holder: bool = p.role in ["RDM", "LDM", "CDM"]
 
 	if dist_to_own < 21.0 and is_back:
@@ -254,7 +254,7 @@ func assign_marks() -> void:
 		for p in e.players:
 			if p.team == t or p.sent_off or p.is_gk:
 				continue
-			if not (Attrs.is_defender(p.role) or p.role in ["RDM", "LDM", "CDM"]):
+			if not (AttrRoles.is_defender(p.role) or p.role in ["RDM", "LDM", "CDM"]):
 				continue
 			defenders.append(p)
 			p.mark_id = -1
