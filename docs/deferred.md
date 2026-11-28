@@ -19,7 +19,7 @@ Rules: [wiki](https://github.com/waigore/footballsim/wiki).
 | Whistle goals; roundup; encyclopedia; ToI Watch | DR-20261125-04 / 07 / 08 / 09 |
 | Shape-pass; hubs; match billing; phone tap; `SKIP` | DR-20261125-11 / 26-01 / 26-06 / 28-02 / 03 / 05 |
 | Club ids; player UUIDs; assists; FC cards | DR-20261128-16 / 19 / 20; `fc_ratings.gd` |
-| Domestic cups (ENG/ESP/GER/ITA) hubs, watch, draws | DR-20261128-17 / 22; `league_cup_*.gd`; [#455](https://github.com/waigore/footballsim/issues/455)–[#480](https://github.com/waigore/footballsim/issues/480) |
+| Domestic cups (ENG/ESP/GER/ITA) + season-two pools | DR-20261128-17 / 22 / 36; `league_cup_*.gd`; [#455](https://github.com/waigore/footballsim/issues/455)–[#480](https://github.com/waigore/footballsim/issues/480), [#506](https://github.com/waigore/footballsim/issues/506) |
 | UEFA data, sim, hub, stages, draws, encyclopedia | DR-20261128-15; `league_uefa_*.gd`; [#435](https://github.com/waigore/footballsim/issues/435)–[#437](https://github.com/waigore/footballsim/issues/437) |
 | Multi-season settle, archive, age/retire, NEW SEASON | DR-20261128-30; `scripts/sim/market/`; [#440](https://github.com/waigore/footballsim/issues/440) |
 | Contracts, windows and club money | DR-20261128-23 / 24 / 32; `market_*.gd`; [#441](https://github.com/waigore/footballsim/issues/441)–[#443](https://github.com/waigore/footballsim/issues/443) |
@@ -31,7 +31,7 @@ Rules: [wiki](https://github.com/waigore/footballsim/wiki).
 |------|-----|-------|
 | 1 | Transfer market (L6+) | loans, clauses, clearance, lists, FFP — [#438](https://github.com/waigore/footballsim/issues/438), [#444](https://github.com/waigore/footballsim/issues/444)–[#454](https://github.com/waigore/footballsim/issues/454), [#473](https://github.com/waigore/footballsim/issues/473) |
 | 2 | Spanish La Liga 2 pyramid | DR-20261128-33 designed; [#496](https://github.com/waigore/footballsim/issues/496)–[#500](https://github.com/waigore/footballsim/issues/500) |
-| 3 | Season-two cup & UEFA fields | Rollover clears drops only — [#506](https://github.com/waigore/footballsim/issues/506), [#481](https://github.com/waigore/footballsim/issues/481); DR-35 |
+| 3 | Season-two UEFA fields | Cups done [#506](https://github.com/waigore/footballsim/issues/506); UEFA [#481](https://github.com/waigore/footballsim/issues/481); DR-35 |
 | 4 | Native match hot loop | DR-20261123-02 under 120 s; tick still GDScript |
 | 5 | Cup-tied eligibility | Wiki deferred; needs registration ([#448](https://github.com/waigore/footballsim/issues/448)) |
 
