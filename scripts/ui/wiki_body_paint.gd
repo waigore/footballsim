@@ -21,6 +21,10 @@ static func row(body: WikiBody, row: Dictionary, rect: Rect2, hovered: bool) -> 
 		_thead(body, row, rect)
 	elif kind == "trow":
 		_trow(body, row, rect, hovered)
+	elif kind == "gridrow":
+		_gridrow(body, row, rect)
+	elif kind == "door":
+		_door(body, row, rect, hovered)
 
 
 static func _section(body: WikiBody, row: Dictionary, rect: Rect2) -> void:
@@ -166,6 +170,51 @@ static func _trow(body: WikiBody, row: Dictionary, rect: Rect2, hovered: bool) -
 static func _clip(s: String, max_chars: int) -> String:
 	return s if s.length() <= max_chars else s.substr(0, max_chars - 1) + "…"
 
+
+static func _gridrow(body: WikiBody, row: Dictionary, rect: Rect2) -> void:
+	var groups: Array = row.get("groups", [])
+	var cols: int = maxi(int(row.get("cols", 3)), 1)
+	var row_h: float = float(row.get("row_h", WikiBody.GRID_ROW))
+	var cell_w: float = rect.size.x / float(cols)
+	for i in range(groups.size()):
+		var group: Dictionary = groups[i]
+		var x: float = rect.position.x + cell_w * float(i)
+		var right: float = x + cell_w - 10.0
+		_text(body, Vector2(x, rect.position.y + 14.0), str(group.get("title", "")), 9,
+			WikiChrome.GOLD, true)
+		body.draw_line(Vector2(x, rect.position.y + 18.0), Vector2(right, rect.position.y + 18.0),
+			Color(1, 1, 1, 0.08), 1)
+		var cells: Array = group.get("cells", [])
+		for j in range(cells.size()):
+			var cell: Array = cells[j]
+			var y: float = rect.position.y + WikiBody.GRID_HEAD + row_h * float(j) + 1.0
+			_text(body, Vector2(x, y + row_h * 0.66), str(cell[0]), 10,
+				Color(0.62, 0.72, 0.78), true)
+			_text_right(body, right, y + row_h * 0.66, str(cell[1]), 12,
+				Color(0.92, 0.95, 0.96), true)
+
+
+static func _door(body: WikiBody, row: Dictionary, rect: Rect2, hovered: bool) -> void:
+	var accent := Color(str(row.get("accent", ""))) if str(row.get("accent", "")) != "" \
+		else WikiChrome.GOLD
+	var on := bool(row.get("on", false))
+	if on:
+		body.draw_rect(rect, Color(accent, 0.16), true)
+		body.draw_rect(rect, Color(accent, 0.55), false, 1.0)
+	else:
+		body.draw_rect(rect, Color(0.075, 0.105, 0.125, 0.95 if not hovered else 1.0), true)
+		body.draw_rect(rect, Color(1, 1, 1, 0.07), false, 1.0)
+	var ink: Color = accent if on or hovered else Color(0.62, 0.71, 0.76)
+	_text_center(body, rect, str(row.get("text", "")), 11, ink, true)
+
+
+static func _text_center(body: WikiBody, rect: Rect2, s: String, size_px: int, color: Color,
+		bold: bool) -> void:
+	var font: Font = body.f_bold if bold else body.f_body
+	var px := WikiChrome.text_size(size_px)
+	var w: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	var at := Vector2(rect.position.x + (rect.size.x - w) * 0.5, rect.position.y + rect.size.y * 0.66)
+	body.draw_string(font, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, color)
 
 static func _row_baseline(rect: Rect2) -> float:
 	if rect.size.y > 30.0:

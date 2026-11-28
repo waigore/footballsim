@@ -535,9 +535,28 @@ func test_the_paused_banner_resumes_when_the_chrome_is_hidden() -> void:
 	hud.queue_redraw()
 	await get_tree().process_frame
 	var vp: Vector2 = hud.design_vp()
-	var banner := Rect2(vp.x * 0.5 - 130.0, vp.y * 0.5 - 27.0, 260.0, 54.0)
+	var banner := Rect2(vp.x * 0.5 - 150.0, vp.y * 0.5 - 27.0, 300.0, 54.0)
 	assert_eq(hud.button_at(banner.get_center()), "pause",
 		"a hidden chrome's PAUSED banner pointed at a RESUME door that is not on screen")
+	var chip := Rect2(banner.position.x + 160.0, banner.position.y + 13.0, 116.0, 28.0)
+	assert_eq(hud.button_at(chip.get_center()), "pause",
+		"the RESUME chip is painted but does not answer its own press")
+	hud.queue_free()
+
+
+func test_the_docked_resume_chip_is_a_real_door_on_a_desktop_too() -> void:
+	var eng := MatchEngine.new(203)
+	var hud := _hud(eng)
+	hud.touch = false
+	hud.ui_scale = 1.0
+	hud.game.paused = true
+	hud.set_hud_visible(false, true)
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var vp: Vector2 = hud.design_vp()
+	var chip := Rect2(vp.x * 0.5 - 140.0, vp.y * 0.5 - 14.0, 116.0, 28.0)
+	assert_eq(hud.button_at(chip.get_center()), "pause",
+		"a desktop reader with the chrome hidden had no RESUME to click")
 	hud.queue_free()
 
 func test_a_finished_match_offers_no_play_doors() -> void:
@@ -630,4 +649,23 @@ func test_a_league_watch_takes_away_the_picker_and_restart() -> void:
 		if str(spec[0]) == "restart":
 			restart_live = bool(spec[3])
 	assert_true(restart_live, "a single match lost its RESTART")
+	hud.queue_free()
+
+func test_the_card_draws_the_full_sheet_on_a_desktop_and_keeps_its_bars_on_a_phone() -> void:
+	var eng := MatchEngine.new(41)
+	var hud := _hud(eng)
+	hud.game.focus_id = eng.players[2].id
+	hud.ui_scale = 1.0
+	hud.card.mode = "FULL"
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_gt(hud.card.rect_for(hud.design_vp()).size.y, 300.0, "the Full reading left the desktop column")
+	assert_gte(hud.card._subs(eng.players[2]).size(), 30, "the card found no sub-stat sheet")
+	var door: Rect2 = hud.card.attrs_rect(hud.design_vp())
+	assert_true(door.size.x > 100.0, "the desktop door is too narrow for its pair")
+	hud.card.mode = "SIMPLIFIED"
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_eq(hud.card.rect_for(hud.design_vp()), hud.card.rect_for(hud.design_vp()),
+		"the card moved when the reading changed")
 	hud.queue_free()

@@ -168,10 +168,63 @@ func test_fixtures_cover_the_season() -> void:
 func test_player_dossier_carries_snapshot_and_career() -> void:
 	var p := PLRepository.shared().player(TestSquad.id_of("ENG-MUN1", "B. Fernandes"))
 	assert_eq(str(p["club_id"]), "ENG-MUN1", "the dossier lost its club")
-	assert_eq(int(p["ovr"]), 88, "ratings are the game's own dataset and must survive")
+	assert_between(int(p["ovr"]), 80, 96, "an elite playmaker fell outside a believable card")
 	assert_gte(int(p["season"].get("matches", 0)), 1, "no real-world season line")
 	assert_gte(int(p["career"].get("matches", 0)), 1, "no career line")
 	assert_gte(int(p["age"]), 18, "no identity line from the snapshot")
+
+
+func test_every_seed_player_ships_the_full_sub_stat_sheet() -> void:
+	var keys := FCRatings.sub_stat_keys()
+	assert_eq(keys.size(), 34, "the derive model lost its sub-stat list")
+	var rows := PLDatabase.rows("SELECT id, subs, extras FROM player;")
+	assert_gt(rows.size(), 4000, "the seed lost its squads")
+	for row in rows:
+		var subs: Variant = JSON.parse_string(str(row["subs"]))
+		assert_true(subs is Dictionary, "%s carries no sub-stat sheet" % row["id"])
+		for key in keys:
+			assert_true((subs as Dictionary).has(key), "%s is missing %s" % [row["id"], key])
+
+
+func test_every_seed_card_is_derived_from_its_own_sheet() -> void:
+	var rows := PLDatabase.rows(
+		"SELECT id, role, ovr, pac, sho, pas, dri, def, phy, subs, extras FROM player;")
+	var checked := 0
+	for row in rows:
+		var subs: Variant = JSON.parse_string(str(row["subs"]))
+		if not (subs is Dictionary):
+			continue
+		var extras: Variant = JSON.parse_string(str(row["extras"]))
+		var rep := int((extras as Dictionary).get("international_reputation", 1)) if extras is Dictionary else 1
+		var face := FCRatings.face_stats(subs)
+		assert_eq(int(row["pac"]), int(face["pace"]), "%s pace is not derived" % row["id"])
+		assert_eq(int(row["sho"]), int(face["shooting"]), "%s shooting is not derived" % row["id"])
+		assert_eq(int(row["def"]), int(face["defending"]), "%s defending is not derived" % row["id"])
+		assert_eq(int(row["ovr"]), FCRatings.overall(subs, str(row["role"]), rep),
+			"%s overall is not derived" % row["id"])
+		checked += 1
+	assert_gt(checked, 4000, "the derivation check skipped most of the seed")
+
+
+func test_the_sim_player_shape_reads_subs_and_the_match_flag() -> void:
+	var p := PLRepository.shared().player(TestSquad.id_of("ENG-MUN1", "B. Fernandes"))
+	assert_true(p.get("subs") is Dictionary, "the repository does not feed the sub-stat sheet")
+	assert_eq((p.get("subs", {}) as Dictionary).size(), 34, "the sheet is short of the 34 fields")
+	assert_true(p.get("extras") is Dictionary, "the repository dropped the card extras")
+	assert_true(typeof(p.get("ratings_matched")) == TYPE_BOOL, "the match flag is not a bool")
+
+
+func test_top_league_first_choice_players_are_sofifa_matched() -> void:
+	for competition_id in ["PL", "LL", "BL"]:
+		var rows := PLDatabase.rows(
+			"SELECT p.ratings_matched, p.squad FROM player p JOIN club c ON c.id = p.club_id" +
+			" WHERE c.competition_id = '%s' AND p.squad != 'bench';" % competition_id)
+		assert_gt(rows.size(), 100, "%s has no shipped XI" % competition_id)
+		var hit := 0
+		for row in rows:
+			hit += int(row["ratings_matched"])
+		var cover := float(hit) / float(rows.size())
+		assert_gte(cover, 0.9, "%s XI is only %.1f%% Sofifa-matched" % [competition_id, cover * 100.0])
 
 func test_leaders_are_ordered() -> void:
 	var leaders := PLRepository.shared().leaders(6, "goals", "PL")

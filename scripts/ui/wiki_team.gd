@@ -9,7 +9,17 @@ const STYLE_LABELS := [
 ]
 
 
-static func page(club_id: String) -> Dictionary:
+static func _bars(p: Dictionary) -> Array:
+	"""The six face bars a squad row shows in the Full view."""
+	if str(p.get("role", "")) == "GK":
+		var gk: Dictionary = p.get("gk", {})
+		return [int(gk.get("div", 0)), int(gk.get("han", 0)), int(gk.get("kic", 0)),
+			int(gk.get("ref", 0)), int(gk.get("spd", 0)), 0]
+	return [int(p.get("pac", 0)), int(p.get("sho", 0)), int(p.get("pas", 0)),
+		int(p.get("dri", 0)), int(p.get("def", 0)), int(p.get("phy", 0))]
+
+
+static func page(club_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 	var club := WikiModel.repo().club(club_id)
 	if club.is_empty():
 		return WikiLeague.page()
@@ -63,15 +73,31 @@ static func page(club_id: String) -> Dictionary:
 	out["blocks"].append({"k": "section", "text": "SQUAD"})
 	var squad := WikiModel.repo().squad(club_id)
 	var absences := WikiAbsence.statuses(club_id)
+	var view := AttrView.normalize(mode)
+	var full := view == "FULL"
+	out["blocks"].append({"k": "door", "items": [
+		{"text": "SIMPLIFIED", "id": "attrs:SIMPLIFIED",
+			"accent": WikiModel.hex(club.get("color", Color.WHITE)), "on": not full},
+		{"text": "FULL", "id": "attrs:FULL",
+			"accent": WikiModel.hex(club.get("color", Color.WHITE)), "on": full},
+	]})
 	var squad_rows: Array = []
 	for p in squad:
+		var cells: Array = [str(p["number"]), str(p["name"]), str(p["pos"]), str(p["ovr"])]
+		if full:
+			for bar in _bars(p):
+				cells.append(str(bar))
 		squad_rows.append({
-			"cells": [str(p["number"]), str(p["name"]), str(p["pos"]), str(p["ovr"])],
+			"cells": cells,
 			"target": {"page": WikiModel.PLAYER, "id": str(p["id"])},
 		})
 	var squad_head := ["#", "PLAYER", "POS", "OVR"]
 	var squad_widths := [0.09, 0.55, 0.19, 0.17]
 	var squad_text := [1, 2]
+	if full:
+		squad_head = ["#", "PLAYER", "POS", "OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY"]
+		squad_widths = [0.05, 0.29, 0.09, 0.07, 0.07, 0.07, 0.07, 0.07, 0.07, 0.07]
+		squad_text = [1, 2]
 	if not absences.is_empty():
 		squad_head.append("STATUS")
 		squad_widths = [0.07, 0.34, 0.13, 0.10, 0.36]
