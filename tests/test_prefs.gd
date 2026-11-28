@@ -4,8 +4,9 @@ extends GdToolsTest
 var P := TestScratch.file("test_prefs_issue36.cfg")
 
 func after_each() -> void:
-	if FileAccess.file_exists(P):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(P))
+	for path in [P, A]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func test_a_missing_file_falls_back_to_a_sensible_default() -> void:
 	assert_false(FileAccess.file_exists(P), "the probe file should start absent")
@@ -39,3 +40,19 @@ func test_a_wrong_value_type_falls_back() -> void:
 	cfg.set_value(Prefs.SECTION, Prefs.KEY_BGM, "loud")
 	assert_eq(cfg.save(P), OK, "could not write the type probe")
 	assert_almost_eq(Prefs.load_bgm(P), Prefs.DEFAULT_BGM, 0.0001, "a string volume did not default")
+
+
+var A := TestScratch.file("test_prefs_attrs_issue411.cfg")
+
+func test_the_attribute_view_defaults_to_simplified() -> void:
+	assert_eq(Prefs.load_attrs(A), "SIMPLIFIED", "a missing preference did not default to Simplified")
+	assert_eq(Prefs.DEFAULT_ATTRS, "SIMPLIFIED", "the shipped default moved")
+
+func test_the_attribute_view_survives_a_save_and_load() -> void:
+	assert_true(Prefs.save_attrs("FULL", A), "saving the attribute view failed")
+	assert_eq(Prefs.load_attrs(A), "FULL", "the Full view did not survive a relaunch")
+
+func test_a_junk_attribute_view_falls_back_to_simplified() -> void:
+	Prefs.save_attrs("TINY", A)
+	assert_eq(Prefs.load_attrs(A), "SIMPLIFIED", "an unknown mode was not normalised")
+	assert_eq(Prefs.normalize_attrs("full"), "SIMPLIFIED", "case folding invented a mode")

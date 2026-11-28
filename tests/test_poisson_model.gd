@@ -27,11 +27,12 @@ func test_strength_reads_roles_not_just_overall() -> void:
 		"midfield reading is out of family with the rest of the squad")
 
 func test_equal_sides_get_home_advantage_only() -> void:
-	var m := _model(1, "ENG-MCI1", "ENG-MCI1")
-	assert_gt(m.lambda_home, m.lambda_away, "equal sides had no home advantage")
-	assert_almost_eq(m.lambda_home, PoissonModel.HOME_XG, 0.20, "home λ drifted from the league baseline")
-	assert_almost_eq(m.lambda_away, PoissonModel.AWAY_XG, 0.20, "away λ drifted from the league baseline")
-	assert_between(m.lambda_home + m.lambda_away, 2.30, 3.10, "an even fixture should sit near the league total")
+	var strong := _model(1, "ENG-MCI1", "ENG-MCI1")
+	assert_gt(strong.lambda_home, strong.lambda_away, "equal sides had no home advantage")
+	var even := _model(1, "ENG-BHA1", "ENG-BHA1")
+	assert_almost_eq(even.lambda_home, PoissonModel.HOME_XG, 0.20, "home λ drifted from the league baseline")
+	assert_almost_eq(even.lambda_away, PoissonModel.AWAY_XG, 0.20, "away λ drifted from the league baseline")
+	assert_between(even.lambda_home + even.lambda_away, 2.30, 3.10, "an even fixture should sit near the league total")
 
 func test_rating_gap_drives_expected_goals() -> void:
 	var m := _model()

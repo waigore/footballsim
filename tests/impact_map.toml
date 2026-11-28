@@ -238,6 +238,9 @@ suites = [
   "test_pl_competitions.gd",
   # The player page reads his season match by match (DR-20261127-10).
   "test_wiki_player_log.gd",
+  # The Simplified / Full attribute sheet and the shared view preference (#411).
+  "test_attr_view.gd",
+  "test_fc_ratings.gd",
   "test_hud_layout.gd",
   "test_hud_chrome.gd",
   "test_touch_flow.gd",
@@ -651,6 +654,14 @@ domain = "hud_chrome"
 
 [[rules]]
 match = "scripts/ui/wiki_*.gd*"
+domain = "wiki"
+
+[[rules]]
+match = "scripts/ui/attr_view.gd*"
+domain = "wiki"
+
+[[rules]]
+match = "scripts/data/fc_ratings.gd*"
 domain = "wiki"
 
 # The drag/wheel/click grammar the league and wiki hosts both delegate to.

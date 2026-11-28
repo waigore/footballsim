@@ -163,7 +163,19 @@ func _player_row(row: Dictionary) -> Dictionary:
 		"phy": int(row["phy"]), "height": int(row["height"]), "gk": gk,
 		"squad": str(row["squad"]), "age": int(row["age"]), "nationality": str(row["nationality"]),
 		"date_of_birth": str(row["date_of_birth"]), "espn_id": str(row["espn_id"]),
+		"subs": _json_field(row.get("subs")),
+		"extras": _json_field(row.get("extras")),
+		"ratings_matched": int(row.get("ratings_matched", 0)) == 1,
 	}
+
+
+static func _json_field(raw: Variant) -> Dictionary:
+	if raw is Dictionary:
+		return raw
+	if raw == null or str(raw) == "":
+		return {}
+	var parsed: Variant = JSON.parse_string(str(raw))
+	return parsed if parsed is Dictionary else {}
 
 
 func player(player_id: String) -> Dictionary:
