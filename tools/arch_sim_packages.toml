@@ -1,0 +1,43 @@
+# Sim package manifest for arch-lint (issue #527, DR-20261128-38).
+#
+# Every scripts/sim/**/*.gd must map to exactly one package below by path
+# prefix. The sim root itself must stay empty (no .gd directly under
+# scripts/sim/), so ownership is unambiguous.
+#
+# Edges are declared one-way: `allowed_edges[SRC]` lists the packages SRC may
+# depend on by path (preload/load/extends "res://scripts/sim/...") or by symbol
+# (class_name references). Any edge not listed is a failure. A dependency that
+# is not one-way (i.e. the target lists SRC back) cannot appear: the DAG below
+# is acyclic by construction and lint_arch.py re-checks the transitive cycle.
+#
+# The ratchet lists are shrink-only: a PR may remove entries, never add them.
+
+[packages]
+attrs = "scripts/sim/attrs/"
+shared = "scripts/sim/shared/"
+match = "scripts/sim/match/"
+match_engine = "scripts/sim/match_engine/"
+commentary = "scripts/sim/commentary/"
+goal = "scripts/sim/goal/"
+league = "scripts/sim/league/"
+market = "scripts/sim/market/"
+season_bridge = "scripts/sim/season_bridge/"
+
+[allowed_edges]
+attrs = []
+shared = ["attrs"]
+match = ["attrs", "shared"]
+match_engine = ["attrs", "shared", "match"]
+commentary = ["match_engine"]
+goal = ["commentary"]
+league = ["shared", "goal", "market", "match_engine"]
+market = ["shared"]
+season_bridge = ["league", "market", "shared"]
+
+# Path prefixes or class names still pending a move/refactor. Shrink-only.
+# Empty today: the tree already satisfies placement and every edge.
+[root_allowlist]
+entries = []
+
+[edge_allowlist]
+entries = []
