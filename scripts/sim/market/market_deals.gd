@@ -296,11 +296,19 @@ static func _write_registration(deal: Dictionary, date: String, mode: Dictionary
 			"UPDATE player_registration SET state = 'closed', reason = 'moved', deal_id = ? "
 			+ "WHERE club_id = ? AND player_id = ? AND state <> 'closed';",
 			[str(deal.get("id", "")), seller, player_id])
-	PLDatabase.execute(
-		"INSERT OR REPLACE INTO player_registration (player_id, competition_id, club_id, kind, "
-		+ "state, reason, deal_id, season_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
-		[player_id, competition_id, buyer, str(deal.get("kind", PERMANENT)), state, reason,
-			str(deal.get("id", "")), int(deal.get("season_index", 0))])
+	SquadList.register(buyer, competition_id, player_id, state, reason,
+		str(deal.get("id", "")), int(deal.get("season_index", 0)),
+		str(deal.get("kind", PERMANENT)))
+	var refused := state == SquadList.INELIGIBLE
+	for listed in SquadList.entries(buyer):
+		if str(listed) == competition_id:
+			continue
+		var ok := bool(SquadList.verdict(buyer, str(listed), player_id).get("ok", true))
+		SquadList.register(buyer, str(listed), player_id,
+			SquadList.REGISTERED if ok and not refused else SquadList.INELIGIBLE,
+			"" if ok and not refused else MarketDealRules.LIST,
+			str(deal.get("id", "")), int(deal.get("season_index", 0)),
+			str(deal.get("kind", PERMANENT)))
 	return state
 
 

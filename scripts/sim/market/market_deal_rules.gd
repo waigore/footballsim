@@ -128,6 +128,22 @@ static func ffp(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
 static func list_check(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
 	if str(mode.get("list", "")) == "refuse":
 		return fail(LIST, "the squad list refuses the registration")
+	if bool(mode.get("force", false)):
+		return pass_with("forced")
+	var verdict := list_verdict(deal)
+	if not bool(verdict.get("ok", true)):
+		return fail(LIST, str(verdict.get("detail", "the squad list refuses him")))
+	return pass_with("")
+
+
+static func list_verdict(deal: Dictionary) -> Dictionary:
+	var buyer := str(deal.get("to_club_id", ""))
+	var player := str(deal.get("player_id", ""))
+	for competition_id in SquadList.entries(buyer):
+		var checked := SquadList.verdict(buyer, str(competition_id), player)
+		if not bool(checked.get("ok", true)):
+			return fail(LIST, "%s: %s" % [
+				LeagueUefa.name_of(str(competition_id)), str(checked.get("detail", ""))])
 	return pass_with("")
 
 

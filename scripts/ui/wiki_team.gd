@@ -111,6 +111,7 @@ static func page(club_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 		"widths": squad_widths, "text_cols": squad_text,
 		"rows": squad_rows,
 	})
+	out["blocks"].append_array(uefa_lists(club_id))
 	out["blocks"].append({"k": "section", "text": "RESULTS  ·  %s" % WikiLedger.ledger_label()})
 	var results: Array = []
 	for fx in WikiModel.repo().fixtures(club_id, 8):
@@ -193,6 +194,34 @@ static func currency_doors() -> Array:
 		doors.append({"text": str(code), "id": "currency:" + str(code),
 			"on": str(code) == active})
 	return doors
+
+
+static func uefa_lists(club_id: String) -> Array:
+	var out: Array = []
+	if not SquadList.available():
+		return out
+	for competition_id in SquadList.entries(club_id):
+		var reading := SquadList.reading(club_id, str(competition_id))
+		if reading.is_empty():
+			continue
+		out.append({"k": "section", "text": "%s LIST  ·  %d / %d" % [
+			str(reading["name"]).to_upper(), int(reading["slots_used"]), int(reading["slots"])]})
+		out.append({"k": "kv", "items": [
+			["STATE", str(reading["state"]).to_upper(), true],
+			["ASSOCIATION-TRAINED", "%d / %d" % [int(reading["trained"]),
+				int(reading["trained_min"])], false],
+		]})
+		var rows: Array = []
+		for player in reading["players"]:
+			var state := str(player["state"])
+			var cells: Array = [str(player["name"]), str(player["pos"]).to_upper(),
+				"YES" if bool(player["trained"]) else "NO",
+				"UNDER 21" if bool(player["exempt"]) else state.to_upper()]
+			rows.append({"cells": cells,
+				"target": {"page": WikiModel.PLAYER, "id": str(player["id"])}})
+		out.append({"k": "table", "cols": ["PLAYER", "POS", "TRAINED", "STATE"],
+			"widths": [0.44, 0.16, 0.18, 0.22], "text_cols": [0, 1, 2, 3], "rows": rows})
+	return out
 
 
 static func finance_blocks(out: Dictionary, club_id: String) -> void:

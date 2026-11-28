@@ -89,5 +89,12 @@
     "wage_min": 1,
     "years_max": 5,
     "years_min": 1
+  },
+  "list": {
+    "uefa": {
+      "slots": 25,
+      "trained_min": 4,
+      "u21_free": 1
+    }
   }
 }

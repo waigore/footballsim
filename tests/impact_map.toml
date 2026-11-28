@@ -344,6 +344,16 @@ suites = [
   "test_league_europe_ui.gd",
 ]
 
+# UEFA squad lists (#448): the 25-slot list, the U21 exemption, the
+# association-trained count, the force floor and the club page's list block.
+[domains.squad_list]
+suites = [
+  "test_squad_list.gd",
+  "test_market_deals.gd",
+  "test_wiki_model.gd",
+  "test_attr_view.gd",
+]
+
 # Domestic cup pools after NEW SEASON (#506): the rebuild beside the rollover
 # and the cups it redraws. Kept off the full league domain so the tier-1 gate
 # stays inside five minutes.
@@ -596,6 +606,15 @@ domain = "league"
 [[rules]]
 match = "scripts/sim/market/market_deal*.gd*"
 domain = "market_deals"
+
+# UEFA squad lists (#448): their own read model, kept off the league domain.
+[[rules]]
+match = "scripts/sim/market/squad_list.gd*"
+domain = "squad_list"
+
+[[rules]]
+match = "tests/test_squad_list.gd*"
+domain = "squad_list"
 
 [[rules]]
 match = "scripts/data/market_deal_copy.gd*"
