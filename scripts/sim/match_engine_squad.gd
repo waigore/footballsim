@@ -52,10 +52,12 @@ func _calibrate_finishing() -> void:
 	var defence: Vector2 = terms["defence"]
 	var ex := PoissonModel.side_exponents(h, a)
 	var total: float = PoissonModel.HOME_XG + PoissonModel.AWAY_XG
-	var open: float = (PoissonModel.HOME_XG * exp(ex.x) + PoissonModel.AWAY_XG * exp(ex.y)) / total
+	var open_total: float = (PoissonModel.HOME_XG * exp(ex.x) + PoissonModel.AWAY_XG * exp(ex.y)) / total
+	var open_home: float = minf(open_total, sqrt(open_total * exp(ex.x)))
+	var open_away: float = minf(open_total, sqrt(open_total * exp(ex.y)))
 	var venue: float = exp(XG_HOME_EDGE)
-	xg_form[0] = exp(XG_CONTEST_ELASTICITY * (attack.x + defence.x)) * venue * open
-	xg_form[1] = exp(XG_CONTEST_ELASTICITY * (attack.y + defence.y)) / venue * open
+	xg_form[0] = exp(XG_CONTEST_ELASTICITY * (attack.x + defence.x)) * venue * open_home
+	xg_form[1] = exp(XG_CONTEST_ELASTICITY * (attack.y + defence.y)) / venue * open_away
 
 
 func team_players(t: int) -> Array:
