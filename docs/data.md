@@ -24,7 +24,7 @@ La Liga (`LL`) and Germany's pair (`BL`, `BL2`) — 172 clubs. Every club id is
 country-stable (`ENG-MUN1`, `WAL-CAR1`) and every player id is a UUID; both are
 minted once and kept, so promotion and roster refreshes never rewrite identity.
 Abbreviations stay display-only; a Welsh club in the English pyramid reads
-`WAL-`. Rules: wiki [DR-20261128-01](https://github.com/waigore/footballsim/wiki/dr-20261128-01).
+`WAL-`. Rules: wiki [DR-20261128-16](https://github.com/waigore/footballsim/wiki/dr-20261128-16).
 
 Lower tiers play 24 clubs over 46 matchdays, German tiers 18 over 34; auto-sim
 reuses the PL envelope.
