@@ -18,7 +18,34 @@ static func build(season: LeagueSeason) -> Dictionary:
 	out["competitions"] = sections
 	out["one_podium"] = true
 	_end_of_linked_season(season, out)
+	_mark_playouts(out)
 	return out
+
+
+static func _mark_playouts(out: Dictionary) -> void:
+	var ties: Variant = out.get("playout", {})
+	if not ties is Dictionary or (ties as Dictionary).is_empty():
+		return
+	for section in (out.get("competitions", []) as Array):
+		var row: Dictionary = section
+		var tie: Variant = (ties as Dictionary).get(str(row.get("id", "")), {})
+		if not tie is Dictionary or (tie as Dictionary).is_empty():
+			continue
+		var entry := {
+			"position": int((tie as Dictionary).get("relegated_position", 0)),
+			"club": str((tie as Dictionary).get("relegated_club", "")),
+			"club_id": str((tie as Dictionary).get("relegated_club_id", "")),
+		}
+		var relegated: Array = row.get("relegated", [])
+		var placed := false
+		for i in range(relegated.size()):
+			if int((relegated[i] as Dictionary)["position"]) > int(entry["position"]):
+				relegated.insert(i, entry)
+				placed = true
+				break
+		if not placed:
+			relegated.append(entry)
+		row["relegated"] = relegated
 
 
 static func _end_of_linked_season(season: LeagueSeason, out: Dictionary) -> void:
@@ -26,7 +53,7 @@ static func _end_of_linked_season(season: LeagueSeason, out: Dictionary) -> void
 	if stored is String and str(stored) != "":
 		var parsed: Variant = JSON.parse_string(str(stored))
 		if parsed is Dictionary:
-			for key in ["playoffs", "pyramid", "relegation", "promotion"]:
+			for key in ["playoffs", "pyramid", "relegation", "promotion", "playout"]:
 				if (parsed as Dictionary).has(key):
 					out[key] = (parsed as Dictionary)[key]
 			return
@@ -38,6 +65,9 @@ static func _end_of_linked_season(season: LeagueSeason, out: Dictionary) -> void
 		if not pyramid.is_empty():
 			LeaguePyramid.apply(season, pyramid)
 			payload["pyramid"] = pyramid
+	var playouts := LeagueSerieB.playouts(season)
+	if not playouts.is_empty():
+		payload["playout"] = playouts
 	var tie := LeagueRelegation.build(season)
 	if not tie.is_empty():
 		payload["relegation"] = tie

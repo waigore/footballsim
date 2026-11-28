@@ -15,7 +15,7 @@ func after_all() -> void:
 
 func test_the_seed_carries_every_competition() -> void:
 	var all := PLCompetitions.all()
-	assert_eq(all.size(), 8, "the shipped seed should carry the whole pyramid")
+	assert_eq(all.size(), 10, "the shipped seed should carry the whole pyramid")
 	var ids: Array = []
 	for comp in all:
 		ids.append(str(comp["id"]))
@@ -23,6 +23,10 @@ func test_the_seed_carries_every_competition() -> void:
 	assert_has(ids, "LL", "the seed's La Liga is missing")
 	assert_has(ids, "BL", "the seed's Bundesliga is missing")
 	assert_has(ids, "BL2", "the seed's 2. Bundesliga is missing")
+	assert_has(ids, "SA", "the seed's Serie A is missing")
+	assert_has(ids, "SB", "the seed's Serie B is missing")
+	assert_eq(int(PLCompetitions.clubs("SA")), 20, "the Serie A club count is wrong")
+	assert_eq(int(PLCompetitions.clubs("SB")), 20, "the Serie B club count is wrong")
 
 	for cid in ["CH", "L1", "L2", "NL"]:
 		assert_has(ids, cid, "the seed's English tier %s is missing" % cid)
@@ -41,11 +45,13 @@ func test_the_shipped_hub_names_its_competition() -> void:
 	assert_eq(str(page["title"]), "PREMIER LEAGUE", "the hub title is not the competition's")
 	assert_true(str(page["subtitle"]).contains("20 CLUBS"), "the hub's club count is hard-coded")
 	var index := _chips(page)
-	assert_eq(index.size(), 8, "the competition index should hold every league")
+	assert_eq(index.size(), 10, "the competition index should hold every league")
 	assert_true(_chip_target(index, "LA LIGA", "LL"),
 		"the Premier League hub does not offer La Liga")
 	assert_true(_chip_target(index, "BUNDESLIGA", "BL"),
 		"the Premier League hub does not offer the Bundesliga")
+	assert_true(_chip_target(index, "SERIE A", "SA"),
+		"the Premier League hub does not offer Serie A")
 	var badge := 0
 	for item in index:
 		if str(item.get("text", "")) == "PREMIER LEAGUE":
@@ -65,7 +71,7 @@ func test_a_club_and_its_players_point_at_their_competition() -> void:
 
 func test_every_competition_gets_its_own_hub() -> void:
 	var all := PLCompetitions.all()
-	assert_eq(all.size(), 8, "the competitions were not all read")
+	assert_eq(all.size(), 10, "the competitions were not all read")
 	assert_eq(PLCompetitions.default_id(), "PL", "the default competition moved")
 	assert_eq(PLCompetitions.clubs("LL"), 20, "La Liga's club count is wrong")
 
@@ -75,7 +81,7 @@ func test_every_competition_gets_its_own_hub() -> void:
 		"the second hub kept the first's club count")
 	assert_eq(_rows_in(theirs, "LEAGUE TABLE"), 20, "the second hub shows the wrong table")
 	var index := _chips(theirs)
-	assert_eq(index.size(), 8, "the index does not list every competition")
+	assert_eq(index.size(), 10, "the index does not list every competition")
 	assert_true(_chip_target(index, "PREMIER LEAGUE", "PL"),
 		"the second hub does not offer the Premier League")
 

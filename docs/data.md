@@ -19,10 +19,10 @@ stats (accepted: the sim ledger belongs to one snapshot).
 
 ## Competitions
 
-Eight competitions: England's five linked tiers (`PL`, `CH`, `L1`, `L2`, `NL`),
-La Liga (`LL`) and Germany's pair (`BL`, `BL2`) — 172 clubs. Each owns an id
-namespace (`LL-BAR`, `CH-BIR`). The English lower tiers play 24 clubs over 46
-matchdays, the German tiers 18 over 34; auto-sim reuses the PL envelope.
+Ten competitions: England's five linked tiers (`PL`, `CH`, `L1`, `L2`, `NL`),
+La Liga (`LL`), Germany's pair (`BL`, `BL2`) and Italy's pair (`SA`, `SB`) — 212
+clubs, each with its own id namespace (`LL-BAR`, `SA-INT`). England's lower
+tiers play 24 clubs over 46 matchdays, Germany 18 over 34, Italy 20 over 38.
 
 ## Tool
 

@@ -44,6 +44,9 @@ func frame_height(view: Dictionary) -> float:
 
 		if brackets.has(str(section.get("id", ""))):
 			h += 6.0 + 16.0
+		var ties: Dictionary = summary_data.get("playout", {})
+		if ties.has(str(section.get("id", ""))):
+			h += 6.0 + 16.0
 		h += 12.0
 	if not (summary.get("relegation", {}) as Dictionary).is_empty():
 		h += 8.0 + 16.0
@@ -122,6 +125,13 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary)
 		if not bracket.is_empty():
 			y += 6.0
 			UiChrome.text(c, Vector2(24.0, y + 12.0), "PLAY-OFFS  %s" % str(bracket.get("text", "")),
+				10, UiChrome.C_GOLD, bold)
+			y += 16.0
+		var playout: Dictionary = (summary.get("playout", {}) as Dictionary).get(
+			str(section.get("id", "")), {})
+		if not playout.is_empty():
+			y += 6.0
+			UiChrome.text(c, Vector2(24.0, y + 12.0), "PLAY-OUT  %s" % str(playout.get("text", "")),
 				10, UiChrome.C_GOLD, bold)
 			y += 16.0
 		y += 6.0

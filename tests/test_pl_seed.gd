@@ -75,7 +75,7 @@ func test_the_seed_ships_the_multi_competition_set() -> void:
 			assert_true(str(id).begins_with(cid + "-"),
 				"%s does not carry its competition namespace" % id)
 	var all_ids := TeamData.team_ids()
-	assert_eq(all_ids.size(), 172, "the seed should ship the whole pyramid")
+	assert_eq(all_ids.size(), 212, "the seed should ship the whole pyramid")
 	var unique := {}
 	for id in all_ids:
 		unique[str(id)] = true

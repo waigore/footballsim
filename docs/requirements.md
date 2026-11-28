@@ -62,4 +62,4 @@ P1 = look; P4 = latency; P5 = agency.
 
 ## Non-goals
 
-Club-manager career; licensed data beyond shipped English pyramid, La Liga and German pair ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01)); photoreal/3D primary; desktop-only mobile.
+Club-manager career; licensed data beyond shipped English pyramid, La Liga, German pair and Italian pair ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01), [DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15)); photoreal/3D primary; desktop-only mobile.
