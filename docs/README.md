@@ -10,6 +10,7 @@ Every Markdown file at the repo root and under `docs/` must stay **≤ 500 words
 |-----|---------|
 | [Simulation rules (wiki)](https://github.com/waigore/footballsim/wiki) | Mechanics source of truth |
 | [requirements.md](requirements.md) | Pillars P1–P5 (`REQ-*`) |
+| [DR-20261128-37](https://github.com/waigore/footballsim/wiki/dr-20261128-37) | UI architecture: Controls, bus, one Theme, canvas budget (P1/P3) |
 | [rubric.md](rubric.md) | Evaluation gate (`RUB-*`) |
 | [deferred.md](deferred.md) | Deferred gaps ranked by impact |
 | [data.md](data.md) | PL snapshot: seed, cache versioning, refresh tool |

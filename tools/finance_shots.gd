@@ -35,7 +35,7 @@ func _initialize() -> void:
 		return
 	var club_id := str(PLDatabase.row(
 		"SELECT id FROM club WHERE competition_id = 'PL' ORDER BY name LIMIT 1;").get("id", ""))
-	MarketFinance.month(season.save.current_date())
+	MarketFinanceFlows.month(season.save.current_date())
 	MarketFinance.post_amortisation(club_id, season.save.current_date(), 40000000, 4, "")
 	scene.menus.close()
 	await _frames(3)
