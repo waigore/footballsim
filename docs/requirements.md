@@ -49,8 +49,6 @@ Score with [`rubric.md`](rubric.md). **Rules SoT:** [wiki](https://github.com/wa
 
 ## P5 — Usability & agency
 
-P1 = look; P4 = latency; P5 = agency.
-
 - **REQ-P5-01** — God-like interventions on main surfaces; clear critical entry.
 - **REQ-P5-02** — Choice primary; chores batched/deferred.
 - **REQ-P5-03** — Competitive / world actions in scope discoverable, not buried.
@@ -62,4 +60,4 @@ P1 = look; P4 = latency; P5 = agency.
 
 ## Non-goals
 
-Club-manager career; licensed data beyond the four shipped chains ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01), [DR-20261128-18](https://github.com/waigore/footballsim/wiki/dr-20261128-18)); photoreal/3D primary; desktop-only mobile; UEFA stubs ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15))
+Club-manager career; licensed data beyond the English, Spanish, German and Italian chains ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01), [DR-20261128-18](https://github.com/waigore/footballsim/wiki/dr-20261128-18)) — cup and UEFA stubs are identity plus a rating band ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15)); photoreal/3D primary; desktop-only mobile.
