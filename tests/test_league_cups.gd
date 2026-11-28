@@ -45,6 +45,16 @@ func test_the_cups_start_beside_the_league() -> void:
 	var tie: Dictionary = (names[0]["ties"] as Array)[0]
 	assert_true(str(tie["home"]) != "" and str(tie["away"]) != "", "the Shield has no pairing")
 
+func test_a_regional_round_pairs_every_club() -> void:
+	var row := PLDatabase.row(
+		"SELECT COUNT(*) AS n FROM cup_tie WHERE competition_id = 'EFLC' AND round_id = 'PR';")
+	assert_eq(int(row["n"]), 2, "the regional preliminary round dropped a club")
+	var clubs := PLDatabase.row(
+		"SELECT COUNT(DISTINCT club_id) AS n FROM (SELECT home_club_id AS club_id "
+		+ "FROM cup_tie WHERE competition_id = 'EFLC' AND round_id = 'PR' UNION "
+		+ "SELECT away_club_id FROM cup_tie WHERE competition_id = 'EFLC' AND round_id = 'PR');")
+	assert_eq(int(clubs["n"]), 4, "the regional sections did not pair four clubs")
+
 func test_the_draw_is_deterministic() -> void:
 	var first := _fa_pairs(season)
 	var other := LeagueSeason.create("Cup Season Other", "generated", "fixture_days", SEED, ["PL"], true)

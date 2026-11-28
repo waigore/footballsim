@@ -58,12 +58,10 @@ static func _shuffle(ids: Array, rng: RandomNumberGenerator) -> void:
 
 
 static func _balance(north: Array, south: Array) -> void:
-	if north.size() % 2 == 0:
-		return
-	if south.size() <= 1:
-		return
-	var moved: Variant = south.pop_back()
-	north.append(moved)
+	if north.size() % 2 == 1 and south.size() > 1:
+		north.append(south.pop_back())
+	elif south.size() % 2 == 1 and north.size() > 1:
+		south.append(north.pop_back())
 
 
 static func _pair(competition_id: String, round_id: String, ids: Array) -> Array:
