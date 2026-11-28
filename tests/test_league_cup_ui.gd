@@ -172,6 +172,12 @@ func test_a_cup_opens_its_rounds_and_bracket() -> void:
 	assert_eq(rounds.size(), 8, "the bracket lost a round")
 	for row in rounds:
 		assert_true(str((row as Dictionary).get("name", "")) != "", "a bracket round has no name")
+	var first_round: Dictionary = rounds[0]
+	var ties: Array = first_round.get("ties", [])
+	assert_eq(ties.size(), 40, "the bracket column lost its ties")
+	var tie: Dictionary = ties[0]
+	assert_true(str(tie.get("home_name", "")) != "" and str(tie.get("away_name", "")) != "",
+		"a bracket tie does not name both clubs")
 
 func test_a_played_cup_tie_opens_its_report() -> void:
 	create_season()

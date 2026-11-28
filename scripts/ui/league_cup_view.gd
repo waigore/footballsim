@@ -130,7 +130,7 @@ static func cup(season, competition_id: String, round_id: String) -> Dictionary:
 			"id": rid, "name": stage_name(competition_id, rid), "date": str(row.get("date", "")),
 			"count": decorated.size(), "complete": bool(row.get("complete", false)),
 			"selected": rid == chosen, "legs": int(row.get("legs", 1)),
-			"drawn": LeagueCup.has_round(competition_id, rid),
+			"drawn": LeagueCup.has_round(competition_id, rid), "ties": decorated,
 		})
 		if rid == chosen:
 			ties = decorated

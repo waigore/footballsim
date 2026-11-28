@@ -34,7 +34,7 @@ func _initialize() -> void:
 	screen.click("cupround:FAC:QF")
 	await _shot("cup_bracket_qf", _plain.bind(screen))
 	screen.click("back")
-	screen.click("cupdraw:FAC:QF")
+	screen.click("cupdraw:FAC:R1")
 	await _frames(30)
 	await _shot("cup_draw", _plain.bind(screen))
 	screen.click("skiptodraw")
@@ -50,9 +50,11 @@ func _initialize() -> void:
 	screen.click("calendar")
 	await _shot("cup_calendar", _calendar.bind(screen))
 	screen.click("back")
-	season.save.set_status("complete")
-	season.save.reload()
-	screen.open_season(season, true)
+	var guard := 0
+	while season.matches_remaining() > 0 and guard < 200:
+		season.advance()
+		guard += 1
+	league.show_season(season)
 	await _shot("cup_podium", _plain.bind(screen))
 	_encyclopedia()
 	await _shot("cup_encyclopedia", _enc.bind())
@@ -70,7 +72,7 @@ func _play_round(screen: LeagueScreen, competition_id: String, round_id: String)
 
 
 func _encyclopedia() -> void:
-	scene.wiki_host.open(WikiModel.CUP, "FAC")
+	scene.wiki_host.open_page_over_league(WikiModel.CUP, "FAC")
 
 
 func _wizard_pose(league: LeagueHost) -> void:
@@ -82,7 +84,8 @@ func _calendar(screen: LeagueScreen) -> void:
 	var day := ""
 	for date in (screen.days_cache as Dictionary).keys():
 		var info: Dictionary = screen.days_cache[date]
-		if int((info.get("by_league", {}) as Dictionary).size()) == 3:
+		var by: Dictionary = info.get("by_league", {})
+		if by.has("CS") or by.has("EFLC") or by.has("FAC"):
 			day = str(date)
 			break
 	if day != "":
