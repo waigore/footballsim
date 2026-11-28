@@ -441,7 +441,7 @@ func test_the_sheet_chrome_keeps_back_top_left_and_the_primary_top_right() -> vo
 		assert_almost_eq(_item_rect(sheets["table"], "tbl:mode:compact").end.y, vp.y - 8.0, 0.5,
 			"COMPACT left the bottom bar")
 		assert_almost_eq(kick.end.y, vp.y - 8.0, 0.5, "FULL left the bottom bar")
-		assert_eq(SettingsScreen.back_rect(vp), Rect2(24.0, 12.0, 116.0, 44.0),
+		assert_eq(SettingsLayout.back_rect(vp), Rect2(24.0, 12.0, 116.0, 44.0),
 			"settings BACK is not top-left")
 		var picker = load("res://scripts/ui/team_select.gd").new()
 		assert_almost_eq(picker.back_rect(vp).position.x, 24.0, 0.5, "the picker's BACK is not top-left")
