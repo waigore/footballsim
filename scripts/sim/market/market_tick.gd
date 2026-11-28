@@ -31,6 +31,7 @@ static func step(season: LeagueSeason, day: String) -> void:
 	if day.ends_with("-01"):
 		MarketFinanceFlows.month(day)
 		MarketFinanceFlows.tick_gates(season, day)
+	MarketLoans.review(season, day)
 	if not enabled(season):
 		return
 	MarketAi.run_day(season, day)

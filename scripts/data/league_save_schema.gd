@@ -135,6 +135,15 @@ const TABLES := [
 	+ "reason TEXT NOT NULL DEFAULT '', deal_id TEXT NOT NULL DEFAULT '', "
 	+ "season_index INTEGER NOT NULL DEFAULT 0, "
 	+ "PRIMARY KEY (player_id, competition_id));",
+	"CREATE TABLE IF NOT EXISTS player_loan (id TEXT PRIMARY KEY, "
+	+ "player_id TEXT NOT NULL, parent_club_id TEXT NOT NULL, "
+	+ "loanee_club_id TEXT NOT NULL, season_index INTEGER NOT NULL DEFAULT 0, "
+	+ "start_date TEXT NOT NULL DEFAULT '', end_date TEXT NOT NULL DEFAULT '', "
+	+ "wage_parent INTEGER NOT NULL DEFAULT 0, wage_loanee INTEGER NOT NULL DEFAULT 0, "
+	+ "fee INTEGER NOT NULL DEFAULT 0, option_kind TEXT NOT NULL DEFAULT 'none', "
+	+ "buy_fee INTEGER NOT NULL DEFAULT 0, trigger_kind TEXT NOT NULL DEFAULT '', "
+	+ "trigger_value TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'active', "
+	+ "deal_id TEXT NOT NULL DEFAULT '', returned_on TEXT NOT NULL DEFAULT '');",
 ]
 
 const INDEXES := [
@@ -149,6 +158,9 @@ const INDEXES := [
 	"CREATE INDEX IF NOT EXISTS deal_player_idx ON deal (player_id, state);",
 	"CREATE INDEX IF NOT EXISTS deal_event_deal_idx ON deal_event (deal_id);",
 	"CREATE INDEX IF NOT EXISTS player_registration_club_idx ON player_registration (club_id, state);",
+	"CREATE INDEX IF NOT EXISTS player_loan_player_idx ON player_loan (player_id, status);",
+	"CREATE INDEX IF NOT EXISTS player_loan_parent_idx ON player_loan (parent_club_id, season_index);",
+	"CREATE INDEX IF NOT EXISTS player_loan_loanee_idx ON player_loan (loanee_club_id, season_index);",
 ]
 
 
@@ -193,82 +205,11 @@ static func valid(wanted: Array) -> Array:
 
 
 static func migrate() -> void:
-	for sql in TABLES:
-		PLDatabase.execute(sql)
-	for table in ["league_fixture", "league_table", "league_player_stat"]:
-		add_column(table, "competition_id", "TEXT NOT NULL DEFAULT ''")
-	add_column("league_fixture", "stage", "TEXT NOT NULL DEFAULT ''")
-	add_column("league_fixture", "leg", "INTEGER NOT NULL DEFAULT 0")
-	var hint_rows := hint()
-	var owner := str(hint_rows[0]) if not hint_rows.is_empty() else "PL"
-	for table in ["league_fixture", "league_table", "league_player_stat"]:
-		backfill(table, owner)
-	_rebuild_table_for_two_tables()
-	_rebuild_player_stat_for_season()
-	_rebuild_absence_for_competition()
-	_rebuild_discipline_for_competition()
-	for table in SEASON_TABLES:
-		add_column(table, "season_index", "INTEGER NOT NULL DEFAULT 0")
-	for sql in INDEXES:
-		PLDatabase.execute(sql)
-	create_two_table_index()
-	LeagueRules.migrate(owner)
-	add_column("club", "reserve_of", "TEXT NOT NULL DEFAULT ''")
+	LeagueSaveMigrate.run()
 
 
 static func ensure_schema(save: LeagueSave) -> void:
-	if not save.ensure_open():
-		return
-	for column in SIDE_COLUMNS:
-		add_column("league_table", column)
-	for table in ["league_fixture", "league_table", "league_player_stat"]:
-		add_column(table, "competition_id", "TEXT NOT NULL DEFAULT ''")
-		backfill(table, str(save.actives[0]) if not save.actives.is_empty() else "")
-
-
-	add_column("match_event", "penalty")
-	add_column("goal_highlight", "penalty")
-	add_column("league_fixture", "stage", "TEXT NOT NULL DEFAULT ''")
-	add_column("league_fixture", "leg", "INTEGER NOT NULL DEFAULT 0")
-	add_column("club", "reserve_of", "TEXT NOT NULL DEFAULT ''")
-	for cid in save.actives:
-		PLDatabase.execute(
-			"INSERT INTO save_competition (competition_id, active, position) VALUES (?, 1, ?) "
-			+ "ON CONFLICT(competition_id) DO UPDATE SET active = 1;",
-			[str(cid), save.actives.find(cid)])
-
-
-static func _rebuild_table_for_two_tables() -> void:
-	var row := PLDatabase.row(
-		"SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'league_table';")
-	if row.is_empty():
-		return
-	var sql := str(row.get("sql", ""))
-	if "PRIMARY KEY (club_id, competition_id)" in sql:
-		return
-	var have := {}
-	for column in PLDatabase.rows("PRAGMA table_info(league_table);"):
-		have[str(column["name"])] = true
-	if not have.has("competition_id"):
-		return
-	var carried := ["club_id", "competition_id"]
-	for column in ["played", "won", "drawn", "lost", "gf", "ga", "points"] + SIDE_COLUMNS:
-		if have.has(column):
-			carried.append(column)
-	PLDatabase.transaction("BEGIN TRANSACTION;")
-	PLDatabase.execute("ALTER TABLE league_table RENAME TO league_table_pre_two;")
-	PLDatabase.execute(TABLES[6])
-	PLDatabase.execute(
-		"INSERT INTO league_table (" + ", ".join(carried) + ") SELECT "
-		+ ", ".join(carried) + " FROM league_table_pre_two;")
-	PLDatabase.execute("DROP TABLE league_table_pre_two;")
-	PLDatabase.transaction("COMMIT;")
-
-
-static func create_two_table_index() -> void:
-	PLDatabase.execute(
-		"CREATE UNIQUE INDEX IF NOT EXISTS league_table_pair_idx "
-		+ "ON league_table (club_id, competition_id);")
+	LeagueSaveMigrate.ensure(save)
 
 
 static func player_stat_table() -> String:
@@ -278,85 +219,14 @@ static func player_stat_table() -> String:
 	return ""
 
 
-static func _rebuild_player_stat_for_season() -> void:
-	var row := PLDatabase.row(
-		"SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'league_player_stat';")
-	if row.is_empty():
-		return
-	var sql := str(row.get("sql", ""))
-	if "PRIMARY KEY (player_id, competition_id, club_id)" in sql:
-		return
-	var carried := []
-	for column in ["player_id", "competition_id", "club_id", "apps", "goals", "assists",
-			"yellow", "red"]:
-		carried.append(column)
-	PLDatabase.transaction("BEGIN TRANSACTION;")
-	PLDatabase.execute("ALTER TABLE league_player_stat RENAME TO league_player_stat_pre_season;")
-	PLDatabase.execute(player_stat_table())
-	var sets := carried.duplicate()
-	if _columns("league_player_stat_pre_season").has("season_index"):
-		sets.append("season_index")
-	PLDatabase.execute(
-		"INSERT INTO league_player_stat (" + ", ".join(sets) + ") SELECT "
-		+ ", ".join(sets) + " FROM league_player_stat_pre_season;")
-	PLDatabase.execute("DROP TABLE league_player_stat_pre_season;")
-	PLDatabase.transaction("COMMIT;")
-
-
-static func _rebuild_absence_for_competition() -> void:
-	if not _needs_competition_key("league_absence"):
-		return
-	PLDatabase.transaction("BEGIN TRANSACTION;")
-	PLDatabase.execute("ALTER TABLE league_absence RENAME TO league_absence_pre_comp;")
-	PLDatabase.execute(_create_sql("league_absence"))
-	PLDatabase.execute(
-		"INSERT INTO league_absence (player_id, competition_id, club_id, kind, grade, "
-		+ "days_left, matches_left, started_on, due_on, rate) "
-		+ "SELECT a.player_id, CASE WHEN a.kind = 'injury' THEN '' ELSE "
-		+ _club_competition("a") + " END, a.club_id, a.kind, a.grade, a.days_left, "
-		+ "a.matches_left, a.started_on, a.due_on, a.rate FROM league_absence_pre_comp a;")
-	PLDatabase.execute("DROP TABLE league_absence_pre_comp;")
-	PLDatabase.transaction("COMMIT;")
-
-
-static func _rebuild_discipline_for_competition() -> void:
-	if not _needs_competition_key("league_discipline"):
-		return
-	PLDatabase.transaction("BEGIN TRANSACTION;")
-	PLDatabase.execute("ALTER TABLE league_discipline RENAME TO league_discipline_pre_comp;")
-	PLDatabase.execute(_create_sql("league_discipline"))
-	PLDatabase.execute(
-		"INSERT INTO league_discipline (player_id, competition_id, club_id, yellows, yellow_mark) "
-		+ "SELECT d.player_id, " + _club_competition("d") + ", d.club_id, "
-		+ "COALESCE((SELECT SUM(s.yellow) FROM league_player_stat s "
-		+ "WHERE s.player_id = d.player_id AND s.competition_id = "
-		+ _club_competition("d") + "), 0), d.yellow_mark "
-		+ "FROM league_discipline_pre_comp d;")
-	PLDatabase.execute("DROP TABLE league_discipline_pre_comp;")
-	PLDatabase.transaction("COMMIT;")
-
-
-static func _needs_competition_key(table: String) -> bool:
-	var row := PLDatabase.row(
-		"SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?;", [table])
-	if row.is_empty():
-		return false
-	return not ("PRIMARY KEY (player_id, competition_id)" in str(row.get("sql", "")))
-
-
-static func _club_competition(alias: String) -> String:
-	return ("COALESCE((SELECT c.competition_id FROM club c WHERE c.id = %s.club_id), '')"
-		% alias)
-
-
-static func _create_sql(name: String) -> String:
+static func create_sql(name: String) -> String:
 	for sql in TABLES:
 		if "CREATE TABLE IF NOT EXISTS %s (" % name in sql:
 			return sql
 	return ""
 
 
-static func _columns(table: String) -> Dictionary:
+static func columns(table: String) -> Dictionary:
 	var out := {}
 	for row in PLDatabase.rows("PRAGMA table_info(%s);" % table):
 		out[str(row["name"])] = true

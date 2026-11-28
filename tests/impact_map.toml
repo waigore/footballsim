@@ -229,10 +229,7 @@ suites = [
 suites = [
   "test_league_save.gd",
   "test_market_contracts.gd",
-  "test_league_season.gd",
-  "test_multi_league.gd",
   "test_season_rollover.gd",
-  "test_league_system.gd",
 ]
 
 # Deal engine (#444): validator, commit, clearance, god force and the player
@@ -245,6 +242,23 @@ suites = [
   "test_market_windows.gd",
   "test_league_save.gd",
   "test_season_rollover.gd",
+  "test_market_loans.gd",
+  "test_market_clauses.gd",
+  "test_market_clearance.gd",
+]
+
+# Loans (#445), clauses and attribution (#446) and clearance (#447): three
+# levels on the L5 deal engine. They share the money and history modules, so a
+# change in any rides this domain.
+[domains.market_levels]
+suites = [
+  "test_market_loans.gd",
+  "test_market_clauses.gd",
+  "test_market_clearance.gd",
+  "test_market_deals.gd",
+  "test_market_contracts.gd",
+  "test_market_finance.gd",
+  "test_market_windows.gd",
 ]
 
 # Player encyclopedia page only: attributes, contracts, TRANSFER. Kept off the
@@ -595,11 +609,11 @@ domain = "cup_rollover"
 
 [[rules]]
 match = "scripts/sim/market/season_rollover.gd*"
-domain = "cup_rollover"
+domain = "market_deals"
 
 [[rules]]
 match = "tests/test_season_rollover.gd*"
-domain = "cup_rollover"
+domain = "market_deals"
 
 # Season helpers split out of the season loop to keep its P3 size ratchet.
 [[rules]]
@@ -620,6 +634,40 @@ domain = "market_deals"
 match = "tests/test_market_deals.gd*"
 domain = "market_deals"
 
+# Loans (#445), clauses and attribution (#446) and clearance (#447): their own
+# modules and suites. Before the broad market/** rule so they do not drag the
+# whole league domain into tier 1.
+[[rules]]
+match = "scripts/sim/market/market_loan*.gd*"
+domain = "market_levels"
+
+[[rules]]
+match = "scripts/sim/market/market_attribution.gd*"
+domain = "market_levels"
+
+[[rules]]
+match = "tests/test_market_loans.gd*"
+domain = "market_levels"
+
+[[rules]]
+match = "tests/test_market_clauses.gd*"
+domain = "market_levels"
+
+[[rules]]
+match = "tests/test_market_clearance.gd*"
+domain = "market_levels"
+
+# The money and the clock hooks the new levels ride: the ledger kinds, the
+# amortisation the FFP line reads and the per-day tick that reviews loans. They
+# stay on the narrow level domain instead of the broad league group.
+[[rules]]
+match = "scripts/sim/market/market_finance.gd*"
+domain = "market_levels"
+
+[[rules]]
+match = "scripts/sim/market/market_tick.gd*"
+domain = "market_levels"
+
 # The market's season modules (#440): settle, rollover, ageing, the archives,
 # the date shifts and the tick that hangs off the clock. Contracts (#441) ride
 # here too: the bootstrap envelope, expiry and options run on the same clock.
@@ -632,10 +680,11 @@ match = "tests/test_market_contracts.gd*"
 domain = "league"
 
 # The market's money (#442): revenue anchors, the ledger and the currency
-# display. It rides the market modules it reads.
+# display. Keep it on market_levels so a ledger edit does not pull the full
+# league surface into the 5-minute tier-1 job.
 [[rules]]
 match = "tests/test_market_finance.gd*"
-domain = "league"
+domain = "market_levels"
 
 [[rules]]
 match = "scripts/data/market_currency.gd*"
@@ -920,7 +969,7 @@ domain = "hud_chrome"
 # encyclopedia suite past the tier-1 5 min budget.
 [[rules]]
 match = "scripts/ui/wiki_player.gd*"
-domain = "wiki_player"
+domain = "market_levels"
 
 [[rules]]
 match = "scripts/ui/wiki_*.gd*"
