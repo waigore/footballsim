@@ -134,15 +134,17 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		"rect": LeagueExtra.back_rect(touch)})
 
 
+	var bar_top := vp.y - LeagueChrome.BAR_H + 6.0
+	var bar_h := UiChrome.tap_h(LeagueChrome.BAR_H - 14.0, touch)
 	items.append({"id": "tbl:mode:" + COMPACT, "kind": "button", "label": "COMPACT",
 		"pinned": true, "primary": reading == COMPACT,
-		"rect": Rect2(24.0, vp.y - LeagueChrome.BAR_H + 6.0, 104.0, LeagueChrome.BAR_H - 14.0)})
+		"rect": Rect2(24.0, bar_top, 104.0, bar_h)})
 	items.append({"id": "tbl:mode:" + FULL, "kind": "button", "label": "FULL",
 		"pinned": true, "primary": reading == FULL,
-		"rect": Rect2(134.0, vp.y - LeagueChrome.BAR_H + 6.0, 78.0, LeagueChrome.BAR_H - 14.0)})
+		"rect": Rect2(134.0, bar_top, 78.0, bar_h)})
 	items.append({"id": "tbl:mode:" + FORM, "kind": "button", "label": "FORM",
 		"pinned": true, "primary": reading == FORM,
-		"rect": Rect2(218.0, vp.y - LeagueChrome.BAR_H + 6.0, 62.0, LeagueChrome.BAR_H - 14.0)})
+		"rect": Rect2(218.0, bar_top, 62.0, bar_h)})
 	return items
 
 

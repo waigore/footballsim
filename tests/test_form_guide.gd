@@ -171,6 +171,25 @@ func test_each_mark_carries_its_own_colour() -> void:
 		"the reading has no club column beside its pips")
 
 
+func test_a_touch_pose_lays_the_reading_doors_at_the_thumb_floor() -> void:
+	var view := LeagueTableView.new()
+	view.mode = LeagueTableView.FORM
+	var touch_view := _view(_rows())
+	touch_view["touch"] = true
+	var doors := 0
+	for item in view.layout(Vector2(913, 411), touch_view):
+		if str(item["kind"]) != "button" or not str(item["id"]).begins_with("tbl:mode:"):
+			continue
+		doors += 1
+		assert_gte((item["rect"] as Rect2).size.y, float(UiChrome.TAP_H),
+			"%s is under the thumb floor" % str(item["label"]))
+	assert_eq(doors, 3, "a touch table lost a reading door")
+	for item in view.layout(Vector2(1600, 900), _view(_rows())):
+		if str(item["kind"]) == "button" and str(item["id"]) == "tbl:mode:form":
+			assert_almost_eq((item["rect"] as Rect2).size.y, LeagueChrome.BAR_H - 14.0, 0.01,
+				"the desktop form door left its dense pitch")
+
+
 func _fixture(home: String, away: String, home_goals: int, away_goals: int) -> Dictionary:
 	return {"home_club_id": home, "away_club_id": away,
 		"home_goals": home_goals, "away_goals": away_goals}
