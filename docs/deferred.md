@@ -50,8 +50,8 @@ Shipped (wiki domains playable):
 | Training, live data, mid-season seed refresh | Season Out of scope (v1); DR-20261128-25 / 30 |
 | VAR; weather; referee outcome bias | Match playable-slice Out |
 | Concussion subs; extra injury stoppage beyond added-time | Substitutions Out; DR-20261122-05 |
-| Licensed data beyond ENG/ESP/GER/ITA chains | Non-goals; DR-20261123-01 / 28-15 / 28-18 (stubs OK) |
+| Licensed data beyond English chain and ESP/GER/ITA pairs | Non-goals; DR-20261123-01 / 28-15 / 28-18 / 28-33 (stubs OK) |
 | Match HUD under the non-match type rule | DR-20261124-03 |
 | Photoreal / 3D primary | requirements Non-goals |
-| Serie C; German-style Relegation for Italy | Season Out of scope |
+| Serie C; Primera Federación; German-style Relegation for Italy | Season Out of scope |
 | UEFA FFP; live FX; player development | Finances/Transfers Out; DR-20261128-24 / 25 / 29 |

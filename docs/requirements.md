@@ -20,7 +20,7 @@ Score with [`rubric.md`](rubric.md). **Rules SoT:** [wiki](https://github.com/wa
 - **REQ-P1-04** — Meaningful motion; never hide rules or block input (P4).
 - **REQ-P1-05** — Phone, tablet, desktop; no hover-only critical UX; resolution-independent UI.
 - **REQ-P1-06** — Optional music; mute/volume; don’t obscure feedback.
-- **REQ-P1-07** — Readable UI: contrast, type, density; non-match chrome (menus, settings, league hub/table, calendar, encyclopedia, full-time summary, confirms) reads comfortably and type/chrome scale with the viewport on every platform; match overlay excepted.
+- **REQ-P1-07** — Readable UI: contrast, type, density; non-match chrome (menus, settings, league hub/table, calendar, encyclopedia, full-time summary, confirms) reads comfortably; type/chrome scale with the viewport everywhere; match overlay excepted.
 - **REQ-P1-08** — Distinct icon per player-facing entity type; shared style; no placeholder/emoji/default.
 
 ## P2 — Rules fidelity
@@ -60,4 +60,4 @@ Score with [`rubric.md`](rubric.md). **Rules SoT:** [wiki](https://github.com/wa
 
 ## Non-goals
 
-Club-manager career; licensed data beyond the English, Spanish, German and Italian chains ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01), [DR-20261128-18](https://github.com/waigore/footballsim/wiki/dr-20261128-18)) — cup and UEFA stubs are identity plus a rating band ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15)); photoreal/3D primary; desktop-only mobile.
+Club-manager career; licensed data beyond the English chain and Spanish, German and Italian pairs ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01), [DR-20261128-18](https://github.com/waigore/footballsim/wiki/dr-20261128-18), [DR-20261128-33](https://github.com/waigore/footballsim/wiki/dr-20261128-33)) — cup and UEFA stubs are identity plus a rating band ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15)); photoreal/3D primary; desktop-only mobile.
