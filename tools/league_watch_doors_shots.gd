@@ -38,6 +38,7 @@ func _initialize() -> void:
 	print("SINGLE viewer=", scene.home_id, " v ", scene.away_id, " friendly=", scene.billing.friendly)
 	await _probe("single match")
 	await _shot("issue-418-single-match-desktop")
+	scene.paused = true
 	scene.hud.set_hud_visible(false, true)
 	scene.hud.queue_redraw()
 	await _frames(3)
