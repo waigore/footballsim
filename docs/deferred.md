@@ -15,9 +15,9 @@ Shipped (wiki domains playable; DRs accepted):
 | Live tactics + IFAB substitutions | DR-20261122-05; MatchAI |
 | Extra time + pens when a winner is required | DR-20261126-12 |
 | Poisson / Dixon–Coles outcomes | `poisson_model.gd`; DR-20261122-04 |
-| Physics↔Poisson finishing + level/gradient | DR-20261124-08; [#33](https://github.com/waigore/footballsim/issues/33) closed |
-| Poisson λ on the last-10 PL scoring envelope | DR-20261125-19; [#172](https://github.com/waigore/footballsim/issues/172) |
-| Engine λ, keeper dive, openness (n=96 on λ) | DR-20261126-07/08; [#192](https://github.com/waigore/footballsim/issues/192) closed |
+| Physics↔Poisson finishing | DR-20261124-08; [#33](https://github.com/waigore/footballsim/issues/33) closed |
+| Poisson λ on the last-10 PL envelope | DR-20261125-19; [#172](https://github.com/waigore/footballsim/issues/172) |
+| Engine λ, keeper dive, openness | DR-20261126-07/08; [#192](https://github.com/waigore/footballsim/issues/192) closed |
 | PL + English pyramid + LL + German pair | `data/`; DR-20261123-01 / 13 / 17 |
 | Season saves, calendar, Continue/watch | `league_season.gd`; DR-20261124-01 / 06 |
 | Multi-league save; play-offs; German Relegation | DR-20261126-10 / 14 / 17; [#185](https://github.com/waigore/footballsim/issues/185) |
@@ -26,15 +26,15 @@ Shipped (wiki domains playable; DRs accepted):
 | Non-match type / viewport scale | DR-20261124-03 |
 | Live `tempo` on the tactics board | DR-20261122-02; drives play now |
 | Woodwork, interceptions, momentum, stored rating | DR-20261125-01 / 02 |
-| Whistle card lists the goals that made the score | `goal_sheet`; DR-20261125-04 |
+| Whistle card lists the goals | `goal_sheet`; DR-20261125-04 |
 | Roundup scorers name their club | [#125](https://github.com/waigore/footballsim/issues/125); DR-20261125-07 |
 | Encyclopedia reads the open season | `league_ledger.gd`; DR-20261125-08 |
-| Teams of Interest: followed club's games stay on Watch | `league_interest.gd`; DR-20261125-09; [#104](https://github.com/waigore/footballsim/issues/104) |
+| Teams of Interest: followed games stay on Watch | `league_interest.gd`; DR-20261125-09; [#104](https://github.com/waigore/footballsim/issues/104) |
 | Shape pass shares one ball path per pass | DR-20261125-11 |
 | Encyclopedia competition hubs + index | `pl_competitions.gd`; DR-20261126-01; [#190](https://github.com/waigore/footballsim/issues/190) |
 | One competition per match; places as ordinals | `match_billing.gd`; DR-20261126-06; [#209](https://github.com/waigore/footballsim/issues/209), [#207](https://github.com/waigore/footballsim/issues/207) |
-| Phone tap targets: every non-match control ≥44 dp | DR-20261128-02 / 03; [#369](https://github.com/waigore/footballsim/issues/369) |
-| Match `SKIP` runs the engine on to the next whistle | DR-20261128-05; [#381](https://github.com/waigore/footballsim/issues/381) |
+| Phone tap targets ≥44 dp | DR-20261128-02 / 03; [#369](https://github.com/waigore/footballsim/issues/369) |
+| Match `SKIP` runs on to the next whistle | DR-20261128-05; [#381](https://github.com/waigore/footballsim/issues/381) |
 
 ## Remaining gaps (impact order)
 
