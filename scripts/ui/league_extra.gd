@@ -119,6 +119,8 @@ static func draw_league_head(c: CanvasItem, rect: Rect2, competition_id: String,
 	var text := "%s  ·  GW %d" % [name, matchday]
 	if LeagueCup.is_cup(competition_id):
 		text = "%s  ·  %s" % [name, LeagueCupView.stage_name(competition_id, stage)]
+	if LeagueUefa.is_continental(competition_id):
+		text = "UEFA NIGHT  ·  %s  ·  %s" % [name, LeagueEurope.badge(stage)]
 	UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
 		text, 10, UiChrome.C_GOLD, fonts["bold"])
 	var width := UiChrome.text_width(fonts["bold"], text, 10)

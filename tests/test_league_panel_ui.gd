@@ -68,8 +68,9 @@ func open_panel() -> void:
 
 func press_nav(id: String) -> void:
 	open_panel()
-	for i in range(LeaguePanel.ITEMS.size()):
-		if str(LeaguePanel.ITEMS[i]["id"]) == id:
+	var list: Array = panel().items()
+	for i in range(list.size()):
+		if str(list[i]["id"]) == id:
 			press(panel().item_rect(vp(), i).get_center())
 			panel().settle()
 			return

@@ -316,6 +316,20 @@ hello
     _assert(table["settings"] == "https://example.com/settings.png", table)
     _assert(parse_ux_screenshot_table("no section") == {}, "empty parse")
 
+    from check_screens import _parse_verdict
+
+    passed, reason = _parse_verdict(
+        '[{"rubric_id": "overflow", "pass": true, "reason": "ok"},'
+        ' {"rubric_id": "cta", "pass": false, "reason": "no cta"}]'
+    )
+    _assert(passed is False and reason == "no cta", "bare array must fail on a row")
+    passed, reason = _parse_verdict(
+        '{"results": [{"rubric_id": "a", "pass": true, "reason": "fine"}]}'
+    )
+    _assert(passed is True and reason == "fine", "results envelope must pass")
+    passed, reason = _parse_verdict('{"pass": true, "reason": "single"}')
+    _assert(passed is True, "single verdict must pass")
+
     print("test_catalogue: OK")
     return 0
 
