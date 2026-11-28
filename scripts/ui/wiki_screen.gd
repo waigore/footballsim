@@ -130,6 +130,14 @@ func set_attr_view(mode: String) -> bool:
 	return true
 
 
+func set_currency(code: String) -> bool:
+	if not MarketCurrency.currencies().has(code):
+		return false
+	Prefs.save_currency(code)
+	_refresh()
+	return true
+
+
 func _strip_sync() -> void:
 	var width: float = float(WikiHeader.metrics(design_vp(), is_compact(), touch, false)["width"])
 	strip.rebuild(page_data, f_bold, width)
