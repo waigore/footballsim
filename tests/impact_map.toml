@@ -258,6 +258,21 @@ suites = [
   "test_attr_view.gd",
   "test_market_deals.gd",
   "test_market_contracts.gd",
+  "test_market_ai.gd",
+]
+
+# Market AI and valuation (#450): the band table, needs, shortlist, the tick,
+# completeness and mode equivalence. Kept off the full league domain.
+[domains.market_ai]
+suites = [
+  "test_market_ai.gd",
+  "test_market_deals.gd",
+  "test_market_finance.gd",
+  "test_market_contracts.gd",
+  "test_market_windows.gd",
+  "test_season_rollover.gd",
+  "test_league_season.gd",
+  "test_wiki_model.gd",
 ]
 
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the

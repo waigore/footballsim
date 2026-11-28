@@ -23,9 +23,23 @@ invariant.
 | `windows` | the association calendar | open and closed by date alone |
 | `ledger` | revenue, wages, amortisation, prize | ledger kinds, currency display |
 | `deal` | one permanent move end to end | the validators, the commit, clearance |
+| `ai` | a world season of AI deals | volume, spread, mode equivalence, no stranded club |
 
 Each verb owns a file under `tools/market_sim/`; `tools/market_sim.gd` only
 parses flags, loads the verb and prints its dictionary.
+
+## The ai verb
+
+```bash
+godot --headless --path . --script res://tools/market_sim.gd -- ai \
+  --clubs 172 --days 365 --mode fixture_days
+```
+
+It plays a season with the market AI on and prints the deal transcript as one
+JSON line: signed count, value spread, the refusal reasons and any club left
+short of eleven. `--mode every_day` must print the same transcript — the
+run exits `1` if a club is stranded or no deal signed. The AI never consumes
+`LeagueSeason.rng`; every draw is keyed `(seed, "market", date, key)`.
 
 ## The ledger verb
 

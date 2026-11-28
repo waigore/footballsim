@@ -89,5 +89,83 @@
     "wage_min": 1,
     "years_max": 5,
     "years_min": 1
+  },
+  "valuation": {
+    "bands": [
+      {"min_ovr": 85, "value": 90000000},
+      {"min_ovr": 80, "value": 45000000},
+      {"min_ovr": 75, "value": 22000000},
+      {"min_ovr": 70, "value": 10000000},
+      {"min_ovr": 65, "value": 4500000},
+      {"min_ovr": 60, "value": 1800000},
+      {"min_ovr": 0, "value": 400000}
+    ],
+    "age": [
+      {"max": 20, "mult": 1.15},
+      {"max": 23, "mult": 1.10},
+      {"max": 27, "mult": 1.00},
+      {"max": 30, "mult": 0.80},
+      {"max": 32, "mult": 0.60},
+      {"max": 34, "mult": 0.40},
+      {"max": 200, "mult": 0.25}
+    ],
+    "contract": [
+      {"min": 4, "mult": 1.10},
+      {"min": 3, "mult": 1.05},
+      {"min": 2, "mult": 1.00},
+      {"min": 1, "mult": 0.85},
+      {"min": 0, "mult": 0.55}
+    ],
+    "position": {
+      "default": 1.00,
+      "GK": 0.85,
+      "RB": 1.00,
+      "LB": 1.00,
+      "CB": 0.95,
+      "RCB": 0.95,
+      "LCB": 0.95,
+      "CDM": 1.00,
+      "RDM": 1.00,
+      "LDM": 1.00,
+      "CM": 1.00,
+      "RM": 1.08,
+      "LM": 1.08,
+      "CAM": 1.10,
+      "RW": 1.08,
+      "LW": 1.08,
+      "ST": 1.12
+    },
+    "form": {
+      "weight": 0.30,
+      "floor": 0.90,
+      "ceiling": 1.15,
+      "expected": {
+        "GK": 0.0,
+        "FB": 0.08,
+        "CB": 0.05,
+        "PIVOT": 0.10,
+        "WING": 0.28,
+        "CAM": 0.32,
+        "ST": 0.40
+      }
+    },
+    "wage_per_million": 2200,
+    "wage_step": 10,
+    "wage_uplift": 1.05
+  },
+  "need": {
+    "required": {"GK": 2, "DEF": 8, "MID": 8, "ATT": 5},
+    "quality_gap": 3,
+    "reserve_share": 0.10,
+    "severity_cap": 1.0
+  },
+  "ai": {
+    "deals_per_club_day": 0.028,
+    "shortlist_cap": 50,
+    "need_ceiling_min": 1.00,
+    "need_ceiling_max": 1.35,
+    "seller_floor_min": 0.75,
+    "seller_floor_max": 1.15,
+    "clearance_batch": 40
   }
 }

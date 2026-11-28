@@ -61,6 +61,7 @@ static func create(name: String, rules: Dictionary, seed: int = 0,
 		PLDatabase.reset()
 		LeagueSave.current = null
 		return null
+	save.put_meta(MarketTick.AI_KEY, "on")
 	return save
 
 
@@ -106,6 +107,8 @@ static func open(slug_or_path: String) -> LeagueSave:
 		LeagueRules.read(str(save.actives[0])))
 	LeagueSaveSchema.ensure_schema(save)
 	LeagueSave.current = save
+	MarketTick.invalidate()
+	MarketShortlist.reset()
 	return save
 
 
