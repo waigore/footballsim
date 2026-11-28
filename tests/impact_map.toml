@@ -364,6 +364,7 @@ suites = [
 suites = [
   "test_squad_list.gd",
   "test_market_deals.gd",
+  "test_strongest_xi.gd",
   "test_wiki_model.gd",
   "test_attr_view.gd",
 ]
@@ -610,6 +611,12 @@ domain = "market_deals"
 match = "tests/test_season_rollover.gd*"
 domain = "market_deals"
 
+# UEFA list bootstrap (#448): before the league_* catch-all so boot stays on
+# the squad_list domain instead of the full league suite.
+[[rules]]
+match = "scripts/sim/league_season_boot.gd*"
+domain = "squad_list"
+
 # Season helpers split out of the season loop to keep its P3 size ratchet.
 [[rules]]
 match = "scripts/sim/league_*.gd*"
@@ -735,7 +742,7 @@ domain = "league"
 
 [[rules]]
 match = "scripts/sim/strongest_xi.gd*"
-domain = "league"
+domain = "squad_list"
 
 # Per-goal report clips: the pack generator, the store and the viewer that
 # plays one back. They all belong to the season theme.
@@ -974,6 +981,12 @@ domain = "hud_chrome"
 [[rules]]
 match = "scripts/ui/wiki_player.gd*"
 domain = "market_levels"
+
+# Club page UEFA list block (#448): before wiki_* so the list stays on
+# squad_list instead of the full encyclopedia suite.
+[[rules]]
+match = "scripts/ui/wiki_team.gd*"
+domain = "squad_list"
 
 [[rules]]
 match = "scripts/ui/wiki_*.gd*"
