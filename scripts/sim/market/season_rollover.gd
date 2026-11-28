@@ -46,6 +46,8 @@ static func apply(season: LeagueSeason) -> Dictionary:
 	season.save.reload()
 	season.rules_by = season.save.rules_by
 	season.rules = season.save.rules
+	MarketTick.invalidate()
+	MarketShortlist.reset()
 	PLRepository.shared().invalidate()
 	return {
 		"ok": true, "season_index": index, "season_label": label, "date": first,

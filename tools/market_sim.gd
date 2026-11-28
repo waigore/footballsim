@@ -4,6 +4,7 @@ extends SceneTree
 ## One verb per file under tools/market_sim/. Bullet the isolated-run gate for the market theme.
 
 const VERBS := {
+	"ai": "res://tools/market_sim/ai.gd",
 	"clauses": "res://tools/market_sim/clauses.gd",
 	"clearance": "res://tools/market_sim/clearance.gd",
 	"contracts": "res://tools/market_sim/contracts.gd",
