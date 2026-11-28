@@ -79,6 +79,12 @@ jobs:
           ARCH_LINT_RULES_DIFF: "1"
         run: python tools/lint_arch.py --require-rules-tests
 
+      - name: Check the Theme palette is current
+        run: python tools/make_ui_palette.py --check
+
+      - name: Lint UI architecture (Controls, palette, hit-rects, reactive views)
+        run: python tools/lint_ui.py
+
   # Identity guardrail: club ids are country-stable and player ids are UUIDs, so
   # the data-access layer may never key a club by abbreviation or rebuild a
   # player id out of a club id. Abbreviations stay display-only.

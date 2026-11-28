@@ -2,12 +2,12 @@ class_name WikiChrome
 extends RefCounted
 
 
-const PANEL := Color(0.035, 0.055, 0.070, 0.97)
-const PANEL_LIGHT := Color(0.075, 0.105, 0.125, 0.97)
-const BORDER := Color(1, 1, 1, 0.085)
-const TEXT := Color(0.92, 0.95, 0.96)
-const DIM := Color(0.62, 0.71, 0.76)
-const GOLD := Color(0.96, 0.78, 0.30)
+const PANEL := UiChrome.C_PANEL
+const PANEL_LIGHT := UiChrome.C_PANEL_LIGHT
+const BORDER := UiChrome.C_BORDER
+const TEXT := UiChrome.C_TEXT
+const DIM := UiChrome.C_SOFT
+const GOLD := UiChrome.C_GOLD
 
 static var _styles := {}
 

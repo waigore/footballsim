@@ -41,8 +41,8 @@ static func open_stage(screen: Object, competition_id: String = "") -> void:
 
 static func open_draw(screen: Object, competition_id: String, round_id: String) -> void:
 	var save: LeagueSave = screen.season.save if screen.season != null else null
-	var settled := LeagueEurope.seen(save, competition_id, round_id)
-	var count := LeagueEurope.pairs(competition_id, round_id).size()
+	var settled := LeagueEuropeDraws.seen(save, competition_id, round_id)
+	var count := LeagueEuropeDraws.pairs(competition_id, round_id).size()
 	screen.europe_draw = {"competition": competition_id, "round": round_id,
 		"revealed": count if settled else 0, "done": settled, "t": 0.0}
 	LeagueDoors.go(screen, LeagueScreen.MODE_EUROPE_DRAW)
@@ -81,9 +81,9 @@ static func finish(screen: Object) -> void:
 	var save: LeagueSave = screen.season.save if screen.season != null else null
 	var competition_id := str(screen.europe_draw.get("competition", ""))
 	var round_id := str(screen.europe_draw.get("round", ""))
-	screen.europe_draw["revealed"] = LeagueEurope.pairs(competition_id, round_id).size()
+	screen.europe_draw["revealed"] = LeagueEuropeDraws.pairs(competition_id, round_id).size()
 	screen.europe_draw["done"] = true
-	LeagueEurope.mark_seen(save, competition_id, round_id)
+	LeagueEuropeDraws.mark_seen(save, competition_id, round_id)
 	screen.refresh()
 
 
@@ -94,7 +94,7 @@ static func tick(screen: Object, delta: float) -> bool:
 		return false
 	var competition_id := str(screen.europe_draw.get("competition", ""))
 	var round_id := str(screen.europe_draw.get("round", ""))
-	var count := LeagueEurope.pairs(competition_id, round_id).size()
+	var count := LeagueEuropeDraws.pairs(competition_id, round_id).size()
 	screen.europe_draw["t"] = float(screen.europe_draw.get("t", 0.0)) + delta
 	var step := int(float(screen.europe_draw["t"]) / STEP)
 	var revealed := int(screen.europe_draw.get("revealed", 0))

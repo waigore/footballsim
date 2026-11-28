@@ -1,0 +1,9 @@
+# Fixed canvas budget (RUB-P3-06, DR-20261128-37).
+# Not a ratchet: raising the ceiling is a deliberate design change recorded in a
+# Design Record. The number assumes the HUD, the pitch and the pre-match pitch
+# stay painted; everything else is a Control tree.
+budget 180
+scripts/ui/hud
+scripts/ui/pre_match_pitch.gd
+scripts/view/pitch_
+scripts/view/actor_layer.gd

@@ -41,9 +41,9 @@ var names := InterestNames.new()
 var followed := {}
 
 func _ready() -> void:
-	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
-	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
-	f_body = load("res://fonts/Inter-Regular.ttf")
+	f_bold = UiTheme.bold()
+	f_med = UiTheme.medium()
+	f_body = UiTheme.body()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
 
@@ -107,7 +107,7 @@ static func layout(blocks: Array, width: float, compact: bool = false,
 				rows.append({
 					"k": "door", "rect": Rect2(x + door_w * float(i), y, door_w - 8.0, DOOR_H),
 					"text": str(door.get("text", "")), "id": str(door.get("id", "")),
-					"accent": str(door.get("accent", "")),
+					"accent": str(door.get("accent", "")), "on": bool(door.get("on", false)),
 				})
 			y += DOOR_H
 		elif kind == "spark":
