@@ -259,6 +259,7 @@ suites = [
   "test_market_contracts.gd",
   "test_market_finance.gd",
   "test_market_windows.gd",
+  "test_market_ai.gd",
 ]
 
 # Player encyclopedia page only: attributes, contracts, TRANSFER. Kept off the
@@ -273,20 +274,6 @@ suites = [
   "test_market_deals.gd",
   "test_market_contracts.gd",
   "test_market_ai.gd",
-]
-
-# Market AI and valuation (#450): the band table, needs, shortlist, the tick,
-# completeness and mode equivalence. Kept off the full league domain.
-[domains.market_ai]
-suites = [
-  "test_market_ai.gd",
-  "test_market_deals.gd",
-  "test_market_finance.gd",
-  "test_market_contracts.gd",
-  "test_market_windows.gd",
-  "test_season_rollover.gd",
-  "test_league_season.gd",
-  "test_wiki_model.gd",
 ]
 
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
@@ -666,6 +653,29 @@ domain = "market_levels"
 
 [[rules]]
 match = "scripts/sim/market/market_tick.gd*"
+domain = "market_levels"
+
+# The market AI (#450): valuation, needs, shortlist, the deal flow and the
+# completeness top-up. Ahead of the broad `scripts/sim/market/**` so an AI edit
+# rides the narrow level domain, not the whole league group, inside the budget.
+[[rules]]
+match = "scripts/sim/market/market_ai.gd*"
+domain = "market_levels"
+
+[[rules]]
+match = "scripts/sim/market/market_needs.gd*"
+domain = "market_levels"
+
+[[rules]]
+match = "scripts/sim/market/market_shortlist.gd*"
+domain = "market_levels"
+
+[[rules]]
+match = "scripts/sim/market/market_completeness.gd*"
+domain = "market_levels"
+
+[[rules]]
+match = "scripts/data/market_valuation.gd*"
 domain = "market_levels"
 
 # The market's season modules (#440): settle, rollover, ageing, the archives,
