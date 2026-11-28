@@ -26,22 +26,21 @@ Shipped (wiki domains playable):
 | Phone tap ≥44 dp; match `SKIP` to whistle | DR-20261128-02 / 03 / 05 |
 | Club country ids; player UUIDs; watched assists | DR-20261128-16 / 19 |
 | FC-derived cards; Simplified/Full attributes | DR-20261128-20; `fc_ratings.gd` |
-| Domestic cups (ENG/ESP/GER) hubs, watch, draws | DR-20261128-17 / 22; `league_cup_*.gd`; [#455](https://github.com/waigore/footballsim/issues/455)–[#459](https://github.com/waigore/footballsim/issues/459) |
-| UEFA data, sim path and Europe hub | DR-20261128-15; `league_uefa_*.gd`, `league_europe*.gd`; [#435](https://github.com/waigore/footballsim/issues/435)–[#437](https://github.com/waigore/footballsim/issues/437) |
+| Domestic cups (ENG/ESP/GER/ITA) hubs, watch, draws | DR-20261128-17 / 22; `league_cup_*.gd`; `CI`/`SCI`; [#455](https://github.com/waigore/footballsim/issues/455)–[#459](https://github.com/waigore/footballsim/issues/459), [#480](https://github.com/waigore/footballsim/issues/480) |
+| UEFA data, sim, hub, stages, draws, encyclopedia | DR-20261128-15; `league_uefa_*.gd`, `league_europe*.gd`; [#435](https://github.com/waigore/footballsim/issues/435)–[#437](https://github.com/waigore/footballsim/issues/437) |
+| Multi-season settle, archive, age/retire, NEW SEASON | DR-20261128-30; `scripts/sim/market/`; [#440](https://github.com/waigore/footballsim/issues/440) / [#491](https://github.com/waigore/footballsim/pull/491) |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Transfer market + multi-season | Rules landed ([#439](https://github.com/waigore/footballsim/issues/439)); no `scripts/sim/market/` — [#440](https://github.com/waigore/footballsim/issues/440)–[#454](https://github.com/waigore/footballsim/issues/454), [#473](https://github.com/waigore/footballsim/issues/473) |
-| 2 | Europe UX: draws, watch, chips, encyclopedia | Hub and stages shipped; rest of [#437](https://github.com/waigore/footballsim/issues/437) |
-| 3 | Italian cups (Coppa Italia, Supercoppa) | Wiki names them; no `CI`/`SCI` seed — [#480](https://github.com/waigore/footballsim/issues/480) |
-| 4 | Native match hot loop | DR-20261123-02 under 120 s; tick still GDScript |
-| 5 | Cup-tied eligibility | Transfers deferred; needs market registration |
+| 1 | Transfer market (L2+) | L1 rollover shipped; contracts → deals → windows still open — [#438](https://github.com/waigore/footballsim/issues/438), [#441](https://github.com/waigore/footballsim/issues/441)–[#454](https://github.com/waigore/footballsim/issues/454), [#473](https://github.com/waigore/footballsim/issues/473); `market_tick` is a date stub |
+| 2 | Native match hot loop | DR-20261123-02 under 120 s; tick still GDScript |
+| 3 | Cup-tied eligibility | Wiki Transfers/Registration deferred; needs registration lists ([#448](https://github.com/waigore/footballsim/issues/448)) |
 
 ## Next pick
 
-**Transfer market + multi-season** ([#438](https://github.com/waigore/footballsim/issues/438) / [#440](https://github.com/waigore/footballsim/issues/440)).
+**Transfer market L2: contracts** ([#441](https://github.com/waigore/footballsim/issues/441); parent [#438](https://github.com/waigore/footballsim/issues/438)).
 
 ## Out of scope / blocked
 
