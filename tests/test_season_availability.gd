@@ -124,16 +124,17 @@ func test_the_recovery_rate_bends_the_month_without_jumping() -> void:
 		"a slow healer healed as fast as the calendar")
 
 
-func _book(club: String, player_id: String, yellow: int, red: int, matchday: int) -> void:
+func _book(club: String, player_id: String, yellow: int, red: int, matchday: int,
+		competition_id: String = "") -> void:
 	season.record.report.add_player_lines([{
-		"player_id": player_id, "club_id": club,
+		"player_id": player_id, "club_id": club, "competition_id": competition_id,
 		"line": {"apps": 1, "goals": 0, "assists": 0, "yellow": yellow, "red": red},
 	}])
 	SeasonAvailability.apply_fixture(matchday, "2026-08-15", [{
 		"club_id": club,
 		"rows": [{"player_id": player_id, "yellow": yellow, "red": red}],
 		"events": [],
-	}], SEED)
+	}], SEED, competition_id)
 
 func test_five_yellows_ban_one_match_and_the_ban_is_served() -> void:
 	var club := _first_club()
@@ -272,3 +273,162 @@ func test_backing_out_of_a_briefing_cancels_the_watch() -> void:
 	season.cancel_watch()
 	assert_eq(season.watching_fixture, "", "the season is still waiting for the fixture")
 	season.set_watch(held, false)
+
+
+func _unavailable(club: String, player_id: String, competition: String) -> bool:
+	return SeasonAvailability.unavailable(club, competition).has(player_id)
+
+
+func _picked(xi: Array, player_id: String) -> bool:
+	for p in xi:
+		if str(p["id"]) == player_id:
+			return true
+	return false
+
+
+func test_a_cup_red_bans_the_cup_and_leaves_the_league_alone() -> void:
+	var club := _first_club()
+	var league := SeasonAvailability.league_of(club)
+	var id := str(TeamData.get_team(club)["starters"][0]["id"])
+	_book(club, id, 0, 1, 3, "FAC")
+	assert_true(_unavailable(club, id, "FAC"), "the cup red did not ban")
+	assert_false(_unavailable(club, id, league), "a cup red emptied the league XI")
+	assert_true(_picked(StrongestXI.pick(TeamData.get_team(club), league), id),
+		"a cup ban kept him out of the league XI")
+	assert_false(_picked(StrongestXI.pick(TeamData.get_team(club), "FAC"), id),
+		"the cup ban did not empty the cup XI")
+	assert_true(WikiAbsence.statuses(club).has(id), "the encyclopedia lost the cup ban")
+	SeasonAvailability.apply_fixture(4, "2026-08-22",
+		[{"club_id": club, "rows": [], "events": []}], SEED, league)
+	assert_true(_unavailable(club, id, "FAC"), "a league fixture served a cup ban")
+	SeasonAvailability.apply_fixture(5, "2026-08-29",
+		[{"club_id": club, "rows": [], "events": []}], SEED, "FAC")
+	assert_false(_unavailable(club, id, "FAC"), "the cup fixture did not serve the cup ban")
+
+
+func test_a_league_ban_does_not_empty_the_cup_xi() -> void:
+	var club := _first_club()
+	var league := SeasonAvailability.league_of(club)
+	var id := str(TeamData.get_team(club)["starters"][0]["id"])
+	SeasonAvailability.suspend(id, club, 1, "red", "2026-08-15")
+	assert_true(_unavailable(club, id, league), "the league ban is missing")
+	assert_false(_unavailable(club, id, "FAC"), "a league ban emptied the cup XI")
+	assert_true(_picked(StrongestXI.pick(TeamData.get_team(club), "FAC"), id),
+		"a league ban kept him out of the cup XI")
+
+
+func test_a_cup_injury_keeps_him_out_of_every_competition() -> void:
+	var club := _first_club()
+	var id := str(TeamData.get_team(club)["starters"][7]["id"])
+	SeasonAvailability.apply_fixture(3, "2026-08-15", [{
+		"club_id": club, "rows": [],
+		"events": [{"kind": "injury", "player_id": id, "club_id": club}],
+	}], SEED, "FAC")
+	assert_true(_unavailable(club, id, SeasonAvailability.league_of(club)),
+		"a cup injury left him available in the league")
+	assert_true(_unavailable(club, id, "UCL"), "a cup injury left him available in Europe")
+	var kind := ""
+	for row in SeasonAvailability.rows(club, "UCL"):
+		if str(row["player_id"]) == id:
+			kind = str(row["kind"])
+	assert_eq(kind, "injury", "the body is not marked injured")
+
+
+func test_cup_yellows_are_recorded_apart_from_the_league_table() -> void:
+	var club := _first_club()
+	var league := SeasonAvailability.league_of(club)
+	var id := str(TeamData.get_team(club)["starters"][8]["id"])
+	for i in range(4):
+		_book(club, id, 1, 0, 1)
+	for i in range(4):
+		_book(club, id, 1, 0, 2, "FAC")
+	assert_eq(SeasonAvailability.absences(club, "FAC").size(), 0,
+		"four cup yellows banned a player")
+	var counts := {}
+	for row in PLDatabase.rows(
+			"SELECT competition_id, yellows FROM league_discipline WHERE player_id = ?;",
+			[id]):
+		counts[str(row["competition_id"])] = int(row["yellows"])
+	assert_eq(int(counts.get(league, 0)), 4, "the league yellow tally is wrong")
+	assert_eq(int(counts.get("FAC", 0)), 4, "the cup yellow tally is wrong")
+	_book(club, id, 1, 0, 3)
+	assert_eq(SeasonAvailability.absences(club, league).size(), 1,
+		"five league yellows did not ban")
+	assert_eq(SeasonAvailability.absences(club, "FAC").size(), 0,
+		"the league threshold banned in the cup")
+
+
+func test_a_player_can_carry_an_injury_and_bans_in_two_competitions() -> void:
+	var club := _first_club()
+	var id := str(TeamData.get_team(club)["starters"][0]["id"])
+	SeasonAvailability.suspend(id, club, 1, "red", "2026-08-15", "FAC")
+	SeasonAvailability.suspend(id, club, 2, "red", "2026-08-15", "EFLC")
+	SeasonAvailability.injure(id, club, "2026-08-15", "knock", 5, 1.0)
+	var rows := SeasonAvailability.rows(club)
+	assert_eq(rows.size(), 3, "one player cannot hold an injury and two bans at once")
+	var seen := {}
+	for row in rows:
+		seen[str(row["competition_id"])] = int(row["matches_left"])
+	assert_eq(int(seen.get("", -1)), 0, "the injury has no competition of its own")
+	assert_eq(int(seen.get("FAC", 0)), 1, "the cup ban lost its length")
+	assert_eq(int(seen.get("EFLC", 0)), 2, "the second cup ban lost its length")
+
+
+func test_an_older_absence_table_gains_the_competition_key() -> void:
+	var club := _first_club()
+	var league := SeasonAvailability.league_of(club)
+	var id := str(TeamData.get_team(club)["starters"][0]["id"])
+	var hurt := str(TeamData.get_team(club)["starters"][1]["id"])
+	_install_old_tables(club, id, hurt)
+	LeagueSaveSchema.migrate()
+	assert_true(SeasonAvailability.unavailable(club, league).has(id),
+		"the old league ban lost its competition")
+	assert_true(SeasonAvailability.unavailable(club, league).has(hurt),
+		"the old injury left the body available")
+	var mark := PLDatabase.row(
+		"SELECT competition_id, yellow_mark FROM league_discipline WHERE player_id = ?;", [id])
+	assert_eq(str(mark.get("competition_id", "")), league, "the old mark lost its competition")
+	assert_eq(int(mark.get("yellow_mark", 0)), 5, "the old mark lost its count")
+
+
+func _install_old_tables(club: String, id: String, hurt: String) -> void:
+	PLDatabase.execute("ALTER TABLE league_absence RENAME TO league_absence_old;")
+	PLDatabase.execute(
+		"CREATE TABLE league_absence (player_id TEXT PRIMARY KEY, club_id TEXT NOT NULL, "
+		+ "kind TEXT NOT NULL, grade TEXT NOT NULL DEFAULT '', "
+		+ "days_left INTEGER NOT NULL DEFAULT 0, matches_left INTEGER NOT NULL DEFAULT 0, "
+		+ "started_on TEXT NOT NULL DEFAULT '', due_on TEXT NOT NULL DEFAULT '', "
+		+ "rate REAL NOT NULL DEFAULT 1.0);")
+	PLDatabase.execute(
+		"INSERT INTO league_absence VALUES (?, ?, 'suspension', 'red', 0, 2, "
+		+ "'2026-08-15', '', 1.0);", [id, club])
+	PLDatabase.execute(
+		"INSERT INTO league_absence VALUES (?, ?, 'injury', 'knock', 7, 0, "
+		+ "'2026-08-15', '2026-08-22', 1.0);", [hurt, club])
+	PLDatabase.execute("DROP TABLE league_absence_old;")
+	PLDatabase.execute("ALTER TABLE league_discipline RENAME TO league_discipline_old;")
+	PLDatabase.execute(
+		"CREATE TABLE league_discipline (player_id TEXT PRIMARY KEY, club_id TEXT NOT NULL, "
+		+ "yellow_mark INTEGER NOT NULL DEFAULT 0);")
+	PLDatabase.execute("INSERT INTO league_discipline VALUES (?, ?, 5);", [id, club])
+	PLDatabase.execute("DROP TABLE league_discipline_old;")
+
+
+func test_a_cup_briefing_lists_only_the_cup_bans() -> void:
+	var club := _first_club()
+	var other := str(TeamData.team_ids()[1])
+	var id := str(TeamData.get_team(club)["starters"][0]["id"])
+	SeasonAvailability.suspend(id, club, 1, "red", "2026-08-15", "FAC")
+	var cup := PreMatchModel.build(club, other, {"competition_id": "FAC", "matchday": 3}, season)
+	var listed: Array = []
+	for row in cup["home_absences"]:
+		listed.append(str(row["player_id"]))
+	assert_true(listed.has(id), "the cup briefing hides a cup ban")
+	assert_false(_picked(cup["home_xi"], id), "the cup XI fields a banned player")
+	var league_view := PreMatchModel.build(club, other,
+		{"competition_id": SeasonAvailability.league_of(club), "matchday": 3}, season)
+	var shown: Array = []
+	for row in league_view["home_absences"]:
+		shown.append(str(row["player_id"]))
+	assert_false(shown.has(id), "the league briefing lists a cup ban")
+	assert_true(_picked(league_view["home_xi"], id), "the league XI drops a cup-banned player")

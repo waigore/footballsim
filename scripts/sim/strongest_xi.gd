@@ -15,11 +15,11 @@ const EXACT_BONUS := 12.0
 const FAMILY_BONUS := 5.0
 
 
-static func pick(team: Dictionary) -> Array:
+static func pick(team: Dictionary, competition_id: String = "") -> Array:
 	var pool: Array = []
 	pool.append_array(team.get("starters", []))
 	pool.append_array(team.get("bench", []))
-	var out_ids := SeasonAvailability.unavailable(str(team.get("id", "")))
+	var out_ids := SeasonAvailability.unavailable(str(team.get("id", "")), competition_id)
 	var fit: Array = []
 	var unfit: Array = []
 	for p in pool:
@@ -70,9 +70,9 @@ static func _best(pool: Array, used: Dictionary, slot: String) -> Dictionary:
 	return best
 
 
-static func apply(club_id: String) -> bool:
+static func apply(club_id: String, competition_id: String = "") -> bool:
 	var team := TeamData.get_team(club_id)
-	var xi := pick(team)
+	var xi := pick(team, competition_id)
 	if xi.size() < 11:
 		return false
 	var order := {}
