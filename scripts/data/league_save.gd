@@ -23,6 +23,19 @@ var actives: Array = []
 static var last_error := ""
 
 
+static func create(name: String, rules: Dictionary, seed: int = 0,
+		competitions: Array = ["PL"]) -> LeagueSave:
+	return LeagueSaveBoot.create(name, rules, seed, competitions)
+
+
+static func open(slug_or_path: String) -> LeagueSave:
+	return LeagueSaveBoot.open(slug_or_path)
+
+
+static func close() -> void:
+	LeagueSaveBoot.close()
+
+
 func touch() -> bool:
 	if not ensure_open():
 		return false
@@ -53,7 +66,7 @@ func write_copy(name: String) -> String:
 		return ""
 	out.store_buffer(bytes)
 	out.close()
-	var copy := LeagueSaveBoot.open(target)
+	var copy := open(target)
 	if copy == null:
 		ensure_open()
 		return ""

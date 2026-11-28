@@ -262,7 +262,7 @@ func test_an_old_save_refuses_to_open_and_writes_nothing() -> void:
 	var season := _finished("Old Save")
 	var path := season.save.path
 	PLDatabase.execute("DELETE FROM save_meta WHERE key = 'season_index';")
-	LeagueSaveBoot.close()
+	LeagueSave.close()
 	var before := FileAccess.get_md5(path)
 	var opened := LeagueSeason.open(season.save.slug)
 	assert_true(opened == null, "a save without the market schema opened")

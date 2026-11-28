@@ -353,7 +353,7 @@ func test_a_pre_multi_save_is_migrated_on_open() -> void:
 		+ "SELECT club_id, played, won, drawn, lost, gf, ga, points FROM league_table_two;")
 	PLDatabase.execute("DROP TABLE league_table_two;")
 	season.close()
-	var reopened := LeagueSaveBoot.open(slug)
+	var reopened := LeagueSave.open(slug)
 	assert_not_null(reopened, "the legacy save did not open")
 	assert_eq(reopened.competition_ids(), ["PL"], "the legacy save did not open as PL-active")
 	var rows := PLDatabase.rows(
@@ -362,7 +362,7 @@ func test_a_pre_multi_save_is_migrated_on_open() -> void:
 	assert_false(PLDatabase.row(
 		"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'save_competition';").is_empty(),
 		"the migration did not recreate the active-competition table")
-	LeagueSaveBoot.close()
+	reopened.close()
 
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:

@@ -768,15 +768,15 @@ func test_a_watched_fixture_keeps_the_captured_clip() -> void:
 	assert_eq(season.captured.size(), 1, "the season did not hold the capture")
 
 func test_the_schema_migrates_an_older_save() -> void:
-	var save := LeagueSaveBoot.create("Migrating", LeagueRules.defaults())
+	var save := LeagueSave.create("Migrating", LeagueRules.defaults())
 	assert_not_null(save, "the save was not created")
 	PLDatabase.execute("DROP TABLE goal_highlight;")
 	var found := PLDatabase.row(
 		"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'goal_highlight';")
 	assert_true(found.is_empty(), "the table was not dropped")
-	var reopened := LeagueSaveBoot.open(save.slug)
+	var reopened := LeagueSave.open(save.slug)
 	assert_not_null(reopened, "the old save did not reopen")
 	var back := PLDatabase.row(
 		"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'goal_highlight';")
 	assert_false(back.is_empty(), "opening an old save did not add the clip table")
-	LeagueSaveBoot.open(season.save.slug)
+	LeagueSave.open(season.save.slug)

@@ -28,7 +28,7 @@ func after_all() -> void:
 		await get_tree().process_frame
 	if LeagueSeason.active != null:
 		LeagueSeason.active.close()
-	LeagueSaveBoot.close()
+	LeagueSave.close()
 	_clean()
 	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR

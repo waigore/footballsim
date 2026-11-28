@@ -50,7 +50,7 @@ func close() -> void:
 	if active == self:
 		active = null
 	if save != null:
-		LeagueSaveBoot.close()
+		LeagueSave.close()
 
 func matches_remaining() -> int:
 	return record.fixtures.unplayed() if record != null else 0

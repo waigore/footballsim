@@ -25,7 +25,7 @@ func after_all() -> void:
 			game.menus.league.close()
 		game.queue_free()
 	LeagueSeason.active = null
-	LeagueSaveBoot.close()
+	LeagueSave.close()
 	TestScratch.clear(SAVE_DIR)
 	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR
@@ -49,7 +49,7 @@ func _leave() -> void:
 		screen().click("system")
 		screen().click("sys:menu")
 	LeagueSystemActions.unload(screen())
-	LeagueSaveBoot.close()
+	LeagueSave.close()
 
 
 func test_the_calendar_month_chips_still_turn_the_page() -> void:

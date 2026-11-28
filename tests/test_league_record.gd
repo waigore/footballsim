@@ -11,7 +11,7 @@ func before_all() -> void:
 	PLRepository.shared().invalidate()
 
 func after_all() -> void:
-	LeagueSaveBoot.close()
+	LeagueSave.close()
 	_clean()
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()

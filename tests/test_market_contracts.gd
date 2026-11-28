@@ -258,7 +258,7 @@ func test_a_save_without_the_contracts_refuses_to_open() -> void:
 	var slug := season.save.slug
 	PLDatabase.execute("UPDATE save_meta SET value = '18' WHERE key = 'db_version';")
 	season.close()
-	assert_null(LeagueSaveBoot.open(slug), "a save from before the market opened")
+	assert_null(LeagueSave.open(slug), "a save from before the market opened")
 	assert_eq(LeagueSave.last_error, LeagueSave.NEW_SAVE_MESSAGE,
 		"an old save refused without saying why")
 
