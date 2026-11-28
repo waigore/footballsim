@@ -23,7 +23,7 @@ static func after_round(season: LeagueSeason, competition_id: String, round_id: 
 	if next == "" or LeagueUefa.has_stage(competition_id, next):
 		return
 	var table := LeagueUefaLeaguePhase.table(competition_id)
-	var winners := _winners(competition_id, round_id)
+	var winners := LeagueCupTie.winners(competition_id, round_id)
 	if next == "R16":
 		var seeded := _top(table, 8)
 		var pairs: Array = []
@@ -59,15 +59,6 @@ static func _top(table: Array, count: int) -> Array:
 	return out
 
 
-static func _winners(competition_id: String, round_id: String) -> Array:
-	var out: Array = []
-	for row in PLDatabase.rows(
-			"SELECT winner_club_id FROM cup_tie WHERE competition_id = ? AND round_id = ? "
-			+ "AND winner_club_id <> '' ORDER BY tie_index;", [competition_id, round_id]):
-		out.append(str(row["winner_club_id"]))
-	return out
-
-
 static func _orient(competition_id: String, pairs: Array, legs: int) -> Array:
 	var places := {}
 	var table := LeagueUefaLeaguePhase.table(competition_id)
@@ -93,34 +84,7 @@ static func _install(competition_id: String, round_id: String, pairs: Array,
 		return false
 	var legs := int(rule.get("legs", 2))
 	pairs = _orient(competition_id, pairs, legs)
-	PLDatabase.execute(
-		"INSERT OR REPLACE INTO cup_round (competition_id, round_id, position, status, "
-		+ "season_index) VALUES (?, ?, ?, 'open', ?);",
-		[competition_id, round_id, LeagueUefa.round_ids(competition_id).find(round_id) + 1,
-		 season_index])
-	for i in range(pairs.size()):
-		var pair: Dictionary = pairs[i]
-		var home := str(pair["home"])
-		var away := str(pair["away"])
-		PLDatabase.execute(
-			"INSERT OR REPLACE INTO cup_tie (competition_id, round_id, tie_index, "
-			+ "home_club_id, away_club_id, winner_club_id, home_goals, away_goals, "
-			+ "pens_home, pens_away, extra_time, season_index) "
-			+ "VALUES (?, ?, ?, ?, ?, '', 0, 0, -1, -1, 0, ?);",
-			[competition_id, round_id, i, home, away, season_index])
-		for leg in range(1, legs + 1):
-			var date := str(rule.get("date", "")) if leg == 1 \
-				else str(rule.get("second_leg", FixtureCalendar.add_days(
-					str(rule.get("date", "")), 7)))
-			var fixture_home := home if leg == 1 else away
-			var fixture_away := away if leg == 1 else home
-			PLDatabase.execute(
-				"INSERT OR REPLACE INTO league_fixture (id, competition_id, matchday, kickoff, "
-				+ "kickoff_time, home_club_id, away_club_id, status, watched, suggested, "
-				+ "stage, leg, season_index) "
-				+ "VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, ?, ?);",
-				["uefa-%s-%s-%02d-%d" % [competition_id, round_id, i, leg], competition_id,
-				 LeagueUefa.round_ids(competition_id).find(round_id) + 1, date,
-				 FixtureCalendar.KICKOFF_TIMES[(i + leg) % FixtureCalendar.KICKOFF_TIMES.size()],
-				 fixture_home, fixture_away, round_id, leg])
+	var position := LeagueUefa.round_ids(competition_id).find(round_id) + 1
+	LeagueCupTie.install_round(competition_id, round_id, position, pairs, rule, "uefa",
+		season_index)
 	return true

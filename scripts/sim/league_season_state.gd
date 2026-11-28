@@ -68,5 +68,6 @@ static func build(season: LeagueSeason) -> Dictionary:
 		"rules": season.rules.duplicate(true),
 		"rules_by": season.rules_by.duplicate(true),
 		"complete": complete,
+		"continental": LeagueEurope.honours(save),
 		"summary": season.summary() if complete else {},
 	}

@@ -5,7 +5,7 @@ extends RefCounted
 static func settle(season: LeagueSeason, competition_id: String, round_id: String,
 		pool: Array) -> Array:
 	var rule := LeagueCup.round_rule(competition_id, round_id)
-	var ids := _unique(pool)
+	var ids := unique(pool)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = _seed(season, competition_id, round_id)
 	_shuffle(ids, rng)
@@ -26,7 +26,7 @@ static func settle(season: LeagueSeason, competition_id: String, round_id: Strin
 	return pairs
 
 
-static func _unique(pool: Array) -> Array:
+static func unique(pool: Array) -> Array:
 	var seen := {}
 	var out: Array = []
 	for club_id in pool:

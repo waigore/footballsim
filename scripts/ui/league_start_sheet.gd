@@ -98,6 +98,16 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 				"rect": Rect2(24.0, y, w, toggle_h),
 				"selected": not (view.get("cups_off", []) as Array).has(str(group["id"]))})
 			y += pitch + 2.0
+	items.append({"id": "", "kind": "country", "label": "EUROPE", "rect": Rect2(24.0, y, w, 16.0)})
+	y += 22.0
+	if LeagueEurope.available():
+		items.append({"id": "wuefa", "kind": "choice",
+			"label": "UEFA CLUB COMPETITIONS (2026/27)",
+			"rect": Rect2(24.0, y, w, toggle_h), "selected": bool(view.get("uefa", false))})
+	else:
+		items.append({"id": "", "kind": "caption",
+			"label": "NOT IN THIS SEED", "rect": Rect2(24.0, y, w, toggle_h)})
+	y += toggle_h + MODE_AFTER
 	items.append({"id": "mode:real", "kind": "choice", "label": "REAL FIXTURES",
 		"rect": Rect2(24.0, y, w * 0.48, toggle_h), "selected": str(view.get("calendar_mode", "")) == "real"})
 	items.append({"id": "mode:generated", "kind": "choice", "label": "GENERATED",
@@ -167,12 +177,15 @@ func load_layout(vp: Vector2, view: Dictionary) -> Array:
 	return items
 
 
-static func _league_badge(csv: String) -> String:
+static func _league_badge(csv: String, uefa: String = "off") -> String:
 	var names: Array = []
 	for cid in csv.split(",", false):
 		if cid == "":
 			continue
 		names.append(PLRepository.shared().competition_name(str(cid)))
+	if uefa == "on":
+		for cid in LeagueUefa.IDS:
+			names.append(str(cid))
 	return " + ".join(PackedStringArray(names)) if not names.is_empty() else "PL"
 
 
@@ -274,7 +287,7 @@ func draw_load_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 				str(save["name"]), 14, UiChrome.C_TEXT, bold)
 			var current := str(save.get("current_date", ""))
 			var dated: String = FixtureCalendar.day_label(current)
-			var leagues := _league_badge(str(save.get("competitions", "PL")))
+			var leagues := _league_badge(str(save.get("competitions", "PL")), str(save.get("uefa", "off")))
 			var status := status_label(str(save.get("status", "")))
 			var line: String = "%s · %s · %s" % [dated, status, leagues] \
 				if dated != "" else "%s · %s" % [status, leagues]

@@ -116,7 +116,7 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			for item in items:
 				if str(item["id"]).begins_with("wcups:"):
 					cups += 1
-			assert_eq(items.size(), 22 + cups, "the wizard is missing a control")
+			assert_eq(items.size(), 24 + cups, "the wizard is missing a control")
 			assert_eq(cups, 1, "a Premier League form did not offer England's domestic cups")
 
 
@@ -135,7 +135,7 @@ func test_the_wizard_cascades_a_country_chain() -> void:
 	assert_eq(ids, ["wleague:PL", "wleague:CH", "wleague:L1", "wleague:L2", "wleague:NL",
 		"wleague:LL", "wleague:BL", "wleague:BL2", "wleague:SA", "wleague:SB"],
 		"the wizard did not list every league")
-	assert_eq(countries, ["ENGLAND", "SPAIN", "GERMANY", "ITALY"],
+	assert_eq(countries, ["ENGLAND", "SPAIN", "GERMANY", "ITALY", "EUROPE"],
 		"the country headers are wrong")
 	var screen := FakeWizard.new()
 

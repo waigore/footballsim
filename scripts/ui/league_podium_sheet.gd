@@ -30,7 +30,8 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 
 func frame_height(view: Dictionary) -> float:
 	var summary: Dictionary = view.get("summary", {})
-	if summary.is_empty():
+	var continental: Array = view.get("continental", [])
+	if summary.is_empty() and continental.is_empty():
 		return 0.0
 	var h := 0.0
 	var summary_data: Dictionary = view.get("summary", {})
@@ -57,6 +58,8 @@ func frame_height(view: Dictionary) -> float:
 	h += cups_height(summary)
 	if not (summary.get("relegation", {}) as Dictionary).is_empty():
 		h += 8.0 + 16.0
+	if not continental.is_empty():
+		h += 10.0 + 20.0 + 18.0 * float(continental.size())
 	return h + 8.0
 
 
@@ -108,7 +111,8 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary)
 	var summary: Dictionary = view.get("summary", {})
 	var brackets: Dictionary = summary.get("playoffs", {})
 	var y := HEADER + 6.0
-	if summary.is_empty():
+	var continental: Array = view.get("continental", [])
+	if summary.is_empty() and continental.is_empty():
 		return
 	for section in sections(summary):
 		var section_rules: Dictionary = section.get("rules", view.get("rules", {}))
@@ -176,6 +180,30 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary)
 			10, UiChrome.C_GOLD, bold)
 		y += 16.0
 	_paint_cups(c, vp, summary, y, bold, med)
+	_paint_continental(c, vp, continental, y + cups_height(summary) + 10.0, bold, med)
+
+
+func _paint_continental(c: CanvasItem, vp: Vector2, honours: Array, y: float, bold: Font,
+		med: Font) -> void:
+	if honours.is_empty():
+		return
+	UiChrome.text(c, Vector2(24.0, y), "CONTINENTAL HONOURS", 10, UiChrome.C_DIM, bold)
+	c.draw_rect(Rect2(24.0, y + 6.0, vp.x - 48.0, 1.0), Color(1, 1, 1, 0.10))
+	y += 20.0
+	for row in honours:
+		var honour: Dictionary = row
+		UiChrome.text(c, Vector2(24.0, y + 12.0), str(honour.get("id", "")), 9,
+			UiChrome.C_GOLD, bold)
+		UiChrome.text(c, Vector2(84.0, y + 12.0), str(honour.get("winner_name", "")), 11,
+			UiChrome.C_TEXT, bold)
+		UiChrome.text(c, Vector2(84.0 + UiChrome.text_width(bold,
+			str(honour.get("winner_name", "")), 11) + 8.0, y + 12.0), "↑", 10,
+			UiChrome.C_GOLD, bold)
+		UiChrome.text(c, Vector2(372.0, y + 12.0), str(honour.get("runner_up_name", "")), 10,
+			UiChrome.C_SOFT, med)
+		UiChrome.text_r(c, vp.x - 24.0, y + 12.0, LeagueEurope.score_line(honour), 10,
+			UiChrome.C_SOFT, bold)
+		y += 18.0
 
 
 static func cups_lines(summary: Dictionary) -> Array:

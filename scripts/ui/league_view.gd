@@ -8,6 +8,8 @@ static func pose_names() -> Dictionary:
 		LeagueScreen.MODE_CALENDAR: "calendar", LeagueScreen.MODE_INTEREST: "interest",
 		LeagueScreen.MODE_STATS: "stats", LeagueScreen.MODE_SYSTEM: "system",
 		LeagueScreen.MODE_REPORT: "fixtures", LeagueScreen.MODE_PODIUM: "stats",
+		LeagueScreen.MODE_EUROPE: "europe", LeagueScreen.MODE_EUROPE_STAGE: "europe",
+		LeagueScreen.MODE_EUROPE_DRAW: "europe",
 		LeagueScreen.MODE_CUPS: "cups", LeagueScreen.MODE_CUP: "cups",
 		LeagueScreen.MODE_BRACKET: "cups", LeagueScreen.MODE_CUP_DRAW: "cups",
 	}
@@ -26,6 +28,9 @@ static func sheets() -> Dictionary:
 		LeagueScreen.MODE_SYSTEM: ["system", "layout", "draw_body", "draw_chrome"],
 		LeagueScreen.MODE_STATS: ["stats", "layout", "draw_body", "draw_chrome"],
 		LeagueScreen.MODE_INTEREST: ["interest", "layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_EUROPE: ["europe", "layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_EUROPE_STAGE: ["europe_stage", "layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_EUROPE_DRAW: ["europe_draw", "layout", "draw_body", "draw_chrome"],
 		LeagueScreen.MODE_CUPS: ["cups", "cups_layout", "draw_cups_body", "draw_cups_chrome"],
 		LeagueScreen.MODE_CUP: ["cup", "cup_layout", "draw_cup_body", "draw_cup_chrome"],
 		LeagueScreen.MODE_BRACKET: ["bracket", "bracket_layout", "draw_body", "draw_chrome"],
@@ -68,6 +73,12 @@ static func build(screen) -> Dictionary:
 		return drawn
 	if mode == LeagueScreen.MODE_SYSTEM:
 		return LeagueSystemActions.view(screen)
+	if mode == LeagueScreen.MODE_EUROPE:
+		return LeagueEuropeView.hub(screen)
+	if mode == LeagueScreen.MODE_EUROPE_STAGE:
+		return LeagueEuropeView.stage(screen)
+	if mode == LeagueScreen.MODE_EUROPE_DRAW:
+		return LeagueEuropeView.draw(screen)
 
 
 	if mode == LeagueScreen.MODE_STATS:
@@ -122,8 +133,10 @@ static func build(screen) -> Dictionary:
 
 			"touch": bool(screen.touch)}
 	if mode == LeagueScreen.MODE_CALENDAR:
+		var filter := str(screen.calendar_filter)
 		return {"month": screen.month, "day": screen.day, "days": screen.days_cache,
 			"day_fixtures": screen.day_fixtures, "interests": state.get("interests", []),
+			"filter": filter, "filters": _calendar_filters(season, filter),
 			"touch": bool(screen.touch)}
 	if mode == LeagueScreen.MODE_REPORT:
 		if not (screen.roundup as Array).is_empty():
@@ -143,6 +156,7 @@ static func build(screen) -> Dictionary:
 		return {"summary": state.get("summary", {}), "name": state.get("name", ""),
 			"season": state.get("season_label", ""),
 			"table": state.get("table", []), "rules": state.get("rules", rules),
+			"continental": state.get("continental", []),
 			"touch": bool(screen.touch)}
 	var view: Dictionary = state.duplicate()
 
@@ -163,6 +177,16 @@ static func _has_comp(comps: Array, competition_id: String) -> bool:
 		if str(comp.get("id", "")) == competition_id:
 			return true
 	return false
+
+
+static func _calendar_filters(season: LeagueSeason, filter: String) -> Array:
+	var out: Array = [{"id": "", "label": "ALL", "selected": filter == ""}]
+	if season == null or season.save == null:
+		return out
+	for cid in LeagueEurope.active_ids(season.save):
+		out.append({"id": str(cid), "label": LeagueEurope.badge(str(cid)),
+			"selected": filter == str(cid)})
+	return out
 
 
 static func _team_matches(season, fx: Dictionary, query: String) -> bool:

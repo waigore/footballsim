@@ -204,6 +204,10 @@ suites = [
   "test_league_nav_stack.gd",
   "test_league_system.gd",
   "test_league_interest.gd",
+  "test_uefa_seed.gd",
+  "test_uefa_season.gd",
+  "test_league_europe.gd",
+  "test_league_europe_ui.gd",
   "test_league_sheets.gd",  "test_goal_highlights.gd",
   # Multi-league saves and their chrome (#185): both calendars, the shared
   # clock, the league-scoped tables/filters and the picker.
@@ -236,6 +240,14 @@ suites = [
   # Multi-season (#440): the season-scoped schema, the one settle step, the
   # rollover, the archives and the podium's NEW SEASON door.
   "test_season_rollover.gd",
+]
+
+# Europe's own destination (#437): the hub read models, the two sheets and the
+# doors between them, plus the UEFA season they read.
+[domains.europe]
+suites = [
+  "test_league_europe.gd",
+  "test_league_europe_ui.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -438,6 +450,17 @@ domain = "tactics"
 [[rules]]
 match = "scripts/sim/league_season.gd*"
 domain = "league"
+
+# Europe is its own destination (#437): the hub read models, the two sheets and
+# their doors. Narrowed here so a continental surface does not drag the whole
+# season domain into tier 1.
+[[rules]]
+match = "scripts/sim/league_europe*.gd*"
+domain = "europe"
+
+[[rules]]
+match = "scripts/ui/league_europe*.gd*"
+domain = "europe"
 
 # The planner's suggested watches read the table and flag fixtures.
 [[rules]]
