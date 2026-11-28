@@ -601,7 +601,7 @@ func test_a_league_watch_takes_away_the_picker_and_restart() -> void:
 	assert_true(door.size.x > 0.0, "a single match has no CHANGE TEAMS door")
 	assert_eq(hud.button_at(door.get_center()), "teams", "a single match's CHANGE TEAMS answered nothing")
 
-	hud.game.billing.bind_fixture("MUN", {"matchday": 3})
+	hud.game.billing.bind_fixture("ENG-MUN1", {"matchday": 3})
 	hud.queue_redraw()
 	await get_tree().process_frame
 	var ids: Array = []
@@ -618,7 +618,7 @@ func test_a_league_watch_takes_away_the_picker_and_restart() -> void:
 				if str(spec[0]) in ["restart", "teams"]:
 					assert_false(bool(spec[3]), "%s stayed live over a league watch (touch=%s, phase=%s)" % [str(spec[0]), touch, phase])
 
-	hud.game.billing.bind_friendly("MUN", "MCI")
+	hud.game.billing.bind_friendly("ENG-MUN1", "ENG-MCI1")
 	hud.queue_redraw()
 	await get_tree().process_frame
 	ids = []
