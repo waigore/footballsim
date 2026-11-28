@@ -67,6 +67,31 @@ func test_the_regional_sections_are_balanced_both_ways() -> void:
 	assert_eq(south2.size(), 2, "an odd south section did not take a northern club")
 	assert_eq(north2.size(), 1, "the northern section kept its extra club")
 
+func test_the_shared_helpers_dedupe_and_install_a_round() -> void:
+	assert_eq(LeagueCupDraw.unique(["a", "a", "", "b"]), ["a", "b"],
+		"the shared draw pool kept blanks or duplicates")
+	var rule := {"date": "2026-09-01", "second_leg": "2026-09-08", "legs": 2}
+	LeagueCupTie.install_round("TST", "R1", 1, [{"home": "a", "away": "b"}], rule, "cup")
+	var legs := PLDatabase.rows(
+		"SELECT * FROM league_fixture WHERE competition_id = 'TST' ORDER BY leg;")
+	assert_eq(legs.size(), 2, "a two-leg round did not install both legs")
+	assert_eq(str(legs[0]["id"]), "cup-TST-R1-00-1", "the first-leg id drifted")
+	assert_eq(str(legs[1]["id"]), "cup-TST-R1-00-2", "the second-leg id drifted")
+	assert_eq(str(legs[1]["home_club_id"]), "b", "the second leg did not swap home")
+	var tie := PLDatabase.row(
+		"SELECT * FROM cup_tie WHERE competition_id = 'TST' AND round_id = 'R1';")
+	assert_eq(str(tie["home_club_id"]), "a", "the round did not keep its first tie")
+	LeagueCupTie.install_round("TST", "R2", 2, [{"home": "a", "away": "b"}],
+		{"date": "2026-09-01", "legs": 2}, "cup")
+	var fallback := PLDatabase.row(
+		"SELECT kickoff FROM league_fixture WHERE competition_id = 'TST' AND stage = 'R2' "
+		+ "AND leg = 2;")
+	assert_eq(str(fallback.get("kickoff", "")), "2026-09-08",
+		"a missing second-leg date did not fall back a week")
+	PLDatabase.execute("DELETE FROM league_fixture WHERE competition_id = 'TST';")
+	PLDatabase.execute("DELETE FROM cup_tie WHERE competition_id = 'TST';")
+	PLDatabase.execute("DELETE FROM cup_round WHERE competition_id = 'TST';")
+
 func test_the_first_round_pairs_all_seventy_after_the_preliminary() -> void:
 	var pr := PLDatabase.rows(
 		"SELECT * FROM league_fixture WHERE competition_id = 'EFLC' AND stage = 'PR' ORDER BY id;")
