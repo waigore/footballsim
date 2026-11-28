@@ -1,0 +1,38 @@
+{
+  "England": {
+    "first": ["Harry", "Jack", "Callum", "Ollie", "Reece", "Mason", "Tyler", "Alfie", "Josh", "Kieran", "Liam", "Charlie", "Freddie", "Archie", "Ben"],
+    "last": ["Walker", "Bennett", "Hughes", "Foster", "Palmer", "Reid", "Doyle", "Barnes", "Shaw", "Hart", "Mills", "Booth", "Sutton", "Grant", "Walsh"]
+  },
+  "Spain": {
+    "first": ["Sergio", "Pablo", "Hugo", "Álvaro", "Marcos", "Diego", "Iker", "Adrián", "Rubén", "Nico", "Javi", "Mateo", "Aitor", "Bruno", "Iván"],
+    "last": ["García", "Martínez", "López", "Sánchez", "Romero", "Torres", "Navarro", "Molina", "Ortega", "Delgado", "Castro", "Rubio", "Marín", "Vidal", "Serrano"]
+  },
+  "Germany": {
+    "first": ["Lukas", "Jonas", "Felix", "Maximilian", "Tim", "Nico", "Leon", "Elias", "Julian", "Marvin", "Florian", "David", "Paul", "Finn", "Moritz"],
+    "last": ["Müller", "Schmidt", "Wagner", "Becker", "Hoffmann", "Schulz", "Koch", "Richter", "Klein", "Wolf", "Neumann", "Schwarz", "Braun", "Krüger", "Hartmann"]
+  },
+  "Italy": {
+    "first": ["Luca", "Matteo", "Alessandro", "Lorenzo", "Marco", "Davide", "Federico", "Simone", "Andrea", "Riccardo", "Tommaso", "Gabriele", "Niccolò", "Pietro", "Edoardo"],
+    "last": ["Rossi", "Russo", "Ferrari", "Esposito", "Bianchi", "Romano", "Colombo", "Ricci", "Marino", "Greco", "Bruno", "Gallo", "Conti", "De Luca", "Costa"]
+  },
+  "France": {
+    "first": ["Hugo", "Lucas", "Théo", "Nathan", "Enzo", "Louis", "Gabriel", "Rayan", "Jules", "Adam", "Noah", "Mathis", "Ethan", "Yanis", "Ilan"],
+    "last": ["Martin", "Bernard", "Dubois", "Thomas", "Robert", "Richard", "Petit", "Durand", "Leroy", "Moreau", "Simon", "Laurent", "Lefebvre", "Michel", "Garnier"]
+  },
+  "Netherlands": {
+    "first": ["Daan", "Bram", "Lars", "Thijs", "Sven", "Jesse", "Ruben", "Milan", "Finn", "Luuk", "Stijn", "Teun", "Niels", "Koen", "Joris"],
+    "last": ["De Jong", "Jansen", "De Vries", "Van Dijk", "Bakker", "Visser", "Smit", "Meijer", "Mulder", "Bos", "Vos", "Peters", "Hendriks", "Van Leeuwen", "Dekker"]
+  },
+  "Portugal": {
+    "first": ["João", "Diogo", "Tomás", "Rui", "Pedro", "Afonso", "Gonçalo", "Miguel", "Rafael", "Duarte", "Vasco", "Guilherme", "Tiago", "Martim", "André"],
+    "last": ["Silva", "Santos", "Ferreira", "Pereira", "Oliveira", "Costa", "Rodrigues", "Martins", "Sousa", "Fernandes", "Gonçalves", "Gomes", "Lopes", "Marques", "Almeida"]
+  },
+  "Brazil": {
+    "first": ["Gabriel", "Lucas", "Matheus", "João", "Pedro", "Rafael", "Bruno", "Thiago", "Felipe", "Vinícius", "Caio", "Igor", "Diego", "Éder", "Renan"],
+    "last": ["Silva", "Santos", "Oliveira", "Souza", "Lima", "Pereira", "Costa", "Almeida", "Ferreira", "Rodrigues", "Barbosa", "Ribeiro", "Martins", "Carvalho", "Araújo"]
+  },
+  "Default": {
+    "first": ["Alex", "Daniel", "Marco", "Nico", "Sam", "Leo", "Erik", "Jonas", "Rafael", "Milan", "Tomas", "Ivan", "Andre", "Luka", "Adam"],
+    "last": ["Novak", "Petrov", "Kovac", "Horvat", "Nielsen", "Larsen", "Andersen", "Berg", "Lind", "Holm", "Jansen", "Meyer", "Keller", "Rossi", "Silva"]
+  }
+}

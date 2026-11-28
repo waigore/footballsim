@@ -19,6 +19,7 @@ static func apply(season: LeagueSeason) -> Dictionary:
 	var ageing := SeasonAgeing.apply(season, index, start)
 	var loans := MarketLoans.review(season.save, start)
 	var contracts := MarketContracts.review(season.save, index, start)
+	var youth := YouthIntake.apply(season.save, index, start)
 	MarketFinanceFlows.tick_gates(season.save, season.save.current_date())
 	MarketFinanceFlows.season_end(season.save, played_index)
 	season.save.put_meta("gates_through", "")
@@ -52,8 +53,8 @@ static func apply(season: LeagueSeason) -> Dictionary:
 	return {
 		"ok": true, "season_index": index, "season_label": label, "date": first,
 		"settled": not settled.is_empty(), "archived": archived, "aged": ageing,
-		"loans": loans, "contracts": contracts, "fixtures": installed, "entries": entries,
-		"pools": pools,
+		"loans": loans, "contracts": contracts, "youth": youth, "fixtures": installed,
+		"entries": entries, "pools": pools,
 	}
 
 

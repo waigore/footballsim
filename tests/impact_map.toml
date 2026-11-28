@@ -739,6 +739,29 @@ domain = "market_levels"
 match = "scripts/data/market_valuation.gd*"
 domain = "market_levels"
 
+# Market modules with their own suites (#451/#452/#453): intake, the list,
+# the news feed and the contract bootstrap ride the deal domain so a market
+# change stays inside the tier-1 budget.
+[[rules]]
+match = "scripts/sim/market/market_contracts.gd*"
+domain = "market_deals"
+
+[[rules]]
+match = "scripts/sim/market/market_lists.gd*"
+domain = "market_deals"
+
+[[rules]]
+match = "scripts/sim/market/youth_intake.gd*"
+domain = "market_deals"
+
+[[rules]]
+match = "scripts/sim/market/market_news.gd*"
+domain = "market_deals"
+
+[[rules]]
+match = "scripts/sim/market/season_ageing.gd*"
+domain = "market_deals"
+
 # The market's season modules (#440): settle, rollover, ageing, the archives,
 # the date shifts and the tick that hangs off the clock. Contracts (#441) ride
 # here too: the bootstrap envelope, expiry and options run on the same clock.
@@ -1076,6 +1099,40 @@ domain = "league_ui"
 
 [[rules]]
 match = "scripts/ui/league_view.gd*"
+domain = "league_ui"
+
+# The market's own sheets (#453): the transfer hub, deal inspector and news
+# feed ride the deal domain; the season doors they add to stay on league_ui.
+[[rules]]
+match = "scripts/ui/league_transfer_sheet.gd*"
+domain = "market_deals"
+
+[[rules]]
+match = "scripts/ui/league_market_view.gd*"
+domain = "market_deals"
+
+[[rules]]
+match = "scripts/ui/league_deal_sheet.gd*"
+domain = "market_deals"
+
+[[rules]]
+match = "scripts/ui/league_news_sheet.gd*"
+domain = "market_deals"
+
+[[rules]]
+match = "scripts/ui/league_doors.gd*"
+domain = "league_ui"
+
+[[rules]]
+match = "scripts/ui/league_panel*.gd*"
+domain = "league_ui"
+
+[[rules]]
+match = "scripts/ui/league_report_sheet.gd*"
+domain = "league_ui"
+
+[[rules]]
+match = "scripts/ui/league_nav_stack.gd*"
 domain = "league_ui"
 
 [[rules]]
