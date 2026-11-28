@@ -414,6 +414,126 @@ func test_a_cup_winner_takes_its_slot_and_a_taken_one_passes_down() -> void:
 		"the hub summary does not count the cup winner")
 
 
+func _cup_members(competition_id: String, role: String = "") -> Array:
+	var out: Array = []
+	var sql := ("SELECT member_id, role FROM competition_member WHERE competition_id = ? "
+			+ "AND member_kind = 'club'")
+	var bindings: Array = [competition_id]
+	if role != "":
+		sql += " AND role = ?"
+		bindings.append(role)
+	for row in PLDatabase.rows(sql + " ORDER BY member_id;", bindings):
+		out.append(str(row["member_id"]))
+	return out
+
+
+func _stub_ids(cup_id: String) -> Array:
+	var out: Array = []
+	for row in PLDatabase.rows(
+			"SELECT id FROM club WHERE competition_id = ? AND stub = 1 ORDER BY id;", [cup_id]):
+		out.append(str(row["id"]))
+	return out
+
+
+func test_season_two_pairs_the_shield_from_last_season() -> void:
+	var season := _finished("Shield Pair", true, ["PL"], true)
+	var places := _finish_places(season)
+	var champion := str(places[0])
+	var cup_winner := str(places[4])
+	_pin_cup_final("FAC", cup_winner, str(places[5]))
+	var stubs := _stub_ids("FAC")
+	assert_gte(stubs.size(), 8, "the seed has no FA Cup stubs")
+	var before := _cup_members("FAC", "R1")
+	for stub in stubs:
+		assert_true(before.has(stub), "season one lost stub %s" % stub)
+	var result := SeasonRollover.apply(season)
+	assert_true(bool(result.get("ok", false)), "the shield rollover refused a finished season")
+	assert_eq(_sorted(_cup_members("CS", "F")), _sorted([champion, cup_winner]),
+		"the Community Shield is not last season's champion and cup winner")
+	var reading := LeagueCupPools.reading(season.save, "CS")
+	assert_eq(str((reading[champion] as Dictionary).get("source", "")), "PL 1ST",
+		"the shield reading does not name the champion")
+	assert_eq(str((reading[cup_winner] as Dictionary).get("source", "")), "FAC WINNER",
+		"the shield reading does not name the cup winner")
+	var after := _cup_members("FAC", "R1")
+	for stub in stubs:
+		assert_true(after.has(stub), "a followed stub left the FA Cup pool")
+	assert_eq(_sorted(stubs), _sorted(_stub_ids("FAC")), "a stub id was reminted")
+
+
+func test_a_double_or_missing_cup_sends_the_league_runner_up() -> void:
+	var season := _finished("Shield Double", true)
+	var places := _finish_places(season)
+	var champion := str(places[0])
+	var runner := str(places[1])
+	_pin_cup_final("FAC", champion, str(places[3]))
+	var result := SeasonRollover.apply(season)
+	assert_true(bool(result.get("ok", false)), "the double rollover refused a finished season")
+	assert_eq(_sorted(_cup_members("CS", "F")), _sorted([champion, runner]),
+		"a double did not send the league runner-up")
+	var reading := LeagueCupPools.reading(season.save, "CS")
+	assert_true(str((reading[runner] as Dictionary).get("source", "")).begins_with("DOUBLE"),
+		"the double reading is silent")
+	season = _finished("Shield Missing", true)
+	places = _finish_places(season)
+	champion = str(places[0])
+	runner = str(places[1])
+	result = SeasonRollover.apply(season)
+	assert_true(bool(result.get("ok", false)), "the missing-cup rollover refused a finished season")
+	assert_eq(_sorted(_cup_members("CS", "F")), _sorted([champion, runner]),
+		"a missing cup winner did not send the next league place")
+	reading = LeagueCupPools.reading(season.save, "CS")
+	assert_true(str((reading[runner] as Dictionary).get("source", "")).contains("OFF"),
+		"the missing-cup reading is silent")
+
+
+func test_carabao_byes_follow_the_english_europe_list() -> void:
+	var season := _finished("Carabao Byes", true, ["PL"], true)
+	var places := _finish_places(season)
+	_pin_cup_final("FAC", str(places[10]), str(places[11]))
+	var result := SeasonRollover.apply(season)
+	assert_true(bool(result.get("ok", false)), "the Carabao rollover refused a finished season")
+	var r3 := _cup_members("EFLC", "R3")
+	assert_eq(r3.size(), 9, "the Carabao lost its nine late byes")
+	var europe: Array = []
+	for cid in ["UCL", "UEL", "UECL"]:
+		for club in _members(cid, "LP", "ENG") + _members(cid, "POMP", "ENG"):
+			if LeaguePyramid.competition_of(club) == "PL" and not europe.has(club):
+				europe.append(club)
+	for club in europe:
+		assert_true(r3.has(club), "%s is in Europe but not a Carabao R3 bye" % club)
+	var l2 := []
+	for row in SeasonArchive.table(0, "L2"):
+		l2.append(str(row["club_id"]))
+	if l2.is_empty():
+		assert_eq(_cup_members("EFLC", "PR").size(), 4, "the Carabao preliminary lost its four")
+	else:
+		var lowest := _sorted(l2.slice(maxi(0, l2.size() - 4), l2.size()))
+		var still: Array = []
+		for club in lowest:
+			if LeaguePyramid.competition_of(club) == "L2":
+				still.append(club)
+		for club in still:
+			assert_true(_cup_members("EFLC", "PR").has(club),
+				"%s finished bottom of League Two but missed the preliminary" % club)
+
+
+func test_spain_reuses_the_supercopa_four_in_the_copa() -> void:
+	var season := _finished("Supercopa Four", true, ["LL"], false)
+	var places: Array = []
+	for row in season.record.standings.table("LL"):
+		places.append(str(row["club_id"]))
+	assert_eq(places.size(), 20, "La Liga did not finish")
+	var winner := str(places[5])
+	var runner := str(places[6])
+	_pin_cup_final("CDR", winner, runner)
+	var result := SeasonRollover.apply(season)
+	assert_true(bool(result.get("ok", false)), "the Spanish cup rollover refused a finished season")
+	var four := _sorted([str(places[0]), str(places[1]), winner, runner])
+	assert_eq(_sorted(_cup_members("SCE", "SF")), four, "the Supercopa four is wrong")
+	assert_eq(_sorted(_cup_members("CDR", "R32")), four, "the Copa late four is not the Supercopa")
+
+
 class FakeScreen extends RefCounted:
 	const MODE_HUB := LeagueScreen.MODE_HUB
 	var season: LeagueSeason = null
