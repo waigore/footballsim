@@ -104,6 +104,10 @@ func _in_save_order(rows: Array) -> Array:
 		var cb := int(order.get(str(b.get("competition_id", "")), 99))
 		if ca != cb:
 			return ca < cb
+		var da := str(a.get("kickoff", ""))
+		var db := str(b.get("kickoff", ""))
+		if da != db:
+			return da < db
 		var ta := str(a.get("kickoff_time", ""))
 		var tb := str(b.get("kickoff_time", ""))
 		if ta != tb:

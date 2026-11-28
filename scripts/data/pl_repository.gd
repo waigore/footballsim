@@ -63,7 +63,17 @@ func cups() -> Array:
 	var out: Array = []
 	for row in competitions():
 		var rules: Dictionary = row.get("rules", {})
-		if str(rules.get("kind", "league")) != "league":
+		var kind := str(rules.get("kind", "league"))
+		if kind == "cup" or kind == "supercup":
+			out.append(row)
+	return out
+
+
+func continentals() -> Array:
+	var out: Array = []
+	for row in competitions():
+		var rules: Dictionary = row.get("rules", {})
+		if str(rules.get("kind", "league")) == "continental":
 			out.append(row)
 	return out
 

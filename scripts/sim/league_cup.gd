@@ -24,7 +24,8 @@ static func kind(competition_id: String) -> String:
 
 
 static func is_cup(competition_id: String) -> bool:
-	return kind(competition_id) != "league"
+	var cup_kind := kind(competition_id)
+	return cup_kind == "cup" or cup_kind == "supercup"
 
 
 static func is_cup_fixture(fixture: Dictionary) -> bool:
