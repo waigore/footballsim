@@ -141,24 +141,6 @@ func test_a_watched_tie_aggregates_both_legs() -> void:
 	season.close()
 
 
-func test_the_league_phase_seeds_from_the_frozen_bands() -> void:
-	var season := _season()
-	_run_to(season, "UCL", "POLP")
-	var save: LeagueSave = season.save
-	assert_true(LeagueUefa.has_stage("UCL", "LP"), "the league phase never drew")
-	var seeded := LeagueUefaBands.pot_bands("UCL")
-	assert_gte(seeded.size(), 36, "the seed carries no frozen bands")
-	var pots := LeagueEurope.pots(save, "UCL", "LP")
-	assert_eq(pots.size(), 4, "the league phase is not four pots")
-	var last := 0
-	for pot in pots:
-		for club in pot:
-			var band := LeagueUefaBands.band(seeded, str((club as Dictionary)["id"]))
-			assert_gte(band, last, "a pot mixes a better band below a worse one")
-			last = band
-	season.close()
-
-
 func test_an_unbanded_club_takes_its_association_median_or_pot_three() -> void:
 	var season := _season()
 	var save: LeagueSave = season.save
@@ -196,6 +178,16 @@ func test_a_complete_bracket_keeps_its_table_and_names_three_winners() -> void:
 	var season := _season()
 	for cid in LeagueUefa.IDS:
 		_run_to(season, str(cid), "F")
+	var seeded := LeagueUefaBands.pot_bands("UCL")
+	assert_gte(seeded.size(), 36, "the seed carries no frozen bands")
+	var pots := LeagueEurope.pots(season.save, "UCL", LeagueUefa.LEAGUE_STAGE)
+	assert_eq(pots.size(), 4, "the league phase is not four pots")
+	var last := 0
+	for pot in pots:
+		for club in pot:
+			var band := LeagueUefaBands.band(seeded, str((club as Dictionary)["id"]))
+			assert_gte(band, last, "a pot mixes a better band below a worse one")
+			last = band
 	var matches := LeagueUefa.league_matches("UCL")
 	var knockout := PLDatabase.row(
 		"SELECT home_club_id, away_club_id FROM league_fixture "

@@ -330,10 +330,25 @@ func _finish_places(season: LeagueSeason) -> Array:
 	return places
 
 
-func test_season_two_fills_england_from_last_seasons_places() -> void:
+func test_season_two_fills_the_places_and_keeps_every_other_slot() -> void:
 	var season := _finished("UEFA Places", false, ["PL"], true)
 	var places := _finish_places(season)
 	var shape := _shape_counts()
+	var carried := _members("UCL", "LP", "ESP")
+	assert_gte(carried.size(), 2, "the seed carries no Spanish Champions League entrants")
+	var stub_iso := ""
+	var stub_round := ""
+	for row in PLDatabase.rows(
+			"SELECT competition_id, role, member_id FROM competition_member "
+			+ "WHERE member_kind = 'club' AND role NOT LIKE 'drop:%';"):
+		var iso := LeagueUefa.association_of(str(row["member_id"]))
+		if LeagueUefa.is_continental(str(row["competition_id"])) \
+				and not ["ENG", "ESP", "GER", "ITA"].has(iso):
+			stub_iso = iso
+			stub_round = str(row["role"])
+			break
+	assert_true(stub_iso != "", "the seed carries no stub association")
+	var stubs := _members("UCL", stub_round, stub_iso)
 	var result := SeasonRollover.apply(season)
 	assert_true(bool(result.get("ok", false)), "the rollover refused a finished season")
 	assert_eq(places.size(), 20, "season one's table was not finished")
@@ -344,6 +359,15 @@ func test_season_two_fills_england_from_last_seasons_places() -> void:
 	assert_eq(_members("UECL", "POMP", "ENG"), _sorted([places[8]]),
 		"a cup that did not run did not pass its place down the league table")
 	assert_eq(_shape_counts(), shape, "the frozen access-list shape moved")
+	assert_eq(_members("UCL", "LP", "ESP"), carried,
+		"an association whose league is not active changed its entrants")
+	var labelled := 0
+	for row in LeagueEuropeEntries.entrants(season.save, "UCL"):
+		if str(row["association"]) == "ESP" and str(row["source"]) == "CARRIED OVER":
+			labelled += 1
+	assert_eq(labelled, carried.size(), "the carried entrants are not labelled")
+	assert_eq(_members("UCL", stub_round, stub_iso), stubs,
+		"a stub association's entrants did not stay put")
 
 
 func test_a_cup_winner_takes_its_slot_and_a_taken_one_passes_down() -> void:
@@ -364,42 +388,6 @@ func test_a_cup_winner_takes_its_slot_and_a_taken_one_passes_down() -> void:
 		"the entrants reading does not name the cup winner")
 	assert_true(LeagueEuropeEntries.summary(season.save, "UEL").contains("1 CUP WINNER"),
 		"the hub summary does not count the cup winner")
-
-
-func test_an_inactive_association_carries_its_entrants_over() -> void:
-	var season := _finished("UEFA Carried", false, ["PL"], true)
-	var before := _members("UCL", "LP", "ESP")
-	assert_gte(before.size(), 2, "the seed carries no Spanish Champions League entrants")
-	var result := SeasonRollover.apply(season)
-	assert_true(bool(result.get("ok", false)), "the rollover refused a finished season")
-	assert_eq(_members("UCL", "LP", "ESP"), before,
-		"an association whose league is not active changed its entrants")
-	var labelled := 0
-	for row in LeagueEuropeEntries.entrants(season.save, "UCL"):
-		if str(row["association"]) == "ESP" and str(row["source"]) == "CARRIED OVER":
-			labelled += 1
-	assert_eq(labelled, before.size(), "the carried entrants are not labelled")
-
-
-func test_stub_associations_keep_the_same_clubs_in_the_same_slots() -> void:
-	var season := _finished("UEFA Stubs", false, ["PL"], true)
-	var probe := ""
-	var round_id := ""
-	for row in PLDatabase.rows(
-			"SELECT competition_id, role, member_id FROM competition_member "
-			+ "WHERE member_kind = 'club' AND role NOT LIKE 'drop:%';"):
-		var iso := LeagueUefa.association_of(str(row["member_id"]))
-		if LeagueUefa.is_continental(str(row["competition_id"])) \
-				and not ["ENG", "ESP", "GER", "ITA"].has(iso):
-			probe = iso
-			round_id = str(row["role"])
-			break
-	assert_true(probe != "", "the seed carries no stub association")
-	var before := _members("UCL", round_id, probe)
-	var result := SeasonRollover.apply(season)
-	assert_true(bool(result.get("ok", false)), "the rollover refused a finished season")
-	assert_eq(_members("UCL", round_id, probe), before,
-		"a stub association's entrants did not stay put")
 
 
 class FakeScreen extends RefCounted:
