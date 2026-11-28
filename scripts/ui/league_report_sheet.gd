@@ -117,6 +117,17 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": "", "kind": "note", "label": "No results match these filters.",
 			"rect": Rect2(24.0, y, vp.x - 48.0, 24.0)})
 	if not roundup.is_empty():
+		var news: Array = view.get("market_news", [])
+		if not news.is_empty():
+			y += 8.0
+			items.append({"id": "", "kind": "caption", "label": "TRANSFER NEWS",
+				"rect": Rect2(24.0, y, vp.x - 48.0, 18.0)})
+			y += 22.0
+			for item in news:
+				var row_h: float = UiChrome.tap_h(32.0, touch)
+				items.append({"id": "deal:" + str(item.get("deal_id", "")), "kind": "news",
+					"news": item, "rect": Rect2(24.0, y, vp.x - 48.0, row_h)})
+				y += row_h + 4.0
 		return items
 	var report := {"fixture": view.get("fixture", {}), "events": view.get("events", [])}
 	var clips := {}
@@ -261,6 +272,11 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 		elif kind == "note":
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0),
 				str(item["label"]), 11, UiChrome.C_SOFT, med)
+		elif kind == "news":
+			var news: Dictionary = item["news"]
+			UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 5)
+			UiChrome.text(c, Vector2(rect.position.x + 12.0, rect.position.y + rect.size.y * 0.5
+				+ UiChrome.RISE), str(news.get("headline", "")), 10, UiChrome.C_GOLD, bold)
 		elif kind == "event":
 			_draw_event(c, rect, item, fonts, interest)
 
