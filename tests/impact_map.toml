@@ -622,6 +622,17 @@ domain = "squad_list"
 match = "scripts/sim/league_*.gd*"
 domain = "league"
 
+# UEFA list registration and list_check (#448): before the deal*.gd* rule so
+# commit/rules edits stay on squad_list and do not drag every market suite
+# past the tier-1 5 min budget.
+[[rules]]
+match = "scripts/sim/market/market_deal_commit.gd*"
+domain = "squad_list"
+
+[[rules]]
+match = "scripts/sim/market/market_deal_rules.gd*"
+domain = "squad_list"
+
 # The deal engine (#444): before the broad market/** rule so deal files do not
 # pull the whole league domain past the tier-1 5 min budget.
 [[rules]]
