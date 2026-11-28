@@ -29,7 +29,7 @@ func on_shot(shooter) -> void:
 	var t: int = 1 - shooter.team
 	var gk = e._gk_of(t)
 	if gk != null:
-		gk_react_at[t] = e.clock + Attrs.gk_reaction(gk) * e.rng.randf_range(0.75, 1.35)
+		gk_react_at[t] = e.clock + AttrKeeper.reaction(gk) * e.rng.randf_range(0.75, 1.35)
 
 func update(dt: float) -> void:
 	if kickoff_lock > 0.0:

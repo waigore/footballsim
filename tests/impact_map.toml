@@ -535,6 +535,14 @@ match = "scripts/sim/attributes.gd*"
 domain = "match_engine"
 
 [[rules]]
+match = "scripts/sim/attr_roles.gd*"
+domain = "match_engine"
+
+[[rules]]
+match = "scripts/sim/attr_keeper.gd*"
+domain = "match_engine"
+
+[[rules]]
 match = "scripts/sim/pitch_queries.gd*"
 domain = "pitch_queries"
 

@@ -195,7 +195,7 @@ func test_role_duty_moves_the_push() -> void:
 			st = p
 			break
 	assert_not_null(st, "the fixture has no striker")
-	var base: float = Attrs.role_push("ST")
+	var base: float = AttrRoles.role_push("ST")
 	eng.manager.tactics_for(0).roles["ST"] = "attack"
 	assert_gt(eng.push_of(st), base, "attack duty did not push the striker higher")
 	eng.manager.tactics_for(0).roles["ST"] = "defend"
