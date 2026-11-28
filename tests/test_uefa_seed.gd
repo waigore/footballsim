@@ -20,7 +20,7 @@ func test_the_seed_ships_the_three_continental_competitions() -> void:
 		assert_eq(PLRepository.shared().competition_kind(cid), "continental",
 			"%s is not continental" % cid)
 	assert_eq(PLRepository.shared().leagues().size(), 10, "a continental leaked into the leagues")
-	assert_eq(PLRepository.shared().cups().size(), 7, "a continental leaked into the cups")
+	assert_eq(PLRepository.shared().cups().size(), 9, "a continental leaked into the cups")
 
 
 func test_every_entrant_resolves_to_a_playable_club() -> void:

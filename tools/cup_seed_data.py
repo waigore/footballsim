@@ -131,7 +131,45 @@ DFL_SUPERCUP = {
     },
 }
 
-CUPS = {c["id"]: c for c in (FA_CUP, CARABAO_CUP, COMMUNITY_SHIELD, COPA_DEL_REY, SUPERCOPA, DFB_POKAL, DFL_SUPERCUP)}
+## Italy's pair (#480): the Coppa Italia is a 44-club cup that starts with a
+## preliminary round of 4 Serie B + 4 Serie C clubs, gives the 16 remaining
+## Serie B clubs and 12 Serie A clubs the first round, and seeds the eight
+## highest-placed Serie A clubs into the round of 16. The Supercoppa Italiana
+## reverted to one match from 2026/27: the Serie A champion against the Coppa
+## winner, the league runner-up taking the place when one club won the double.
+COPPA_ITALIA = {
+    "id": "CI", "name": "Coppa Italia", "short_name": "COPPA ITALIA", "country": "Italy",
+    "prefix": "CI-", "kind": "cup",
+    "rules": {
+        "season_start": "2026-08-11", "season_end": "2027-05-19",
+        "entrants": {"PR": 8, "R1": 28, "R16": 8},
+        "rounds": [
+            {"id": "PR", "name": "Preliminary round", "date": "2026-08-11", "ties": 4, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
+            {"id": "R1", "name": "First round", "date": "2026-08-18", "ties": 16, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
+            {"id": "R2", "name": "Second round", "date": "2026-09-22", "ties": 8, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
+            {"id": "R16", "name": "Round of 16", "date": "2026-12-01", "ties": 8, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
+            {"id": "QF", "name": "Quarter-finals", "date": "2027-02-09", "ties": 4, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
+            {"id": "SF", "name": "Semi-finals", "date": "2027-03-09", "second_leg": "2027-04-06", "ties": 2, "legs": 2, "extra_time": True, "host": "lower", "regional": False},
+            {"id": "F", "name": "Final", "date": "2027-05-19", "ties": 1, "legs": 1, "extra_time": True, "host": "neutral", "regional": False},
+        ],
+        "europe": {"competition": "UEL", "round": "LP"},
+    },
+}
+
+SUPERCOPPA_ITALIANA = {
+    "id": "SCI", "name": "Supercoppa Italiana", "short_name": "SUPERCOPPA", "country": "Italy",
+    "prefix": "SCI-", "kind": "supercup",
+    "rules": {
+        "season_start": "2027-01-12", "season_end": "2027-01-12",
+        "entrants": {"F": 2},
+        "rounds": [{"id": "F", "name": "Final", "date": "2027-01-12", "ties": 1, "legs": 1, "extra_time": True, "host": "neutral", "regional": False}],
+        "europe": {},
+    },
+}
+
+CUPS = {c["id"]: c for c in (FA_CUP, CARABAO_CUP, COMMUNITY_SHIELD, COPA_DEL_REY,
+                             SUPERCOPA, DFB_POKAL, DFL_SUPERCUP, COPPA_ITALIA,
+                             SUPERCOPPA_ITALIANA)}
 
 ## Season one's results, by club name so a refresh can rename a club without
 ## moving its prior slot. The Community Shield pairs the 2025-26 champion with
@@ -144,6 +182,7 @@ PRIORS = {
         "entrants": ["Barcelona", "Atlético Madrid", "Real Sociedad", "Real Madrid"],
         "semi_finals": [["Barcelona", "Atlético Madrid"], ["Real Sociedad", "Real Madrid"]],
     },
+    "SCI": {"entrants": ["Internazionale", "Napoli"], "host": "Internazionale"},
 }
 
 ## Entry pools for the cups that draw on the shipped leagues. A role is the
@@ -304,6 +343,15 @@ SPANISH_STUBS = [
     ('UE Porreres', 'POR', 'Porreres', 4, 'south', 62),
 ]
 
+## The four Serie C clubs the Coppa Italia's preliminary round needs. Serie C is
+## tier three in Italy, so their band sits under Serie B's 64.
+ITALIAN_STUBS = [
+    ('Foggia', 'FOG', 'Foggia', 3, 'south', 58),
+    ('Perugia', 'PER', 'Perugia', 3, 'north', 58),
+    ('Trapani', 'TRA', 'Trapani', 3, 'south', 58),
+    ('Potenza', 'POT', 'Potenza', 3, 'south', 58),
+]
+
 
 ## Synthetic squad names for stubs. Real enough to read on a team sheet, and
 ## deliberately plain: a stub is an identity, not a licensed roster.
@@ -319,6 +367,10 @@ NAME_POOLS = {
     "Germany": {
         "first": ["L.", "M.", "J.", "T.", "S.", "N.", "F.", "D.", "P.", "K.", "A.", "B.", "C.", "E.", "H.", "R."],
         "last": ["Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Hoffmann", "Schulz", "Koch", "Richter", "Klein", "Wolf", "Neumann", "Schwarz", "Zimmermann", "Braun", "Krüger", "Hartmann", "Lange", "Werner", "Krause", "Lehmann"],
+    },
+    "Italy": {
+        "first": ["A.", "M.", "L.", "G.", "F.", "S.", "D.", "P.", "C.", "R.", "E.", "N.", "V.", "T.", "I.", "B."],
+        "last": ["Rossi", "Russo", "Ferrari", "Esposito", "Bianchi", "Romano", "Colombo", "Ricci", "Marino", "Greco", "Bruno", "Gallo", "Conti", "De Luca", "Costa", "Giordano", "Mancini", "Rizzo", "Lombardi", "Moretti", "Barbieri", "Fontana", "Santoro", "Caruso"],
     },
 }
 

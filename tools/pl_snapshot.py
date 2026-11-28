@@ -49,7 +49,7 @@ import sys as _sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cup_seed_data import (  # noqa: E402
     CUPS, NAME_POOLS, NORTH_CITIES, PL_EUROPE, PRIORS, SPANISH_NORTH,
-    ENGLISH_STUBS, GERMAN_STUBS, SPANISH_STUBS,
+    ENGLISH_STUBS, GERMAN_STUBS, SPANISH_STUBS, ITALIAN_STUBS,
 )
 from uefa_seed_data import (  # noqa: E402
     ASSOCIATIONS, CLUB_ALIASES as UEFA_ALIASES, COMPETITIONS as UEFA_COMPETITIONS,
@@ -1291,7 +1291,8 @@ def _stub_club(cup_id: str, country: str, name: str, abbr: str, city: str,
     digest = hashlib.sha1(name.encode("utf-8")).hexdigest()
     h = int(digest[:8], 16)
     color = STUB_COLORS[h % len(STUB_COLORS)]
-    ground = {"England": "Park", "Germany": "Stadion", "Spain": "Municipal"}.get(country, "Stadium")
+    ground = {"England": "Park", "Germany": "Stadion", "Spain": "Municipal",
+              "Italy": "Stadio"}.get(country, "Stadium")
     style = {k: round(0.5 + _jitter(name + k, 12) / 100.0, 2) for k in STYLE_KEYS}
     return {
         "id": f"STUB-{name}",
@@ -1350,6 +1351,7 @@ def _stub_rows() -> list[tuple[str, str, list]]:
         ("England", "FAC", ENGLISH_STUBS),
         ("Germany", "DFBP", GERMAN_STUBS),
         ("Spain", "CDR", SPANISH_STUBS),
+        ("Italy", "CI", ITALIAN_STUBS),
     ]
 
 
@@ -1415,12 +1417,29 @@ def _entry_members(snapshot: dict) -> list[dict]:
     for club_row in by_comp.get("DFBP", []):
         add("DFBP", club_row, "R1")
 
+    sa_table = sorted(
+        ((str(r["club_id"]), int(r["position"])) for r in snapshot.get("table", [])
+         if str(r.get("competition_id", "")) == "SA"),
+        key=lambda pair: pair[1],
+    )
+    seeded = {club_id for club_id, _ in sa_table[:8]}
+    for club_row in by_comp.get("SA", []):
+        add("CI", club_row, "R16" if str(club_row["id"]) in seeded else "R1")
+    sb_table = {str(r["club_id"]): int(r["position"]) for r in snapshot.get("table", [])
+                if str(r.get("competition_id", "")) == "SB"}
+    for club_row in by_comp.get("SB", []):
+        add("CI", club_row, "PR" if sb_table.get(str(club_row["id"]), 99) >= 17 else "R1")
+    for club_row in by_comp.get("CI", []):
+        add("CI", club_row, "PR")
+
     for name in PRIORS["CS"]["entrants"]:
         add("CS", club_of("PL", name), "F")
     for name in PRIORS["DFLS"]["entrants"]:
         add("DFLS", club_of("BL", name), "F")
     for name in PRIORS["SCE"]["entrants"]:
         add("SCE", club_of("LL", name), "SF")
+    for name in PRIORS["SCI"]["entrants"]:
+        add("SCI", club_of("SA", name), "F")
     return members
 
 

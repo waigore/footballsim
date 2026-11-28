@@ -6,10 +6,12 @@ const COUNTRY_LEAGUES := {
 	"England": ["PL", "CH", "L1", "L2", "NL"],
 	"Spain": ["LL"],
 	"Germany": ["BL", "BL2"],
+	"Italy": ["SA", "SB"],
 }
 
 const LEAGUE_TIER := {
 	"PL": 1, "CH": 2, "L1": 3, "L2": 4, "NL": 5, "LL": 1, "BL": 1, "BL2": 2,
+	"SA": 1, "SB": 2,
 }
 
 
