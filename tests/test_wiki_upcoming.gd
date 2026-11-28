@@ -84,7 +84,7 @@ func test_each_fixture_ahead_opens_the_opponent() -> void:
 func test_without_a_season_the_page_reads_the_snapshot_ahead() -> void:
 	season.close()
 	PLRepository.shared().invalidate()
-	var page := WikiModel.page(WikiModel.TEAM, "MUN")
+	var page := WikiModel.page(WikiModel.TEAM, "ENG-MUN1")
 	var text := _flatten(page)
 	assert_true(text.contains("NEXT FIXTURES  ·  SNAPSHOT"), "the snapshot has no schedule ahead")
 	var next := _rows_below(page, "NEXT FIXTURES  ·  SNAPSHOT")
@@ -104,8 +104,8 @@ func test_without_a_season_the_page_reads_the_snapshot_ahead() -> void:
 
 
 func test_results_and_fixtures_ahead_never_overlap() -> void:
-	var played := PLRepository.shared().fixtures("MUN", 100)
-	var ahead := PLRepository.shared().upcoming("MUN", 100)
+	var played := PLRepository.shared().fixtures("ENG-MUN1", 100)
+	var ahead := PLRepository.shared().upcoming("ENG-MUN1", 100)
 	assert_gte(played.size(), 1, "the snapshot has no played fixture for the club")
 	assert_gte(ahead.size(), 1, "the snapshot has no fixture ahead for the club")
 	var ids := {}

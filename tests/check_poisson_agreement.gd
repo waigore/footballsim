@@ -3,8 +3,8 @@ extends SceneTree
 
 func _init() -> void:
 	var a := OS.get_cmdline_user_args()
-	var home: String = a[0] if a.size() > 0 else "MCI"
-	var away: String = a[1] if a.size() > 1 else "IPS"
+	var home: String = a[0] if a.size() > 0 else "ENG-MCI1"
+	var away: String = a[1] if a.size() > 1 else "ENG-IPS1"
 	var n: int = int(a[2]) if a.size() > 2 else 4
 	var seed0: int = int(a[3]) if a.size() > 3 else 1000
 	var model := PoissonModel.new(seed0, home, away)

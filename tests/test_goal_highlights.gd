@@ -16,8 +16,8 @@ func before_all() -> void:
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
 	season = LeagueSeason.create("Clip Season", "generated", "fixture_days", SEED)
-	home_xi = StrongestXI.pick(TeamData.get_team("MUN"))
-	away_xi = StrongestXI.pick(TeamData.get_team("MCI"))
+	home_xi = StrongestXI.pick(TeamData.get_team("ENG-MUN1"))
+	away_xi = StrongestXI.pick(TeamData.get_team("ENG-MCI1"))
 
 func after_all() -> void:
 	if season != null:
@@ -31,10 +31,10 @@ func after_all() -> void:
 func _clean() -> void:
 	TestScratch.clear(SAVE_DIR)
 
-func _goal(minute: int = 34, club: String = "MUN", index: int = 1) -> Dictionary:
+func _goal(minute: int = 34, club: String = "ENG-MUN1", index: int = 1) -> Dictionary:
 	return {
 		"fixture_id": "gw01-MUN-MCI", "goal_index": index, "minute": minute,
-		"home": "MUN", "away": "MCI", "club_id": club,
+		"home": "ENG-MUN1", "away": "ENG-MCI1", "club_id": club,
 		"player_id": str(home_xi[9]["id"]), "player_name": str(home_xi[9]["name"]),
 		"assist_id": str(home_xi[6]["id"]), "assist_name": str(home_xi[6]["name"]),
 		"club_short": "MUN", "opp_short": "MCI", "score_after": [2, 1],
@@ -130,7 +130,7 @@ func test_the_ball_travels_into_the_net() -> void:
 	assert_lt(end.y, 68.0 - 3.0, "the finish went wide")
 
 func test_an_away_goal_is_mirrored() -> void:
-	var goal := _goal(51, "MCI")
+	var goal := _goal(51, "ENG-MCI1")
 	goal["player_id"] = str(away_xi[9]["id"])
 	goal["player_name"] = str(away_xi[9]["name"])
 	var clip := GoalHighlight.build(goal, _sides(), 11)
@@ -267,7 +267,7 @@ func test_the_viewer_interpolates_between_frames() -> void:
 
 
 func test_an_away_goal_line_reads_from_the_scoring_side() -> void:
-	var goal := _goal(51, "MCI")
+	var goal := _goal(51, "ENG-MCI1")
 	goal["score_after"] = [1, 2]
 	goal["club_short"] = "MCI"
 	goal["opp_short"] = "MUN"
@@ -332,7 +332,7 @@ func _open_pending_clip(engine, director: HighlightDirector) -> bool:
 
 
 func _ring_host(seed: int) -> Array:
-	var engine = MatchEngine.new(seed, "MUN", "MCI")
+	var engine = MatchEngine.new(seed, "ENG-MUN1", "ENG-MCI1")
 	var host := FakeHost.new()
 	host.engine = engine
 	var director := HighlightDirector.new(host)
@@ -386,7 +386,7 @@ func test_a_capture_needs_a_watch_and_a_ring() -> void:
 	assert_eq(season.captured.size(), held, "a clip was cut from an empty ring")
 
 func _live_host(seed: int, mode: String) -> Array:
-	var engine = MatchEngine.new(seed, "MUN", "MCI")
+	var engine = MatchEngine.new(seed, "ENG-MUN1", "ENG-MCI1")
 	var host := FakeHost.new()
 	host.engine = engine
 	host.mode = mode
@@ -750,14 +750,14 @@ func test_a_watched_fixture_keeps_the_captured_clip() -> void:
 	var start := season.start_watch(fx)
 	assert_false(start.is_empty(), "the watch did not start")
 	var snaps: Array = []
-	var engine = MatchEngine.new(101, "MUN", "MCI")
+	var engine = MatchEngine.new(101, "ENG-MUN1", "ENG-MCI1")
 	for i in range(40):
 		engine.tick()
 		if i % 4 == 0:
 			snaps.append(engine.to_dict())
 	var captured := GoalHighlight.from_snapshots(snaps, {
-		"seed": 101, "fixture_id": fx, "home": "MUN", "away": "MCI",
-		"minute": 12, "club_id": "MUN", "scorer_id": str(home_xi[9]["id"]),
+		"seed": 101, "fixture_id": fx, "home": "ENG-MUN1", "away": "ENG-MCI1",
+		"minute": 12, "club_id": "ENG-MUN1", "scorer_id": str(home_xi[9]["id"]),
 		"scorer_name": str(home_xi[9]["name"]), "assist_name": "", "assist_id": "",
 		"commentary": "Captured live!", "score_after": [1, 0],
 	})

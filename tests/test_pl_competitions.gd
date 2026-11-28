@@ -55,10 +55,10 @@ func test_the_shipped_hub_names_its_competition() -> void:
 	assert_eq(badge, 1, "the index lost the competition being read")
 
 func test_a_club_and_its_players_point_at_their_competition() -> void:
-	var club := WikiModel.page(WikiModel.TEAM, "MUN")
+	var club := WikiModel.page(WikiModel.TEAM, "ENG-MUN1")
 	var targets := _targets(club)
 	assert_true(_has_target(targets, WikiModel.LEAGUE, "PL"), "a club page does not link its league")
-	var player := WikiModel.page(WikiModel.PLAYER, "MUN-b-fernandes")
+	var player := WikiModel.page(WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "B. Fernandes"))
 	var player_targets := _targets(player)
 	assert_true(_has_target(player_targets, WikiModel.LEAGUE, "PL"),
 		"a player page does not link its league")
@@ -95,7 +95,7 @@ func test_every_competition_gets_its_own_hub() -> void:
 	assert_true(_chip_target(_chips(ours), "2. BUNDESLIGA", "BL2"),
 		"the Premier League hub does not offer the second German tier")
 
-	var club := WikiModel.page(WikiModel.TEAM, "LL-RMA")
+	var club := WikiModel.page(WikiModel.TEAM, "ESP-RMA1")
 	assert_eq(str(club["title"]), "REAL MADRID", "the second league's club page is missing")
 	var club_targets := _targets(club)
 	assert_true(_has_target(club_targets, WikiModel.LEAGUE, "LL"),

@@ -57,7 +57,7 @@ func _picker() -> void:
 func _pre_match() -> void:
 	scene.fixture.close()
 	scene.menus.close()
-	scene._on_fixture_confirmed("MUN", "MCI")
+	scene._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 	await _frames(4)
 	await _shot("pre-match")
 

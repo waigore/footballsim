@@ -54,13 +54,13 @@ func test_setup_choices_are_validated() -> void:
 
 
 func _xi() -> Array:
-	return StrongestXI.pick(TeamData.get_team("MCI"))
+	return StrongestXI.pick(TeamData.get_team("ENG-MCI1"))
 
 func test_a_report_is_seeded_and_repeatable() -> void:
 	var xi := _xi()
-	var a := MatchEvents.side(77, "gw01-MCI-BUR", "MCI", xi, 3)
-	var b := MatchEvents.side(77, "gw01-MCI-BUR", "MCI", xi, 3)
-	var c := MatchEvents.side(78, "gw01-MCI-BUR", "MCI", xi, 3)
+	var a := MatchEvents.side(77, "gw01-MCI-BUR", "ENG-MCI1", xi, 3)
+	var b := MatchEvents.side(77, "gw01-MCI-BUR", "ENG-MCI1", xi, 3)
+	var c := MatchEvents.side(78, "gw01-MCI-BUR", "ENG-MCI1", xi, 3)
 	assert_eq(a.size(), b.size(), "one seed produced two reports")
 	for i in range(a.size()):
 		assert_eq(int(a[i]["minute"]), int(b[i]["minute"]), "the minutes drifted")
@@ -73,12 +73,12 @@ func test_a_report_is_seeded_and_repeatable() -> void:
 	assert_false(same, "a different seed produced the same report")
 
 func test_goals_become_goal_events() -> void:
-	var events := MatchEvents.side(11, "gw02-LIV-MUN", "LIV", _xi(), 4)
+	var events := MatchEvents.side(11, "gw02-LIV-MUN", "ENG-LIV1", _xi(), 4)
 	var goals := 0
 	for e in events:
 		if str(e["kind"]) == "goal":
 			goals += 1
-			assert_eq(str(e["club_id"]), "LIV", "a goal was credited to another club")
+			assert_eq(str(e["club_id"]), "ENG-LIV1", "a goal was credited to another club")
 			assert_true(str(e["player_id"]) != "", "a goal has no scorer")
 			assert_gte(int(e["minute"]), 1, "a goal came before kick-off")
 			assert_lte(int(e["minute"]), 90, "a goal came after full time")
@@ -90,7 +90,7 @@ func test_scorers_follow_the_position_priors() -> void:
 	var defenders := 0
 	var goals := 0
 	for seed in range(1, 41):
-		for e in MatchEvents.side(seed, "gw03-MCI-MUN", "MCI", xi, 6):
+		for e in MatchEvents.side(seed, "gw03-MCI-MUN", "ENG-MCI1", xi, 6):
 			if str(e["kind"]) != "goal":
 				continue
 			goals += 1
@@ -117,7 +117,7 @@ func test_cards_favour_the_physical_roles() -> void:
 	assert_gt(back, cards / 2, "cards do not favour the defensive roles")
 
 func test_a_clean_sheet_still_reports_cards() -> void:
-	var events := MatchEvents.side(5, "gw05-EVE-FUL", "EVE", _xi(), 0)
+	var events := MatchEvents.side(5, "gw05-EVE-FUL", "ENG-EVE1", _xi(), 0)
 	var goals := 0
 	for e in events:
 		if str(e["kind"]) == "goal":
@@ -130,7 +130,7 @@ func test_every_event_names_a_player_from_the_xi() -> void:
 	var known := {}
 	for p in xi:
 		known[str(p["id"])] = true
-	for e in MatchEvents.side(3, "gw06-MCI-ARS", "MCI", xi, 2):
+	for e in MatchEvents.side(3, "gw06-MCI-ARS", "ENG-MCI1", xi, 2):
 		assert_true(known.has(str(e["player_id"])), "an event names a player outside the XI")
 		assert_eq(str(e["fixture_id"]), "gw06-MCI-ARS", "an event lost its fixture")
 		assert_gte(int(e["minute"]), 1, "an event came before kick-off")
@@ -149,7 +149,7 @@ func test_penalty_goals_are_tagged_and_carry_no_assist() -> void:
 	var goals := 0
 	var penalties := 0
 	for seed in range(1, 61):
-		for e in MatchEvents.side(seed, "gw08-MCI-MUN", "MCI", xi, 6):
+		for e in MatchEvents.side(seed, "gw08-MCI-MUN", "ENG-MCI1", xi, 6):
 			if str(e["kind"]) != "goal":
 				continue
 			goals += 1
@@ -175,8 +175,8 @@ func test_penalty_tags_never_change_the_goal_count() -> void:
 
 func test_penalty_tags_are_seeded_with_the_report() -> void:
 	var xi := _xi()
-	var a := MatchEvents.side(171, "gw09-MCI-ARS", "MCI", xi, 5)
-	var b := MatchEvents.side(171, "gw09-MCI-ARS", "MCI", xi, 5)
+	var a := MatchEvents.side(171, "gw09-MCI-ARS", "ENG-MCI1", xi, 5)
+	var b := MatchEvents.side(171, "gw09-MCI-ARS", "ENG-MCI1", xi, 5)
 	assert_eq(a.size(), b.size(), "one seed produced two reports")
 	for i in range(a.size()):
 		assert_eq(bool(a[i].get("penalty", false)), bool(b[i].get("penalty", false)),
@@ -189,7 +189,7 @@ func test_a_player_who_leaves_takes_no_further_part() -> void:
 	var exits_seen := 0
 	for seed in range(1, 81):
 		for goals in [0, 3, 5]:
-			var events := MatchEvents.side(seed, "gw11-MCI-BUR", "MCI", xi, goals)
+			var events := MatchEvents.side(seed, "gw11-MCI-BUR", "ENG-MCI1", xi, goals)
 			var exit_at := {}
 			for e in events:
 				var kind := str(e["kind"])
@@ -216,7 +216,7 @@ func test_an_exit_never_costs_the_report_a_goal() -> void:
 	var xi := _xi()
 	var injury_reports := 0
 	for seed in range(1, 61):
-		var events := MatchEvents.side(seed, "gw12-MCI-ARS", "MCI", xi, 4)
+		var events := MatchEvents.side(seed, "gw12-MCI-ARS", "ENG-MCI1", xi, 4)
 		var goals := 0
 		var hurt := false
 		for e in events:
@@ -232,7 +232,7 @@ func test_an_exit_never_costs_the_report_a_goal() -> void:
 
 
 func test_a_watched_match_takes_an_injured_player_out_of_play() -> void:
-	var eng := MatchEngine.new(321, "MUN", "MCI")
+	var eng := MatchEngine.new(321, "ENG-MUN1", "ENG-MCI1")
 	var hurt = null
 	for p in eng.players:
 		if p.team == 0 and not p.is_gk:

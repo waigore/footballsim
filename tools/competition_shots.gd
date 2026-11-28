@@ -69,7 +69,7 @@ func _initialize() -> void:
 	print("CARD    league=", HudTopBand.billing_name(scene, scene.engine))
 
 	# The picker's match: a friendly on every surface.
-	scene._on_fixture_confirmed("MUN", "MCI")
+	scene._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 	scene.prematch.screen.hold()
 	await _shot("issue209_briefing_friendly")
 	_print_caption(scene.prematch.screen.view, "friendly briefing")

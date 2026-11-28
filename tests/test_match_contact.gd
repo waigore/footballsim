@@ -2,7 +2,7 @@ extends GdToolsTest
 
 
 func _duel(level: float, trials: int, seed_in: int = 4242) -> Dictionary:
-	var eng := MatchEngine.new(seed_in, "MUN", "MCI")
+	var eng := MatchEngine.new(seed_in, "ENG-MUN1", "ENG-MCI1")
 	eng.phase = "play"
 	eng.possession_team = 0
 	var def = null

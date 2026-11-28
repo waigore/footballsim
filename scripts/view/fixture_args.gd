@@ -5,8 +5,8 @@ extends RefCounted
 static func parse(args: PackedStringArray, known: Array, defaults: Dictionary) -> Dictionary:
 	var out := {
 		"seed": int(defaults.get("seed", 1000)),
-		"home": str(defaults.get("home", "MUN")),
-		"away": str(defaults.get("away", "MCI")),
+		"home": str(defaults.get("home", "ENG-MUN1")),
+		"away": str(defaults.get("away", "ENG-MCI1")),
 		"given": false,
 	}
 	for a in args:

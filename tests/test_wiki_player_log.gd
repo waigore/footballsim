@@ -66,7 +66,7 @@ func test_the_log_lists_the_newest_match_first_and_caps_the_list() -> void:
 	var last := ""
 	for fx in played:
 		if last != "":
-			assert_lte(str(fx["kickoff"]), last, "the log is not newest first")
+			assert_true(str(fx["kickoff"]) <= last, "the log is not newest first")
 		last = str(fx["kickoff"])
 	var one := LeagueLedger.player_events(id, club_id, 1)
 	assert_eq(one.size(), mini(played.size(), 1), "the list ignores its cap")
@@ -147,7 +147,7 @@ func test_a_home_fixture_reads_as_home_and_empty_asks_read_nothing() -> void:
 		if str(log_row["cells"][0]) == FixtureCalendar.day_label(str(at_home["kickoff"])):
 			hit = str(log_row["cells"][2])
 	assert_true(hit.ends_with("(H)"), "the page does not mark the match as home")
-	assert_eq(LeagueLedger.player_events("", "MUN", 5), [], "a read with no player answered")
+	assert_eq(LeagueLedger.player_events("", "ENG-MUN1", 5), [], "a read with no player answered")
 	assert_eq(LeagueLedger.player_events(id, "", 5), [], "a read with no club answered")
 
 

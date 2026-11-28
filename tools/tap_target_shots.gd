@@ -154,7 +154,7 @@ func _extra(league: LeagueHost) -> void:
 	_print_doors("calendar", ["day:", "month:"])
 
 	screen.mode = LeagueScreen.MODE_INTEREST
-	LeagueSeasonDoors.set_interest(screen, "MUN", true)
+	LeagueSeasonDoors.set_interest(screen, "ENG-MUN1", true)
 	screen.interest_query = "man"
 	screen.refresh()
 	await _frames(2)

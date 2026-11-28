@@ -35,7 +35,7 @@ static func movers(season: LeagueSeason, relegation: Dictionary) -> Dictionary:
 		var loser := str(relegation.get("loser_club_id", ""))
 		if winner != "" and loser != "":
 			playoff = winner
-			if winner.begins_with(SECOND + "-"):
+			if winner == str(relegation.get("second_club_id", "")):
 				up.append(winner)
 				down.append(loser)
 	return {

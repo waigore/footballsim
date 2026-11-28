@@ -81,7 +81,7 @@ func test_every_link_on_the_league_page_resolves() -> void:
 		assert_true(WikiModel.has_page(str(target["page"]), str(target["id"])), "dead link %s" % str(target))
 
 func test_the_club_page_shows_the_agreed_sections() -> void:
-	var page := WikiModel.page(WikiModel.TEAM, "MUN")
+	var page := WikiModel.page(WikiModel.TEAM, "ENG-MUN1")
 	assert_eq(str(page["title"]), "MANCHESTER UNITED", "the club page lost its title")
 	var kinds := _kinds(page)
 	assert_has(kinds, "kv", "no season figures on the club page")
@@ -92,7 +92,7 @@ func test_the_club_page_shows_the_agreed_sections() -> void:
 		assert_true(WikiModel.has_page(str(target["page"]), str(target["id"])), "dead link %s" % str(target))
 
 func test_the_player_page_shows_ability_real_and_sim_numbers() -> void:
-	var page := WikiModel.page(WikiModel.PLAYER, "MUN-b-fernandes")
+	var page := WikiModel.page(WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "B. Fernandes"))
 	assert_eq(str(page["title"]), "B. FERNANDES", "the player page lost its name")
 	var kinds := _kinds(page)
 	assert_has(kinds, "bars", "no attributes on the player page")
@@ -108,11 +108,11 @@ func test_the_player_page_shows_ability_real_and_sim_numbers() -> void:
 
 
 func test_the_player_page_notes_read_as_player_copy() -> void:
-	for p in PLRepository.shared().squad("MUN"):
+	for p in PLRepository.shared().squad("ENG-MUN1"):
 		var text := _flatten(WikiModel.page(WikiModel.PLAYER, str(p["id"])))
 		for word in ["SNAPSHOT", "DATASET", "SEASON LINE", "BEST EFFORT", "LEDGER"]:
 			assert_false(text.contains(word), "%s still says %s" % [str(p["id"]), word])
-	var empty := WikiModel.page(WikiModel.PLAYER, "MUN-casemiro")
+	var empty := WikiModel.page(WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "Casemiro"))
 	var notes: Array = []
 	for block in empty["blocks"]:
 		if str(block["k"]) == "note":
@@ -121,7 +121,7 @@ func test_the_player_page_notes_read_as_player_copy() -> void:
 	assert_has(notes, "NO CAREER TOTALS YET", "the empty career block is not player copy")
 
 func test_a_goalkeeper_page_shows_keeper_attributes() -> void:
-	var page := WikiModel.page(WikiModel.PLAYER, "MUN-s-lammens")
+	var page := WikiModel.page(WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "S. Lammens"))
 	var bars: Array = []
 	for block in page["blocks"]:
 		if str(block["k"]) == "bars":
@@ -130,19 +130,19 @@ func test_a_goalkeeper_page_shows_keeper_attributes() -> void:
 	assert_eq(str(bars[0][0]), "DIVING", "keeper attributes are in the wrong order")
 
 func test_unknown_targets_are_rejected() -> void:
-	assert_false(WikiModel.has_page(WikiModel.PLAYER, "NOPE-x"), "a missing player resolved")
+	assert_false(WikiModel.has_page(WikiModel.PLAYER, TestSquad.none()), "a missing player resolved")
 	assert_false(WikiModel.has_page(WikiModel.TEAM, "NOPE"), "a missing club resolved")
 	assert_false(WikiModel.has_page(WikiModel.MANAGER, "NOPE"), "a missing manager resolved")
 	assert_false(WikiModel.has_page("banana", ""), "a made-up page kind resolved")
 	assert_eq(WikiModel.label(WikiModel.LEAGUE, ""), "PREMIER LEAGUE",
 		"the league crumb should name the competition")
-	assert_eq(WikiModel.label(WikiModel.TEAM, "MUN"), "MUN", "the club crumb should be the abbreviation")
-	assert_eq(WikiModel.label(WikiModel.MANAGER, "MUN"), "R. Amorim", "the manager crumb should name him")
+	assert_eq(WikiModel.label(WikiModel.TEAM, "ENG-MUN1"), "MUN", "the club crumb should be the abbreviation")
+	assert_eq(WikiModel.label(WikiModel.MANAGER, "ENG-MUN1"), "R. Amorim", "the manager crumb should name him")
 
 
 func test_the_manager_page_reads_the_dugout_temperament() -> void:
-	var prof := ManagerData.profile("MUN")
-	var page := WikiModel.page(WikiModel.MANAGER, "MUN")
+	var prof := ManagerData.profile("ENG-MUN1")
+	var page := WikiModel.page(WikiModel.MANAGER, "ENG-MUN1")
 	assert_eq(str(page["title"]), str(prof["name"]).to_upper(), "the manager page lost his name")
 	var kinds := _kinds(page)
 	assert_has(kinds, "kv", "no club figures on the manager page")
@@ -160,7 +160,7 @@ func test_the_manager_page_reads_the_dugout_temperament() -> void:
 
 
 func test_a_snapshot_manager_reads_a_name_and_no_invented_temperament() -> void:
-	var page := WikiModel.page(WikiModel.MANAGER, "LL-BAR")
+	var page := WikiModel.page(WikiModel.MANAGER, "ESP-BAR1")
 	assert_eq(str(page["title"]), "H. FLICK", "the snapshot club lost its manager's name")
 	assert_false(_kinds(page).has("bars"), "a club with no authored temperament drew bars")
 	var text := _flatten(page)
@@ -169,15 +169,15 @@ func test_a_snapshot_manager_reads_a_name_and_no_invented_temperament() -> void:
 
 
 func test_the_club_page_offers_the_manager() -> void:
-	var page := WikiModel.page(WikiModel.TEAM, "MUN")
+	var page := WikiModel.page(WikiModel.TEAM, "ENG-MUN1")
 	var found := false
 	for target in _targets(page):
-		if str(target.get("page", "")) == WikiModel.MANAGER and str(target.get("id", "")) == "MUN":
+		if str(target.get("page", "")) == WikiModel.MANAGER and str(target.get("id", "")) == "ENG-MUN1":
 			found = true
 	assert_true(found, "the club page has no door to its manager")
 
 func test_the_club_page_draws_its_season_race() -> void:
-	var page := WikiModel.page(WikiModel.TEAM, "MUN")
+	var page := WikiModel.page(WikiModel.TEAM, "ENG-MUN1")
 	var spark := {}
 	for block in page["blocks"]:
 		if str(block["k"]) == "spark":
@@ -201,7 +201,7 @@ func test_the_club_page_draws_its_season_race() -> void:
 
 
 func test_layout_fits_a_page_into_rows() -> void:
-	var page := WikiModel.page(WikiModel.TEAM, "MUN")
+	var page := WikiModel.page(WikiModel.TEAM, "ENG-MUN1")
 	var desktop := WikiBody.layout(page["blocks"], 1112.0, false)
 	assert_gte(int(desktop["height"]), 400.0, "a club page is suspiciously short")
 	assert_gte(desktop["rows"].size(), 20, "a club page lays out too few rows")
@@ -211,14 +211,14 @@ func test_layout_fits_a_page_into_rows() -> void:
 	assert_gte(float(compact["height"]), float(desktop["height"]) * 0.7, "the phone layout collapsed")
 
 func test_snapshot_pages_carry_no_availability_status() -> void:
-	assert_eq(WikiAbsence.statuses("MUN").size(), 0, "the snapshot claims an open season")
-	var page := WikiModel.page(WikiModel.TEAM, "MUN")
+	assert_eq(WikiAbsence.statuses("ENG-MUN1").size(), 0, "the snapshot claims an open season")
+	var page := WikiModel.page(WikiModel.TEAM, "ENG-MUN1")
 	var cols: Array = []
 	for block in page["blocks"]:
 		if str(block["k"]) == "table" and (block["cols"] as Array).has("OVR"):
 			cols = block["cols"]
 	assert_false(cols.has("STATUS"), "the snapshot squad carries a status column")
-	assert_false(_flatten(WikiModel.page(WikiModel.PLAYER, "MUN-s-lammens")).contains("STATUS"),
+	assert_false(_flatten(WikiModel.page(WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "S. Lammens"))).contains("STATUS"),
 		"a snapshot player page shows availability")
 
 
