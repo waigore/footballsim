@@ -122,6 +122,21 @@ func _init() -> void:
 		season.close()
 		return
 
+	var state := season.state()
+	var tables: Dictionary = state.get("tables", {})
+	var short_form := 0
+	for cid in selected:
+		for row in tables.get(str(cid), []):
+			var marks: Array = (row as Dictionary).get("form", [])
+			var expected: int = mini(int(row.get("played", 0)), LeagueFormGuide.LAST)
+			if marks.size() != expected:
+				short_form += 1
+	if short_form > 0:
+		_fail("%d table row(s) read a form that is not their played count (max %d)" % [
+			short_form, LeagueFormGuide.LAST])
+		season.close()
+		return
+
 	var played := 0
 	for cid in selected:
 		played += season.record.fixtures.played(str(cid))
