@@ -532,6 +532,60 @@ func test_spain_reuses_the_supercopa_four_in_the_copa() -> void:
 	var four := _sorted([str(places[0]), str(places[1]), winner, runner])
 	assert_eq(_sorted(_cup_members("SCE", "SF")), four, "the Supercopa four is wrong")
 	assert_eq(_sorted(_cup_members("CDR", "R32")), four, "the Copa late four is not the Supercopa")
+	var overlap := _finished("Supercopa Overlap", true, ["LL"], false)
+	places = []
+	for row in overlap.record.standings.table("LL"):
+		places.append(str(row["club_id"]))
+	_pin_cup_final("CDR", str(places[0]), str(places[1]))
+	result = SeasonRollover.apply(overlap)
+	assert_true(bool(result.get("ok", false)), "the overlap rollover refused a finished season")
+	assert_eq(_cup_members("SCE", "SF").size(), 4, "an overlap did not fill the Supercopa four")
+	assert_true(_cup_members("SCE", "SF").has(str(places[2])),
+		"the next La Liga place did not fill a Supercopa overlap")
+
+
+func test_germany_and_italy_pair_their_supercups() -> void:
+	var germany := _finished("DFLS Pair", true, ["BL", "BL2"], false)
+	var bl: Array = []
+	for row in germany.record.standings.table("BL"):
+		bl.append(str(row["club_id"]))
+	_pin_cup_final("DFBP", str(bl[3]), str(bl[4]))
+	var stubs := _stub_ids("DFBP")
+	var result := SeasonRollover.apply(germany)
+	assert_true(bool(result.get("ok", false)), "the German cup rollover refused a finished season")
+	assert_eq(_sorted(_cup_members("DFLS", "F")), _sorted([str(bl[0]), str(bl[3])]),
+		"the DFL-Supercup is not last season's champion and cup winner")
+	for stub in stubs:
+		assert_true(_cup_members("DFBP", "R1").has(stub), "a DFB-Pokal stub left its slot")
+	var italy := _finished("SCI Pair", true, ["SA", "SB"], false)
+	var sa: Array = []
+	for row in italy.record.standings.table("SA"):
+		sa.append(str(row["club_id"]))
+	_pin_cup_final("CI", str(sa[4]), str(sa[5]))
+	result = SeasonRollover.apply(italy)
+	assert_true(bool(result.get("ok", false)), "the Italian cup rollover refused a finished season")
+	assert_eq(_sorted(_cup_members("SCI", "F")), _sorted([str(sa[0]), str(sa[4])]),
+		"the Supercoppa is not last season's champion and Coppa winner")
+	assert_eq(_cup_members("CI", "R16").size(), 8, "the Coppa lost its eight seeds")
+	for club in sa.slice(0, 8):
+		assert_true(_cup_members("CI", "R16").has(club),
+			"%s finished top eight but missed the Coppa round of 16" % club)
+	assert_eq(_cup_members("CI", "PR").size(), 8, "the Coppa preliminary lost its eight")
+
+
+func test_cups_off_leave_the_seeded_pools_alone() -> void:
+	var season := _finished("Cups Off", false, ["PL"], false)
+	var before := _sorted(_cup_members("CS", "F"))
+	assert_eq(before.size(), 2, "the seed lost the Community Shield priors")
+	var result := SeasonRollover.apply(season)
+	assert_true(bool(result.get("ok", false)), "a cups-off rollover refused a finished season")
+	assert_eq(_sorted(_cup_members("CS", "F")), before, "cups off rewrote the Shield priors")
+	assert_true(LeagueCupPools.reading(season.save, "CS").is_empty(),
+		"cups off still wrote a cup_pools reading")
+	assert_true(LeagueCupPools.reading(null, "CS").is_empty(),
+		"a null save invented a reading")
+	assert_true(LeagueCupPools.rebuild(null, 0, {}, {}).get("ok", true) == false,
+		"a null season rebuilt the pools")
 
 
 class FakeScreen extends RefCounted:
