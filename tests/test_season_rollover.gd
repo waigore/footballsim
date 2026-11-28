@@ -513,6 +513,30 @@ func test_season_two_pairs_the_shield_from_last_season() -> void:
 	assert_eq(_sorted(stubs), _sorted(_stub_ids("FAC")), "a stub id was reminted")
 
 
+func test_the_supercup_page_names_its_field() -> void:
+	var season := _finished("Shield Field", true, ["PL"], true)
+	var places := _finish_places(season)
+	var champion := str(places[0])
+	var cup_winner := str(places[4])
+	_pin_cup_final("FAC", cup_winner, str(places[5]))
+	var result := SeasonRollover.apply(season)
+	assert_true(bool(result.get("ok", false)), "the shield rollover refused a finished season")
+	var line := LeagueCupPools.field_line(season.save, "CS")
+	assert_true(line.begins_with("FIELD"), "the supercup page carries no field line")
+	assert_true(line.contains("PL 1ST"), "the field line does not name the champion's place")
+	assert_true(line.contains("FAC WINNER"), "the field line does not name the cup winner")
+	assert_eq(LeagueCupPools.field_line(season.save, "FAC"), "",
+		"a main cup drew a supercup field line")
+	var view := LeagueCupView.cup(season, "CS", "F")
+	assert_eq(str(view.get("field", "")), line, "the cup view drops the field line")
+	var items: Array = LeagueCupSheet.new().cup_layout(Vector2(1600.0, 900.0), view)
+	var drawn := false
+	for item in items:
+		if str((item as Dictionary).get("kind", "")) == "field":
+			drawn = str((item as Dictionary).get("label", "")).begins_with("FIELD")
+	assert_true(drawn, "the cup layout does not draw the field line")
+
+
 func test_a_double_or_missing_cup_sends_the_league_runner_up() -> void:
 	var season := _finished("Shield Double", true)
 	var places := _finish_places(season)
