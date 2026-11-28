@@ -80,5 +80,14 @@
       "EUR": 1.17,
       "USD": 1.27
     }
+  },
+  "deal": {
+    "clearance_days_max": 5,
+    "clearance_days_min": 1,
+    "clearance_fail_share": 0.08,
+    "fee_min": 0,
+    "wage_min": 1,
+    "years_max": 5,
+    "years_min": 1
   }
 }
