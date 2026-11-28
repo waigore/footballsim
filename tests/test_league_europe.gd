@@ -53,6 +53,10 @@ func test_the_hub_reads_three_competitions_and_their_pending_draws() -> void:
 	assert_eq(LeagueEurope.pending_draws(save).size(), 2, "a shown draw is still pending")
 	assert_eq(str(LeagueEurope.stage_of("UCL")), "Q1", "the UCL stage is not its first round")
 	assert_eq(str(LeagueEurope.stage_label("UCL")), "QUALIFYING Q1", "the stage label is not Q1")
+	assert_eq(str(LeagueEurope.stage_label("")), "NOT DRAWN", "an empty competition still has a stage")
+	assert_eq(str(LeagueEurope.next_night(null)), "", "a missing save still names a UEFA night")
+	assert_eq(LeagueEurope.tonight(null), [], "a missing save still lists tonight's ties")
+	assert_eq(int(LeagueEurope.alive("")), 0, "an empty competition still has clubs alive")
 	var data := LeagueEurope.draw_data(save, "UCL", "Q1")
 	assert_true(str(data["title"]).contains("FIRST QUALIFYING ROUND"), "the draw lost its round")
 	assert_eq((data["pots"] as Array).size(), 1, "a qualifying draw is not one pool")
@@ -96,6 +100,16 @@ func test_qualifying_drops_and_the_bracket_keep_their_reading() -> void:
 		assert_true(str(tie["agg"]) != "", "a tie has no aggregate")
 		assert_true(str(tie["fixture"]) != "", "a tie has no fixture to watch")
 	assert_gte(int(LeagueEurope.alive("UCL")), 16, "the play-off left too few clubs")
+	var knockout := LeagueEurope.stage_of("UCL")
+	assert_true(LeagueEurope.KO_ROUNDS.has(knockout), "the bracket left the knockout path")
+	assert_eq(str(LeagueEurope.stage_label("UCL")), LeagueEurope.badge(knockout),
+		"an open knockout stage has the wrong label")
+	season.close()
+	season = _season()
+	_run_to(season, "UCL", "POLP")
+	assert_true(str(LeagueEurope.stage_label("UCL")).begins_with("LEAGUE PHASE"),
+		"the league phase label is wrong while it runs")
+	assert_gte(int(LeagueEurope.alive("UCL")), 30, "the league phase lost its clubs")
 	season.close()
 
 
@@ -154,4 +168,10 @@ func test_a_complete_bracket_keeps_its_table_and_names_three_winners() -> void:
 		assert_true(str(LeagueEurope.stage_of(str(row["id"]))) == "F",
 			"a completed competition is not at its final")
 		assert_eq(int(LeagueEurope.alive(str(row["id"]))), 2, "a final does not list two clubs")
+		assert_eq(str(LeagueEurope.stage_label(str(row["id"]))), "FINAL · COMPLETE",
+			"a finished final has the wrong stage label")
+	assert_eq(str(LeagueEurope.next_night(season.save, "UCL")), "",
+		"a finished UCL still has a night ahead")
+	assert_eq(str(LeagueEurope.stage_label("UCL")), "FINAL · COMPLETE",
+		"UCL did not read as a finished final")
 	season.close()
