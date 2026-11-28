@@ -182,6 +182,19 @@ static func thousands(n: int) -> String:
 	return out
 
 
+static func currency_doors() -> Array:
+	var active := MarketCurrency.code_of()
+	var order: Array = [MarketCurrency.default_code()]
+	for code in MarketCurrency.currencies():
+		if not order.has(code):
+			order.append(code)
+	var doors: Array = []
+	for code in order:
+		doors.append({"text": str(code), "id": "currency:" + str(code),
+			"on": str(code) == active})
+	return doors
+
+
 static func finance_blocks(out: Dictionary, club_id: String) -> void:
 	var finance := MarketFinance.club(club_id)
 	if finance.is_empty():
@@ -194,6 +207,7 @@ static func finance_blocks(out: Dictionary, club_id: String) -> void:
 		["FFP HEADROOM", MarketCurrency.format(MarketFinance.ffp_headroom(club_id)), false],
 		["REPUTATION", str(int(finance.get("reputation", 0))), false],
 	]})
+	out["blocks"].append({"k": "door", "items": currency_doors()})
 	var tail := MarketFinance.ledger_tail(club_id, 5)
 	if tail.is_empty():
 		return

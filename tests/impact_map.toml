@@ -336,6 +336,18 @@ suites = [
   "test_league_europe_ui.gd",
 ]
 
+# Domestic cup pools after NEW SEASON (#506): the rebuild beside the rollover
+# and the cups it redraws. Kept off the full league domain so the tier-1 gate
+# stays inside five minutes.
+[domains.cup_rollover]
+suites = [
+  "test_season_rollover.gd",
+  "test_league_cups.gd",
+  "test_cup_season.gd",
+  "test_league_europe.gd",
+  "test_market_contracts.gd",
+]
+
 # Encyclopedia screens: page data, the sheet itself and every door into it.
 [domains.wiki]
 suites = [
@@ -553,6 +565,19 @@ domain = "europe"
 match = "scripts/sim/league_planner.gd*"
 domain = "league"
 
+# Cup pool rebuild (#506): before the league_* and market/** catch-alls.
+[[rules]]
+match = "scripts/sim/league_cup_pools.gd*"
+domain = "cup_rollover"
+
+[[rules]]
+match = "scripts/sim/market/season_rollover.gd*"
+domain = "cup_rollover"
+
+[[rules]]
+match = "tests/test_season_rollover.gd*"
+domain = "cup_rollover"
+
 # Season helpers split out of the season loop to keep its P3 size ratchet.
 [[rules]]
 match = "scripts/sim/league_*.gd*"
@@ -577,10 +602,6 @@ domain = "market_deals"
 # here too: the bootstrap envelope, expiry and options run on the same clock.
 [[rules]]
 match = "scripts/sim/market/**"
-domain = "league"
-
-[[rules]]
-match = "tests/test_season_rollover.gd*"
 domain = "league"
 
 [[rules]]
