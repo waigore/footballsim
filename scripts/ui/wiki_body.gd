@@ -107,7 +107,7 @@ static func layout(blocks: Array, width: float, compact: bool = false,
 				rows.append({
 					"k": "door", "rect": Rect2(x + door_w * float(i), y, door_w - 8.0, DOOR_H),
 					"text": str(door.get("text", "")), "id": str(door.get("id", "")),
-					"accent": str(door.get("accent", "")),
+					"accent": str(door.get("accent", "")), "on": bool(door.get("on", false)),
 				})
 			y += DOOR_H
 		elif kind == "spark":
