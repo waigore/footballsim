@@ -226,6 +226,65 @@ func test_a_watched_result_keeps_a_goal_its_scorer_left_behind() -> void:
 	assert_eq(int(line.get("goals", 0)), int(before_line.get("goals", 0)) + 1,
 		"the substituted scorer lost his goal from the season line")
 
+func test_a_fast_skipped_watch_keeps_every_goal_and_one_scoreline() -> void:
+	var fixtures: Array = []
+	for fx in season.plan():
+		if str(fx["status"]) != "played":
+			fixtures.append(fx)
+	if fixtures.is_empty():
+		season.advance()
+		fixtures = season.plan()
+	assert_false(fixtures.is_empty(), "the clock holds no fixture to watch")
+	var held := str(fixtures[0]["id"])
+	season.set_watch(held, true)
+	season.advance()
+	var watch := season.start_watch(held)
+	var engine := MatchEngine.new(SEED + 19, str(watch["home"]), str(watch["away"]))
+	engine.half = 2
+	engine.clock = 5399.5
+	engine.added[1] = 0.0
+	var scorer = null
+	for p in engine.players:
+		if p.team == 0 and not p.is_gk:
+			scorer = p
+			break
+	engine.ball.last_touch_id = scorer.id
+	engine.ball.last_touch_team = 0
+	engine._score_goal(1)
+	assert_true(engine._bring_on(0, scorer, false, false, {}), "the bench refused the change")
+	for i in range(650):
+		engine._emit("pass", "pass %d" % i, 0, engine.players[0])
+	assert_true(engine.run_to_full_time(), "the fast skip never reached full time")
+	PLSimStats.record_match(engine)
+	var report := season.report(held)
+	var stored: Array = report["score"]
+	var goals: Array = []
+	for e in report["events"]:
+		if str(e["kind"]) == "goal":
+			goals.append(e)
+	assert_eq(goals.size(), int(stored[0]) + int(stored[1]),
+		"the recorded goal rows do not total the stored score")
+	var named := false
+	for e in goals:
+		if str(e["player_id"]) == str(scorer.key):
+			named = true
+	assert_true(named, "the fast-skipped watch lost the goal its scorer left behind")
+	var planned: Dictionary = {}
+	for fx in season.plan():
+		if str(fx["id"]) == held:
+			planned = fx
+	assert_false(planned.is_empty(), "the played fixture left its own day")
+	var sides := LeagueRoundup.sides(LeagueBlock.report_of(planned))
+	var card := [0, 0]
+	for side in ["home", "away"]:
+		var at: int = 0 if side == "home" else 1
+		for e in sides[side]:
+			if LeagueRoundup.is_goal(e):
+				card[at] = int(card[at]) + 1
+	assert_eq(int(card[0]), int(stored[0]), "the day card counts another home score")
+	assert_eq(int(card[1]), int(stored[1]), "the day card counts another away score")
+
+
 func test_the_season_walks_to_a_complete_round_robin() -> void:
 	_ledger_play_remaining()
 	assert_eq(season.matches_remaining(), 0, "the season could not be finished")
