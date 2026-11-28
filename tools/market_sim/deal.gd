@@ -35,18 +35,22 @@ static func run(options: Dictionary) -> Dictionary:
 		mode["list"] = "refuse"
 	var agreed := MarketDeals.agree(deal_id, date, mode)
 	print("agreed: %s (%s)" % [str(agreed.get("state", "")), str(agreed.get("reason", ""))])
+	if str(agreed.get("state", "")) == MarketDealRecords.CLEARANCE_PENDING and inject != "clearance":
+		agreed = MarketDeals.resolve_clearance(deal_id, str(agreed.get("clears_on", date)),
+			{"clearance": "pass", "defer": true})
+		print("cleared: %s" % str(agreed.get("state", "")))
 	var done := {}
 	match inject:
 		"clearance":
 			done = MarketDeals.resolve_clearance(deal_id, str(agreed.get("clears_on", date)),
 				{"clearance": "fail"})
 		"fault":
-			done = MarketDeals.sign(deal_id, date, {"fault": "contract"})
+			done = MarketDeals.seal(deal_id, date, {"fault": "contract"})
 		"registration":
-			done = MarketDeals.sign(deal_id, date, {"registration": "refuse"})
+			done = MarketDeals.seal(deal_id, date, {"registration": "refuse"})
 		_:
-			done = MarketDeals.sign(deal_id, date, mode)
-	var buyer := MarketFinance.club(to)
+			done = MarketDeals.seal(deal_id, date, mode)
+	var buyer := MarketDealRules.club_row(to)
 	var registration := MarketDealRecords.registration(player, str(buyer.get("competition_id", "")))
 	print("signed: %s; cash %s; registration %s" % [str(done.get("state", "")),
 		MarketCurrency.format(int(done.get("cash", 0))), str(registration.get("state", "none"))])

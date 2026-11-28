@@ -63,6 +63,11 @@ static func agree(deal_id: String, date: String, mode: Dictionary = {}) -> Dicti
 	if not [MarketDealRecords.PROPOSED, MarketDealRecords.NEGOTIATING,
 			MarketDealRecords.AGREED].has(state):
 		return answer(deal_id)
+	var window_id := str(MarketDealRules.window(deal, date).get("detail", ""))
+	var fields := {"window_id": window_id}
+	if window_id != "":
+		deal["window_id"] = window_id
+		MarketDealRecords.update(deal_id, fields)
 	var verdict := MarketDealRules.validate(deal, date, mode)
 	if not bool(verdict.get("ok", false)):
 		var code := str(verdict.get("code", MarketDealRules.TERMS))
@@ -70,8 +75,6 @@ static func agree(deal_id: String, date: String, mode: Dictionary = {}) -> Dicti
 		var failed := answer(deal_id)
 		failed["detail"] = str(verdict.get("detail", ""))
 		return failed
-	var fields := {"window_id": str(MarketDealRules.window(deal, date).get("detail", ""))}
-	MarketDealRecords.update(deal_id, fields)
 	if needs_clearance(deal):
 		fields["clears_on"] = FixtureCalendar.add_days(date, clearance_days(deal_id))
 		MarketDealRecords.update(deal_id, fields)
@@ -85,7 +88,7 @@ static func agree(deal_id: String, date: String, mode: Dictionary = {}) -> Dicti
 	return agreed
 
 
-static func sign(deal_id: String, date: String, mode: Dictionary = {}) -> Dictionary:
+static func seal(deal_id: String, date: String, mode: Dictionary = {}) -> Dictionary:
 	var deal := MarketDealRecords.load(deal_id)
 	if deal.is_empty():
 		return {"ok": false, "reason": "no_deal"}
@@ -127,7 +130,11 @@ static func resolve_clearance(deal_id: String, date: String, mode: Dictionary = 
 		return answer(deal_id)
 	MarketDealRecords.update(deal_id, {"clears_on": ""})
 	MarketDealRecords.set_state(deal_id, MarketDealRecords.AGREED, date, "cleared")
-	return sign(deal_id, date, {})
+	if bool(mode.get("defer", false)):
+		var cleared := answer(deal_id)
+		cleared["ok"] = true
+		return cleared
+	return seal(deal_id, date, {})
 
 
 static func block(deal_id: String, date: String, note: String = "") -> Dictionary:
@@ -151,7 +158,7 @@ static func force(deal_id: String, date: String) -> Dictionary:
 	var agreed := agree(deal_id, date, {"force": true})
 	if not bool(agreed.get("ok", false)):
 		return agreed
-	return sign(deal_id, date, {"force": true})
+	return seal(deal_id, date, {"force": true})
 
 
 static func rewrite(deal_id: String, terms: Dictionary, date: String) -> Dictionary:
