@@ -169,20 +169,52 @@ def _chat(
     return str(content).strip()
 
 
+def _verdict_of(obj: Any) -> tuple[bool, str] | None:
+    """One verdict object → (pass, reason), or None when it is not a verdict."""
+    if not isinstance(obj, dict):
+        return None
+    if "pass" not in obj and "passed" not in obj:
+        return None
+    passed = bool(obj.get("pass", obj.get("passed", False)))
+    reason = str(obj.get("reason") or obj.get("explanation") or "").strip()
+    return passed, reason or ("pass" if passed else "fail")
+
+
+def _aggregate(results: list[Any]) -> tuple[bool, str]:
+    """A results array passes only when every row passes."""
+    verdicts = [v for v in (_verdict_of(row) for row in results) if v is not None]
+    if not verdicts:
+        return False, "unparseable verdict: empty results"
+    failed = [reason for passed, reason in verdicts if not passed]
+    if failed:
+        return False, failed[0]
+    return True, verdicts[0][1]
+
+
 def _parse_verdict(text: str) -> tuple[bool, str]:
     cleaned = text.strip()
     if cleaned.startswith("```"):
         cleaned = re_strip_fence(cleaned)
-    try:
-        start = cleaned.find("{")
-        end = cleaned.rfind("}")
-        if start >= 0 and end > start:
-            obj = json.loads(cleaned[start : end + 1])
-            passed = bool(obj.get("pass", obj.get("passed", False)))
-            reason = str(obj.get("reason") or obj.get("explanation") or "").strip()
-            return passed, reason or ("pass" if passed else "fail")
-    except json.JSONDecodeError:
-        pass
+    for opener, closer in (("{", "}"), ("[", "]")):
+        start = cleaned.find(opener)
+        end = cleaned.rfind(closer)
+        if start < 0 or end <= start:
+            continue
+        try:
+            parsed = json.loads(cleaned[start : end + 1])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, list):
+            return _aggregate(parsed)
+        if isinstance(parsed, dict):
+            if isinstance(parsed.get("results"), list):
+                return _aggregate(parsed["results"])
+            verdict = _verdict_of(parsed)
+            if verdict is not None:
+                return verdict
+            for value in parsed.values():
+                if isinstance(value, list):
+                    return _aggregate(value)
     upper = cleaned.upper()
     if upper.startswith("PASS") or "\nPASS" in upper:
         return True, cleaned[:240]
