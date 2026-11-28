@@ -180,6 +180,7 @@ static func migrate() -> void:
 		PLDatabase.execute(sql)
 	create_two_table_index()
 	LeagueRules.migrate(owner)
+	add_column("club", "reserve_of", "TEXT NOT NULL DEFAULT ''")
 
 
 static func ensure_schema(save: LeagueSave) -> void:
@@ -196,6 +197,7 @@ static func ensure_schema(save: LeagueSave) -> void:
 	add_column("goal_highlight", "penalty")
 	add_column("league_fixture", "stage", "TEXT NOT NULL DEFAULT ''")
 	add_column("league_fixture", "leg", "INTEGER NOT NULL DEFAULT 0")
+	add_column("club", "reserve_of", "TEXT NOT NULL DEFAULT ''")
 	for cid in save.actives:
 		PLDatabase.execute(
 			"INSERT INTO save_competition (competition_id, active, position) VALUES (?, 1, ?) "

@@ -15,7 +15,7 @@ func after_all() -> void:
 
 func test_the_seed_carries_every_competition() -> void:
 	var all := PLCompetitions.all()
-	assert_eq(all.size(), 10, "the shipped seed should carry the whole pyramid")
+	assert_eq(all.size(), 11, "the shipped seed should carry the whole pyramid")
 	var ids: Array = []
 	for comp in all:
 		ids.append(str(comp["id"]))
@@ -71,7 +71,7 @@ func test_a_club_and_its_players_point_at_their_competition() -> void:
 
 func test_every_competition_gets_its_own_hub() -> void:
 	var all := PLCompetitions.all()
-	assert_eq(all.size(), 10, "the competitions were not all read")
+	assert_eq(all.size(), 11, "the competitions were not all read")
 	assert_eq(PLCompetitions.default_id(), "PL", "the default competition moved")
 	assert_eq(PLCompetitions.clubs("LL"), 20, "La Liga's club count is wrong")
 
