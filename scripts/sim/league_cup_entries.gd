@@ -12,20 +12,20 @@ static func regenerate(season: LeagueSeason, played_index: int, cups: Dictionary
 	var ids := LeagueCup.active_ids(season.save)
 	if ids.is_empty() or not _has_spec(ids):
 		return out
-	var ctx := _context(season.save, played_index, cups)
+	var ctx := LeagueCupContext.build(season.save, played_index, cups)
 	var carried: Array = []
 	var entries := {}
 	for cid in ids:
 		if _spec(str(cid), "pairing").is_empty():
 			continue
-		var field := _field(str(cid), ctx)
+		var field := LeagueCupPairings.field(str(cid), ctx)
 		if field.is_empty():
 			carried.append(str(cid))
 			continue
 		_write(str(cid), field["rounds"])
 		entries[str(cid)] = field["labels"]
 		out["pairings"][str(cid)] = field["labels"]
-	var four := _four(out["pairings"])
+	var four := LeagueCupPairings.four(out["pairings"])
 	for cid in ids:
 		if _spec(str(cid), "entry").is_empty():
 			continue
@@ -74,164 +74,6 @@ static func _stored(save: LeagueSave) -> Dictionary:
 		return {}
 	var parsed: Variant = JSON.parse_string(str(save.meta.get(META, "{}")))
 	return parsed if parsed is Dictionary else {}
-
-
-static func _context(save: LeagueSave, played_index: int, cups: Dictionary) -> Dictionary:
-	var ctx := {"places": {}, "ranked": {}, "rank": {}, "names": {},
-		"europe": _europe(save), "stubs": {}, "cups": cups}
-	for row in PLRepository.shared().leagues():
-		var cid := str(row.get("id", ""))
-		if cid == "":
-			continue
-		ctx.names[cid] = str(row.get("short_name", cid))
-		var current: Array = []
-		for club in PLDatabase.rows(
-				"SELECT id FROM club WHERE competition_id = ? ORDER BY id;", [cid]):
-			current.append(str(club["id"]))
-		var places: Array = []
-		for line in SeasonArchive.table(played_index, cid):
-			places.append(str(line["club_id"]))
-		ctx.places[cid] = places
-		var rank := {}
-		for i in range(places.size()):
-			rank[str(places[i])] = i + 1
-		ctx.rank[cid] = rank
-		var ranked: Array = current.duplicate()
-		ranked.sort_custom(_before(rank))
-		ctx.ranked[cid] = ranked
-	for row in PLDatabase.rows(
-			"SELECT id, competition_id, tier FROM club WHERE stub = 1 ORDER BY id;"):
-		var cup := str(row["competition_id"])
-		if not ctx.stubs.has(cup):
-			ctx.stubs[cup] = []
-		(ctx.stubs[cup] as Array).append({"id": str(row["id"]), "tier": int(row["tier"])})
-	return ctx
-
-
-static func _before(rank: Dictionary) -> Callable:
-	return func(a: Variant, b: Variant) -> bool:
-		var pa := int(rank.get(str(a), 999))
-		var pb := int(rank.get(str(b), 999))
-		if pa != pb:
-			return pa < pb
-		return str(a) < str(b)
-
-
-static func _europe(save: LeagueSave) -> Array:
-	var out: Array = []
-	if save == null or str(save.meta.get("uefa", "off")) != "on":
-		return out
-	for cid in LeagueUefa.IDS:
-		for round_id in LeagueUefa.round_ids(str(cid)):
-			for club_id in LeagueUefa.entrants(str(cid), str(round_id)):
-				if not out.has(str(club_id)):
-					out.append(str(club_id))
-	return out
-
-
-static func _field(competition_id: String, ctx: Dictionary) -> Dictionary:
-	var spec := _spec(competition_id, "pairing")
-	var entrants: Dictionary = LeagueCup.rules(competition_id).get("entrants", {})
-	var rounds := {}
-	var labels := {}
-	for round_id in spec.keys():
-		var slots: Array = spec[round_id]
-		var target := int(entrants.get(str(round_id), 0))
-		var league := _pair_league(slots)
-		var places: Array = ctx.places.get(league, [])
-		if places.is_empty():
-			return {}
-		var picks: Array = []
-		var notes := {}
-		var pending := ""
-		for slot in slots:
-			var club_id := _pair_club(slot, ctx)
-			if club_id == "":
-				pending = _missing(slot, ctx)
-				continue
-			if picks.has(club_id):
-				pending = _taken(slot, ctx)
-				continue
-			picks.append(club_id)
-			notes[club_id] = _pair_label(slot, ctx)
-		picks = _top_up(picks, target, places, notes, pending, league, ctx)
-		for club_id in picks:
-			labels[club_id] = {"round": str(round_id),
-				"source": str(notes.get(club_id, place_name(league, ctx, club_id))),
-				"kind": "place" if notes.has(club_id) else "fallback"}
-		rounds[str(round_id)] = picks
-	return {"rounds": rounds, "labels": labels}
-
-
-static func _top_up(picks: Array, target: int, places: Array, notes: Dictionary,
-		pending: String, league: String, ctx: Dictionary) -> Array:
-	var head := pending
-	for club_id in places:
-		if picks.size() >= target:
-			break
-		if picks.has(club_id):
-			continue
-		picks.append(club_id)
-		var place := place_name(league, ctx, club_id)
-		notes[club_id] = place if head == "" else head + " · " + place
-		head = ""
-	return picks
-
-
-static func _pair_club(slot: Dictionary, ctx: Dictionary) -> String:
-	if slot.has("cup"):
-		var results: Dictionary = ctx.cups.get(str(slot["cup"]), {})
-		return str(results.get(str(slot.get("result", "winner")), ""))
-	var places: Array = ctx.places.get(str(slot.get("league", "")), [])
-	var place := int(slot.get("place", 0))
-	if place < 1 or place > places.size():
-		return ""
-	return str(places[place - 1])
-
-
-static func _pair_label(slot: Dictionary, ctx: Dictionary) -> String:
-	if slot.has("cup"):
-		return _cup_name(slot) + _result_name(slot)
-	var league := str(slot.get("league", ""))
-	return "%s %s" % [str(ctx.names.get(league, league)), LeagueEuropeEntries.ordinal(
-		int(slot.get("place", 0)))]
-
-
-static func _missing(slot: Dictionary, ctx: Dictionary) -> String:
-	if slot.has("cup"):
-		return _cup_name(slot) + " OFF"
-	return ""
-
-
-static func _taken(slot: Dictionary, ctx: Dictionary) -> String:
-	if slot.has("cup"):
-		return _cup_name(slot) + _result_name(slot) + " IN"
-	return ""
-
-
-static func _cup_name(slot: Dictionary) -> String:
-	var cup := str(slot.get("cup", ""))
-	return str(LeagueEuropeEntries.CUP_NAMES.get(cup, cup))
-
-
-static func _result_name(slot: Dictionary) -> String:
-	return " WINNER" if str(slot.get("result", "winner")) == "winner" else " RUNNER-UP"
-
-
-static func _pair_league(slots: Array) -> String:
-	for slot in slots:
-		if (slot as Dictionary).has("league"):
-			return str((slot as Dictionary)["league"])
-	return ""
-
-
-static func place_name(league: String, ctx: Dictionary, club_id: String) -> String:
-	var places: Array = ctx.places.get(league, [])
-	for i in range(places.size()):
-		if str(places[i]) == str(club_id):
-			return "%s %s" % [str(ctx.names.get(league, league)),
-				LeagueEuropeEntries.ordinal(i + 1)]
-	return "LIVE LEAGUE"
 
 
 static func _pool(competition_id: String, ctx: Dictionary, four: Array) -> Dictionary:
@@ -283,10 +125,7 @@ static func _reserve(competition_id: String, ctx: Dictionary) -> Array:
 	var out: Array = []
 	for i in range(leagues.size()):
 		var league := str(leagues[i])
-		if i == 0:
-			out.append_array(ctx.places.get(league, []))
-			continue
-		out.append_array(ctx.ranked.get(league, []))
+		out.append_array(ctx.places.get(league, []) if i == 0 else ctx.ranked.get(league, []))
 	return out
 
 
@@ -360,15 +199,6 @@ static func _band(slot: Dictionary) -> String:
 	if slot.has("to"):
 		return "TOP %d" % int(slot["to"])
 	return "%d DOWN" % int(slot["from"])
-
-
-static func _four(pairings: Dictionary) -> Array:
-	var out: Array = []
-	var sce: Variant = pairings.get("SCE", {})
-	if sce is Dictionary:
-		for club_id in (sce as Dictionary).keys():
-			out.append(str(club_id))
-	return out
 
 
 static func _has_spec(ids: Array) -> bool:
