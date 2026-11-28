@@ -123,7 +123,7 @@ func _column(x: float, y: float, w: float, round: Dictionary, touch: bool) -> Ar
 	out.append({"id": "", "kind": "eu_col", "round": round,
 		"rect": Rect2(x, y, w, 20.0)})
 	var top := y + 24.0
-	var h := TIE_TOUCH_H if touch else TIE_H
+	var h: float = TIE_TOUCH_H if touch else TIE_H
 	for tie in round.get("ties", []):
 		var id := ""
 		if bool((tie as Dictionary).get("played", false)):
@@ -149,7 +149,7 @@ func _column(x: float, y: float, w: float, round: Dictionary, touch: bool) -> Ar
 func _names(rect: Rect2, tie: Dictionary, touch: bool) -> Array:
 	var out: Array = []
 	var line: float = rect.position.y + (18.0 if touch else 16.0)
-	var step := 20.0 if touch else 16.0
+	var step: float = 20.0 if touch else 16.0
 	for side in ["home", "away"]:
 		var club := str(tie.get(side, ""))
 		if club == "":
@@ -178,7 +178,7 @@ func _table(vp: Vector2, view: Dictionary, y: float, touch: bool) -> Array:
 		return out
 	out.append({"id": "", "kind": "eu_head", "rect": Rect2(24.0, y, row_w, 18.0)})
 	y += 20.0
-	var h := ROW_TOUCH_H if touch else ROW_H
+	var h: float = ROW_TOUCH_H if touch else ROW_H
 	var interest := LeagueInterestMark.set_of(view.get("interests", []))
 	for i in range(rows.size()):
 		var row: Dictionary = rows[i]
@@ -258,7 +258,7 @@ func _tie(c: CanvasItem, rect: Rect2, tie: Dictionary, fonts: Dictionary, view: 
 	var touch := bool(view.get("touch", false))
 	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_BORDER, 1)
 	var line: float = rect.position.y + (18.0 if touch else 16.0)
-	var step := 20.0 if touch else 16.0
+	var step: float = 20.0 if touch else 16.0
 	for side in ["home", "away"]:
 		var club := str(tie.get(side, ""))
 		var name := str(tie.get(side + "_name", club))
