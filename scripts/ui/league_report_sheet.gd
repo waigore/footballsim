@@ -15,6 +15,14 @@ const GUTTER := 16.0
 const ROW_H := 20.0
 const CLIP_H := 40.0
 
+const CHIP_H := 30.0
+const CHIP_GAP := 8.0
+const CHIP_TOP := 8.0
+const CHIP_MAX_W := 150.0
+
+const ALL_CHIP := "resultleague:"
+const INTEREST_CHIP := "resultinterest"
+
 var cache := {}
 
 var hints := DateHints.new()
@@ -32,28 +40,70 @@ static func block_fixture(report: Dictionary) -> Dictionary:
 	fx["events"] = report.get("events", [])
 	return fx
 
+
+static func day_competitions(roundup: Array) -> Array:
+	var out: Array = []
+	for report in roundup:
+		var cid := str((report.get("fixture", {}) as Dictionary).get("competition_id", ""))
+		if not out.has(cid):
+			out.append(cid)
+	return out
+
+
+static func filters(view: Dictionary, roundup: Array) -> Dictionary:
+	var raw: Dictionary = view.get("filters", {})
+	var comps := day_competitions(roundup)
+	var league := str(raw.get("league", ""))
+	if comps.size() < 2 or not comps.has(league):
+		league = ""
+	var marks := LeagueInterestMark.set_of(view.get("interests", []))
+	var followed := false
+	for report in roundup:
+		var fx: Dictionary = report.get("fixture", {})
+		if LeagueInterestMark.follows(marks, fx):
+			followed = true
+			break
+	return {"mixed": comps.size() > 1, "league": league, "comps": comps, "marks": marks,
+		"followed": followed, "interest": followed and bool(raw.get("interest", false))}
+
+
+static func shown(roundup: Array, flags: Dictionary) -> Array:
+	var out: Array = []
+	for report in roundup:
+		var fx: Dictionary = report.get("fixture", {})
+		if str(flags["league"]) != "" and str(fx.get("competition_id", "")) != str(flags["league"]):
+			continue
+		if bool(flags["interest"]) and not LeagueInterestMark.follows(flags["marks"], fx):
+			continue
+		out.append(report)
+	return out
+
+
 func layout(vp: Vector2, view: Dictionary) -> Array:
 	var items: Array = []
 
 
 	var touch := bool(view.get("touch", false))
-	items.append(LeagueExtra.back_item(touch))
 	var roundup: Array = view.get("roundup", [])
+	var flags := filters(view, roundup)
+	items.append(LeagueExtra.back_item(touch))
 	if not roundup.is_empty():
 		items.append({"id": "continue", "kind": "button", "label": "CONTINUE", "primary": true,
 			"pinned": true, "rect": LeagueExtra.primary_rect(vp, 140.0, touch)})
 	var y := HEADER + 70.0
-	var mixed := false
-	if roundup.size() > 1:
-		var ids := {}
-		for report in roundup:
-			ids[str(block_fixture(report).get("competition_id", ""))] = true
-		mixed = ids.size() > 1
+	var chips := _chips(vp, flags, touch)
+	if not chips.is_empty():
+		var strip: float = UiChrome.tap_h(CHIP_H, touch) + CHIP_TOP + 8.0
+		items.append({"id": "", "kind": "band", "pinned": true,
+			"rect": Rect2(0.0, HEADER, vp.x, strip)})
+		items.append_array(chips)
+		y = HEADER + strip + 14.0
+	var rows := shown(roundup, flags)
 	var last_comp := ""
-	for report in roundup:
+	for report in rows:
 		var fx := block_fixture(report)
 		var comp := str(fx.get("competition_id", ""))
-		if mixed and comp != last_comp:
+		if bool(flags["mixed"]) and comp != last_comp:
 			last_comp = comp
 			items.append({"id": "", "kind": "league_head", "competition": comp,
 				"matchday": int(fx.get("matchday", 1)),
@@ -63,7 +113,10 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append({"id": "match:" + str(fx.get("id", "")), "kind": "result",
 			"report": report, "rect": row})
 		y += row.size.y + 6.0
-	if not (view.get("roundup", []) as Array).is_empty():
+	if rows.is_empty() and not roundup.is_empty():
+		items.append({"id": "", "kind": "note", "label": "No results match these filters.",
+			"rect": Rect2(24.0, y, vp.x - 48.0, 24.0)})
+	if not roundup.is_empty():
 		return items
 	var report := {"fixture": view.get("fixture", {}), "events": view.get("events", [])}
 	var clips := {}
@@ -95,6 +148,42 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 				"rect": Rect2(line.end.x - PLAY_W, line.position.y + 1.0, PLAY_W, PLAY_H)})
 		cursors[side] = float(cursors[side]) + h + 1.0
 	return items
+
+
+static func _chips(vp: Vector2, flags: Dictionary, touch: bool) -> Array:
+	var wanted: Array = []
+	if bool(flags["mixed"]):
+		wanted.append({"id": ALL_CHIP, "label": "ALL", "selected": str(flags["league"]) == ""})
+		for comp in flags["comps"]:
+			wanted.append({"id": ALL_CHIP + str(comp), "comp": str(comp),
+				"selected": str(flags["league"]) == str(comp)})
+	if bool(flags["followed"]):
+		wanted.append({"id": INTEREST_CHIP, "label": "FOLLOWED",
+			"selected": bool(flags["interest"])})
+	if wanted.is_empty():
+		return []
+	var h: float = UiChrome.tap_h(CHIP_H, touch)
+	var gap := CHIP_GAP
+	var w: float = minf(CHIP_MAX_W,
+		(vp.x - 48.0 - gap * float(wanted.size() - 1)) / float(wanted.size()))
+	var x := 24.0
+	var out: Array = []
+	for chip in wanted:
+		var label := str(chip.get("label", ""))
+		if chip.has("comp"):
+			label = _comp_label(str(chip["comp"]), w)
+		out.append({"id": str(chip["id"]), "kind": "choice", "label": label,
+			"selected": bool(chip["selected"]), "pinned": true,
+			"rect": Rect2(x, HEADER + CHIP_TOP, w, h)})
+		x += w + gap
+	return out
+
+
+static func _comp_label(competition_id: String, width: float) -> String:
+	var row := PLRepository.shared().competition(competition_id)
+	if row.is_empty():
+		return competition_id.substr(0, 6)
+	return LeagueChrome.competition_chip_label(row, width)
 
 # gd-tools: no cover start
 
@@ -168,6 +257,9 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view
 			LeagueBlock.paint(c, rect, block, fonts, names,
 				LeagueInterestMark.ink(interest, home_id),
 				LeagueInterestMark.ink(interest, away_id))
+		elif kind == "note":
+			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 14.0),
+				str(item["label"]), 11, UiChrome.C_SOFT, med)
 		elif kind == "event":
 			_draw_event(c, rect, item, fonts, interest)
 

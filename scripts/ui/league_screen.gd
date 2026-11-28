@@ -41,6 +41,7 @@ var saves: Array = []
 var delete := LeagueDelete.new()
 var report: Dictionary = {}
 var roundup: Array = []
+var report_filter := {"league": "", "interest": false}
 var month := ""
 var day := ""
 var day_fixtures: Array = []

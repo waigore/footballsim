@@ -80,6 +80,7 @@ static func open_day(screen, date: String) -> void:
 			rows.append(screen.season.report(str(fx["id"])))
 	LeagueDoors.go(screen, screen.MODE_REPORT)
 	screen.roundup = rows
+	LeagueReportActions.reset(screen)
 	screen.report = {}
 	screen.report_back = screen.MODE_STATS
 

@@ -241,7 +241,19 @@ static func pinned_door(c: CanvasItem, cache: Dictionary, item: Dictionary,
 		var band := Rect2(0.0, vp.y - bar, vp.x, bar)
 		c.draw_rect(band, Color(0.012, 0.020, 0.026, 0.96))
 		c.draw_rect(Rect2(band.position.x, band.position.y, band.size.x, 1.0), Color(1, 1, 1, 0.08))
-	if str(item["kind"]) == "chip":
+	var kind := str(item["kind"])
+	if kind == "band":
+		c.draw_rect(rect, Color(0.012, 0.020, 0.026, 0.97))
+		c.draw_rect(Rect2(rect.position.x, rect.end.y - 1.0, rect.size.x, 1.0),
+			Color(1, 1, 1, 0.08))
+	elif kind == "choice":
+		var on := bool(item.get("selected", false))
+		UiChrome.panel(c, cache, rect,
+			UiChrome.C_GOLD.darkened(0.1) if on else UiChrome.C_PANEL_LIGHT, 6,
+			UiChrome.C_GOLD if on else UiChrome.C_BORDER, 1)
+		UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 4.0,
+			str(item["label"]), 10, Color(0.06, 0.06, 0.05) if on else UiChrome.C_SOFT, fonts["bold"])
+	elif kind == "chip":
 		UiChrome.chip(c, cache, rect, str(item["label"]), fonts["bold"])
 	else:
 		UiChrome.button(c, cache, rect, str(item["label"]), fonts["bold"],

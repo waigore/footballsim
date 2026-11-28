@@ -30,6 +30,7 @@ func open_load() -> void:
 func open_season(target: LeagueSeason, show_podium: bool = false) -> void:
 	screen.season = target
 	screen.delete.clear()
+	LeagueReportActions.reset(screen)
 
 
 	screen.nav.clear()
@@ -54,6 +55,7 @@ func show_report(fixture_id: String) -> void:
 func show_roundup(reports: Array) -> void:
 	push_page()
 	screen.report = {}
+	LeagueReportActions.reset(screen)
 	screen.roundup = reports
 	screen.mode = LeagueScreen.MODE_REPORT
 	screen.refresh()
