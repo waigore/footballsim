@@ -77,6 +77,13 @@ static func of(row: Rect2, cols: Array, club_min: float = MIN_CLUB_W,
 	}
 
 
+static func club_label(row: Dictionary) -> String:
+	var name := str(row.get("club_name", "")).strip_edges()
+	if name != "":
+		return name
+	return str(row.get("club_abbr", ""))
+
+
 static func text(row: Dictionary, key: String) -> String:
 	if key == "gd":
 		return "%+d" % (int(row.get("gf", 0)) - int(row.get("ga", 0)))

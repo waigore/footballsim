@@ -25,7 +25,7 @@ static func page(competition_id: String = "") -> Dictionary:
 	for row in WikiModel.repo().table(comp_id):
 		rows.append({
 			"cells": [
-				str(int(row["position"])), str(row["club_abbr"]),
+				str(int(row["position"])), str(row["club_name"]),
 				str(int(row["played"])), str(int(row["won"])), str(int(row["drawn"])),
 				str(int(row["lost"])), str(int(row["gf"])), str(int(row["ga"])),
 				str(int(row["points"])),
@@ -37,7 +37,7 @@ static func page(competition_id: String = "") -> Dictionary:
 	out["blocks"].append({
 		"k": "table",
 		"cols": ["#", "CLUB", "P", "W", "D", "L", "GF", "GA", "PTS"],
-		"widths": [0.05, 0.27, 0.09, 0.09, 0.09, 0.09, 0.10, 0.10, 0.12],
+		"widths": [0.04, 0.30, 0.09, 0.09, 0.09, 0.09, 0.10, 0.10, 0.10],
 		"text_cols": [1],
 		"rows": rows,
 	})
@@ -53,8 +53,8 @@ static func page(competition_id: String = "") -> Dictionary:
 	for fx in WikiModel.repo().fixtures("", 10, comp_id):
 		results.append({
 			"cells": [
-				FixtureCalendar.day_label(str(fx["kickoff"])), str(fx["home_abbr"]),
-				"%d – %d" % [int(fx["home_goals"]), int(fx["away_goals"])], str(fx["away_abbr"]),
+				FixtureCalendar.day_label(str(fx["kickoff"])), str(fx["home_name"]),
+				"%d – %d" % [int(fx["home_goals"]), int(fx["away_goals"])], str(fx["away_name"]),
 			],
 			"target": {"page": WikiModel.TEAM, "id": str(fx["home_club_id"])},
 			"dates": {0: str(fx["kickoff"])}, "club_cell": 1,
@@ -81,7 +81,7 @@ static func leader_rows(limit: int, stat: String, competition_id: String = "") -
 	for row in WikiModel.repo().leaders(limit, stat, competition_id):
 		rows.append({
 			"cells": [
-				str(row["name"]), str(row["abbr"]), str(int(row["matches"])),
+				str(row["name"]), str(row["club_name"]), str(int(row["matches"])),
 				str(int(row["goals"] if stat == "goals" else row["assists"])),
 			],
 			"target": {"page": WikiModel.PLAYER, "id": str(row["player_id"])},

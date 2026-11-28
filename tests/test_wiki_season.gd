@@ -45,7 +45,7 @@ func test_the_league_page_scorer_chart_is_the_season_s() -> void:
 	var rows := _rows_below(page, "FOOTBALLSIM  ·  IN-SIM SCORERS")
 	assert_gte(rows.size(), 1, "the season scored no goals at all")
 	assert_eq(str(rows[0]["cells"][0]), str(scorers[0]["name"]), "the chart does not lead with the season's top scorer")
-	assert_eq(str(rows[0]["cells"][1]), str(scorers[0]["abbr"]), "the chart names the wrong club")
+	assert_eq(str(rows[0]["cells"][1]), str(scorers[0]["club_name"]), "the chart names the wrong club")
 
 func test_the_club_page_reads_the_live_row() -> void:
 	var club_id := str(first["home_club_id"])

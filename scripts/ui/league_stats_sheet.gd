@@ -181,8 +181,12 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array,
 				UiChrome.C_DIM, med)
 			UiChrome.text(c, Vector2(rect.position.x + 24.0, rect.position.y + 15.0),
 				str(leader.get("name", "")), 11, UiChrome.C_TEXT, bold)
-			UiChrome.text(c, Vector2(rect.position.x + 260.0, rect.position.y + 15.0),
-				"%s  ·  %s" % [str(leader.get("abbr", "")), _comp_short(str(leader.get("competition_id", "")))],
+			var club_line := "%s  ·  %s" % [str(leader.get("club_name", leader.get("abbr", ""))),
+				_comp_short(str(leader.get("competition_id", "")))]
+			var club_x := rect.position.x + 260.0
+			var club_room: float = rect.end.x - 10.0 - club_x - 30.0
+			UiChrome.text(c, Vector2(club_x, rect.position.y + 15.0),
+				LeagueColumns.fit_name(club_line, med, 9, club_room),
 				9, UiChrome.C_DIM, med)
 			UiChrome.text_r(c, rect.end.x - 10.0, rect.position.y + 15.0,
 				str(int(leader.get("stat_value", leader.get("goals", 0)))), 11, UiChrome.C_GOLD, bold)

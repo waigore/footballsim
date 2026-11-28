@@ -57,6 +57,7 @@ func leaders(limit: int = 6, stat: String = "goals", competition_id: String = ""
 	var column := "assists" if stat == "assists" else "goals"
 	var sql := (
 		"SELECT s.player_id, s.matches, s.goals, s.assists, p.name, p.pos, c.abbr, "
+		+ "c.name AS club_name, "
 		+ "c.competition_id FROM season_stat s JOIN player p ON p.id = s.player_id "
 		+ "JOIN club c ON c.id = p.club_id "
 	)
@@ -144,7 +145,7 @@ func sim_leaders(limit: int = 5, competition_id: String = "", stat: String = "go
 	var column := "assists" if stat == "assists" else "goals"
 	var sql := (
 		"SELECT s.goals, s.assists, s.apps, p.name, p.id AS player_id, c.abbr, "
-		+ "c.id AS club_id, c.competition_id FROM sim_player_stat s "
+		+ "c.name AS club_name, c.id AS club_id, c.competition_id FROM sim_player_stat s "
 		+ "JOIN player p ON p.id = s.player_id JOIN club c ON c.id = p.club_id WHERE s.%s > 0" % column
 	)
 	var bindings: Array = []

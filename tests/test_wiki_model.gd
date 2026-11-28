@@ -23,6 +23,58 @@ func test_the_league_page_has_every_agreed_section() -> void:
 	assert_gte(_rows_in(page, "LATEST RESULTS  ·  SNAPSHOT"), 5, "no recent results")
 	assert_eq(PLRepository.shared().table("PL").size(), 20, "the table behind the page changed size")
 
+func test_the_league_table_names_every_club_in_full() -> void:
+	var page := WikiModel.page(WikiModel.LEAGUE, "")
+	var names := _club_names("PL")
+	var rows := _rows_of(page, "LEAGUE TABLE")
+	assert_gte(rows.size(), 20, "the league table is short")
+	for row in rows:
+		var cell := str((row["cells"] as Array)[1])
+		assert_true(names.has(cell), "the league table printed %s, not a club name" % cell)
+
+
+func test_every_club_column_on_the_league_page_reads_a_full_name() -> void:
+	var page := WikiModel.page(WikiModel.LEAGUE, "")
+	var names := _club_names("PL")
+	var checked := 0
+	for block in page["blocks"]:
+		if str(block["k"]) != "table":
+			continue
+		var cols: Array = block["cols"]
+		var column := cols.find("CLUB")
+		if column < 0:
+			continue
+		for row in block["rows"]:
+			var cell := str((row["cells"] as Array)[column])
+			assert_true(cell == "" or names.has(cell),
+				"a club column printed %s, not a full club name" % cell)
+			checked += 1
+	assert_gt(checked, 20, "no club column was checked")
+
+
+func _club_names(competition_id: String) -> Dictionary:
+	var out := {}
+	for club in PLRepository.shared().club_ids(competition_id):
+		out[str(PLRepository.shared().club(str(club))["name"])] = true
+	return out
+
+
+func _rows_of(page: Dictionary, section: String) -> Array:
+	var seen := false
+	for block in page["blocks"]:
+		var kind := str(block["k"])
+		if kind == "section":
+			if seen:
+				return []
+			seen = str(block["text"]) == section
+			continue
+		if seen and kind == "table":
+			return block["rows"]
+		if seen:
+			return []
+	return []
+
+
 func test_every_link_on_the_league_page_resolves() -> void:
 	var page := WikiModel.page(WikiModel.LEAGUE, "")
 	for target in _targets(page):

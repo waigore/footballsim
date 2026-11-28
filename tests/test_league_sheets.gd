@@ -1157,16 +1157,48 @@ func test_a_played_row_grows_for_its_events() -> void:
 		"an empty result grew a placeholder row")
 
 
-func test_the_table_keeps_abbreviations_while_rows_print_names() -> void:
+func test_the_table_reads_the_full_club_name_at_every_surface() -> void:
 	var row: Dictionary = _table()[0]
-	assert_eq(LeagueTableView.club_label(row), str(row["club_abbr"]),
-		"the table dropped its abbreviation")
-	assert_eq(LeagueTableView.club_label({"club_name": "Coventry City"}), "Coventry City",
-		"a row with no short form lost its name")
+	assert_eq(LeagueTableView.club_label(row), str(row["club_name"]),
+		"the table dropped the full club name")
+	assert_eq(LeagueTableView.club_label({"club_abbr": "MUN"}), "MUN",
+		"a row with no name lost its short form")
 	var fx := _fixture(1)
 	assert_eq(str(fx["home_name"]), "Home 1", "the fixture row lost its full name")
 	assert_ne(str(fx["home_name"]), str(fx["home_abbr"]),
 		"a fixture row still reads only the abbreviation")
+
+
+func test_no_table_surface_paints_a_short_code() -> void:
+	for path in ["res://scripts/ui/league_table_view.gd", "res://scripts/ui/league_plan_rows.gd",
+			"res://scripts/ui/league_side_table.gd", "res://scripts/ui/wiki_league.gd",
+			"res://scripts/ui/wiki_ledger.gd", "res://scripts/ui/wiki_team.gd",
+			"res://scripts/ui/wiki_player_log.gd"]:
+		var text: String = FileAccess.get_file_as_string(path)
+		assert_false(text.is_empty(), "%s did not load" % path)
+		assert_eq(text.find("club_abbr"), -1,
+			"%s paints a club's abbreviation on a table surface" % path)
+		assert_eq(text.find("home_abbr"), -1,
+			"%s paints a club's abbreviation on a table surface" % path)
+		assert_eq(text.find("away_abbr"), -1,
+			"%s paints a club's abbreviation on a table surface" % path)
+
+
+func test_a_side_table_row_paints_the_full_name_inside_its_column() -> void:
+	var font: Font = load("res://fonts/BarlowCondensed-SemiBold.ttf")
+	var rail := LeagueSideTable.places(LeagueSideTable.box(Vector2(1280.0, 800.0), 600.0))
+	var room := float(rail["club_w"])
+	assert_gte(room, 100.0, "the side table's club column is too tight for a full name")
+	var fits := 0
+	for name in ["Arsenal", "Manchester United", "Coventry City", "Wolverhampton Wanderers"]:
+		if font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x <= room:
+			fits += 1
+	assert_gte(fits, 3, "the side table's club column cuts most full names")
+	var shown: String = LeagueColumns.fit_name("Wolverhampton Wanderers", font, 12, room)
+	if font.get_string_size("Wolverhampton Wanderers", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > room:
+		assert_true(shown.ends_with("…"), "a name too wide for the side table is not cut")
+		assert_lte(font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x, room,
+			"the cut side-table name still overflows its column")
 
 func test_the_podium_lays_out_with_and_without_a_summary() -> void:
 	var book := LeagueBook.new()

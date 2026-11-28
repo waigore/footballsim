@@ -153,8 +153,10 @@ static func _trow(body: WikiBody, row: Dictionary, rect: Rect2, hovered: bool) -
 			_text_right(body, x + cw - 8.0, _row_baseline(rect), str(cells[i]), 11, ink,
 				i == cells.size() - 1)
 		else:
-			_text(body, Vector2(x, _row_baseline(rect)), _clip(str(cells[i]), 34), 11, ink,
-				i == 1 and cells.size() >= 4)
+			var bold_cell: bool = i == 1 and cells.size() >= 4
+			var font: Font = body.f_bold if bold_cell else body.f_body
+			_text(body, Vector2(x, _row_baseline(rect)),
+				WikiChrome.fit(font, str(cells[i]), 11, cw - 8.0), 11, ink, bold_cell)
 		x += cw
 	body.draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y),
 		Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y),
