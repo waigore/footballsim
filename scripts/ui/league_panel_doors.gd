@@ -10,6 +10,9 @@ static func nav(screen, pose: String) -> void:
 	if pose == "interest":
 		screen.interest_query = ""
 		LeagueDoors.go(screen, LeagueScreen.MODE_INTEREST)
+	elif pose == "cups":
+		LeagueCupActions.open(screen)
+		return
 	elif pose == "fixtures":
 		LeagueDoors.go(screen, LeagueScreen.MODE_HUB)
 	elif pose == "table":

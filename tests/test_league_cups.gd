@@ -161,12 +161,13 @@ func test_cup_state_survives_a_reopen() -> void:
 	assert_eq(int(after["n"]), before, "the reopen lost a drawn round")
 	assert_true(LeagueCupState.winner("CS") != "", "the reopen lost the Shield result")
 
-func test_a_cup_fixture_is_not_watchable() -> void:
+func test_a_cup_fixture_takes_a_watch_flag() -> void:
 	var fx := _pending_cup_fixture()
 	assert_false(fx.is_empty(), "no cup fixture is pending")
-	assert_false(season.set_watch(str(fx["id"]), true), "a cup fixture took a watch flag")
+	assert_true(season.set_watch(str(fx["id"]), true), "a cup fixture refused a watch flag")
 	var row := PLDatabase.row("SELECT watched FROM league_fixture WHERE id = ?;", [str(fx["id"])])
-	assert_eq(int(row.get("watched", 0)), 0, "a cup fixture kept a watch flag")
+	assert_eq(int(row.get("watched", 0)), 1, "a cup fixture dropped its watch flag")
+	assert_true(season.set_watch(str(fx["id"]), false), "a cup watch could not be cleared")
 
 func test_a_cup_result_leaves_the_league_ledger_alone() -> void:
 	var fx := _pending_cup_fixture()

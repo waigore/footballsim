@@ -24,6 +24,7 @@ const MODE_SYSTEM := "system"
 
 const MODE_STATS := "stats"
 const MODE_INTEREST := "interest"
+const MODE_CUPS := "cups"
 
 
 var ui_scale := 1.0
@@ -35,7 +36,7 @@ var holding := false
 var mode := MODE_WIZARD
 var season: LeagueSeason = null
 var wizard := {"name": "", "calendar_mode": "generated", "advance_mode": "fixture_days",
-	"competitions": ["PL"], "error": ""}
+	"competitions": ["PL"], "cup_off": [], "error": ""}
 var saves: Array = []
 
 var delete := LeagueDelete.new()
@@ -63,6 +64,9 @@ var system := LeagueSystemSheet.new()
 
 var sheet_stats := LeagueStatsSheet.new()
 var sheet_interest := LeagueInterestSheet.new()
+var sheet_cups := LeagueCupSheet.new()
+
+var cups := {"cup": "", "round": ""}
 
 var interest_query := ""
 

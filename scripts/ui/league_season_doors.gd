@@ -18,7 +18,7 @@ static func continue_day(screen) -> void:
 		return
 	var pending: Array = result.get("pending", [])
 	if not pending.is_empty():
-		var watch: Dictionary = screen.season.start_watch(str(pending[0]["id"]))
+		var watch: Dictionary = screen.season.start_watch(str(_held(pending)["id"]))
 		if not watch.is_empty():
 			request_watch(screen, watch)
 			return
@@ -27,6 +27,13 @@ static func continue_day(screen) -> void:
 		return
 	screen.month = LeagueMonth.state_month(screen.season, screen.month)
 	screen.refresh()
+
+
+static func _held(pending: Array) -> Dictionary:
+	for fx in pending:
+		if int((fx as Dictionary).get("watched", 0)) == 1:
+			return fx
+	return pending[0]
 
 
 static func leave_results(screen: LeagueScreen) -> void:

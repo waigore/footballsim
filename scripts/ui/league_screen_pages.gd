@@ -14,7 +14,7 @@ func open_wizard() -> void:
 	screen.nav.clear()
 	screen.wizard = {"name": "",
 		"calendar_mode": "generated", "advance_mode": "fixture_days",
-		"competitions": ["PL"], "error": ""}
+		"competitions": ["PL"], "cup_off": [], "error": ""}
 	screen.visible = true
 	screen.refresh()
 
@@ -99,6 +99,8 @@ func sheet(pose: Array) -> RefCounted:
 			return screen.sheet_stats
 		"interest":
 			return screen.sheet_interest
+		"cups":
+			return screen.sheet_cups
 	return screen.hub
 
 

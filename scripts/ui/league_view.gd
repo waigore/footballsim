@@ -8,6 +8,7 @@ static func pose_names() -> Dictionary:
 		LeagueScreen.MODE_CALENDAR: "calendar", LeagueScreen.MODE_INTEREST: "interest",
 		LeagueScreen.MODE_STATS: "stats", LeagueScreen.MODE_SYSTEM: "system",
 		LeagueScreen.MODE_REPORT: "fixtures", LeagueScreen.MODE_PODIUM: "stats",
+		LeagueScreen.MODE_CUPS: "cups",
 	}
 
 
@@ -24,6 +25,7 @@ static func sheets() -> Dictionary:
 		LeagueScreen.MODE_SYSTEM: ["system", "layout", "draw_body", "draw_chrome"],
 		LeagueScreen.MODE_STATS: ["stats", "layout", "draw_body", "draw_chrome"],
 		LeagueScreen.MODE_INTEREST: ["interest", "layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_CUPS: ["cups", "layout", "draw_body", "draw_chrome"],
 	}
 
 
@@ -49,6 +51,8 @@ static func build(screen) -> Dictionary:
 	var state: Dictionary = season.state() if season != null else {"rules": rules}
 	if mode == LeagueScreen.MODE_SYSTEM:
 		return LeagueSystemActions.view(screen)
+	if mode == LeagueScreen.MODE_CUPS:
+		return LeagueCupActions.view(screen)
 
 
 	if mode == LeagueScreen.MODE_STATS:

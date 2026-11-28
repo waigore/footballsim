@@ -227,6 +227,13 @@ suites = [
   # The table's form reading (DR-20261128-12): the fold over the ledger's
   # played fixtures and the rows the season state decorates with it.
   "test_form_guide.gd",
+  # The cups destination (#459): the wizard's per-country toggle, the cup
+  # hub and its rounds, and the panel row that opens them.
+  "test_league_cups_ui.gd",
+  # The cup engine itself (#457): the draws, the ties, the honours and the
+  # country list LeagueCup.active_ids now narrows by.
+  "test_league_cups.gd",
+  "test_cup_season.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.

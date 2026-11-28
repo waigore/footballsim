@@ -26,6 +26,7 @@ Shipped (wiki domains playable; DRs accepted):
 | Phone tap ≥44 dp; match `SKIP` to whistle | DR-20261128-02 / 03 / 05 |
 | Club country ids + player UUIDs; watched assist row | DR-20261128-16 / 19 |
 | Domestic cups and supercups | DR-20261128-17; `league_cup_*.gd`; [#455](https://github.com/waigore/footballsim/issues/455)–[#459](https://github.com/waigore/footballsim/issues/459) |
+| Cups destination + per-country toggle | DR-20261128-22; `league_cup_hub.gd`, `league_cup_sheet.gd`; watched cup ties settle |
 
 ## Remaining gaps (impact order)
 

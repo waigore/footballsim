@@ -6,6 +6,7 @@ const ITEMS := [
 	{"id": "nav:fixtures", "label": "TODAY'S FIXTURES", "icon": "fixtures", "pose": "hub"},
 	{"id": "nav:table", "label": "TABLES", "icon": "table", "pose": "table"},
 	{"id": "nav:calendar", "label": "CALENDAR", "icon": "calendar", "pose": "calendar"},
+	{"id": "nav:cups", "label": "CUPS", "icon": "cups", "pose": "cups"},
 	{"id": "nav:interest", "label": "TEAMS OF INTEREST", "icon": "interest", "pose": "interest"},
 	{"id": "nav:stats", "label": "STATS", "icon": "stats", "pose": "stats"},
 	{"id": "nav:system", "label": "SYSTEM", "icon": "system", "pose": "system"},

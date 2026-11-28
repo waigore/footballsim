@@ -1000,16 +1000,28 @@ func _matchday_hub() -> Array:
 		_open_scroll_hub()
 	else:
 		_open_hub()
-	var plan: Array = screen().current_view().get("plan", [])
+	if LeagueSeason.active != null:
+		for fx in LeagueSeason.active.record.fixtures.all():
+			if int(fx.get("watched", 0)) == 1:
+				LeagueSeason.active.set_watch(str(fx["id"]), false)
+	var plan: Array = _pending_plan()
 	var guard := 0
-	while plan.is_empty() and guard < 30:
+	while plan.is_empty() and guard < 40:
 		if screen().mode != LeagueScreen.MODE_HUB:
 			press_id("back")
 		press_id("continue")
-		plan = screen().current_view().get("plan", [])
+		plan = _pending_plan()
 		guard += 1
 	assert_gte(plan.size(), 1, "the hub never reached a matchday")
 	return plan
+
+
+func _pending_plan() -> Array:
+	var out: Array = []
+	for fx in screen().current_view().get("plan", []):
+		if str((fx as Dictionary).get("status", "")) == "pending":
+			out.append(fx)
+	return out
 
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:

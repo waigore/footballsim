@@ -112,7 +112,7 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			assert_eq(chosen, 3, "one choice per group should be selected")
 
 
-			assert_eq(items.size(), 22, "the wizard is missing a control")
+			assert_eq(items.size(), 25, "the wizard is missing a control")
 
 
 func test_the_wizard_cascades_a_country_chain() -> void:

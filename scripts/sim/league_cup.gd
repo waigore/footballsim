@@ -36,12 +36,65 @@ static func active_ids(save: LeagueSave) -> Array:
 	var out: Array = []
 	if save == null or str(save.meta.get("cups", "off")) != "on":
 		return out
+	var only := cup_countries(save)
 	for row in PLRepository.shared().cups():
 		var cid := str(row.get("id", ""))
-		for league_id in COUNTRY_LEAGUES.get(str(row.get("country", "")), []):
+		var country := str(row.get("country", ""))
+		if not only.is_empty() and not only.has(country):
+			continue
+		for league_id in COUNTRY_LEAGUES.get(country, []):
 			if save.actives.has(league_id):
 				out.append(cid)
 				break
+	return out
+
+
+static func cup_countries(save: LeagueSave) -> Array:
+	var out: Array = []
+	if save == null:
+		return out
+	var raw := str(save.meta.get("cup_countries", ""))
+	for part in raw.split(",", false):
+		var country := str(part).strip_edges()
+		if country != "" and not out.has(country):
+			out.append(country)
+	return out
+
+
+static func countries_with_cups() -> Array:
+	var out: Array = []
+	for row in PLRepository.shared().cups():
+		var country := str(row.get("country", ""))
+		if country != "" and not out.has(country):
+			out.append(country)
+	return out
+
+
+static func country_cup_ids(country: String) -> Array:
+	var out: Array = []
+	for row in PLRepository.shared().cups():
+		if str(row.get("country", "")) == country:
+			out.append(str(row.get("id", "")))
+	return out
+
+
+static func countries_for(actives: Array) -> Array:
+	var out: Array = []
+	for country in countries_with_cups():
+		for league_id in COUNTRY_LEAGUES.get(country, []):
+			if actives.has(league_id):
+				out.append(country)
+				break
+	return out
+
+
+static func valid_countries(wanted: Array, actives: Array = []) -> Array:
+	var known := countries_for(actives) if not actives.is_empty() else countries_with_cups()
+	var out: Array = []
+	for entry in wanted:
+		var country := str(entry).strip_edges()
+		if known.has(country) and not out.has(country):
+			out.append(country)
 	return out
 
 

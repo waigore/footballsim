@@ -50,6 +50,8 @@ func frame_height(view: Dictionary) -> float:
 		h += 12.0
 	if not (summary.get("relegation", {}) as Dictionary).is_empty():
 		h += 8.0 + 16.0
+	if not (summary.get("cups", []) as Array).is_empty():
+		h += 8.0 + 18.0 + 22.0 * float((summary.get("cups", []) as Array).size())
 	return h + 8.0
 
 
@@ -153,6 +155,32 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary)
 		UiChrome.text(c, Vector2(24.0, y + 8.0), "RELEGATION  %s" % str(tie.get("text", "")),
 			10, UiChrome.C_GOLD, bold)
 		y += 16.0
+	_paint_cups(c, vp, summary, y, bold, med)
+
+
+func _paint_cups(c: CanvasItem, vp: Vector2, summary: Dictionary, y: float,
+		bold: Font, med: Font) -> void:
+	var cups: Array = summary.get("cups", [])
+	if cups.is_empty():
+		return
+	y += 8.0
+	UiChrome.text(c, Vector2(24.0, y + 12.0), "DOMESTIC HONOURS", 10, UiChrome.C_DIM, bold)
+	y += 18.0
+	for row in cups:
+		var honour: Dictionary = row
+		UiChrome.text(c, Vector2(24.0, y + 12.0), str(honour.get("name", honour.get("id", ""))).to_upper(),
+			10, UiChrome.C_GOLD, bold)
+		UiChrome.text(c, Vector2(24.0, y + 30.0), str(honour.get("winner_name", "")), 14,
+			UiChrome.C_TEXT, bold)
+		var score := "%d–%d" % [int(honour.get("home_goals", 0)), int(honour.get("away_goals", 0))]
+		var pens := ""
+		if int(honour.get("pens_home", -1)) >= 0:
+			pens = "  (%d–%d PENS)" % [int(honour.get("pens_home", 0)),
+				int(honour.get("pens_away", 0))]
+		UiChrome.text_r(c, vp.x - 24.0, y + 30.0,
+			"%s  %s%s" % [str(honour.get("runner_up_name", "")), score, pens],
+			10, UiChrome.C_SOFT, med)
+		y += 22.0
 
 
 func _paint_promoted(c: CanvasItem, vp: Vector2, section: Dictionary, up: int,

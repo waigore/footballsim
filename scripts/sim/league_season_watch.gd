@@ -49,17 +49,24 @@ static func record_engine(season: LeagueSeason, engine: MatchEngine) -> void:
 	var home := int(engine.score[0])
 	var away := int(engine.score[1])
 	var cid := str(fx.get("competition_id", ""))
+	var cup := LeagueCup.is_cup_fixture(fx)
 	var events := LeagueHighlights.engine_events(engine, fixture_id)
 	PLDatabase.transaction("BEGIN TRANSACTION;")
 	season.record.report.save_result(fixture_id, home, away,
-		str(fx["home_club_id"]), str(fx["away_club_id"]), season.record.standings, cid)
+		str(fx["home_club_id"]), str(fx["away_club_id"]),
+		null if cup else season.record.standings, cid)
 	season.record.report.add_events(events)
-	LeagueSettle.watch(season.record, engine, events, int(season.rng.seed),
-		str(fx["kickoff"]), int(fx["matchday"]))
+	if cup:
+		LeagueCupTie.record_engine(season, fx, home, away)
+	else:
+		LeagueSettle.watch(season.record, engine, events, int(season.rng.seed),
+			str(fx["kickoff"]), int(fx["matchday"]))
 	LeagueHighlights.store_watch(season.record, int(season.rng.seed), fixture_id, season.captured,
 		str(fx["home_club_id"]), str(fx["away_club_id"]))
 	season.captured = []
 	PLDatabase.transaction("COMMIT;")
+	if cup:
+		LeagueCupState.after_played(season, fx)
 
 	PLRepository.shared().invalidate()
 

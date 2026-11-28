@@ -4,6 +4,7 @@
 assets/ui/league/fixtures.png
 assets/ui/league/table.png
 assets/ui/league/calendar.png
+assets/ui/league/cups.png
 assets/ui/league/interest.png
 assets/ui/league/stats.png
 assets/ui/league/system.png

@@ -61,6 +61,29 @@ static func _league_groups(comps: Array) -> Array:
 		out.append({"id": str(country), "label": str(country).to_upper(), "leagues": sorted})
 	return out
 
+
+static func _cup_label(cup_ids: Array) -> String:
+	var names: Array = []
+	for cid in cup_ids:
+		names.append(PLRepository.shared().competition_name(str(cid)))
+	return " + ".join(PackedStringArray(names))
+
+
+static func _cup_row(y: float, x: float, w: float, h: float, country: String,
+		active: bool, on: bool) -> Dictionary:
+	var cup_ids := LeagueCup.country_cup_ids(country)
+	var label := _cup_label(cup_ids) if cup_ids.size() <= 2 else "%d CUPS" % cup_ids.size()
+	return {"id": "wcup:" + country, "kind": "cup_choice", "country": country,
+		"label": label, "in_cascade": active, "selected": on,
+		"rect": Rect2(x, y, w, h)}
+
+static func _country_active(country: String, chosen: Array) -> bool:
+	for league_id in LeagueCup.COUNTRY_LEAGUES.get(country, []):
+		if chosen.has(str(league_id)):
+			return true
+	return false
+
+
 func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	var touch := bool(view.get("touch", false))
 	var items: Array = []
@@ -76,6 +99,7 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append({"id": "", "kind": "caption", "label": "LEAGUES",
 		"rect": Rect2(24.0, y - 8.0, w, 10.0)})
 	var chosen: Array = view.get("competitions", ["PL"])
+	var cups_on := LeagueWizardActions.countries(chosen, view.get("cup_off", []))
 	var groups := _league_groups(PLRepository.shared().leagues())
 	for group in groups:
 		items.append({"id": "", "kind": "country", "label": str(group["label"]),
@@ -92,6 +116,12 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 				"rect": Rect2(24.0 + float(col) * w * 0.52, y + float(line) * pitch, w * 0.48, toggle_h),
 				"selected": chosen.has(cid)})
 		y += pitch * float(ceili(float(leagues.size()) / 2.0)) + 6.0
+		var country := str(group["id"])
+		if LeagueCup.country_cup_ids(country).is_empty():
+			continue
+		var active := _country_active(country, chosen)
+		items.append(_cup_row(y, 24.0, w, toggle_h, country, active, cups_on.has(country)))
+		y += pitch * 0.5 + 10.0
 	items.append({"id": "mode:real", "kind": "choice", "label": "REAL FIXTURES",
 		"rect": Rect2(24.0, y, w * 0.48, toggle_h), "selected": str(view.get("calendar_mode", "")) == "real"})
 	items.append({"id": "mode:generated", "kind": "choice", "label": "GENERATED",
@@ -212,6 +242,23 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 				value if value != "" else SAVE_NAME, 15,
 				UiChrome.C_TEXT if value != "" else UiChrome.C_DIM, bold)
 			LeagueFieldFocus.caret(c, rect, value, bold, 15, live)
+		elif kind == "cup_choice":
+			var on := bool(item["selected"])
+			var cascade := bool(item.get("in_cascade", false))
+			var fill: Color = UiChrome.C_PANEL
+			var border: Color = UiChrome.C_BORDER
+			var ink: Color = UiChrome.C_DIM
+			if cascade:
+				fill = UiChrome.C_GOLD.darkened(0.1) if on else UiChrome.C_PANEL
+				border = UiChrome.C_GOLD if on else UiChrome.C_BORDER
+				ink = Color(0.06, 0.06, 0.05) if on else UiChrome.C_TEXT
+			UiChrome.panel(c, cache, rect, fill, 6, border, 1)
+			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + 13.0),
+				"DOMESTIC CUPS", 8, ink if on and cascade else UiChrome.C_DIM, bold)
+			UiChrome.text(c, Vector2(rect.position.x + 10.0, rect.position.y + rect.size.y - 8.0),
+				str(item["label"]), 11, ink, bold)
+			UiChrome.text_r(c, rect.end.x - 10.0, rect.position.y + rect.size.y * 0.5 + 5.0,
+				"ON" if on else "OFF", 11, ink, bold)
 		elif kind == "choice":
 			var chosen := bool(item["selected"])
 			UiChrome.panel(c, cache, rect,

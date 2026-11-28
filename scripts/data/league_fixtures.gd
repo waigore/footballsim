@@ -180,9 +180,6 @@ func next_date(after: String, competition_id: String = "") -> String:
 
 func set_watch(fixture_id: String, watch: bool) -> bool:
 	save.ensure_open()
-	var fx := one(fixture_id)
-	if not fx.is_empty() and str(fx.get("stage", "")) != "":
-		return false
 	return PLDatabase.execute(
 		"UPDATE league_fixture SET watched = ? WHERE id = ?;",
 		[1 if watch else 0, fixture_id],
