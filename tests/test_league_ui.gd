@@ -87,9 +87,9 @@ func _press_panel_row(id: String) -> void:
 	panel.settle()
 	screen().refresh()
 	if id.begins_with("nav:"):
-		var nav_rows: Array = LeaguePanel.rows(panel.cups, panel.europe)
-		for i in range(nav_rows.size()):
-			if str(nav_rows[i]["id"]) == id:
+		var list: Array = panel.items()
+		for i in range(list.size()):
+			if str(list[i]["id"]) == id:
 				press(panel.item_rect(screen().design_vp(), i).get_center())
 				panel.settle()
 				return
@@ -175,8 +175,10 @@ func test_a_phone_new_league_presses_create_on_its_pinned_bar() -> void:
 func _league_plan() -> Array:
 	var out: Array = []
 	for fx in screen().current_view().get("plan", []):
-		if str((fx as Dictionary).get("stage", "")) == "":
-			out.append(fx)
+		var row: Dictionary = fx
+		var stage := str(row.get("stage", ""))
+		if stage == "" or LeagueUefa.is_continental(str(row.get("competition_id", ""))):
+			out.append(row)
 	return out
 
 

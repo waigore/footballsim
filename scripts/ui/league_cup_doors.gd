@@ -2,7 +2,7 @@ class_name LeagueCupDoors
 extends RefCounted
 
 
-static func nav(screen: LeagueScreen, pose: String) -> bool:
+static func nav(screen: Object, pose: String) -> bool:
 	if pose != "cups":
 		return false
 	LeagueDoors.go(screen, LeagueScreen.MODE_CUPS)
@@ -10,7 +10,7 @@ static func nav(screen: LeagueScreen, pose: String) -> bool:
 	return true
 
 
-static func press(screen: LeagueScreen, id: String) -> bool:
+static func press(screen: Object, id: String) -> bool:
 	if id.begins_with("cup:"):
 		open_cup(screen, id.substr(4))
 		return true

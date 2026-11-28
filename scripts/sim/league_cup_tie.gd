@@ -132,6 +132,61 @@ static func runner_up_of(competition_id: String, round_id: String) -> String:
 	return str(row.get("home_club_id", ""))
 
 
+static func winners(competition_id: String, round_id: String) -> Array:
+	var out: Array = []
+	for row in PLDatabase.rows(
+			"SELECT winner_club_id FROM cup_tie WHERE competition_id = ? AND round_id = ? "
+			+ "AND winner_club_id <> '' ORDER BY tie_index;", [competition_id, round_id]):
+		out.append(str(row["winner_club_id"]))
+	return out
+
+
+static func install_round(competition_id: String, round_id: String, position: int,
+		pairs: Array, rule: Dictionary, id_prefix: String) -> void:
+	PLDatabase.execute(
+		"INSERT OR REPLACE INTO cup_round (competition_id, round_id, position, status) "
+		+ "VALUES (?, ?, ?, 'open');", [competition_id, round_id, position])
+	var first_date := str(rule.get("date", ""))
+	var second_date := str(rule.get("second_leg", ""))
+	var legs := int(rule.get("legs", 1))
+	for i in range(pairs.size()):
+		var pair: Dictionary = pairs[i]
+		var home := str(pair["home"])
+		var away := str(pair["away"])
+		PLDatabase.execute(
+			"INSERT OR REPLACE INTO cup_tie (competition_id, round_id, tie_index, "
+			+ "home_club_id, away_club_id, winner_club_id, home_goals, away_goals, "
+			+ "pens_home, pens_away, extra_time) VALUES (?, ?, ?, ?, ?, '', 0, 0, -1, -1, 0);",
+			[competition_id, round_id, i, home, away])
+		for leg in range(1, legs + 1):
+			_install_leg(competition_id, round_id, position, i, leg, home, away,
+				first_date, second_date, id_prefix)
+
+
+static func _install_leg(competition_id: String, round_id: String, position: int,
+		tie_index: int, leg: int, home: String, away: String, first_date: String,
+		second_date: String, id_prefix: String) -> void:
+	var fixture_home := home if leg == 1 else away
+	var fixture_away := away if leg == 1 else home
+	var date := _leg_date(first_date, second_date, leg)
+	PLDatabase.execute(
+		"INSERT OR REPLACE INTO league_fixture (id, competition_id, matchday, kickoff, "
+		+ "kickoff_time, home_club_id, away_club_id, status, watched, suggested, stage, leg) "
+		+ "VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, ?);",
+		["%s-%s-%s-%02d-%d" % [id_prefix, competition_id, round_id, tie_index, leg],
+		 competition_id, position, date,
+		 FixtureCalendar.KICKOFF_TIMES[(tie_index + leg) % FixtureCalendar.KICKOFF_TIMES.size()],
+		 fixture_home, fixture_away, round_id, leg])
+
+
+static func _leg_date(first_date: String, second_date: String, leg: int) -> String:
+	if leg <= 1:
+		return first_date
+	if second_date != "":
+		return second_date
+	return FixtureCalendar.add_days(first_date, 7 * (leg - 1))
+
+
 static func _tie_index(fixture_id: String) -> int:
 	var parts := fixture_id.split("-")
 	if parts.size() < 2:

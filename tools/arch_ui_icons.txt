@@ -3,6 +3,7 @@
 # do not drop entries that still have a panel/row destination.
 assets/ui/league/fixtures.png
 assets/ui/league/table.png
+assets/ui/league/europe.png
 assets/ui/league/calendar.png
 assets/ui/league/europe.png
 assets/ui/league/interest.png

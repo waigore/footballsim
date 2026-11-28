@@ -49,7 +49,8 @@ import sys as _sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cup_seed_data import (  # noqa: E402
     CUPS, NAME_POOLS, NORTH_CITIES, PL_EUROPE, PRIORS, SPANISH_NORTH,
-    ENGLISH_STUBS, GERMAN_STUBS, SPANISH_STUBS,
+    CI_PRELIMINARY, CI_SEEDS, ENGLISH_STUBS, GERMAN_STUBS, SPANISH_STUBS,
+    ITALIAN_STUBS,
 )
 from uefa_seed_data import (  # noqa: E402
     ASSOCIATIONS, CLUB_ALIASES as UEFA_ALIASES, COMPETITIONS as UEFA_COMPETITIONS,
@@ -1291,7 +1292,8 @@ def _stub_club(cup_id: str, country: str, name: str, abbr: str, city: str,
     digest = hashlib.sha1(name.encode("utf-8")).hexdigest()
     h = int(digest[:8], 16)
     color = STUB_COLORS[h % len(STUB_COLORS)]
-    ground = {"England": "Park", "Germany": "Stadion", "Spain": "Municipal"}.get(country, "Stadium")
+    ground = {"England": "Park", "Germany": "Stadion", "Spain": "Municipal",
+              "Italy": "Stadio"}.get(country, "Stadium")
     style = {k: round(0.5 + _jitter(name + k, 12) / 100.0, 2) for k in STYLE_KEYS}
     return {
         "id": f"STUB-{name}",
@@ -1350,6 +1352,7 @@ def _stub_rows() -> list[tuple[str, str, list]]:
         ("England", "FAC", ENGLISH_STUBS),
         ("Germany", "DFBP", GERMAN_STUBS),
         ("Spain", "CDR", SPANISH_STUBS),
+        ("Italy", "CI", ITALIAN_STUBS),
     ]
 
 
@@ -1415,12 +1418,23 @@ def _entry_members(snapshot: dict) -> list[dict]:
     for club_row in by_comp.get("DFBP", []):
         add("DFBP", club_row, "R1")
 
+    ci_preliminary = set(CI_PRELIMINARY)
+    ci_seeded = set(CI_SEEDS)
+    for club_row in by_comp.get("SB", []):
+        add("CI", club_row, "PR" if str(club_row["name"]) in ci_preliminary else "R1")
+    for club_row in by_comp.get("SA", []):
+        add("CI", club_row, "R16" if str(club_row["name"]) in ci_seeded else "R1")
+    for club_row in by_comp.get("CI", []):
+        add("CI", club_row, "PR")
+
     for name in PRIORS["CS"]["entrants"]:
         add("CS", club_of("PL", name), "F")
     for name in PRIORS["DFLS"]["entrants"]:
         add("DFLS", club_of("BL", name), "F")
     for name in PRIORS["SCE"]["entrants"]:
         add("SCE", club_of("LL", name), "SF")
+    for name in PRIORS["SCI"]["entrants"]:
+        add("SCI", club_of("SA", name), "F")
     return members
 
 
@@ -1450,10 +1464,14 @@ def seed_cups(snapshot: dict) -> dict:
         elif cid == "LL":
             club["region"] = "north" if city in SPANISH_NORTH else "south"
 
+    ## Drop only the cup catalogue's own stale stubs: a stub owned by another
+    ## seed command (the UEFA entry lists) is not the cups' business.
     wanted = {row[0] for _, _, rows in _stub_rows() for row in rows}
     snapshot["clubs"] = [
         c for c in snapshot["clubs"]
-        if not (int(c.get("stub", 0)) == 1 and str(c["name"]) not in wanted)
+        if not (int(c.get("stub", 0)) == 1
+                and str(c.get("competition_id", "")) in CUPS
+                and str(c["name"]) not in wanted)
     ]
     present = {str(c["name"]) for c in snapshot["clubs"]}
     for country, cup_id, rows in _stub_rows():
@@ -1463,7 +1481,11 @@ def seed_cups(snapshot: dict) -> dict:
             snapshot["clubs"].append(_stub_club(cup_id, country, name, abbr, city, tier, region, band))
             present.add(name)
 
-    snapshot["members"] = _entry_members(snapshot)
+    ## The domestic pools are rebuilt from scratch; every other membership
+    ## (the UEFA entry lists) belongs to its own seed command and is kept.
+    kept = [m for m in snapshot.get("members", [])
+            if str(m.get("competition_id", "")) not in CUPS]
+    snapshot["members"] = kept + _entry_members(snapshot)
     snapshot["season_label"] = snapshot.get("season_label", "2026-27")
     return snapshot
 

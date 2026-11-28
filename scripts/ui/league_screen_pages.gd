@@ -14,7 +14,7 @@ func open_wizard() -> void:
 	screen.nav.clear()
 	screen.wizard = {"name": "",
 		"calendar_mode": "generated", "advance_mode": "fixture_days",
-		"competitions": ["PL"], "uefa": false, "cups_off": [], "error": ""}
+		"competitions": ["PL"], "uefa": LeagueEurope.available(), "cups_off": [], "error": ""}
 	screen.visible = true
 	screen.refresh()
 
@@ -87,12 +87,6 @@ func bottom_bar(items: Array) -> float:
 	return 0.0
 
 
-static func has_europe(screen: LeagueScreen) -> bool:
-	if screen.season == null or screen.season.save == null:
-		return false
-	return not LeagueEurope.active(screen.season.save).is_empty()
-
-
 static func has_cups(screen: LeagueScreen) -> bool:
 	if screen.season == null or screen.season.save == null:
 		return false
@@ -115,6 +109,8 @@ func sheet(pose: Array) -> RefCounted:
 			return screen.sheet_europe
 		"europe_stage":
 			return screen.sheet_europe_stage
+		"europe_draw":
+			return screen.sheet_europe_draw
 		"cups":
 			return screen.sheet_cups
 		"cup":
@@ -160,6 +156,8 @@ func refresh() -> void:
 	screen.pinned.queue_redraw()
 	screen.body.frozen = screen.delete_confirm_open()
 	screen.panel.active = LeagueView.panel_reading(screen.mode)
+	var save: LeagueSave = screen.season.save if screen.season != null else null
+	screen.panel.europe_on = LeagueEurope.runs(save)
 
 
 	if screen.panel.active == "":
@@ -169,7 +167,6 @@ func refresh() -> void:
 
 	screen.panel.touch = screen.touch
 	screen.panel.cups = has_cups(screen)
-	screen.panel.europe = has_europe(screen)
 	screen.overlay.active_pose = screen.panel.active
 	screen.overlay.ui_scale = screen.ui_scale
 

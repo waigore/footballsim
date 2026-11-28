@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw
 SIZE = 96
 SS = 4  # supersampling factor
 OUT = Path("assets/ui/league")
-ICONS = ("fixtures", "table", "calendar", "europe", "interest", "stats", "system")
+ICONS = ("fixtures", "table", "europe", "calendar", "interest", "stats", "system")
 WHITE = (255, 255, 255, 255)
 CLEAR = (0, 0, 0, 0)
 
@@ -68,25 +68,6 @@ def _draw_calendar(d: ImageDraw.ImageDraw) -> None:
             d.rectangle([x - 3 * s, y - 3 * s, x + 3 * s, y + 3 * s], fill=WHITE)
 
 
-def _draw_europe(d: ImageDraw.ImageDraw) -> None:
-    """A globe: the ring, the equator and one meridian."""
-    import math
-
-    s = SS
-    cx = cy = 48 * s
-    d.ellipse([cx - 30 * s, cy - 30 * s, cx + 30 * s, cy + 30 * s], outline=WHITE, width=7 * s)
-    d.line([cx - 30 * s, cy * 1.0, cx + 30 * s, cy * 1.0], fill=WHITE, width=7 * s)
-    d.ellipse([cx - 13 * s, cy - 30 * s, cx + 13 * s, cy + 30 * s], outline=WHITE, width=6 * s)
-    d.arc([cx - 21 * s, cy - 30 * s, cx + 21 * s, cy + 30 * s], 0, 360, fill=WHITE,
-          width=int(2.5 * s))
-    d.line([cx - 30 * s * math.cos(math.radians(30)), cy - 15 * s,
-            cx + 30 * s * math.cos(math.radians(30)), cy - 15 * s], fill=WHITE,
-           width=int(3.5 * s))
-    d.line([cx - 30 * s * math.cos(math.radians(30)), cy + 15 * s,
-            cx + 30 * s * math.cos(math.radians(30)), cy + 15 * s], fill=WHITE,
-           width=int(3.5 * s))
-
-
 def _draw_interest(d: ImageDraw.ImageDraw) -> None:
     """A star: the shortlist mark, matching the yellow names on the sheets."""
     import math
@@ -123,6 +104,16 @@ def _draw_system(d: ImageDraw.ImageDraw) -> None:
         d.ellipse([x - 9 * s, y - 9 * s, x + 9 * s, y + 9 * s], fill=WHITE)
     d.ellipse([cx - 26 * s, cy - 26 * s, cx + 26 * s, cy + 26 * s], fill=WHITE)
     d.ellipse([cx - 11 * s, cy - 11 * s, cx + 11 * s, cy + 11 * s], fill=CLEAR)
+
+
+def _draw_europe(d: ImageDraw.ImageDraw) -> None:
+    """A globe: rim, equator and two meridians."""
+    s = SS
+    cx = cy = 48 * s
+    d.ellipse([cx - 32 * s, cy - 32 * s, cx + 32 * s, cy + 32 * s], outline=WHITE, width=7 * s)
+    d.line([cx - 32 * s, cy * s, cx + 32 * s, cy * s], fill=WHITE, width=6 * s)
+    d.ellipse([cx - 14 * s, cy - 32 * s, cx + 14 * s, cy + 32 * s], outline=WHITE, width=6 * s)
+    d.arc([cx - 26 * s, cy - 30 * s, cx + 26 * s, cy + 30 * s], 200, 340, fill=WHITE, width=6 * s)
 
 
 def build(name: str) -> Image.Image:

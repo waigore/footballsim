@@ -100,11 +100,11 @@ static func press(screen, id: String) -> void:
 		return
 	if LeagueStatsActions.press(screen, id):
 		return
+	if LeagueEuropeActions.press(screen, id):
+		return
 	if LeagueReportActions.press(screen, id):
 		return
 	if LeagueCupDoors.press(screen, id):
-		return
-	if LeagueEuropeActions.press(screen, id):
 		return
 	if id.begins_with("match:"):
 		screen.show_report(id.substr(6))
@@ -124,11 +124,11 @@ static func press(screen, id: String) -> void:
 		screen.refresh()
 	elif id.begins_with("wleague:"):
 		LeagueWizardActions.toggle_league(screen, id.substr(8))
-	elif id.begins_with("wcups:"):
-		LeagueWizardActions.toggle_cups(screen, id.substr(6))
-	elif id == "uefa":
+	elif id == "wuefa":
 		screen.wizard["uefa"] = not bool(screen.wizard.get("uefa", false))
 		screen.refresh()
+	elif id.begins_with("wcups:"):
+		LeagueWizardActions.toggle_cups(screen, id.substr(6))
 	elif id.begins_with("mode:"):
 		screen.wizard["calendar_mode"] = id.substr(5)
 		screen.refresh()
@@ -137,6 +137,8 @@ static func press(screen, id: String) -> void:
 		screen.refresh()
 	elif id.begins_with("day:"):
 		LeagueCalendar.pick(screen, id.substr(4))
+	elif id.begins_with("cal:"):
+		LeagueCalendar.set_filter(screen, id.substr(4))
 	elif id.begins_with("month:"):
 		LeagueCalendar.shift(screen, int(id.substr(6)))
 	elif id.begins_with("tbl:"):
@@ -252,9 +254,10 @@ static func create(screen) -> void:
 		comps = ["PL"]
 	var name := LeagueStartSheet.save_name(str(screen.wizard.get("name", "")))
 	var countries: Array = LeagueWizardActions.cups_on(screen)
+	var uefa := bool(screen.wizard.get("uefa", false)) and LeagueEurope.available()
 	var created: LeagueSeason = LeagueSeason.create(name,
 		str(screen.wizard["calendar_mode"]), str(screen.wizard["advance_mode"]), 0, comps,
-		not countries.is_empty(), countries, bool(screen.wizard.get("uefa", false)))
+		not countries.is_empty(), countries, uefa)
 	if created == null:
 		screen.wizard["error"] = "The season could not be created."
 		screen.refresh()

@@ -68,9 +68,9 @@ func open_panel() -> void:
 
 func press_nav(id: String) -> void:
 	open_panel()
-	var nav_rows: Array = LeaguePanel.rows(panel().cups, panel().europe)
-	for i in range(nav_rows.size()):
-		if str(nav_rows[i]["id"]) == id:
+	var list: Array = panel().items()
+	for i in range(list.size()):
+		if str(list[i]["id"]) == id:
 			press(panel().item_rect(vp(), i).get_center())
 			panel().settle()
 			return
@@ -143,8 +143,7 @@ func test_the_drawer_never_sits_on_a_front_door_form() -> void:
 	assert_eq(panel().hit(door.get_center(), vp()), "", "the form answers a press for a plate it does not paint")
 	assert_eq(panel().hit(Vector2(door.end.x + 8.0, door.get_center().y), vp()), "",
 		"the form answers a press beside its plate")
-	var rows: Array = LeaguePanel.rows(panel().cups, panel().europe)
-	for i in range(rows.size()):
+	for i in range(LeaguePanel.ITEMS.size()):
 		var row: Rect2 = panel().item_rect(vp(), i)
 		assert_eq(panel().hit(row.get_center(), vp()), "", "a nav row answers over the form")
 

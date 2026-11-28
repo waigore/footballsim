@@ -2,167 +2,177 @@ class_name LeagueEuropeTies
 extends RefCounted
 
 
-static func rounds(competition_id: String) -> Array:
+static func qualifying(competition_id: String) -> Array:
 	var out: Array = []
-	for row in LeagueUefa.rounds(competition_id):
-		var round_id := str((row as Dictionary).get("id", ""))
-		var state := "ahead"
-		if LeagueUefa.has_stage(competition_id, round_id):
-			state = "done" if LeagueUefa.stage_complete(competition_id, round_id) else "live"
-		out.append({
-			"id": round_id, "label": LeagueEurope.round_short(round_id),
-			"name": LeagueEurope.round_label(round_id), "state": state,
-			"legs": int((row as Dictionary).get("legs", 1)),
-			"date": str((row as Dictionary).get("date", "")),
-			"ties": _tie_count(competition_id, round_id),
-		})
+	for rid in LeagueUefa.round_ids(competition_id):
+		var round_id := str(rid)
+		if round_id == LeagueUefa.LEAGUE_STAGE or LeagueEurope.KO_ROUNDS.has(round_id):
+			continue
+		if not LeagueUefa.has_stage(competition_id, round_id):
+			continue
+		var ties := rows(competition_id, round_id, drop_map(competition_id, round_id),
+			arrivals(competition_id, round_id))
+		if ties.is_empty():
+			continue
+		var rule := LeagueUefa.round_rule(competition_id, round_id)
+		out.append({"id": round_id, "title": LeagueEurope.round_title(competition_id, round_id),
+			"date": str(rule.get("date", "")), "legs": int(rule.get("legs", 2)),
+			"complete": LeagueUefa.stage_complete(competition_id, round_id), "ties": ties})
 	return out
 
 
-static func ties(competition_id: String, round_id: String) -> Array:
+static func bracket(competition_id: String) -> Array:
 	var out: Array = []
-	if round_id == "" or not LeagueUefa.has_stage(competition_id, round_id):
-		return out
-	var drops := _drop_map(competition_id, round_id)
-	var arrived := _dropped_in(competition_id, round_id)
-	var legs := _legs(competition_id, round_id)
+	for round_id in LeagueEurope.KO_ROUNDS:
+		if not LeagueUefa.has_stage(competition_id, round_id):
+			continue
+		var rule := LeagueUefa.round_rule(competition_id, round_id)
+		out.append({"id": round_id, "title": LeagueEurope.round_title(competition_id, round_id),
+			"date": str(rule.get("date", "")), "legs": int(rule.get("legs", 1)),
+			"complete": LeagueUefa.stage_complete(competition_id, round_id),
+			"ties": rows(competition_id, round_id, {}, {})})
+	return out
+
+
+static func rows(competition_id: String, round_id: String, drops: Dictionary,
+		arrivals_by_club: Dictionary) -> Array:
+	var out: Array = []
 	for row in PLDatabase.rows(
 			"SELECT * FROM cup_tie WHERE competition_id = ? AND round_id = ? ORDER BY tie_index;",
 			[competition_id, round_id]):
-		var tie: Dictionary = row
-		var home := str(tie.get("home_club_id", ""))
-		var away := str(tie.get("away_club_id", ""))
-		var winner := str(tie.get("winner_club_id", ""))
-		var loser := home
-		if winner == home:
-			loser = away
-		var report := ""
-		var leg_lines: Array = []
-		var leg_rows: Array = legs.get(int(tie.get("tie_index", 0)), [])
-		for i in range(leg_rows.size()):
-			var leg: Dictionary = leg_rows[i]
-			leg_lines.append(leg_line(leg, i + 1))
-			if str(leg.get("status", "")) == "played":
-				report = str(leg.get("id", ""))
-		var drop := ""
-		if winner != "":
-			drop = str(drops.get(loser, ""))
+		var home := str(row["home_club_id"])
+		var away := str(row["away_club_id"])
+		var winner := str(row["winner_club_id"])
+		var tie_index := int(row["tie_index"])
+		var legs := legs(competition_id, round_id, tie_index)
+		var played := winner != ""
+		var home_goals := int(row["home_goals"])
+		var away_goals := int(row["away_goals"])
 		out.append({
-			"index": int(tie.get("tie_index", 0)), "home": home, "away": away,
-			"home_name": LeagueEurope.club_name(home), "away_name": LeagueEurope.club_name(away),
-			"played": winner != "", "winner": winner,
-			"report": report, "leg_lines": leg_lines,
-			"drop": drop, "arrived": str(arrived.get(home, str(arrived.get(away, "")))),
-			"score_line": LeagueEurope.score_line(tie),
+			"index": tie_index, "home": home, "away": away,
+			"home_name": LeagueUefa.club_name(home), "away_name": LeagueUefa.club_name(away),
+			"home_goals": home_goals, "away_goals": away_goals, "winner": winner,
+			"pens_home": int(row["pens_home"]), "pens_away": int(row["pens_away"]),
+			"extra_time": int(row["extra_time"]) == 1, "played": played, "legs": legs,
+			"fixture": open_leg(legs), "report_leg": last_played(legs),
+			"watched": watched(legs),
+			"agg": agg(home, away, home_goals, away_goals, played),
+			"drop": {} if not played or winner == "" else _one(drops, away if winner == home else home),
+			"arrival": _arrival(arrivals_by_club, home, away),
 		})
 	return out
 
 
-static func leg_line(leg: Dictionary, number: int) -> String:
-	if str(leg.get("status", "")) != "played":
-		return "L%d  —" % number
-	return "L%d  %d–%d" % [number, int(leg.get("home_goals", 0)), int(leg.get("away_goals", 0))]
+static func _one(drops: Dictionary, club_id: String) -> Dictionary:
+	return (drops.get(club_id, {}) as Dictionary).duplicate()
 
 
-static func tonight(save: LeagueSave) -> Array:
+static func _arrival(arrivals_by_club: Dictionary, home: String, away: String) -> Dictionary:
+	for club_id in [home, away]:
+		if arrivals_by_club.has(club_id):
+			var row: Dictionary = (arrivals_by_club[club_id] as Dictionary).duplicate()
+			row["club"] = club_id
+			return row
+	return {}
+
+
+static func agg(home: String, away: String, home_goals: int, away_goals: int,
+		played: bool) -> String:
+	if not played:
+		return "—"
+	if home_goals == away_goals:
+		return "%d–%d" % [home_goals, away_goals]
+	return "%d–%d" % [home_goals, away_goals] if home_goals > away_goals \
+		else "%d–%d" % [away_goals, home_goals]
+
+
+static func legs(competition_id: String, round_id: String, tie_index: int) -> Array:
 	var out: Array = []
-	if save == null:
-		return out
-	var ids := LeagueEurope.active(save)
-	var rows := PLDatabase.rows(
-		"SELECT f.*, h.name AS home_name, a.name AS away_name FROM league_fixture f "
-		+ "JOIN club h ON h.id = f.home_club_id JOIN club a ON a.id = f.away_club_id "
-		+ "WHERE f.kickoff = ? ORDER BY f.competition_id, f.kickoff_time, f.id;",
-		[save.current_date()])
-	for row in rows:
-		var fx: Dictionary = row
-		if not ids.has(str(fx.get("competition_id", ""))):
+	for leg in range(1, 3):
+		var fixture_id := "uefa-%s-%s-%02d-%d" % [competition_id, round_id, tie_index, leg]
+		var row := PLDatabase.row("SELECT * FROM league_fixture WHERE id = ?;", [fixture_id])
+		if row.is_empty():
 			continue
-		out.append(fx)
+		out.append({"id": fixture_id, "home": str(row["home_club_id"]),
+			"away": str(row["away_club_id"]), "home_goals": int(row["home_goals"]),
+			"away_goals": int(row["away_goals"]), "played": str(row["status"]) == "played",
+			"watched": int(row["watched"]), "leg": leg, "kickoff": str(row["kickoff"])})
 	return out
 
 
-static func _tie_count(competition_id: String, round_id: String) -> int:
-	var row := PLDatabase.row(
-		"SELECT COUNT(*) AS n FROM cup_tie WHERE competition_id = ? AND round_id = ?;",
-		[competition_id, round_id])
-	return int(row.get("n", 0))
+static func open_leg(legs_in: Array) -> String:
+	for leg in legs_in:
+		if not bool((leg as Dictionary)["played"]):
+			return str((leg as Dictionary)["id"])
+	if legs_in.is_empty():
+		return ""
+	return str((legs_in[legs_in.size() - 1] as Dictionary)["id"])
 
 
-static func _legs(competition_id: String, round_id: String) -> Dictionary:
-	var out := {}
-	for row in PLDatabase.rows(
-			"SELECT id, leg, home_club_id, away_club_id, home_goals, away_goals, status, kickoff "
-			+ "FROM league_fixture WHERE competition_id = ? AND stage = ? ORDER BY leg, id;",
-			[competition_id, round_id]):
-		var fx: Dictionary = row
-		var index := _tie_index(str(fx.get("id", "")))
-		if not out.has(index):
-			out[index] = []
-		(out[index] as Array).append(fx)
+static func last_played(legs_in: Array) -> String:
+	var out := ""
+	for leg in legs_in:
+		if bool((leg as Dictionary)["played"]):
+			out = str((leg as Dictionary)["id"])
 	return out
 
 
-static func _tie_index(fixture_id: String) -> int:
-	var parts := fixture_id.split("-")
-	if parts.size() < 2:
-		return -1
-	return int(parts[parts.size() - 2])
+static func watched(legs_in: Array) -> int:
+	for leg in legs_in:
+		if not bool((leg as Dictionary)["played"]):
+			return int((leg as Dictionary).get("watched", 0))
+	return 0
 
 
-static func _losers(competition_id: String, round_id: String) -> Array:
+static func losers(competition_id: String, round_id: String) -> Array:
 	var out: Array = []
 	for row in PLDatabase.rows(
 			"SELECT home_club_id, away_club_id, winner_club_id FROM cup_tie "
-			+ "WHERE competition_id = ? AND round_id = ? AND winner_club_id <> '' "
-			+ "ORDER BY tie_index;", [competition_id, round_id]):
-		var winner := str(row.get("winner_club_id", ""))
-		var home := str(row.get("home_club_id", ""))
-		var loser := home
-		if winner == home:
-			loser = str(row.get("away_club_id", ""))
-		out.append(loser)
+			+ "WHERE competition_id = ? AND round_id = ? AND winner_club_id <> '' ORDER BY tie_index;",
+			[competition_id, round_id]):
+		var winner := str(row["winner_club_id"])
+		out.append(str(row["away_club_id"]) if winner == str(row["home_club_id"])
+			else str(row["home_club_id"]))
 	return out
 
 
-static func _drop_map(competition_id: String, round_id: String) -> Dictionary:
+static func drop_map(competition_id: String, round_id: String) -> Dictionary:
 	var out := {}
 	var rules := LeagueUefa.drops(competition_id, round_id)
-	if rules.is_empty():
-		return out
-	var losers := _losers(competition_id, round_id)
+	var out_goers := losers(competition_id, round_id)
 	var at := 0
-	for row in rules:
-		var dest := str((row as Dictionary).get("to", ""))
-		var dest_round := str((row as Dictionary).get("round", ""))
-		var count := int((row as Dictionary).get("count", 0))
-		for i in range(count):
-			if at >= losers.size():
+	for rule in rules:
+		for i in range(int((rule as Dictionary).get("count", 0))):
+			if at >= out_goers.size():
 				break
-			out[str(losers[at])] = "↓ %s %s" % [dest, LeagueEurope.round_short(dest_round)]
+			out[out_goers[at]] = (rule as Dictionary).duplicate()
 			at += 1
 	return out
 
 
-static func _dropped_in(competition_id: String, round_id: String) -> Dictionary:
+static func arrivals(competition_id: String, round_id: String) -> Dictionary:
 	var out := {}
-	var source := _source_of(competition_id, round_id)
-	if source == "":
-		return out
-	for row in PLDatabase.rows(
-			"SELECT member_id FROM competition_member WHERE competition_id = ? "
-			+ "AND member_kind = 'club' AND role = ?;", [competition_id, "drop:" + round_id]):
-		out[str(row.get("member_id", ""))] = "← %s" % source
+	for source in LeagueUefa.IDS:
+		for rid in LeagueUefa.round_ids(str(source)):
+			var drops := drop_map(str(source), str(rid))
+			for club_id in drops:
+				var rule: Dictionary = drops[club_id]
+				if str(rule.get("to", "")) != competition_id:
+					continue
+				if str(rule.get("round", "")) != round_id:
+					continue
+				out[str(club_id)] = {"competition": str(source), "round": str(rid)}
 	return out
 
 
-static func _source_of(competition_id: String, round_id: String) -> String:
-	for other in LeagueUefa.IDS:
-		for round_row in LeagueUefa.rounds(str(other)):
-			var source_round := str((round_row as Dictionary).get("id", ""))
-			for rule_row in LeagueUefa.drops(str(other), source_round):
-				var rule: Dictionary = rule_row
-				if str(rule.get("to", "")) == competition_id \
-						and str(rule.get("round", "")) == round_id:
-					return "%s %s" % [other, LeagueEurope.round_short(source_round)]
-	return ""
+static func drop_label(rule: Dictionary) -> String:
+	if rule.is_empty():
+		return ""
+	return "↓ %s %s" % [str(rule.get("to", "")), LeagueEurope.badge(str(rule.get("round", "")))]
+
+
+static func arrival_label(arrival: Dictionary) -> String:
+	if arrival.is_empty():
+		return ""
+	return "← %s %s" % [str(arrival.get("competition", "")),
+		LeagueEurope.badge(str(arrival.get("round", "")))]

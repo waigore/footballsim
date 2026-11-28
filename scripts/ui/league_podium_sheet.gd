@@ -24,7 +24,8 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 
 func frame_height(view: Dictionary) -> float:
 	var summary: Dictionary = view.get("summary", {})
-	if summary.is_empty():
+	var continental: Array = view.get("continental", [])
+	if summary.is_empty() and continental.is_empty():
 		return 0.0
 	var h := 0.0
 	var summary_data: Dictionary = view.get("summary", {})
@@ -51,9 +52,8 @@ func frame_height(view: Dictionary) -> float:
 	h += cups_height(summary)
 	if not (summary.get("relegation", {}) as Dictionary).is_empty():
 		h += 8.0 + 16.0
-	var europe: Array = summary.get("uefa", [])
-	if not europe.is_empty():
-		h += 30.0 + 16.0 * float(europe.size()) + 8.0
+	if not continental.is_empty():
+		h += 10.0 + 20.0 + 18.0 * float(continental.size())
 	return h + 8.0
 
 
@@ -102,7 +102,8 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary)
 	var summary: Dictionary = view.get("summary", {})
 	var brackets: Dictionary = summary.get("playoffs", {})
 	var y := HEADER + 6.0
-	if summary.is_empty():
+	var continental: Array = view.get("continental", [])
+	if summary.is_empty() and continental.is_empty():
 		return
 	for section in sections(summary):
 		var section_rules: Dictionary = section.get("rules", view.get("rules", {}))
@@ -169,27 +170,31 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary)
 		UiChrome.text(c, Vector2(24.0, y + 8.0), "RELEGATION  %s" % str(tie.get("text", "")),
 			10, UiChrome.C_GOLD, bold)
 		y += 16.0
-	y = _paint_cups(c, vp, summary, y, bold, med)
-	_paint_europe(c, vp, summary, y, bold, med)
+	_paint_cups(c, vp, summary, y, bold, med)
+	_paint_continental(c, vp, continental, y + cups_height(summary) + 10.0, bold, med)
 
 
-func _paint_europe(c: CanvasItem, vp: Vector2, summary: Dictionary, y_in: float, bold: Font,
+func _paint_continental(c: CanvasItem, vp: Vector2, honours: Array, y: float, bold: Font,
 		med: Font) -> void:
-	var europe: Array = summary.get("uefa", [])
-	if europe.is_empty():
+	if honours.is_empty():
 		return
-	var y := y_in
-	UiChrome.text(c, Vector2(24.0, y + 12.0), "CONTINENTAL HONOURS", 10, UiChrome.C_GOLD, bold)
-	y += 18.0
-	for row in europe:
+	UiChrome.text(c, Vector2(24.0, y), "CONTINENTAL HONOURS", 10, UiChrome.C_DIM, bold)
+	c.draw_rect(Rect2(24.0, y + 6.0, vp.x - 48.0, 1.0), Color(1, 1, 1, 0.10))
+	y += 20.0
+	for row in honours:
 		var honour: Dictionary = row
-		UiChrome.text(c, Vector2(24.0, y + 12.0), str(honour.get("short", "")).to_upper(), 9,
-			UiChrome.C_DIM, bold)
-		UiChrome.text(c, Vector2(180.0, y + 12.0), str(honour.get("winner_name", "")), 11,
+		UiChrome.text(c, Vector2(24.0, y + 12.0), str(honour.get("id", "")), 9,
+			UiChrome.C_GOLD, bold)
+		UiChrome.text(c, Vector2(84.0, y + 12.0), str(honour.get("winner_name", "")), 11,
 			UiChrome.C_TEXT, bold)
-		UiChrome.text_r(c, vp.x - 24.0, y + 12.0, str(honour.get("score_line", "")), 10,
+		UiChrome.text(c, Vector2(84.0 + UiChrome.text_width(bold,
+			str(honour.get("winner_name", "")), 11) + 8.0, y + 12.0), "↑", 10,
+			UiChrome.C_GOLD, bold)
+		UiChrome.text(c, Vector2(372.0, y + 12.0), str(honour.get("runner_up_name", "")), 10,
 			UiChrome.C_SOFT, med)
-		y += 16.0
+		UiChrome.text_r(c, vp.x - 24.0, y + 12.0, LeagueEurope.score_line(honour), 10,
+			UiChrome.C_SOFT, bold)
+		y += 18.0
 
 
 static func cups_lines(summary: Dictionary) -> Array:
@@ -212,10 +217,10 @@ static func cups_lines(summary: Dictionary) -> Array:
 
 
 func _paint_cups(c: CanvasItem, vp: Vector2, summary: Dictionary, y_in: float, bold: Font,
-		med: Font) -> float:
+		med: Font) -> void:
 	var lines := cups_lines(summary)
 	if lines.is_empty():
-		return y_in
+		return
 	var y := y_in + 8.0
 	UiChrome.text(c, Vector2(24.0, y), "DOMESTIC HONOURS", 10, UiChrome.C_DIM, bold)
 	y += 16.0
@@ -226,7 +231,6 @@ func _paint_cups(c: CanvasItem, vp: Vector2, summary: Dictionary, y_in: float, b
 			UiChrome.C_TEXT, bold)
 		UiChrome.text_r(c, vp.x - 24.0, y + 12.0, str(line["score"]), 10, UiChrome.C_GOLD, bold)
 		y += 18.0
-	return y
 
 
 func _paint_promoted(c: CanvasItem, vp: Vector2, section: Dictionary, up: int,

@@ -117,21 +117,13 @@ static func draw_league_head(c: CanvasItem, rect: Rect2, competition_id: String,
 		matchday: int, fonts: Dictionary, stage: String = "") -> void:
 	var name: String = PLRepository.shared().competition_name(competition_id)
 	var text := "%s  ·  GW %d" % [name, matchday]
-	var width_template := "%s  ·  GW 00" % name
-	if stage != "":
-		if LeagueEurope.is_continental(competition_id):
-			text = "%s  ·  %s" % [name, LeagueEurope.round_short(stage)]
-		elif LeagueCup.is_cup(competition_id):
-			text = "%s  ·  %s" % [name, LeagueCupView.stage_name(competition_id, stage)]
-		else:
-			text = "%s  ·  %s" % [name, stage]
-		width_template = text
-	elif LeagueEurope.is_continental(competition_id):
-		text = name
-		width_template = name
+	if LeagueCup.is_cup(competition_id):
+		text = "%s  ·  %s" % [name, LeagueCupView.stage_name(competition_id, stage)]
+	if LeagueUefa.is_continental(competition_id):
+		text = "UEFA NIGHT  ·  %s  ·  %s" % [name, LeagueEurope.badge(stage)]
 	UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
 		text, 10, UiChrome.C_GOLD, fonts["bold"])
-	var width := UiChrome.text_width(fonts["bold"], width_template, 10)
+	var width := UiChrome.text_width(fonts["bold"], text, 10)
 	c.draw_rect(Rect2(rect.position.x + width + 10.0, rect.position.y + 8.0,
 		maxf(rect.size.x - width - 10.0, 0.0), 1.0), Color(1, 1, 1, 0.10))
 
