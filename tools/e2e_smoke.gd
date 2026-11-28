@@ -21,6 +21,8 @@ const WALL_CHECK_EVERY := 1800
 func _init() -> void:
 	var started := Time.get_ticks_msec()
 	var eng := MatchEngine.new(SEED, HOME, AWAY)
+	eng.verbose = false
+	eng.record_trails = false
 	print("SMOKE kickoff %s v %s seed=%d" % [HOME, AWAY, SEED])
 	var ticks := 0
 	while eng.phase != "full_time":

@@ -16,7 +16,6 @@ var watch: LeagueWatch = null
 
 var result: LeagueResult = null
 
-var briefing: Dictionary = {}
 var was_paused := false
 
 func attach(host) -> void:
@@ -39,10 +38,10 @@ func build() -> void:
 	if screen.body != null:
 		screen.body.host = self
 	screen.closed.connect(_on_closed)
-	screen.match_requested.connect(_on_match_requested)
+	screen.match_requested.connect(watch.on_match_requested)
 	screen.season_opened.connect(_on_season_opened)
 	screen.club_requested.connect(_on_club_requested)
-	screen.goal_highlight_requested.connect(_on_goal_highlight)
+	screen.goal_highlight_requested.connect(watch.on_goal_highlight)
 	screen.quit_requested.connect(_on_quit_requested)
 	pointer = SheetPointer.new(screen)
 
@@ -168,51 +167,6 @@ func _on_season_opened(opened: LeagueSeason) -> void:
 		season.match_recorded.connect(_on_recorded)
 
 
-func _on_match_requested(home: String, away: String, fixture_id: String) -> void:
-	briefing = {"home": home, "away": away, "fixture": fixture_id}
-	var fx: Dictionary = season.record.fixtures.one(fixture_id) if season != null else {}
-
-	MatchBilling.bind_scene(game, home, fx)
-	if game.prematch != null:
-		var req := PreMatchModel.build(home, away, fx, season)
-		game.prematch.ask(req, Callable(self, "_kick_briefing"), Callable(self, "_back_from_briefing"))
-		return
-	_start_watch(home, away)
-
-
-func _kick_briefing() -> void:
-	_start_watch(str(briefing.get("home", "")), str(briefing.get("away", "")))
-
-
-func _back_from_briefing() -> void:
-	if season != null:
-		season.cancel_watch()
-	briefing = {}
-	if layer != null:
-		layer.visible = true
-	if screen != null:
-		screen.refresh()
-	game.paused = true
-
-func _start_watch(home: String, away: String) -> void:
-	briefing = {}
-	if layer != null:
-		layer.visible = false
-
-	if screen != null:
-		screen.focus.blur()
-	if result != null:
-		result.clear()
-	game.home_id = home
-	game.away_id = away
-	game.seeded += randi_range(1, 9999)
-	game.match_started = true
-	game.new_match(game.seeded)
-	game.paused = false
-	if game.hud_layer != null:
-		game.hud_layer.visible = true
-
-
 func _on_quit_requested() -> void:
 	if game != null and game.menus != null:
 		game.menus.ask_quit()
@@ -234,26 +188,3 @@ func handle_input(event: InputEvent, design_point: Vector2) -> bool:
 	if pointer.handle(event, design_point):
 		return true
 	return event is InputEventMouse
-
-
-func _on_goal_highlight(fixture_id: String, goal_index: int) -> void:
-	if season == null or fixture_id == "":
-		return
-	var pack := season.goal_clip(fixture_id, goal_index)
-	if pack.is_empty():
-		return
-	if layer != null:
-		layer.visible = false
-	if game.hud_layer != null:
-		game.hud_layer.visible = true
-	game.play_goal_clip(pack, _on_goal_clip_done)
-
-func _on_goal_clip_done() -> void:
-	if game == null or screen == null:
-		return
-	game.paused = true
-	if game.hud_layer != null:
-		game.hud_layer.visible = false
-	if layer != null:
-		layer.visible = true
-	screen.refresh()

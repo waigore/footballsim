@@ -103,6 +103,7 @@ screens:
       - scripts/ui/league_screen_pages.gd
       - scripts/ui/league_screen_input.gd
       - scripts/ui/league_host.gd
+      - scripts/ui/league_watch.gd
       - scripts/ui/league_body.gd
       - scripts/ui/league_pinned.gd
       - scripts/ui/league_view.gd

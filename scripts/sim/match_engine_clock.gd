@@ -201,6 +201,8 @@ func resume_after_break() -> void:
 func run_to_full_time(budget_usec: int = -1) -> bool:
 	var started := Time.get_ticks_usec()
 	var guard := 0
+	var keep_trails := record_trails
+	record_trails = false
 	while phase != "full_time" and guard < FAST_FORWARD_TICKS:
 		if phase == "half_time":
 			begin_second_half()
@@ -210,5 +212,6 @@ func run_to_full_time(budget_usec: int = -1) -> bool:
 		guard += 1
 		if budget_usec >= 0 and Time.get_ticks_usec() - started >= budget_usec:
 			break
+	record_trails = keep_trails
 	return phase == "full_time"
 
