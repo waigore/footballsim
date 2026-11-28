@@ -189,12 +189,27 @@ static func engine_events(engine, fixture_id: String) -> Array:
 		var mapped := "goal"
 		if kind == "card":
 			mapped = "red" if card == "red" else "yellow"
+		var club_id := str(engine.teams[int(e.get("team", 0))]["id"])
+		var minute := int(e.get("minute", 0))
 		rows.append({
 			"fixture_id": fixture_id,
-			"minute": int(e.get("minute", 0)),
+			"minute": minute,
 			"kind": mapped,
 			"player_id": key,
-			"club_id": str(engine.teams[int(e.get("team", 0))]["id"]),
+			"club_id": club_id,
 			"detail": name,
+		})
+		if mapped != "goal":
+			continue
+		var helper := str(e.get("assist_key", ""))
+		if helper == "" or helper == key:
+			continue
+		rows.append({
+			"fixture_id": fixture_id,
+			"minute": minute,
+			"kind": "assist",
+			"player_id": helper,
+			"club_id": club_id,
+			"detail": str(e.get("assist_name", "")),
 		})
 	return rows

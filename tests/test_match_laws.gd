@@ -204,3 +204,89 @@ func test_snapshot_carries_official_and_injury_state() -> void:
 	var got = other.by_id.get(p.id, null)
 	assert_not_null(got, "the injured player vanished from the restored squad")
 	assert_true(got.injured, "the injured flag was not restored")
+
+
+func _assisted_goal(eng: Variant, seed_off: int) -> Array:
+	var scorer = null
+	var helper = null
+	for p in eng.players:
+		if p.team != 0 or p.is_gk or p.sent_off:
+			continue
+		if scorer == null:
+			scorer = p
+		else:
+			helper = p
+			break
+	eng.ball.last_touch_id = scorer.id
+	eng.ball.last_touch_team = 0
+	eng.ball.assist_id = helper.id
+	eng.ball.assist_time = eng.clock - float(seed_off)
+	eng._score_goal(1)
+	return [scorer, helper]
+
+
+func test_a_goal_names_the_assister_it_was_given() -> void:
+	var eng := MatchEngine.new(51)
+	var pair := _assisted_goal(eng, 0)
+	assert_eq(str(eng.last_goal.get("assist", "")), str(pair[1].name),
+		"the goal card lost the assister")
+	assert_eq(int(pair[1].stats["assists"]), 1, "the assister was not credited")
+
+func test_an_assist_older_than_the_window_is_not_given() -> void:
+	var eng := MatchEngine.new(52)
+	var pair := _assisted_goal(eng, 20)
+	assert_eq(str(eng.last_goal.get("assist", "")), "", "an old pass still counted as an assist")
+	assert_eq(int(pair[1].stats["assists"]), 0, "an old pass credited the wrong man")
+
+func test_a_report_row_carries_the_assist_beside_its_goal() -> void:
+	var eng := MatchEngine.new(53)
+	var pair := _assisted_goal(eng, 0)
+	var rows := LeagueHighlights.engine_events(eng, "fx")
+	assert_eq(rows.size(), 2, "the report does not carry the assist beside the goal")
+	assert_eq(str(rows[0]["kind"]), "goal", "the goal is not the first row")
+	assert_eq(str(rows[1]["kind"]), "assist", "the assist is not filed as an assist")
+	assert_eq(str(rows[1]["player_id"]), str(pair[1].key), "the assist names the wrong man")
+	assert_eq(str(rows[1]["club_id"]), str(eng.teams[0]["id"]),
+		"the assist was given to the wrong club")
+	assert_eq(str(rows[1]["club_id"]), str(rows[0]["club_id"]),
+		"the assist does not ride its goal's own club")
+	assert_eq(int(rows[1]["minute"]), int(rows[0]["minute"]),
+		"the assist is not on the goal's own minute")
+
+func test_a_penalty_share_goal_with_no_pass_gets_no_assist_row() -> void:
+	var eng := MatchEngine.new(54)
+	var p = _outfield(eng, 0)
+	eng.ball.assist_id = -1
+	eng.ball.last_touch_id = p.id
+	eng.ball.last_touch_team = 0
+	eng._score_goal(1)
+	var rows := LeagueHighlights.engine_events(eng, "fx")
+	assert_eq(rows.size(), 1, "an unassisted goal invented a helper")
+	assert_eq(str(rows[0]["kind"]), "goal", "the goal left the report")
+
+
+func test_a_helper_on_the_other_side_is_not_credited() -> void:
+	var eng := MatchEngine.new(55)
+	var scorer = _outfield(eng, 0)
+	var rival = _outfield(eng, 1)
+	eng.ball.assist_id = rival.id
+	eng.ball.assist_time = eng.clock
+	eng.ball.last_touch_id = scorer.id
+	eng.ball.last_touch_team = 0
+	eng._score_goal(1)
+	assert_eq(str(eng.last_goal.get("assist", "")), "",
+		"an opponent was credited with the assist")
+	assert_eq(int(rival.stats["assists"]), 0, "an opponent earned an assist")
+
+func test_the_scorer_cannot_assist_himself() -> void:
+	var eng := MatchEngine.new(56)
+	var scorer = _outfield(eng, 0)
+	eng.ball.assist_id = scorer.id
+	eng.ball.assist_time = eng.clock
+	eng.ball.last_touch_id = scorer.id
+	eng.ball.last_touch_team = 0
+	eng._score_goal(1)
+	assert_eq(str(eng.last_goal.get("assist", "")), "",
+		"a solo goal credited the scorer with his own assist")
+	var rows := LeagueHighlights.engine_events(eng, "fx")
+	assert_eq(rows.size(), 1, "a solo goal grew an assist row")

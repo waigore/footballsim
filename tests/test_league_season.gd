@@ -285,6 +285,62 @@ func test_a_fast_skipped_watch_keeps_every_goal_and_one_scoreline() -> void:
 	assert_eq(int(card[1]), int(stored[1]), "the day card counts another away score")
 
 
+func test_a_watched_goal_keeps_the_assist_that_made_it() -> void:
+	var fixtures: Array = []
+	for fx in season.plan():
+		if str(fx["status"]) != "played":
+			fixtures.append(fx)
+	if fixtures.is_empty():
+		season.advance()
+		fixtures = season.plan()
+	assert_false(fixtures.is_empty(), "the clock holds no fixture to watch")
+	var held := str(fixtures[0]["id"])
+	season.set_watch(held, true)
+	season.advance()
+	var watch := season.start_watch(held)
+	var engine := MatchEngine.new(SEED + 23, str(watch["home"]), str(watch["away"]))
+	var scorer = null
+	var helper = null
+	for p in engine.players:
+		if p.team != 0 or p.is_gk:
+			continue
+		if scorer == null:
+			scorer = p
+		else:
+			helper = p
+			break
+	engine.ball.last_touch_id = scorer.id
+	engine.ball.last_touch_team = 0
+	engine.ball.assist_id = helper.id
+	engine.ball.assist_time = engine.clock
+	engine._score_goal(1)
+	engine.phase = "full_time"
+	LeagueSeason.engine_finished(engine)
+	var report := season.report(held)
+	var goals: Array = []
+	var assists: Array = []
+	for e in report["events"]:
+		if str(e["kind"]) == "goal":
+			goals.append(e)
+		elif str(e["kind"]) == "assist":
+			assists.append(e)
+	assert_eq(goals.size(), 1, "the watched goal left the report")
+	assert_eq(assists.size(), 1, "the watched goal lost the assist that made it")
+	assert_eq(str(assists[0]["player_id"]), str(helper.key),
+		"the report gives the assist to the wrong man")
+	assert_eq(int(assists[0]["minute"]), int(goals[0]["minute"]),
+		"the assist is not on the goal's own minute")
+	var lines := LeagueRoundup.lines(report)
+	var painted := ""
+	for row in lines:
+		if LeagueRoundup.is_goal(row):
+			painted = LeagueRoundup.line(row)
+	assert_true(painted.ends_with("(%s)" % str(helper.name)),
+		"the goal line does not name the helper: " + painted)
+	var line := LeagueLedger.player_line(str(helper.key))
+	assert_gte(int(line.get("assists", 0)), 1, "the season line dropped the assist")
+
+
 func test_the_season_walks_to_a_complete_round_robin() -> void:
 	_ledger_play_remaining()
 	assert_eq(season.matches_remaining(), 0, "the season could not be finished")

@@ -1,6 +1,9 @@
 extends "res://scripts/sim/match_engine_play.gd"
 
 
+const ASSIST_WINDOW := 16.0
+
+
 func _check_rules() -> void:
 
 	if ball.pos.x <= 0.0 or ball.pos.x >= L:
@@ -81,6 +84,7 @@ func _score_goal(conceding_team: int) -> void:
 	teams[scoring_team]["score"] = score[scoring_team]
 	stats[scoring_team]["goals"] += 1
 	var scorer_name = "Unknown"
+	var assister = null
 	if own_goal:
 		scorer_name = "Own goal — " + scorer.name
 		var recent := []
@@ -93,14 +97,15 @@ func _score_goal(conceding_team: int) -> void:
 		scorer_name = scorer.name
 		scorer.stats["goals"] += 1
 		scorer.celebrate = 3.0
-		var assister = by_id.get(ball.assist_id, null)
-		if assister != null and assister.team == scoring_team and assister.id != scorer.id and clock - ball.assist_time < 16.0:
+		assister = _assister_for(scorer, scoring_team)
+		if assister != null:
 			assister.stats["assists"] += 1
 			_add_involvement(assister, "assist", "Assist for %s" % scorer_name, assister.pos)
 	last_goal = {
 		"team": scoring_team, "conceded_by": conceding_team,
 		"scorer": scorer_name, "minute": minute_of(clock), "own_goal": own_goal,
-		"assist": by_id.get(ball.assist_id, null).name if by_id.get(ball.assist_id, null) != null and not own_goal else "",
+		"assist": assister.name if assister != null else "",
+		"assist_key": str(assister.key) if assister != null else "",
 	}
 	phase = "goal"
 	goal_timer = 3.4
@@ -111,11 +116,15 @@ func _score_goal(conceding_team: int) -> void:
 	ball.z = 0.0
 	ball.shot_team = -1
 	stoppage_events += 1
+	var goal_extra := {"xg": 0.0, "own_goal": own_goal}
+	if assister != null:
+		goal_extra["assist_key"] = str(assister.key)
+		goal_extra["assist_name"] = str(assister.name)
 	_emit("goal", Commentary.goal(rng, scorer.name if scorer != null else "Unknown",
 		str(last_goal.get("assist", "")), own_goal,
 		teams[scoring_team]["data"]["short"], teams[conceding_team]["data"]["short"],
 		score[scoring_team] - 1, score[conceding_team], minute_of(clock)), scoring_team, scorer,
-		{"xg": 0.0, "own_goal": own_goal})
+		goal_extra)
 	flash = 1.0
 	for p in players:
 		if p.team == scoring_team:
@@ -126,6 +135,17 @@ func _score_goal(conceding_team: int) -> void:
 	if scorer != null:
 		_add_involvement(scorer, "goal", "Goal", scorer.pos)
 	ball.assist_id = -1
+
+
+func _assister_for(scorer: Variant, scoring_team: int) -> Variant:
+	var helper = by_id.get(ball.assist_id, null)
+	if helper == null or scorer == null:
+		return null
+	if helper.team != scoring_team or helper.id == scorer.id:
+		return null
+	if clock - ball.assist_time >= ASSIST_WINDOW:
+		return null
+	return helper
 
 
 func _woodwork(goal_team: int, frame: String) -> bool:
