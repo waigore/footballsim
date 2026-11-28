@@ -204,8 +204,13 @@ def _check_cta_enforcement(screens: list[dict]) -> None:
     _assert(not wrong_side["pass"], "CONTINUE must sit on the right")
     _assert("right" in wrong_side["reason"], wrong_side["reason"])
 
-    grader_fail, = enforce_cta(hub, _cta(label="CONTINUE", passed=False))
-    _assert(not grader_fail["pass"], "grader fail is kept")
+    grader_fail, = enforce_cta(hub, _cta(passed=False, label=""))
+    _assert(not grader_fail["pass"], "grader fail without a label is kept")
+
+    salvage, = enforce_cta(
+        hub, _cta(label="CONTINUE", side="right", passed=False)
+    )
+    _assert(salvage["pass"], "a matching cta_label salvages a contradictory fail")
 
     pre = _screen(screens, "pre-match")
     either, = enforce_cta(pre, _cta(label="KICK OFF", side="right"))

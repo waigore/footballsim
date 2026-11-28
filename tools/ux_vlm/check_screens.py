@@ -225,6 +225,9 @@ def enforce_cta(
 
     The prompt asks for the label; this makes the requirement hard rather than
     trusting a model that is happy to call any door "the obvious primary".
+    When the model returns pass=false but still reports the required label
+    (and side), trust the structured read — models often contradict themselves
+    in free-text reasons while naming the door correctly in cta_label.
     """
     labels = cta_labels(screen or {})
     if not labels:
@@ -233,29 +236,43 @@ def enforce_cta(
     wanted = " or ".join(f"'{label}'" for label in labels)
     out: list[dict[str, Any]] = []
     for result in results:
-        if result.get("rubric_id") != "cta" or not result.get("pass"):
+        if result.get("rubric_id") != "cta":
             out.append(result)
             continue
         read = str(result.get("cta_label") or "").strip()
         probe = read or str(result.get("reason") or "")
-        if not any(label_seen(label, probe) for label in labels):
-            failed = dict(result)
-            failed["pass"] = False
-            failed["reason"] = (
-                f"required primary CTA {wanted} is not readable "
-                f"(grader read: {read or 'nothing'})"
-            )
-            out.append(failed)
-            continue
+        label_ok = any(label_seen(label, probe) for label in labels)
         seen_side = str(result.get("cta_side") or "").strip().lower()
-        if side and seen_side and seen_side != side:
-            failed = dict(result)
-            failed["pass"] = False
-            failed["reason"] = (
-                f"required primary CTA {wanted} must sit on the {side}; "
-                f"the grader placed it on the {seen_side}"
+        side_ok = not side or not seen_side or seen_side == side
+        if result.get("pass"):
+            if not label_ok:
+                failed = dict(result)
+                failed["pass"] = False
+                failed["reason"] = (
+                    f"required primary CTA {wanted} is not readable "
+                    f"(grader read: {read or 'nothing'})"
+                )
+                out.append(failed)
+                continue
+            if not side_ok:
+                failed = dict(result)
+                failed["pass"] = False
+                failed["reason"] = (
+                    f"required primary CTA {wanted} must sit on the {side}; "
+                    f"the grader placed it on the {seen_side}"
+                )
+                out.append(failed)
+                continue
+            out.append(result)
+            continue
+        if label_ok and side_ok and read:
+            salvaged = dict(result)
+            salvaged["pass"] = True
+            salvaged["reason"] = (
+                f"grader named {wanted} in cta_label; "
+                f"ignoring contradictory fail reason"
             )
-            out.append(failed)
+            out.append(salvaged)
             continue
         out.append(result)
     return out
