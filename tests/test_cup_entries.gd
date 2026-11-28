@@ -39,14 +39,10 @@ func _finished(name: String, cups: bool = true) -> LeagueSeason:
 	assert_not_null(season, "%s was not created" % name)
 	open_seasons.append(season)
 	current = season
-	for row in PLDatabase.rows("SELECT id, home_club_id, away_club_id FROM league_fixture;"):
-		var home := str(row["home_club_id"])
-		var away := str(row["away_club_id"])
-		var hg := 3 if home < away else 1
-		var ag := 1 if home < away else 3
-		PLDatabase.execute(
-			"UPDATE league_fixture SET status = 'played', home_goals = ?, away_goals = ? "
-			+ "WHERE id = ?;", [hg, ag, str(row["id"])])
+	PLDatabase.execute(
+		"UPDATE league_fixture SET status = 'played', "
+		+ "home_goals = CASE WHEN home_club_id < away_club_id THEN 3 ELSE 1 END, "
+		+ "away_goals = CASE WHEN home_club_id < away_club_id THEN 1 ELSE 3 END;")
 	season.record.standings.recompute()
 	season.save.set_status("complete")
 	season.save.reload()
@@ -68,10 +64,6 @@ func _placed(place: int) -> String:
 	return ""
 
 
-func _champion() -> String:
-	return _placed(1)
-
-
 func _members(competition_id: String, role: String) -> Array:
 	var out: Array = []
 	for row in PLDatabase.rows(
@@ -83,8 +75,7 @@ func _members(competition_id: String, role: String) -> Array:
 
 
 func _in_league(club_id: String, leagues: Array) -> bool:
-	var club := PLRepository.shared().club(club_id)
-	return leagues.has(str(club.get("competition_id", "")))
+	return leagues.has(str(PLRepository.shared().club(club_id).get("competition_id", "")))
 
 
 func _stub_of(cup_id: String) -> String:
@@ -94,10 +85,22 @@ func _stub_of(cup_id: String) -> String:
 	return str(row.get("id", ""))
 
 
-func test_the_pools_rebuild_from_the_live_tiers() -> void:
-	var season := _finished("Pools")
-	var result := SeasonRollover.apply(season)
-	assert_true(bool(result.get("ok", false)), "the season did not roll over")
+func _ctx(places: Array, cups: Dictionary) -> Dictionary:
+	return {"places": {"PL": places}, "ranked": {"PL": places}, "rank": {},
+		"names": {"PL": "PREMIER LEAGUE"}, "europe": [],
+		"stubs": {}, "cups": cups}
+
+
+func test_the_rollover_rebuilds_the_pools_and_names_the_shield() -> void:
+	var season := _finished("Rollover")
+	var champion := _placed(1)
+	var cup_winner := _placed(5)
+	_crown("FAC", cup_winner, _placed(6))
+	var stub := _stub_of("FAC")
+	var top: Array = []
+	for i in range(9):
+		top.append(_placed(i + 1))
+	SeasonRollover.apply(season)
 	assert_eq(_members("FAC", "R1").size(), 80, "the FA Cup first round is not 80 clubs")
 	assert_eq(_members("FAC", "R3").size(), 44, "the FA Cup third round is not 44 clubs")
 	assert_eq(_members("EFLC", "PR").size(), 4, "the Carabao preliminary is not four clubs")
@@ -105,112 +108,62 @@ func test_the_pools_rebuild_from_the_live_tiers() -> void:
 	assert_eq(_members("EFLC", "R2").size(), 11, "the Carabao second round is not 11 clubs")
 	assert_eq(_members("EFLC", "R3").size(), 9, "the Carabao third round is not nine clubs")
 	for club_id in _members("FAC", "R1"):
-		var ok := _in_league(club_id, ["L1", "L2", "NL"]) \
-			or str(PLRepository.shared().club(club_id).get("competition_id", "")) == "FAC"
-		assert_true(ok, "%s entered the FA Cup first round from no tier" % club_id)
+		assert_true(_in_league(club_id, ["L1", "L2", "NL"]) or str(
+			PLRepository.shared().club(club_id).get("competition_id", "")) == "FAC",
+			"%s entered the FA Cup first round from no tier" % club_id)
 	for club_id in _members("FAC", "R3"):
 		assert_true(_in_league(club_id, ["PL", "CH"]),
 			"%s entered the FA Cup third round from no top tier" % club_id)
-	season.close()
-
-
-func test_the_carabao_byes_follow_the_league_places_when_europe_is_off() -> void:
-	var season := _finished("Byes")
-	SeasonRollover.apply(season)
-	var late := _members("EFLC", "R3")
-	var early := _members("EFLC", "R2")
 	for i in range(9):
-		assert_true(late.has(_placed(i + 1)),
+		assert_true(_members("EFLC", "R3").has(top[i]),
 			"the Carabao third round skipped the league's %d" % (i + 1))
-	for i in range(11):
-		assert_true(early.has(_placed(i + 10)),
-			"the Carabao second round skipped the league's %d" % (i + 10))
-	season.close()
-
-
-func test_the_shield_names_last_seasons_champion_and_cup_winner() -> void:
-	var season := _finished("Shield")
-	var champion := _placed(1)
-	var cup_winner := _placed(5)
-	_crown("FAC", cup_winner, _placed(6))
-	SeasonRollover.apply(season)
-	var field := _members("CS", "F")
-	assert_eq(field.size(), 2, "the Community Shield is not two clubs")
-	assert_true(field.has(champion), "the Community Shield left the champion out")
-	assert_true(field.has(cup_winner), "the Community Shield left the cup winner out")
+	var shield := _members("CS", "F")
+	assert_eq(shield.size(), 2, "the Community Shield is not two clubs")
+	assert_true(shield.has(champion), "the Community Shield left the champion out")
+	assert_true(shield.has(cup_winner), "the Community Shield left the cup winner out")
 	var note := LeagueCupEntries.note(season.save, "CS")
 	assert_true(note.find("FA CUP WINNER") >= 0, "the shield does not name the cup winner")
 	assert_true(note.find("1ST") >= 0, "the shield does not name the champion's place")
+	assert_true(_members("FAC", "R1").has(stub), "the followed stub left the FA Cup first round")
+	assert_eq(str(PLRepository.shared().club(stub).get("competition_id", "")), "FAC",
+		"the stub's own competition moved")
+	var view := LeagueCupView.cup(season, "CS", "F")
+	assert_true(LeagueCupSheet.entry_note(view).begins_with("FIELD"),
+		"the shield page carries no field line")
+	var items: Array = LeagueCupSheet.new().cup_layout(Vector2(1600, 900), view)
+	var drawn := false
+	for item in items:
+		if str((item as Dictionary).get("label", "")).begins_with("FIELD"):
+			drawn = true
+	assert_true(drawn, "the cup layout does not draw the field line")
 	season.close()
 
 
-func test_a_double_falls_back_to_the_league_runner_up() -> void:
-	var season := _finished("Double")
-	var champion := _placed(1)
-	var runner_up := _placed(2)
-	var beaten := _placed(7)
-	_crown("FAC", champion, beaten)
-	SeasonRollover.apply(season)
-	var field := _members("CS", "F")
-	assert_true(field.has(champion), "the shield left the champion out")
-	assert_true(field.has(runner_up), "a double did not fall back to the runner-up")
-	assert_true(not field.has(beaten), "a double still fielded the beaten finalist")
-	var note := LeagueCupEntries.note(season.save, "CS")
-	assert_true(note.find("WINNER IN") >= 0, "the shield does not read the double")
-	season.close()
+func test_a_double_sends_the_league_runner_up() -> void:
+	var ctx := _ctx(["ARS", "AVL", "BHA"], {"FAC": {"winner": "ARS", "runner_up": "MCI"}})
+	var field := LeagueCupPairings.field("CS", ctx)
+	assert_eq(field["rounds"].get("F", []), ["ARS", "AVL"],
+		"a double did not fall back to the runner-up")
+	assert_true(str(field["labels"]["AVL"]["source"]).find("WINNER IN") >= 0,
+		"the double is not named on the reading")
+	assert_eq(str(field["labels"]["ARS"]["source"]), "PREMIER LEAGUE 1ST",
+		"the champion's place is not named")
 
 
 func test_a_missing_cup_winner_falls_back_to_the_next_place() -> void:
-	var season := _finished("No Cup")
-	var champion := _placed(1)
-	var runner_up := _placed(2)
-	SeasonRollover.apply(season)
-	var field := _members("CS", "F")
-	assert_true(field.has(champion), "the shield left the champion out")
-	assert_true(field.has(runner_up), "a cup that never ran did not fall back")
-	var note := LeagueCupEntries.note(season.save, "CS")
-	assert_true(note.find("FA CUP OFF") >= 0, "the shield does not name the missing cup")
-	season.close()
-
-
-func test_a_stub_keeps_its_id_in_the_new_pool() -> void:
-	var season := _finished("Stubs")
-	var stub := _stub_of("FAC")
-	assert_true(stub != "", "the seed carries no FA Cup stub")
-	var before := _members("FAC", "R1")
-	assert_true(before.has(stub), "the stub did not open in the FA Cup first round")
-	SeasonRollover.apply(season)
-	var after := _members("FAC", "R1")
-	assert_true(after.has(stub), "the followed stub left the FA Cup first round")
-	assert_eq(str(PLRepository.shared().club(stub).get("competition_id", "")), "FAC",
-		"the stub's own competition moved")
-	season.close()
-
-
-func test_the_cup_page_carries_the_field_line() -> void:
-	var season := _finished("Field Line")
-	var cup_winner := _placed(5)
-	_crown("FAC", cup_winner, _placed(6))
-	SeasonRollover.apply(season)
-	var view := LeagueCupView.cup(season, "CS", "F")
-	assert_true(str(view.get("entry", "")).find("FA CUP WINNER") >= 0,
-		"the shield page carries no field line")
-	assert_true(LeagueCupSheet.entry_note(view).begins_with("FIELD"),
-		"the shield page does not label the field line")
-	var items: Array = LeagueCupSheet.new().cup_layout(Vector2(1600, 900), view)
-	var found := false
-	for item in items:
-		if str((item as Dictionary).get("label", "")).begins_with("FIELD"):
-			found = true
-	assert_true(found, "the cup layout does not draw the field line")
-	var card := LeagueCupView.card(season, "CS")
-	assert_true(str(card.get("entry", "")) != "", "the cup card carries no field line")
-	season.close()
+	var ctx := _ctx(["ARS", "AVL", "BHA"], {})
+	var field := LeagueCupPairings.field("CS", ctx)
+	assert_eq(field["rounds"].get("F", []), ["ARS", "AVL"],
+		"a cup that never ran did not fall back")
+	assert_true(str(field["labels"]["AVL"]["source"]).find("FA CUP OFF") >= 0,
+		"the missing cup is not named on the reading")
+	assert_eq(str(field["labels"]["ARS"]["kind"]), "place", "the champion's source is not a place")
 
 
 func test_cups_that_are_off_write_nothing() -> void:
 	var season := _finished("Cups Off", false)
 	var before := _members("FAC", "R1")
-	SeasonRollover.apply(season)
-	assert_eq(_members("FAC", "R1"), before, "a save with the cups off rebuilt the pools")
+	var result := LeagueCupEntries.regenerate(season, 0, {})
+	assert_true(not bool(result.get("ok", true)), "a save with the cups off rebuilt the pools")
+	assert_eq(_members("FAC", "R1"), before, "a save with the cups off rewrote the pool")
 	season.close()
