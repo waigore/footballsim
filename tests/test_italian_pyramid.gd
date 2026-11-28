@@ -377,3 +377,100 @@ func _set_points(table: Array, targets: Array) -> void:
 		var points: int = int(targets[i]) if i < targets.size() else mini(int(row["points"]), 40)
 		PLDatabase.execute("UPDATE league_table SET points = ? WHERE club_id = ?;",
 			[points, str(row["club_id"])])
+
+func test_the_season_without_italy_settles_no_playout() -> void:
+	var plain := LeagueSeason.create("Plain", "generated", "fixture_days", 9, ["PL"])
+	assert_not_null(plain, "the plain season was not created")
+	_mark_finished(plain)
+	var summary := plain.summary()
+	assert_false(summary.has("playout"), "a Premier League season grew a play-out")
+	assert_eq((summary.get("competitions", []) as Array).size(), 1, "the plain podium lost its league")
+	plain.close()
+	_fresh().close()
+
+
+func test_the_helpers_settle_every_kind_of_tie() -> void:
+	var current := _fresh()
+	var rules := current.save.rules_for("SB")
+	var table := current.record.standings.table("SB")
+	var high := {"club_id": str(table[2]["club_id"]), "name": str(table[2]["club_name"]),
+		"position": 3, "points": 60}
+	var low := {"club_id": str(table[5]["club_id"]), "name": str(table[5]["club_name"]),
+		"position": 6, "points": 50}
+	var prelim := {}
+	for i in range(30):
+		var tie := LeagueSerieB._preliminary(current, "SB", "P%d" % i, high, low)
+		prelim[str(tie["decided_by"])] = true
+	assert_true(prelim.has("ninety"), "a preliminary never settled in ninety")
+	assert_true(prelim.has("extra time"), "no preliminary went to extra time")
+	var legs := {}
+	for i in range(40):
+		var tie := LeagueSerieB._two_legs(current, "SB", rules, "T%d" % i, high, low, i % 2 == 0)
+		legs[str(tie["decided_by"])] = true
+	assert_true(legs.has("points"), "no two-leg tie settled on points")
+	assert_true(legs.has("goal difference") or legs.has("higher place"),
+		"no two-leg tie settled past points")
+	assert_true(legs.has("penalties") or legs.has("extra time"),
+		"no level two-leg tie reached extra time")
+	var pens := LeagueSerieB._tie_dict("FINAL", high, low, [], 3, 3, true, "penalties",
+		str(high["club_id"]), Vector2i(4, 2))
+	assert_true(str(pens["text"]).contains("pens"), "a shootout has no reading")
+	var place := LeagueSerieB._tie_dict("FINAL", high, low, [], 2, 2, false, "higher place",
+		str(high["club_id"]), Vector2i(-1, -1))
+	assert_true(str(place["text"]).contains("higher place"), "a place win has no reading")
+	current.close()
+
+
+func test_the_italian_readings_refuse_what_they_cannot_settle() -> void:
+	assert_true(LeagueSerieB.format(LeagueRules.template("SB")),
+		"Serie B's format is not recognised")
+	assert_false(LeagueSerieB.format(LeagueRules.template("SA")),
+		"Serie A was read as the Serie B format")
+	var plain := LeagueRules.template("SB")
+	plain["promotion_skip_gap"] = 0
+	assert_false(LeagueSerieB.skips(null, "SB", plain), "a missing season skipped the bracket")
+	assert_true(LeagueSerieB.playout(null, "SB", plain).is_empty(),
+		"a missing season played a play-out")
+	assert_true(LeagueSerieB.playouts(null).is_empty(), "a missing season listed a play-out")
+	var open := _fresh()
+	assert_false(LeagueSerieB.skips(open, "SB", plain), "a zero gap skipped the bracket")
+	assert_true(LeagueSerieB.playout(open, "PL", plain).is_empty(),
+		"a competition outside the save played a play-out")
+	var none := plain.duplicate(true)
+	none["playout_places"] = 0
+	assert_true(LeagueSerieB.playout(open, "SB", none).is_empty(),
+		"a tier with no play-out places played one")
+	var thin := open.save.rules_for("SB").duplicate(true)
+	thin["promotion_playoff_places"] = 2
+	LeagueRules.write("SB", thin)
+	open.save.rules_by = LeagueRules.read_all()
+	assert_true(LeaguePlayoffs.build(open, "SB").is_empty(), "a two-team bracket was played")
+	var deep := open.save.rules_for("SB").duplicate(true)
+	deep["relegation_places"] = 25
+	LeagueRules.write("SB", deep)
+	open.save.rules_by = LeagueRules.read_all()
+	assert_true(LeagueSerieB.playout(open, "SB", deep).is_empty(),
+		"a play-out fell off the bottom of the table")
+	open.close()
+	var early := LeagueSeason.create("Early", "generated", "fixture_days", 3, ["SA", "SB"])
+	assert_not_null(early, "the early season was not created")
+	assert_true(LeagueSerieB.playout(early, "SB", plain).is_empty(),
+		"an unfinished season played a play-out")
+	early.close()
+	_fresh().close()
+
+
+func test_the_ui_names_the_playout() -> void:
+	assert_eq(LeagueChrome.zone_color("playout"), Color(0.86, 0.50, 0.36),
+		"the play-out band has no colour")
+	assert_eq(LeagueTableChrome.labels_for(["playout"], false), ["PLAY-OUT"],
+		"the wide legend lost the play-out")
+	var sheet := LeaguePodiumSheet.new()
+	var summary := {"playoffs": {"SB": {"text": "x"}}, "playout": {"SB": {"text": "y"}},
+		"competitions": [{"id": "SB", "rules": LeagueRules.template("SB"), "europe": [],
+			"relegated": [], "table": [], "champion": {"club": "a", "points": 1},
+			"runner_up": {"club": "b", "points": 2}}]}
+	var with_out := sheet.frame_height({"summary": summary})
+	summary.erase("playout")
+	var without := sheet.frame_height({"summary": summary})
+	assert_eq(with_out - without, 22.0, "the podium did not make room for the play-out")
