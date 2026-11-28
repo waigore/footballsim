@@ -34,8 +34,9 @@ static func cells(places: Dictionary, full: bool, sort: String, touch: bool,
 	items.append(cell(y, float(places["club_x"]), float(places["club_w"]),
 		"CLUB", "club", false, sort, band))
 	for col in places["cols"]:
+		var key := str(col["key"]) if bool(col.get("sort", true)) else ""
 		items.append(cell(y, float(col["right"]) - float(col["w"]), float(col["w"]),
-			str(col["label"]), str(col["key"]), true, sort, band))
+			str(col["label"]), key, true, sort, band))
 	return items
 
 static func captions(places: Dictionary, y: float) -> Array:

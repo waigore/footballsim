@@ -12,13 +12,21 @@ const INSET := 10.0
 
 
 static func columns(rect: Rect2) -> Dictionary:
-	var mid := rect.position.x + rect.size.x * 0.5 + GUTTER * 0.5
+	var mid := rect.position.x + rect.size.x * 0.5
+	var away_x := mid + GUTTER * 0.5
 	return {
 		"home_x": rect.position.x + INSET,
-		"away_x": mid,
+		"away_x": away_x,
+		"mid_x": mid,
 		"home_w": maxf(rect.size.x * 0.5 - INSET - GUTTER, 60.0),
-		"away_w": maxf(rect.end.x - mid - INSET, 60.0),
+		"away_w": maxf(rect.end.x - away_x - INSET, 60.0),
 	}
+
+
+static func score_x(rect: Rect2, centered: bool = false) -> float:
+	if centered:
+		return float(columns(rect)["mid_x"])
+	return rect.end.x - 12.0
 
 
 static func report_of(fixture: Dictionary) -> Dictionary:
@@ -36,7 +44,8 @@ static func height(fixture: Dictionary, tight: bool = false) -> float:
 
 
 static func paint(c: CanvasItem, rect: Rect2, fixture: Dictionary, fonts: Dictionary,
-		names: InterestNames, home_ink: Color, away_ink: Color, tight: bool = false) -> void:
+		names: InterestNames, home_ink: Color, away_ink: Color, tight: bool = false,
+		centered_score: bool = false) -> void:
 	var bold: Font = fonts["bold"]
 	var name_size := 11 if tight else 13
 	var line_h := TIGHT_LINE if tight else LINE
@@ -49,8 +58,12 @@ static func paint(c: CanvasItem, rect: Rect2, fixture: Dictionary, fonts: Dictio
 	UiChrome.text(c, Vector2(rect.position.x + 8.0, rect.position.y + 15.0),
 		"FT" if played else kick, 10, UiChrome.C_GOLD if played else UiChrome.C_DIM, bold)
 	var score := "%d  –  %d" % [int(fixture.get("home_goals", 0)), int(fixture.get("away_goals", 0))]
-	UiChrome.text_r(c, rect.end.x - 12.0, rect.position.y + (15.0 if tight else 16.0), score,
-		12 if tight else 13, UiChrome.C_TEXT, bold)
+	var score_y := rect.position.y + (15.0 if tight else 16.0)
+	var score_size := 12 if tight else 13
+	if centered_score:
+		UiChrome.text_c(c, score_x(rect, true), score_y, score, score_size, UiChrome.C_TEXT, bold)
+	else:
+		UiChrome.text_r(c, score_x(rect), score_y, score, score_size, UiChrome.C_TEXT, bold)
 
 
 	var home_name: String = LeagueColumns.fit_name(str(fixture.get("home_name", "")), bold,

@@ -69,7 +69,7 @@ func _initialize() -> void:
 	scene.hud.set_hud_visible(true)
 	scene.menus.open_settings()
 	var shell = scene.menus.shell
-	var segs: Array = SettingsScreen.seg_rects(shell.design_vp())
+	var segs: Array = SettingsLayout.seg_rects(shell.design_vp())
 	for i in range(segs.size()):
 		shell.click((segs[i] as Rect2).get_center())
 		await _shot("issue164_settings_%s" % Prefs.MODES[i])
@@ -120,8 +120,8 @@ func _print_state(label: String) -> void:
 
 func _print_settings(label: String) -> void:
 	var vp: Vector2 = scene.menus.shell.design_vp()
-	print("%s: settings vp=%s card=%s mode=%s segs=%s" % [label, vp, SettingsScreen.card_rect(vp),
-		scene.menus.shell.match_mode, SettingsScreen.seg_rects(vp)])
+	print("%s: settings vp=%s card=%s mode=%s segs=%s" % [label, vp, SettingsLayout.card_rect(vp),
+		scene.menus.shell.match_mode, SettingsLayout.seg_rects(vp)])
 
 func _frames(count: int) -> void:
 	for i in range(count):

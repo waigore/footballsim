@@ -20,17 +20,17 @@ func _settings_ids(vp: Vector2) -> Array:
 	var sheet := SettingsScreen.new()
 	var ids: Array = []
 	for r in [
-		SettingsScreen.minus_rect(vp),
-		SettingsScreen.plus_rect(vp),
-		SettingsScreen.track_rect(vp),
-		SettingsScreen.hud_toggle_rect(vp),
-		SettingsScreen.back_rect(vp),
+		SettingsLayout.minus_rect(vp),
+		SettingsLayout.plus_rect(vp),
+		SettingsLayout.track_rect(vp),
+		SettingsLayout.hud_toggle_rect(vp),
+		SettingsLayout.back_rect(vp),
 	]:
 		var id: String = sheet.button_at((r as Rect2).get_center(), vp)
 		assert_gt(id.length(), 0, "settings door empty at %s" % vp)
 		if not ids.has(id):
 			ids.append(id)
-	for seg in SettingsScreen.seg_rects(vp):
+	for seg in SettingsLayout.seg_rects(vp):
 		var sid: String = sheet.button_at((seg as Rect2).get_center(), vp)
 		assert_true(sid.begins_with("mode:"), "settings mode segment empty at %s" % vp)
 		if not ids.has(sid):

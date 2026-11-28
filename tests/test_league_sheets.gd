@@ -441,7 +441,7 @@ func test_the_sheet_chrome_keeps_back_top_left_and_the_primary_top_right() -> vo
 		assert_almost_eq(_item_rect(sheets["table"], "tbl:mode:compact").end.y, vp.y - 8.0, 0.5,
 			"COMPACT left the bottom bar")
 		assert_almost_eq(kick.end.y, vp.y - 8.0, 0.5, "FULL left the bottom bar")
-		assert_eq(SettingsScreen.back_rect(vp), Rect2(24.0, 12.0, 116.0, 44.0),
+		assert_eq(SettingsLayout.back_rect(vp), Rect2(24.0, 12.0, 116.0, 44.0),
 			"settings BACK is not top-left")
 		var picker = load("res://scripts/ui/team_select.gd").new()
 		assert_almost_eq(picker.back_rect(vp).position.x, 24.0, 0.5, "the picker's BACK is not top-left")
@@ -618,8 +618,12 @@ func test_the_body_keeps_the_pinned_doors_outside_the_clipped_window() -> void:
 		body.set_sheet(table, vp, true, LeagueChrome.BAR_H)
 		var window := Rect2(body.position, body.size)
 		assert_eq(window.end.y, vp.y - LeagueChrome.BAR_H, "the wrong band is clipped at %s" % vp)
-		assert_eq(body.pinned.size(), 3, "the table lost a pinned door at %s" % vp)
+		assert_eq(body.pinned.size(), 4, "the table lost a pinned door at %s" % vp)
 		assert_gte(reading.position.y, window.end.y, "FULL is inside the scrolling band at %s" % vp)
+		var form: Rect2 = _item_rect(table, "tbl:mode:form")
+		assert_gte(form.position.y, window.end.y, "FORM is inside the scrolling band at %s" % vp)
+		assert_gte(form.position.x, reading.end.x, "the reading doors crowd each other at %s" % vp)
+		assert_lte(form.end.x, vp.x - 24.0, "the form door runs off the sheet at %s" % vp)
 
 		body.scroll_to(400.0)
 		var door := _body_item(body.pinned, "back")
@@ -778,6 +782,47 @@ func test_a_roundup_offers_no_play_doors() -> void:
 	})
 	for item in items:
 		assert_ne(str(item["kind"]), "play", "a roundup row offered a play door")
+
+
+func test_a_roundup_card_centers_its_score_between_the_columns() -> void:
+	var played := _fixture(1)
+	played["status"] = "played"
+	played["home_goals"] = 2
+	played["away_goals"] = 1
+	var book := LeagueBook.new()
+	for vp in [Vector2(1280, 720), Vector2(730, 411)]:
+		var items: Array = book.report_layout(vp, {"roundup": [{"fixture": played, "events": []}]})
+		var cards: Array = []
+		for item in items:
+			if str(item["kind"]) == "result":
+				cards.append(item)
+		assert_eq(cards.size(), 1, "the roundup lost its card at %s" % vp)
+		var card: Dictionary = cards[0]
+		assert_true(bool(card.get("centered_score", false)),
+			"a RESULTS card pinned its score to the right edge at %s" % vp)
+		var rect: Rect2 = card["rect"]
+		var places := LeagueBlock.columns(rect)
+		assert_almost_eq(float(places["mid_x"]), rect.get_center().x, 0.01,
+			"the column midline left the card's middle at %s" % vp)
+		var centered: float = LeagueBlock.score_x(rect, true)
+		assert_almost_eq(centered, rect.get_center().x, 0.01,
+			"the RESULTS score is not on the midline at %s" % vp)
+		assert_gt(centered, float(places["home_x"]) + float(places["home_w"]),
+			"the RESULTS score sits in the home column at %s" % vp)
+		assert_lt(centered, float(places["away_x"]),
+			"the RESULTS score sits in the away column at %s" % vp)
+
+		var sheet := LeagueSheet.new()
+		var hub: Array = sheet.hub_layout(Vector2(913, 411),
+			_state([played, _fixture(2)], _table()))
+		var rows := 0
+		for item in hub:
+			if str(item["kind"]) == "row":
+				rows += 1
+				var row: Rect2 = item["rect"]
+				assert_almost_eq(LeagueBlock.score_x(row), row.end.x - 12.0, 0.01,
+					"a plan row stopped right-aligning its score at %s" % row)
+		assert_eq(rows, 2, "the plan lost a row")
 
 
 func test_a_pending_row_without_a_kickoff_starts_its_clubs_at_the_inset() -> void:

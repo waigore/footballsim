@@ -110,6 +110,7 @@ static func build(screen) -> Dictionary:
 		if not (screen.roundup as Array).is_empty():
 			var first: Dictionary = screen.roundup[0]
 			return {"roundup": screen.roundup, "interests": state.get("interests", []),
+				"filters": screen.report_filter,
 				"day": str(first["fixture"]["kickoff"]) if first.has("fixture") else "",
 				"touch": bool(screen.touch)}
 		var card: Dictionary = screen.report

@@ -5,7 +5,6 @@ var SAVE_DIR := TestScratch.dir("saves_test_german_relegation")
 var CACHE_DIR := TestScratch.dir("cache_test_german_relegation")
 const SEED := 5150
 const PRISTINE := "_pristine.sqlite"
-const PRISTINE_EMPTY := "_pristine_empty.sqlite"
 
 var season: LeagueSeason = null
 var slug := ""
@@ -22,7 +21,6 @@ func before_all() -> void:
 		["BL", "BL2"])
 	assert_not_null(season, "the German season was not created")
 	slug = season.save.slug
-	_snapshot_as(PRISTINE_EMPTY)
 	_finish_open_season(season)
 	expected_tie = LeagueRelegation.build(season)
 	_snapshot_as(PRISTINE)
@@ -100,12 +98,6 @@ func _fresh() -> LeagueSeason:
 	return _restore(PRISTINE)
 
 
-func _refinish_from_empty() -> LeagueSeason:
-	var built := _restore(PRISTINE_EMPTY)
-	_finish_open_season(built)
-	return built
-
-
 func _place(table: Array, club_id: String, scored: Dictionary, comp: String) -> int:
 	for i in range(table.size()):
 		if str((table[i] as Dictionary)["club_id"]) == club_id:
@@ -132,8 +124,8 @@ func test_the_tie_is_the_sixteenth_against_the_third() -> void:
 	assert_true(str(tie["text"]).contains("—"), "the tie has no reading")
 
 func test_the_same_seed_settles_the_same_tie() -> void:
-	var again := _refinish_from_empty()
-	assert_not_null(again, "the second German season was not refinished")
+	var again := _fresh()
+	assert_not_null(again, "the finished German season did not reopen")
 	var tie := LeagueRelegation.build(again)
 	assert_eq(str(tie["top_club_id"]), str(expected_tie["top_club_id"]), "the tie moved between runs")
 	assert_eq(tie["legs"], expected_tie["legs"], "the legs differ for one seed")

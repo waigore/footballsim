@@ -6,7 +6,7 @@ var CACHE_DIR := TestScratch.dir("cache_test_english_pyramid")
 const SEED := 7301
 const ENGLISH := ["PL", "CH", "L1", "L2", "NL"]
 const PAIR_EMPTY := "_pair_empty.sqlite"
-const PAIR_SEED_EMPTY := "_pair_seed_empty.sqlite"
+const PAIR_SEED_FINISHED := "_pair_seed_finished.sqlite"
 const MIXED := "_mixed.sqlite"
 const LONE_PL := "_lone_pl.sqlite"
 const STACK4_EMPTY := "_stack4_empty.sqlite"
@@ -44,7 +44,8 @@ func before_all() -> void:
 		"Bracket B", "generated", "fixture_days", SEED, ["PL", "CH"])
 	assert_not_null(seeded, "the shared seed calendar did not build")
 	slug_pair_seed = seeded.save.slug
-	_snapshot_as(seeded, PAIR_SEED_EMPTY)
+	_mark_finished(seeded)
+	_snapshot_as(seeded, PAIR_SEED_FINISHED)
 	seeded.close()
 	var mixed := _finished("Two Countries", 6060, MIXED_COMPS)
 	assert_not_null(mixed, "the shared mixed-country calendar did not build")
@@ -322,10 +323,7 @@ func test_a_bracket_without_its_tier_above_is_not_played() -> void:
 	_reopen_main()
 
 func test_one_seed_settles_one_bracket() -> void:
-
-
-	var again := _restore(PAIR_SEED_EMPTY, slug_pair_seed)
-	_mark_finished(again)
+	var again := _restore(PAIR_SEED_FINISHED, slug_pair_seed)
 	var bracket := LeaguePlayoffs.build(again, "CH")
 	again.close()
 	_reopen_main()

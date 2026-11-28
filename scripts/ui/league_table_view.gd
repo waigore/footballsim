@@ -4,7 +4,8 @@ extends RefCounted
 
 const COMPACT := "compact"
 const FULL := "full"
-const MODES := [COMPACT, FULL]
+const FORM := "form"
+const MODES := [COMPACT, FULL, FORM]
 
 const META_MODE := "table_mode"
 const META_SORT := LeagueTableSort.META_SORT
@@ -30,6 +31,15 @@ const NUM_GAP := 2.0
 
 
 const COMPACT_COLS := LeagueColumns.COMPACT_COLS
+
+const FORM_COLS := [
+	{"key": "position", "label": "#", "num": false},
+	{"key": "club", "label": "CLUB", "num": false},
+	{"key": "form", "label": "FORM", "num": false, "sort": false},
+	{"key": "points", "label": "PTS", "num": true},
+]
+
+const FORM_CAPTION := "LAST 5 · OLDEST FIRST"
 
 const FULL_COLS := [
 	{"key": "position", "label": "#", "num": false},
@@ -80,6 +90,8 @@ func attach(save: LeagueSave) -> void:
 	order.attach(save)
 
 static func columns(reading: String) -> Array:
+	if reading == FORM:
+		return FORM_COLS
 	return FULL_COLS if reading == FULL else COMPACT_COLS
 
 static func numeric(cols: Array) -> int:
@@ -104,6 +116,11 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 	if tab_h > 0.0:
 		items.append_array(_tabs(comps, vp))
 	items.append_array(LeagueTableHead.cells(places, reading == FULL, order.key, touch, tab_h))
+	if reading == FORM:
+		items.append({"id": "", "kind": "caption", "label": FORM_CAPTION,
+			"right": float((places["cols"] as Array)[0]["right"]),
+			"rect": Rect2(float(places["club_x"]) - 2.0, top, row_w, LeagueFormColumns.CAPTION_H)})
+		top += LeagueFormColumns.CAPTION_H
 	var interest := LeagueInterestMark.set_of(view.get("interests", []))
 	for i in range(rows.size()):
 		items.append({
@@ -111,17 +128,23 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 			"zone": LeagueRules.zone(int(rows[i]["position"]), view.get("rules", {})),
 			"rect": Rect2(24.0, top + float(i) * row_h, row_w, row_h - 1.0), "places": places,
 			"interested": interest.has(str(rows[i]["club_id"])),
+			"form": (rows[i] as Dictionary).get("form", []),
 		})
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
 		"rect": LeagueExtra.back_rect(touch)})
 
 
+	var bar_top := vp.y - LeagueChrome.BAR_H + 6.0
+	var bar_h := UiChrome.tap_h(LeagueChrome.BAR_H - 14.0, touch)
 	items.append({"id": "tbl:mode:" + COMPACT, "kind": "button", "label": "COMPACT",
 		"pinned": true, "primary": reading == COMPACT,
-		"rect": Rect2(24.0, vp.y - LeagueChrome.BAR_H + 6.0, 104.0, LeagueChrome.BAR_H - 14.0)})
+		"rect": Rect2(24.0, bar_top, 104.0, bar_h)})
 	items.append({"id": "tbl:mode:" + FULL, "kind": "button", "label": "FULL",
 		"pinned": true, "primary": reading == FULL,
-		"rect": Rect2(134.0, vp.y - LeagueChrome.BAR_H + 6.0, 78.0, LeagueChrome.BAR_H - 14.0)})
+		"rect": Rect2(134.0, bar_top, 78.0, bar_h)})
+	items.append({"id": "tbl:mode:" + FORM, "kind": "button", "label": "FORM",
+		"pinned": true, "primary": reading == FORM,
+		"rect": Rect2(218.0, bar_top, 62.0, bar_h)})
 	return items
 
 
@@ -142,12 +165,16 @@ func ordered(rows: Array) -> Array:
 func _min_row_w(reading: String) -> float:
 	if reading == COMPACT:
 		return LeagueColumns.min_row(COMPACT_COLS)
+	if reading == FORM:
+		return LeagueFormColumns.min_row()
 	return POS_W + CLUB_MIN + float(numeric(FULL_COLS)) * (NUM_W + NUM_GAP)
 
 
 func _places(row: Rect2) -> Dictionary:
 	if mode == COMPACT:
 		return LeagueColumns.of(row, COMPACT_COLS)
+	if mode == FORM:
+		return LeagueFormColumns.places(row)
 	var pos_x := row.position.x + LeagueColumns.POS_INDENT
 	var club_x := row.position.x + POS_W
 	var club_w := row.size.x - POS_W - float(numeric(FULL_COLS)) * (NUM_W + NUM_GAP)
@@ -226,9 +253,13 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array,
 		elif kind == "head":
 			LeagueTableHead.draw(c, item["rect"], item, fonts, mode == COMPACT)
 		elif kind == "caption":
-			UiChrome.text(c, Vector2((item["rect"] as Rect2).position.x + 2.0,
-				(item["rect"] as Rect2).position.y + 8.0), str(item["label"]), 7,
-				UiChrome.C_DIM, fonts["bold"])
+			var cap: Rect2 = item["rect"]
+			if item.has("right"):
+				UiChrome.text_r(c, float(item["right"]), cap.position.y + 8.0, str(item["label"]), 7,
+					UiChrome.C_DIM, fonts["bold"])
+			else:
+				UiChrome.text(c, Vector2(cap.position.x + 2.0, cap.position.y + 8.0),
+					str(item["label"]), 7, UiChrome.C_DIM, fonts["bold"])
 		elif kind == "chip":
 			var on := bool(item.get("selected", false))
 			UiChrome.panel(c, cache, item["rect"],
@@ -264,6 +295,9 @@ func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
 	if strips != null:
 		strips.add(InterestNames.strip(fonts["bold"], label, club_x, y, size), str(row["club_id"]))
 	for col in places["cols"]:
+		if bool(col.get("form", false)):
+			LeagueFormColumns.draw(c, cache, col, rect, item.get("form", []), fonts)
+			continue
 		var key := str(col["key"])
 		var points := key == "points"
 		UiChrome.text_r(c, float(col["right"]), y, LeagueColumns.text(row, key), 10 if points else 9,
