@@ -83,7 +83,10 @@ func _initialize() -> void:
 	await _shot("ui512_match_hud_desktop")
 	# ---- broadcast HUD hidden
 	scene.hud.set_hud_visible(false, true)
+	var toggle: Rect2 = HudLayout.hud_toggle_rect(scene.hud.design_vp(), scene.hud.touch)
+	scene.hud.mouse = toggle.get_center()
 	scene.hud.queue_redraw()
+	await _frames(40)
 	await _shot("ui512_match_hud_hidden_desktop")
 	print("EXIT vp=%s" % scene.get_viewport().get_visible_rect().size)
 	quit()
