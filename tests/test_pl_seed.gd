@@ -149,6 +149,19 @@ func test_leaders_are_ordered() -> void:
 	for i in range(1, leaders.size()):
 		assert_gte(int(leaders[i - 1]["goals"]), int(leaders[i]["goals"]), "scorers are out of order")
 
+
+func test_season_reads_cover_filter_branches() -> void:
+	var assists := PLRepository.shared().leaders(3, "assists", "PL")
+	assert_gte(assists.size(), 1, "assist leaders are empty")
+	var ahead := PLRepository.shared().upcoming("", 5, "PL")
+	assert_gte(ahead.size(), 1, "the competition ahead list is empty")
+	assert_gte(PLRepository.shared().upcoming("MUN", 3, "PL").size(), 1,
+		"a club ahead list is empty")
+	var by_team := PLRepository.shared().sim_leaders(3, "PL", "assists", ["MUN", "MCI"])
+	assert_true(by_team is Array, "team-filtered assist leaders failed")
+	assert_true(PLRepository.shared().sim_leaders(3, "PL", "goals", ["MUN"]) is Array,
+		"team-filtered goal leaders failed")
+
 func _clean_cache() -> void:
 	PLDatabase.reset()
 	DirAccess.make_dir_recursive_absolute(CACHE_DIR)

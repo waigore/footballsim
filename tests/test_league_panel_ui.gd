@@ -154,6 +154,32 @@ func test_the_drawer_never_sits_on_a_front_door_form() -> void:
 	assert_eq(panel().hit(Vector2(painted.end.x + 6.0, painted.get_center().y), vp()), "",
 		"a press beside the painted plate opened the drawer")
 
+func test_the_drawer_door_sits_in_the_header_band_over_no_row() -> void:
+	var saved_touch: bool = bool(game.touch)
+	game.touch = true
+	new_season()
+	for pair in [["nav:fixtures", "hub"], ["nav:table", "table"], ["nav:calendar", "calendar"]]:
+		press_nav(str(pair[0]))
+		assert_eq(screen().mode, str(pair[1]), "the drawer did not open %s" % pair[1])
+		assert_true(bool(screen().touch), "the pose did not come up as a touch sheet for %s" % pair[1])
+		var door: Rect2 = panel().tab_rect(vp())
+		assert_eq(door, LeagueExtra.nav_rect(vp()), "the drawer door left the header at %s" % pair[1])
+		assert_lte(door.end.y, LeagueChrome.HEADER, "the drawer door left the header band on %s" % pair[1])
+		assert_gte(screen().body.position.y, LeagueChrome.HEADER,
+			"the body climbed under the header on %s" % pair[1])
+		assert_eq(screen().button_at(door.get_center()), "panel",
+			"the drawer door's press went elsewhere on %s" % pair[1])
+		for item in screen().buttons:
+			if bool(item.get("pinned", false)):
+				continue
+			var row := Rect2((item["rect"] as Rect2).position + screen().body.position,
+				(item["rect"] as Rect2).size)
+			assert_false(row.intersects(door),
+				"%s's row %s sits under the drawer door" % [pair[1], str(item.get("id", ""))])
+	game.touch = saved_touch
+	screen().refresh()
+
+
 func test_the_panel_slides_open_navigates_and_closes() -> void:
 	new_season()
 	assert_false(panel().is_open(), "the panel opened by itself")

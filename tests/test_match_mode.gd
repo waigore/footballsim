@@ -3,6 +3,7 @@ extends GdToolsTest
 
 var PREFS := TestScratch.file("test_match_mode_issue164.cfg")
 var game = null
+var engine_dirty := false
 
 func before_all() -> void:
 	if FileAccess.file_exists(PREFS):
@@ -35,12 +36,20 @@ func after_each() -> void:
 	if game == null:
 		return
 	game.view.set_mode(Prefs.DEFAULT_MODE)
-
-
-	game.new_match(1000)
+	game.skip_armed = false
+	if game.engine != null and str(game.engine.phase) != "play":
+		engine_dirty = true
+	if engine_dirty:
+		game.new_match(1000)
+		engine_dirty = false
 	game.menus.close()
 	game.paused = true
 	game.hud_layer.visible = true
+	game.in_highlight = false
+	game.fast_mode = true
+	game.speed = 1.0
+	game.replay = null
+	game.highlight_until = -1.0
 
 func _key(code: int) -> void:
 	var ev := InputEventKey.new()
@@ -166,32 +175,147 @@ func test_skip_ends_a_live_replay_in_goals_only() -> void:
 	assert_false(game.in_highlight, "Skip did not end the goal replay")
 	assert_true(game.fast_mode, "Skip left Goals only standing still")
 
+
+func test_skip_runs_the_match_on_to_the_next_whistle() -> void:
+	engine_dirty = true
+	game.view.set_mode("highlights")
+	game.paused = false
+	game.engine.added = [1.0, 1.0]
+	game.engine.clock = 2699.4
+	_key(KEY_S)
+	assert_true(game.skip_armed, "a skip press did not arm the skip")
+	assert_gt(float(game.engine.clock), 2699.4, "a skip press moved the match nowhere")
+	var calls := 0
+	while str(game.engine.phase) != "half_time" and calls < 200:
+		game.playback.advance_skip()
+		calls += 1
+	assert_eq(str(game.engine.phase), "half_time", "the skip did not reach the half-time whistle")
+	assert_false(game.skip_armed, "the skip stayed armed past the whistle")
+	assert_gte(float(game.engine.clock), 2700.0, "the skip stopped short of half time")
+
+
+func test_a_skip_spends_one_frame_budget_at_a_time() -> void:
+	engine_dirty = true
+	game.view.set_mode("highlights")
+	game.paused = false
+	game.engine.clock = 60.0
+	_key(KEY_S)
+	var before := float(game.engine.clock)
+	game._process(1.0 / 60.0)
+	var spent := float(game.engine.clock) - before
+	assert_gt(spent, 0.0, "a skip frame moved nothing")
+	assert_lt(spent, 60.0, "one skip frame ran a whole match minute")
+	assert_true(game.skip_armed, "a skip frame ran out of match to skip")
+
+
+func test_a_second_skip_press_stops_it() -> void:
+	engine_dirty = true
+	game.view.set_mode("highlights")
+	game.paused = false
+	game.engine.clock = 120.0
+	_key(KEY_S)
+	assert_true(game.skip_armed, "a skip press did not arm the skip")
+	_key(KEY_S)
+	assert_false(game.skip_armed, "a second press did not stop the skip")
+
+
+func test_pause_stops_a_running_skip() -> void:
+	engine_dirty = true
+	game.view.set_mode("highlights")
+	game.paused = false
+	game.engine.clock = 200.0
+	_key(KEY_S)
+	assert_true(game.skip_armed, "a skip press did not arm the skip")
+	_key(KEY_SPACE)
+	assert_true(game.paused, "space did not pause the match")
+	game._process(1.0 / 60.0)
+	assert_false(game.skip_armed, "a paused match kept skipping")
+
+
+func test_a_finished_match_cannot_skip_and_a_break_holds_the_skip_off() -> void:
+	engine_dirty = true
+	game.engine.phase = "full_time"
+	game.paused = false
+	_key(KEY_S)
+	assert_false(game.skip_armed, "a finished match armed a skip")
+	game.engine.phase = "half_time"
+	_key(KEY_S)
+	assert_false(game.skip_armed, "a half-time break armed a skip")
+	game.engine.phase = "play"
+
+
+func test_the_state_line_and_the_door_name_a_running_skip() -> void:
+	engine_dirty = true
+	var band: HudRosterBand = game.hud.roster_band
+	game.view.set_mode("highlights")
+	game.paused = false
+	game.engine.clock = 300.0
+	assert_eq(band.state_label(game, "SIM", "play"), "HIGHLIGHTS  ·  SIMMING 24x",
+		"the idle Highlights line moved")
+	_key(KEY_S)
+	assert_eq(band.state_label(game, "SIM", "play"), "SKIPPING  ·  TO HALF TIME",
+		"the state line did not name the skip")
+	assert_eq(_band_label("skip"), "STOP", "the door did not offer to stop the skip")
+	_key(KEY_S)
+	assert_eq(_band_label("skip"), "SKIP", "the door did not go back to SKIP")
+
+
+func test_a_skip_in_the_second_half_names_full_time() -> void:
+	engine_dirty = true
+	game.view.set_mode("full")
+	game.paused = false
+	game.engine.half = 2
+	game.engine.clock = 3000.0
+	_key(KEY_S)
+	assert_eq(HudRosterBand.skip_label(game.engine), "SKIPPING  ·  TO FULL TIME",
+		"the second half's skip named the wrong whistle")
+	_key(KEY_S)
+
 func test_goals_only_replays_only_scored_goals() -> void:
 	game.view.set_mode("goals")
 
 
 	var engine = MatchEngine.new(4242, "MUN", "MCI")
 	game.engine = engine
-	game.highlights.restart()
-	for i in range(60):
-		engine.tick()
-		game.highlights.sample()
+	engine_dirty = true
 	var director: HighlightDirector = game.highlights
+	director.restart()
+	while director.history.size() < HighlightDirector.MIN_CAPTURE_FRAMES:
+		engine.tick()
+		director.snapshot()
+		if director.history.size() < HighlightDirector.MIN_CAPTURE_FRAMES:
+			engine.clock += HighlightDirector.SNAPSHOT_EVERY
 	var clock := float(engine.clock)
 	director.on_event({"type": "shot", "clock": clock, "player_id": 7})
-	assert_false(game.in_highlight, "a shot opened a replay in Goals only")
+	assert_false(director.waiting(), "a shot queued a replay in Goals only")
 	director.on_event({"type": "corner", "clock": clock, "player_id": -1})
-	assert_false(game.in_highlight, "a corner opened a replay in Goals only")
+	assert_false(director.waiting(), "a corner queued a replay in Goals only")
 	director.on_event({"type": "card", "clock": clock, "player_id": 8})
-	assert_false(game.in_highlight, "a card opened a replay in Goals only")
+	assert_false(director.waiting(), "a card queued a replay in Goals only")
 	director.on_event({"type": "penalty_taken", "clock": clock, "player_id": 9})
-	assert_false(game.in_highlight, "a penalty that missed opened a replay in Goals only")
+	assert_false(director.waiting(), "a penalty that missed queued a replay in Goals only")
 	director.on_event({"type": "goal", "clock": clock, "player_id": 9, "team": 0, "text": "GOAL!"})
+	assert_true(director.waiting(), "a scored goal did not queue a replay in Goals only")
+	for i in range(3):
+		engine.tick()
+		director.snapshot()
+		engine.clock += HighlightDirector.SNAPSHOT_EVERY * 0.5
+	director.open_pending(true)
 	assert_true(game.in_highlight, "a scored goal did not open a replay in Goals only")
-	game.in_highlight = false
+	assert_not_null(game.replay, "Goals only opened no clip for the goal")
+	game.replay.finish(true)
+	game.replay = null
 	game.view.set_mode("highlights")
-	director.on_event({"type": "shot", "clock": clock + 0.5, "player_id": 10})
+	director.on_event({"type": "shot", "clock": float(engine.clock) + 0.5, "player_id": 10})
+	assert_true(director.waiting(), "Highlights stopped queuing shots")
+	for i in range(3):
+		engine.tick()
+		director.snapshot()
+		engine.clock += HighlightDirector.SNAPSHOT_EVERY * 0.5
+	director.open_pending(true)
 	assert_true(game.in_highlight, "Highlights stopped replaying shots")
+	game.replay.finish(true)
+	game.replay = null
 
 func test_the_state_line_names_the_view() -> void:
 	var band: HudRosterBand = game.hud.roster_band

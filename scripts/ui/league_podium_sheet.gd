@@ -14,7 +14,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 
 	items.append({"id": "", "kind": "extent",
 		"rect": Rect2(24.0, HEADER, vp.x - 48.0, frame_height(view))})
-	items.append(LeagueExtra.back_item())
+	items.append(LeagueExtra.back_item(bool(view.get("touch", false))))
 	items.append({"id": "table", "kind": "button", "label": "TABLE", "primary": false, "pinned": true,
 		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 130.0, BAR_H - 14.0)})
 	items.append({"id": "menu", "kind": "button", "label": "MAIN MENU", "primary": true, "pinned": true,
@@ -70,7 +70,8 @@ func _paint_band(c: CanvasItem, body: Callable) -> void:
 
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	LeagueExtra.header(c, vp, fonts, "SEASON COMPLETE", str(view.get("name", "")))
+	LeagueExtra.header(c, vp, fonts, "SEASON COMPLETE", str(view.get("name", "")), 0.0, true,
+		bool(view.get("touch", false)))
 
 func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, _items: Array, view: Dictionary) -> void:
 	_paint_band(c, _draw_body.bind(vp, fonts, view))

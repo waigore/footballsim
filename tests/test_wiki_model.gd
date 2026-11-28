@@ -80,10 +80,49 @@ func test_a_goalkeeper_page_shows_keeper_attributes() -> void:
 func test_unknown_targets_are_rejected() -> void:
 	assert_false(WikiModel.has_page(WikiModel.PLAYER, "NOPE-x"), "a missing player resolved")
 	assert_false(WikiModel.has_page(WikiModel.TEAM, "NOPE"), "a missing club resolved")
+	assert_false(WikiModel.has_page(WikiModel.MANAGER, "NOPE"), "a missing manager resolved")
 	assert_false(WikiModel.has_page("banana", ""), "a made-up page kind resolved")
 	assert_eq(WikiModel.label(WikiModel.LEAGUE, ""), "PREMIER LEAGUE",
 		"the league crumb should name the competition")
 	assert_eq(WikiModel.label(WikiModel.TEAM, "MUN"), "MUN", "the club crumb should be the abbreviation")
+	assert_eq(WikiModel.label(WikiModel.MANAGER, "MUN"), "R. Amorim", "the manager crumb should name him")
+
+
+func test_the_manager_page_reads_the_dugout_temperament() -> void:
+	var prof := ManagerData.profile("MUN")
+	var page := WikiModel.page(WikiModel.MANAGER, "MUN")
+	assert_eq(str(page["title"]), str(prof["name"]).to_upper(), "the manager page lost his name")
+	var kinds := _kinds(page)
+	assert_has(kinds, "kv", "no club figures on the manager page")
+	assert_has(kinds, "bars", "no temperament bars on the manager page")
+	var bars: Array = []
+	for block in page["blocks"]:
+		if str(block["k"]) == "bars":
+			bars = block["items"]
+	assert_eq(bars.size(), 5, "a persona should read five temperament bars")
+	var text := _flatten(page)
+	assert_true(text.contains(str(prof["trait"]).to_upper()), "the one-line trait is not on the page")
+	assert_true(text.contains("PREFERRED LEVERS"), "the levers have no section")
+	for target in _targets(page):
+		assert_true(WikiModel.has_page(str(target["page"]), str(target["id"])), "dead link %s" % str(target))
+
+
+func test_a_snapshot_manager_reads_a_name_and_no_invented_temperament() -> void:
+	var page := WikiModel.page(WikiModel.MANAGER, "LL-BAR")
+	assert_eq(str(page["title"]), "H. FLICK", "the snapshot club lost its manager's name")
+	assert_false(_kinds(page).has("bars"), "a club with no authored temperament drew bars")
+	var text := _flatten(page)
+	assert_true(text.contains("NO TEMPERAMENT RECORDED"), "the missing temperament is not said out loud")
+	assert_true(text.contains("BARCELONA"), "the manager page does not name his club")
+
+
+func test_the_club_page_offers_the_manager() -> void:
+	var page := WikiModel.page(WikiModel.TEAM, "MUN")
+	var found := false
+	for target in _targets(page):
+		if str(target.get("page", "")) == WikiModel.MANAGER and str(target.get("id", "")) == "MUN":
+			found = true
+	assert_true(found, "the club page has no door to its manager")
 
 func test_layout_fits_a_page_into_rows() -> void:
 	var page := WikiModel.page(WikiModel.TEAM, "MUN")
@@ -94,6 +133,18 @@ func test_layout_fits_a_page_into_rows() -> void:
 		assert_gte((row["rect"] as Rect2).size.x, 0.0, "a row has no width")
 	var compact := WikiBody.layout(page["blocks"], 800.0, true)
 	assert_gte(float(compact["height"]), float(desktop["height"]) * 0.7, "the phone layout collapsed")
+
+func test_snapshot_pages_carry_no_availability_status() -> void:
+	assert_eq(WikiAbsence.statuses("MUN").size(), 0, "the snapshot claims an open season")
+	var page := WikiModel.page(WikiModel.TEAM, "MUN")
+	var cols: Array = []
+	for block in page["blocks"]:
+		if str(block["k"]) == "table" and (block["cols"] as Array).has("OVR"):
+			cols = block["cols"]
+	assert_false(cols.has("STATUS"), "the snapshot squad carries a status column")
+	assert_false(_flatten(WikiModel.page(WikiModel.PLAYER, "MUN-s-lammens")).contains("STATUS"),
+		"a snapshot player page shows availability")
+
 
 func _kinds(page: Dictionary) -> Array:
 	var out: Array = []

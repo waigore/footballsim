@@ -194,6 +194,64 @@ func test_the_load_list_lays_out_zero_and_many_saves() -> void:
 		"the ninth save was laid over an earlier row")
 
 
+func test_a_phone_load_row_and_its_delete_door_are_finger_sized() -> void:
+	var sheet := LeagueStartSheet.new()
+	var saves: Array = [{"slug": "s0", "name": "Save 0", "status": "in_progress",
+		"current_date": "2026-09-01", "matchday": 1, "path": "", "modified": 0}]
+	var desk: Array = sheet.load_layout(Vector2(913, 411), {"saves": saves})
+	var phone: Array = sheet.load_layout(Vector2(913, 411), {"saves": saves, "touch": true})
+	var desk_row: Rect2 = desk[0]["rect"]
+	var phone_row: Rect2 = phone[0]["rect"]
+	var phone_delete: Rect2 = phone[1]["rect"]
+	assert_lt(desk_row.size.y, UiChrome.TAP_H, "the desktop row grew to a finger's pitch")
+	assert_gte(phone_row.size.y, UiChrome.TAP_H, "the save row is under a finger")
+	assert_gte(phone_delete.size.y, UiChrome.TAP_H, "the delete door is under a finger")
+	assert_true(phone_row.encloses(phone_delete), "the delete door left its row")
+	assert_false(phone_row.intersects(phone[2]["rect"] as Rect2),
+		"two save rows overlap, so one press answers two lanes")
+	assert_gte((phone[phone.size() - 1]["rect"] as Rect2).size.y, UiChrome.TAP_H,
+		"the load list's BACK is under a finger")
+
+
+func test_a_phone_hub_lays_every_row_and_door_for_a_finger() -> void:
+	var sheet := LeagueSheet.new()
+	var plan: Array = []
+	for i in range(6):
+		plan.append(_fixture(i, i % 2, 0))
+	var vp := Vector2(913.0, 411.0)
+	var wide: Array = sheet.hub_layout(vp, _state(plan, _table()))
+	var state := _state(plan, _table())
+	state["touch"] = true
+	var narrow: Array = sheet.hub_layout(vp, state)
+	assert_eq(_item_rect(wide, "fixture:gw01-A0-B0").size.y, LeagueChrome.ROW_H,
+		"the desktop row left its own pitch")
+	for item in narrow:
+		if str(item["kind"]) == "row" or str(item["kind"]) == "chip":
+			assert_gte((item["rect"] as Rect2).size.y, UiChrome.TAP_H,
+				"%s is under a finger at %s" % [item["id"], vp])
+	var first := _item_rect(narrow, "fixture:gw01-A0-B0")
+	var suggest := _item_rect(narrow, "suggest")
+	assert_gte(suggest.size.y, UiChrome.TAP_H, "SUGGEST WATCHES is under a finger")
+	assert_false(suggest.intersects(first), "the suggest door sits on the first fixture")
+	assert_gte(first.position.y, LeagueChrome.HEADER, "the first row rose into the header")
+	assert_gte(_item_rect(narrow, "back").size.y, UiChrome.TAP_H, "the hub's BACK is under a finger")
+	assert_gte(_item_rect(narrow, "continue").size.y, UiChrome.TAP_H, "CONTINUE is under a finger")
+	assert_lte(_item_rect(narrow, "continue").end.x, vp.x, "CONTINUE ran off the sheet")
+	assert_false(_item_rect(narrow, "continue").intersects(_item_rect(narrow, "back")),
+		"the hub's header doors overlap")
+
+
+func test_a_phone_plan_row_keeps_its_toggle_inside_the_row() -> void:
+	var plan: Array = [_fixture(1), _fixture(2)]
+	var items: Array = LeaguePlanSheet.layout(plan, {}, 24.0, 600.0, 72.0, true)
+	var row: Rect2 = items[0]["rect"]
+	var chip: Rect2 = items[1]["rect"]
+	assert_gte(row.size.y, UiChrome.TAP_H, "the phone row is under a finger")
+	assert_gte(chip.size.y, UiChrome.TAP_H, "the AUTO/WATCH door is under a finger")
+	assert_true(row.encloses(chip), "the toggle left its row, so a press can sim the wrong game")
+	assert_false(row.intersects(items[2]["rect"] as Rect2), "two phone rows share a band")
+
+
 func test_the_table_columns_fit_a_phone_and_a_desktop_sheet() -> void:
 	var cols := LeagueTableView.COMPACT_COLS
 	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(873, 393)]:
@@ -323,6 +381,42 @@ func test_the_table_and_calendar_lay_out_at_both_sizes() -> void:
 		assert_eq(matches, 2, "the day lost its fixtures")
 
 
+func test_the_calendar_names_what_its_day_counters_count() -> void:
+	var fonts: Dictionary = UiChrome.fonts()
+	var view := {"month": "2026-08", "days": {"2026-08-15": {"n": 10, "played": 0}}}
+	for vp in [Vector2(1600, 900), Vector2(913, 411), Vector2(640, 360)]:
+		for touch in [false, true]:
+			view["touch"] = touch
+			var legend: Dictionary = LeagueCalendarView.legend_rect(vp, view, fonts)
+			assert_false(legend.is_empty(), "the day counters are unlabelled at %s (touch %s)" % [vp, touch])
+			var rect: Rect2 = legend["rect"]
+			var text := str(legend["text"])
+			assert_true(text.contains("PLAYED") and text.contains("TOTAL"),
+				"the legend does not name the pair it explains: " + text)
+			assert_eq(text, LeagueCalendarView.LEGEND, "a roomy sheet shortened the legend at %s" % vp)
+			assert_almost_eq(rect.position.x, 24.0 + UiChrome.text_width(fonts["bold"],
+				LeagueMonth.label("2026-08"), 13) + 12.0, 0.01, "the legend does not sit by the month")
+			assert_almost_eq(rect.end.y, LeagueCalendarView.HEADER + 25.0, 0.01,
+				"the legend left the month's line")
+			assert_lt(rect.end.y, LeagueCalendarView.grid_top(touch), "the legend crowds the day grid")
+			assert_lte(rect.end.x, LeagueCalendarView.month_door_rects(vp, touch)[0].position.x - 12.0,
+				"the legend runs into the month doors at %s" % vp)
+			assert_lte(rect.end.x, vp.x - 24.0, "the legend runs off the sheet at %s" % vp)
+
+
+func test_a_month_with_no_counters_carries_no_legend() -> void:
+	var fonts: Dictionary = UiChrome.fonts()
+	var vp := Vector2(1600, 900)
+	assert_true(LeagueCalendarView.legend_rect(vp, {"month": "2026-07", "days": {}}, fonts).is_empty(),
+		"an empty month explained a counter it does not draw")
+	assert_true(LeagueCalendarView.legend_rect(vp,
+		{"month": "2026-07", "days": {"2026-07-04": {"n": 0, "played": 0}}}, fonts).is_empty(),
+		"a day with no fixtures raised a legend")
+	var narrow: Dictionary = LeagueCalendarView.legend_rect(Vector2(240, 411),
+		{"month": "2026-08", "touch": true, "days": {"2026-08-15": {"n": 10, "played": 0}}}, fonts)
+	assert_true(narrow.is_empty(), "a sheet too narrow for the legend painted one anyway")
+
+
 func test_the_sheet_chrome_keeps_back_top_left_and_the_primary_top_right() -> void:
 	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
 		var book := LeagueBook.new()
@@ -332,8 +426,8 @@ func test_the_sheet_chrome_keeps_back_top_left_and_the_primary_top_right() -> vo
 			"report": book.report_layout(vp, {"fixture": _fixture(1), "events": [], "day": "x"}),
 			"podium": book.podium_layout(vp, {"summary": {}}),
 			"system": LeagueSystemSheet.new().layout(vp, {"date": "2026-08-15", "name": "S"}),
-			"stats": LeagueExtra.new().stats_layout(vp, {"name": "S", "reports": []}),
-			"interest": LeagueExtra.new().interest_layout(vp, {"query": "", "results": [], "clubs": []}),
+			"stats": LeagueStatsSheet.new().layout(vp, {"name": "S", "reports": []}),
+			"interest": LeagueInterestSheet.new().layout(vp, {"query": "", "results": [], "clubs": []}),
 			"hub": LeagueSheet.new().hub_layout(vp, _state([_fixture(1)], _table())),
 		}
 		for label in sheets:
@@ -463,23 +557,31 @@ func test_the_load_row_status_reads_as_player_copy() -> void:
 
 func test_the_month_stepper_binds_its_label_and_chevrons() -> void:
 	for vp in [Vector2(1280, 720), Vector2(1600, 900), Vector2(913, 411), Vector2(360, 780)]:
-		var items: Array = LeagueExtra.new().stats_layout(vp, {"name": "S", "reports": [],
+		var items: Array = LeagueStatsSheet.new().layout(vp, {"name": "S", "reports": [],
 			"filters": {"league": "", "month": "2026-09", "team": "", "stat": "goals"}})
 		var prev := _item_rect(items, "statsmonth:-1")
 		var next := _item_rect(items, "statsmonth:1")
 		var read := _item_rect(items, "")
 		var goals := _item_rect(items, "statsstat:goals")
 		assert_true(read.size.x >= 72.0, "the readout has no width at %s" % vp)
-		assert_almost_eq(read.position.x, prev.end.x + LeagueExtra.STEP_GAP, 0.01,
+		assert_almost_eq(read.position.x, prev.end.x + LeagueStatsSheet.STEP_GAP, 0.01,
 			"the readout does not follow its back arrow at %s" % vp)
-		assert_almost_eq(next.position.x, read.end.x + LeagueExtra.STEP_GAP, 0.01,
+		assert_almost_eq(next.position.x, read.end.x + LeagueStatsSheet.STEP_GAP, 0.01,
 			"the forward arrow does not hug its readout at %s" % vp)
 		assert_almost_eq(prev.position.y, next.position.y, 0.01,
 			"the stepper cells do not share a row at %s" % vp)
 		assert_almost_eq(prev.size.y, read.size.y, 0.01,
 			"the readout left the arrows' height at %s" % vp)
-		assert_gte(goals.position.x - next.end.x, LeagueExtra.STEP_AFTER,
-			"the stat chips crowd the stepper at %s" % vp)
+		if goals.position.y == next.position.y:
+			assert_gte(goals.position.x - next.end.x, LeagueStatsSheet.STEP_AFTER,
+				"the stat chips crowd the stepper at %s" % vp)
+		else:
+			assert_gte(goals.position.y, next.end.y,
+				"the wrapped stat chips sit on the stepper at %s" % vp)
+			assert_almost_eq(goals.position.x, 24.0, 0.01,
+				"the wrapped stat chips left the sheet's inset at %s" % vp)
+		assert_lte(_item_rect(items, "statsstat:assists").end.x, vp.x - 24.0 + 0.01,
+			"the stat chips run off the sheet at %s" % vp)
 		assert_lte(next.end.x, vp.x - 24.0, "the stepper runs off the sheet at %s" % vp)
 
 
@@ -841,6 +943,72 @@ func test_the_results_sheet_adds_the_hubs_continue_beside_back() -> void:
 	assert_eq(_item_rect(single, "continue"), Rect2(), "a single match report gained CONTINUE")
 
 
+func test_a_phone_header_hangs_the_drawer_door_beside_back() -> void:
+	var bold: Font = UiChrome.fonts()["bold"]
+	var sheet := LeagueSheet.new()
+	for vp in [Vector2(913, 411), Vector2(640, 360), Vector2(1280, 720)]:
+		var state := _state([_fixture(1)], _table())
+		var cont := _item_rect(sheet.hub_layout(vp, state), "continue")
+		var band := LeagueExtra.header_band(vp, bold, LeagueSheet.HUB_TITLE,
+			LeagueSheet.hub_caption(state), cont.size.x + 12.0, false, true)
+		var door := LeagueExtra.nav_rect(vp)
+		assert_false(door == Rect2(), "no header lane for the drawer door at %s" % vp)
+		assert_almost_eq(door.position.x, LeagueExtra.back_rect(true).end.x + LeagueExtra.NAV_GAP, 0.01,
+			"the drawer door left BACK's shoulder at %s" % vp)
+		assert_gte(door.size.x, 44.0, "the drawer door is narrower than a finger at %s" % vp)
+		assert_lte(door.end.x, cont.position.x, "the drawer door sits under CONTINUE at %s" % vp)
+		var title: Rect2 = band["title_rect"]
+		assert_gte(title.position.x, door.end.x, "the title sits on the drawer door at %s" % vp)
+		assert_lte(title.end.x, cont.position.x, "the title runs under CONTINUE at %s" % vp)
+		assert_eq(str(band["title"]), LeagueSheet.HUB_TITLE,
+			"a phone header with room for its title lost it at %s" % vp)
+		var strip: Rect2 = band["caption_rect"]
+		if strip != Rect2():
+			assert_lte(strip.end.x, cont.position.x - 12.0, "the caption runs under CONTINUE at %s" % vp)
+			assert_gte(strip.position.x, title.end.x, "the caption is painted through the title at %s" % vp)
+
+	var desk := LeagueExtra.header_band(Vector2(1600, 900), bold, LeagueSheet.HUB_TITLE, "", 152.0)
+	assert_almost_eq((desk["title_rect"] as Rect2).position.x, LeagueExtra.TITLE_X, 0.01,
+		"the desktop title lane moved")
+	var desk_hub := LeagueExtra.header_band(Vector2(1600, 900), bold, LeagueSheet.HUB_TITLE, "",
+		152.0, false, false)
+	assert_almost_eq((desk_hub["title_rect"] as Rect2).position.x, LeagueExtra.TITLE_X, 0.01,
+		"a desktop header made room for a door it does not paint")
+
+
+func test_a_header_that_cannot_hold_its_title_shortens_or_drops_it() -> void:
+	var bold: Font = UiChrome.fonts()["bold"]
+	for vp in [Vector2(411, 914), Vector2(375, 812), Vector2(320, 480)]:
+		var door := LeagueExtra.nav_rect(vp)
+		assert_false(door == Rect2(), "a narrow sheet lost the drawer door at %s" % vp)
+		var cont := LeagueExtra.primary_rect(vp, 140.0, true)
+		assert_lte(door.end.x, cont.position.x, "the drawer door sits under CONTINUE at %s" % vp)
+		var band := LeagueExtra.header_band(vp, bold, LeagueSheet.HUB_TITLE,
+			LeagueSheet.hub_caption(_state([_fixture(1)], _table())), cont.size.x + 12.0, false, true)
+		var title: Rect2 = band["title_rect"]
+		assert_gte(title.position.x, door.end.x, "the title starts on the drawer door at %s" % vp)
+		assert_lte(title.end.x, cont.position.x, "the title runs under CONTINUE at %s" % vp)
+		var drawn := str(band["title"])
+		assert_true(drawn == "" or drawn.begins_with("Today"),
+			"a narrow header drew neither its page name nor nothing at %s: '%s'" % [vp, drawn])
+		if drawn.length() > 1:
+			assert_true(drawn == LeagueSheet.HUB_TITLE or drawn.ends_with("…"),
+				"a narrow header lost its name instead of being shortened at %s" % vp)
+		assert_eq(str(band["caption"]), "", "a caption was drawn without a title at %s" % vp)
+
+
+func test_a_phone_header_never_lays_a_row_under_the_drawer_door() -> void:
+	var panel := LeaguePanel.new()
+	panel.touch = true
+	var vp := Vector2(913, 411)
+	var door := panel.tab_rect(vp)
+	assert_almost_eq(door.end.y, LeagueExtra.nav_rect(vp).end.y, 0.01,
+		"the painted door and the answer box disagree")
+	assert_lte(door.end.y, LeagueChrome.HEADER, "the door reached into the body")
+	assert_gte(LeagueBody.TOP, door.end.y, "the body starts above the drawer door")
+	assert_eq(LeagueBody.TOP, LeagueChrome.HEADER, "the body top left the header band")
+
+
 func test_the_header_title_and_caption_clear_the_header_doors() -> void:
 	var bold: Font = UiChrome.fonts()["bold"]
 	var long_name := "MANCHESTER DERBY LEAGUE"
@@ -1020,6 +1188,49 @@ class _PaintProbe extends Control:
 		painted = true
 
 
+func test_the_pinned_bar_paints_its_own_ground_under_the_door() -> void:
+	var vp := Vector2(913, 411)
+	var items: Array = LeagueStartSheet.new().wizard_layout(vp,
+		{"name": "S", "competitions": ["PL"], "calendar_mode": "generated",
+			"advance_mode": "fixture_days", "touch": true})
+	var door: Dictionary = _body_item(items, "create")
+	assert_true(bool(door.get("pinned", false)), "the short wizard did not pin CREATE SEASON")
+	assert_gt(float(door.get("bar", 0.0)), 0.0, "the pinned door carries no bar to paint")
+	var body := _body(vp)
+	body.set_sheet(items, vp, true, LeagueStartSheet.bar_of(items))
+	var layer := _PinnedProbe.new()
+	layer.body = body
+	layer.fonts = UiChrome.fonts()
+	layer.size = vp
+	add_child(layer)
+	await get_tree().process_frame
+	assert_true(layer.painted, "the pinned layer never reached its paint")
+
+	var plain := door.duplicate()
+	plain.erase("bar")
+	var probe := _PinnedProbe.new()
+	probe.fonts = UiChrome.fonts()
+	probe.size = vp
+	probe.body = _body(vp)
+	probe.body.pinned = [plain]
+	add_child(probe)
+	await get_tree().process_frame
+	assert_true(probe.painted, "a pinned door with no bar did not paint")
+	layer.queue_free()
+	probe.queue_free()
+
+
+class _PinnedProbe extends Control:
+	var body: LeagueBody = null
+	var fonts: Dictionary = {}
+	var painted := false
+
+	func _draw() -> void:
+		for item in body.pinned:
+			LeagueChrome.pinned_door(self, {}, item, fonts, size)
+		painted = true
+
+
 func test_the_table_sheet_keeps_back_top_left_and_its_doors_on_the_bar() -> void:
 	for vp in [Vector2(1600, 900), Vector2(913, 411)]:
 		var table: Array = LeagueBook.new().table_layout(vp,
@@ -1096,20 +1307,20 @@ func test_the_system_advance_hint_names_the_pointer() -> void:
 
 
 func test_the_stats_empty_state_names_the_season_not_the_filters() -> void:
-	var sheet := LeagueExtra.new()
+	var sheet := LeagueStatsSheet.new()
 	var vp := Vector2(1280, 720)
-	var unplayed: Array = sheet.stats_layout(vp, {"name": "S", "reports": [],
+	var unplayed: Array = sheet.layout(vp, {"name": "S", "reports": [],
 		"played": 0, "leaders": [],
 		"filters": {"league": "", "month": "", "team": "", "stat": "goals"}})
 	assert_eq(_note(unplayed), "No matchday has been played yet.",
 		"an unplayed season blamed the filters")
 	assert_false(_has_caption(unplayed, "LEADERS"), "an empty LEADERS chart printed a bare heading")
-	var filtered: Array = sheet.stats_layout(vp, {"name": "S", "reports": [],
+	var filtered: Array = sheet.layout(vp, {"name": "S", "reports": [],
 		"played": 20, "leaders": [],
 		"filters": {"league": "PL", "month": "", "team": "mun", "stat": "goals"}})
 	assert_eq(_note(filtered), "No matchdays match these filters.",
 		"a played season emptied by its filters lost its note")
-	var charted: Array = sheet.stats_layout(vp, {"name": "S", "reports": [],
+	var charted: Array = sheet.layout(vp, {"name": "S", "reports": [],
 		"played": 20, "leaders": [{"name": "A. Scorer", "abbr": "MUN", "stat_value": 3}],
 		"filters": {"league": "", "month": "", "team": "", "stat": "goals"}})
 	assert_true(_has_caption(charted, "LEADERS  ·  GOALS"), "a chart with rows lost its caption")
@@ -1131,3 +1342,211 @@ func _item(items: Array, id: String) -> Dictionary:
 		if str(item["id"]) == id:
 			return item
 	return {}
+
+
+func test_a_phone_stats_sheet_lays_its_chips_and_stepper_for_a_finger() -> void:
+	var sheet := LeagueStatsSheet.new()
+	var vp := Vector2(913, 411)
+	var filters := {"league": "", "month": "2026-09", "team": "", "stat": "goals"}
+	var view := {"name": "S", "reports": [], "filters": filters,
+		"competitions": [{"id": "PL", "short": "PL"}, {"id": "LL", "short": "LL"}]}
+	var desk: Array = sheet.layout(vp, view)
+	assert_almost_eq(_item_rect(desk, "statsleague:").size.y, 30.0, 0.01,
+		"the desktop league chip left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "statsstat:goals").size.y, LeagueStatsSheet.STEP_H, 0.01,
+		"the desktop stat chip left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "statsmonth:-1").size.y, LeagueStatsSheet.STEP_H, 0.01,
+		"the desktop month arrow left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "statsmonth:-1").size.x, LeagueStatsSheet.STEP_W, 0.01,
+		"the desktop month arrow left its dense width")
+
+	var phone_view: Dictionary = view.duplicate()
+	phone_view["touch"] = true
+	var phone: Array = sheet.layout(vp, phone_view)
+	var chips := 0
+	for item in phone:
+		var id := str(item["id"])
+		var control: bool = id.begins_with("statsleague:") or id.begins_with("statsstat:") \
+			or id.begins_with("statsmonth:")
+		if not control:
+			continue
+		var rect: Rect2 = item["rect"]
+		assert_gte(rect.size.y, UiChrome.TAP_H, "%s is under a finger at %s" % [id, vp])
+		assert_lte(rect.end.x, vp.x - 24.0 + 0.01, "%s runs off the sheet" % id)
+		chips += 1
+	assert_gte(chips, 6, "the phone stats sheet lost a chip")
+	var prev: Rect2 = _item_rect(phone, "statsmonth:-1")
+	var next: Rect2 = _item_rect(phone, "statsmonth:1")
+	var goals: Rect2 = _item_rect(phone, "statsstat:goals")
+	assert_false(prev.intersects(next), "the month arrows share a band")
+	assert_false(next.intersects(goals), "the stat chips sit on the month arrows")
+	assert_gte(goals.position.y, prev.position.y, "the stat chips rose above their row")
+
+
+func test_a_narrow_phone_wraps_the_stat_chips_under_the_month_stepper() -> void:
+	var sheet := LeagueStatsSheet.new()
+	var vp := Vector2(360, 780)
+	var items: Array = sheet.layout(vp, {"name": "S", "reports": [], "touch": true,
+		"filters": {"league": "", "month": "2026-09", "team": "", "stat": "goals"}})
+	var step: Rect2 = _item_rect(items, "statsmonth:1")
+	var goals: Rect2 = _item_rect(items, "statsstat:goals")
+	var assists: Rect2 = _item_rect(items, "statsstat:assists")
+	for rect in [step, goals, assists]:
+		assert_lte(rect.end.x, vp.x - 24.0 + 0.01, "a stats control runs off a 360-wide phone")
+	assert_gte(goals.position.y, step.end.y, "the stat chips still crowd the stepper")
+	assert_false(goals.intersects(assists), "the wrapped stat chips overlap")
+	assert_gte(goals.size.y, UiChrome.TAP_H, "the wrapped stat chip is under a finger")
+
+
+func test_a_phone_calendar_lays_day_cells_and_month_doors_for_a_finger() -> void:
+	var book := LeagueBook.new()
+	var vp := Vector2(913, 411)
+	var view := {"month": "2026-10", "day": "2026-10-17", "days": {}, "day_fixtures": [_fixture(1)]}
+	var desk: Array = book.calendar_layout(vp, view)
+	assert_almost_eq(_item_rect(desk, "day:2026-10-01").size.y, 28.0, 0.01,
+		"the desktop calendar cell left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "month:1").size.y, 24.0, 0.01,
+		"the desktop month door left its dense pitch")
+
+	var phone_view: Dictionary = view.duplicate()
+	phone_view["touch"] = true
+	var phone: Array = book.calendar_layout(vp, phone_view)
+	var back: Rect2 = _item_rect(phone, "back")
+	var cells := 0
+	var first := Rect2()
+	for item in phone:
+		if str(item["kind"]) != "cell":
+			continue
+		var rect: Rect2 = item["rect"]
+		if cells == 0:
+			first = rect
+		cells += 1
+		assert_gte(rect.size.y, UiChrome.TAP_H, "%s is under a finger at %s" % [item["id"], vp])
+		assert_lte(rect.end.x, vp.x - 24.0 + 0.01, "%s runs off the sheet" % item["id"])
+	assert_eq(cells, 31, "October should still have 31 cells")
+	var prev: Rect2 = _item_rect(phone, "month:-1")
+	var next: Rect2 = _item_rect(phone, "month:1")
+	for door in [prev, next]:
+		assert_gte((door as Rect2).size.y, UiChrome.TAP_H, "a month door is under a finger")
+		assert_gte((door as Rect2).size.x, UiChrome.TAP_H, "a month door is narrower than a finger")
+		assert_false((door as Rect2).intersects(back), "a month door sits on BACK")
+		assert_lte((door as Rect2).end.x, vp.x - 24.0 + 0.01, "a month door runs off the sheet")
+	assert_false(prev.intersects(next), "the month doors overlap")
+	assert_lte(prev.end.y, first.position.y, "the grid rose under the month doors")
+
+
+func test_a_phone_interest_sheet_lays_its_rows_and_remove_doors_for_a_finger() -> void:
+	var sheet := LeagueInterestSheet.new()
+	var vp := Vector2(913, 411)
+	var club := {"id": "MUN", "name": "Manchester United", "abbr": "MUN"}
+	var view := {"query": "man", "clubs": [club], "results": [club]}
+	var desk: Array = sheet.layout(vp, view)
+	assert_almost_eq(_item_rect(desk, "interest:add:MUN").size.y, LeagueExtra.ROW_H, 0.01,
+		"the desktop result row left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "club:MUN").size.y, LeagueExtra.ROW_H, 0.01,
+		"the desktop shortlist row left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "interest:remove:MUN").size.y, LeagueExtra.ROW_H - 8.0, 0.01,
+		"the desktop REMOVE door left its dense pitch")
+
+	var phone_view: Dictionary = view.duplicate()
+	phone_view["touch"] = true
+	var phone: Array = sheet.layout(vp, phone_view)
+	var result: Rect2 = _item_rect(phone, "interest:add:MUN")
+	var row: Rect2 = _item_rect(phone, "club:MUN")
+	var door: Rect2 = _item_rect(phone, "interest:remove:MUN")
+	assert_gte(result.size.y, UiChrome.TAP_H, "the result row is under a finger")
+	assert_gte(row.size.y, UiChrome.TAP_H, "the shortlist row is under a finger")
+	assert_gte(door.size.y, UiChrome.TAP_H, "REMOVE is under a finger")
+	assert_true(row.encloses(door), "REMOVE left its row")
+	assert_lte(door.end.x, row.end.x - 8.0 + 0.01, "REMOVE grew into the row's edge")
+	assert_false(result.intersects(row), "the result row sits on the shortlist")
+
+
+func test_a_phone_new_league_lays_its_toggles_for_a_finger() -> void:
+	var sheet := LeagueStartSheet.new()
+	var vp := Vector2(913, 411)
+	var view := {"name": "S", "competitions": ["PL"], "calendar_mode": "generated",
+		"advance_mode": "fixture_days"}
+	var desk: Array = sheet.wizard_layout(vp, view)
+	assert_almost_eq(_item_rect(desk, "mode:real").size.y, LeagueStartSheet.TOGGLE_H, 0.01,
+		"the desktop toggle left its dense pitch")
+	assert_almost_eq(_item_rect(desk, "wleague:PL").size.y, LeagueStartSheet.TOGGLE_H, 0.01,
+		"the desktop league toggle left its dense pitch")
+
+	var phone_view: Dictionary = view.duplicate()
+	phone_view["touch"] = true
+	var phone: Array = sheet.wizard_layout(vp, phone_view)
+	var toggles := 0
+	for item in phone:
+		var id := str(item["id"])
+		if not (id.begins_with("wleague:") or id.begins_with("mode:") or id.begins_with("adv:")):
+			continue
+		var rect: Rect2 = item["rect"]
+		assert_gte(rect.size.y, UiChrome.TAP_H, "%s is under a finger at %s" % [id, vp])
+		assert_lte(rect.end.x, vp.x - 24.0 + 0.01, "%s runs off the sheet" % id)
+		toggles += 1
+	assert_gte(toggles, 4, "the phone wizard drew no toggles")
+	var leagues: Rect2 = _item_rect(phone, "wleague:PL")
+	var modes: Rect2 = _item_rect(phone, "mode:real")
+	var advances: Rect2 = _item_rect(phone, "adv:fixture_days")
+	assert_lte(leagues.end.y, modes.position.y, "the mode toggles sit on the league toggles")
+	assert_lte(modes.end.y, advances.position.y, "the advance toggles sit on the mode toggles")
+	assert_false(leagues.intersects(_item_rect(phone, "name")), "the league toggle sits on the name field")
+
+
+func test_a_short_new_league_pins_create_above_the_scroll() -> void:
+	var sheet := LeagueStartSheet.new()
+	var view := {"name": "S", "competitions": ["PL"], "calendar_mode": "generated",
+		"advance_mode": "fixture_days"}
+	for vp in [Vector2(913, 411), Vector2(640, 360)]:
+		var items: Array = sheet.wizard_layout(vp, view)
+		var create: Dictionary = _body_item(items, "create")
+		assert_false(create.is_empty(), "the wizard lost its CREATE SEASON door at %s" % vp)
+		assert_true(bool(create.get("pinned", false)),
+			"CREATE SEASON was left below the fold at %s" % vp)
+		var rect: Rect2 = create["rect"]
+		assert_lte(rect.end.y, vp.y + 0.01, "CREATE SEASON runs off the sheet at %s" % vp)
+		assert_gte(rect.position.y, vp.y - LeagueStartSheet.bar_h(true),
+			"CREATE SEASON left the bar it is pinned to at %s" % vp)
+		var bar: float = LeagueStartSheet.bar_of(items)
+		assert_gt(bar, 0.0, "the wizard reserved no bar for its own door at %s" % vp)
+		var body := _body(vp)
+		body.set_sheet(items, vp, true, bar)
+		assert_lte(body.position.y + body.size.y, rect.position.y + 0.01,
+			"the scrolling list runs under CREATE SEASON at %s" % vp)
+		assert_true(body.can_scroll(), "the wizard's rows are not scrollable at %s" % vp)
+
+
+func test_a_tall_new_league_leaves_create_in_the_flow() -> void:
+	var sheet := LeagueStartSheet.new()
+	var vp := Vector2(1600, 900)
+	var items: Array = sheet.wizard_layout(vp, {"name": "S", "competitions": ["PL"],
+		"calendar_mode": "generated", "advance_mode": "fixture_days"})
+	var create: Dictionary = _body_item(items, "create")
+	assert_false(bool(create.get("pinned", false)),
+		"a desktop sheet pinned CREATE SEASON although it fits in the flow")
+	assert_eq(LeagueStartSheet.bar_of(items), 0.0, "a desktop sheet reserved a bar it does not draw")
+
+
+func test_the_wizard_names_a_clipped_sheet_with_a_scroll_cue() -> void:
+	var body := _body(Vector2(913, 411))
+	var bound = func(_c: CanvasItem) -> void:
+		pass
+	body.painter = bound
+	var items: Array = LeagueStartSheet.new().wizard_layout(Vector2(913, 411),
+		{"name": "S", "competitions": ["PL"], "calendar_mode": "generated",
+			"advance_mode": "fixture_days"})
+	body.set_sheet(items, Vector2(913, 411), true, LeagueStartSheet.bar_of(items))
+	body.cue = true
+	assert_true(body.can_scroll(), "the wizard does not overflow a 411-unit sheet")
+	assert_true(body.more_below(), "a clipped wizard drew no cue that it continues")
+	body.scroll_to(body.max_scroll())
+	assert_false(body.more_below(), "the cue outlived the last row")
+
+	var tall := _body(Vector2(1600, 900))
+	tall.painter = bound
+	tall.set_sheet(LeagueStartSheet.new().wizard_layout(Vector2(1600, 900),
+		{"name": "S", "competitions": ["PL"], "calendar_mode": "generated",
+			"advance_mode": "fixture_days"}), Vector2(1600, 900), true, 0.0)
+	tall.cue = true
+	assert_false(tall.more_below(), "an unclipped desktop sheet drew a scroll cue")

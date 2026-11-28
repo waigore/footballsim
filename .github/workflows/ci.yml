@@ -43,6 +43,22 @@ jobs:
       - name: Ban comments in scripts/tests/playtests .gd
         run: python tools/lint_no_comments.py
 
+  tools-hygiene:
+    name: tools-hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Ban leftover issue/probe/proto-test scripts under tools/
+        run: python tools/lint_tools_hygiene.py
+
   arch-lint:
     name: arch-lint
     runs-on: ubuntu-latest

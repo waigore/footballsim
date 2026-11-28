@@ -7,10 +7,10 @@ Base rules for opening and landing PRs (humans and agents).
 
 ## Principles
 
-1. **Small and focused** — one concern; stack PRs over mixed refactors + features.
+1. **Small and focused** — one concern; stack PRs over mixed work.
 2. **Use `gh`** — create, inspect, merge via CLI.
 3. **Respect checks** — required status checks are the merge gate; never bypass or force-merge.
-4. **Prefer auto-merge** — enable squash auto-merge when ready; let GitHub land when green.
+4. **Prefer auto-merge** — squash auto-merge when ready; let GitHub land when green.
 
 ## Required checks (main)
 
@@ -18,15 +18,16 @@ Base rules for opening and landing PRs (humans and agents).
 
 | Check | Workflow | Meaning |
 |-------|----------|---------|
-| `tests` | [CI](../.github/workflows/ci.yml) | Tier 1: impacted suites + 80% patch; no-op if no code / no project; `main` push skips |
+| `tests` | [CI](../.github/workflows/ci.yml) | Tier 1 impacted + 80% patch; no-op if no code/project; `main` push skips |
 | `build` | [CI](../.github/workflows/ci.yml) | Headless import/compile; else no-op |
 | `e2e-smoke` | [CI](../.github/workflows/ci.yml) | Needs `build`; smoke when present; else no-op |
 | `docs-lint` | [CI](../.github/workflows/ci.yml) | Docs ≤ 500 words — always |
 | `no-comments-lint` | [CI](../.github/workflows/ci.yml) | Ban `#`/`##`/`//`/`/* */` in scripts/tests/playtests `.gd` |
+| `tools-hygiene` | [CI](../.github/workflows/ci.yml) | Ban `issueN_`/`probe`/`tools/test_*` leftovers — always |
 | `arch-lint` | [CI](../.github/workflows/ci.yml) | P3 + static P1 (2D/icons/hover) — always |
 | `skills-isolation` | [CI](../.github/workflows/ci.yml) | PR-only: fail if code **and** skills both change |
-| `ai-bench-report` | [CI](../.github/workflows/ci.yml) | PR AI paths: hills report ≥ baseline; else no-op |
-| `ux-vlm` | [CI](../.github/workflows/ci.yml) | UI paths: desktop wiki shots in body; VLM rubrics; no-op if no UI |
+| `ai-bench-report` | [CI](../.github/workflows/ci.yml) | PR AI paths: hills ≥ baseline; else no-op |
+| `ux-vlm` | [CI](../.github/workflows/ci.yml) | UI paths: desktop wiki shots; VLM rubrics; no-op if no UI |
 
 Code paths: `scenes/`, `scripts/`, `ui/`, `autoload/`, `tests/`, `addons/`, `project.godot`, `icon.svg` (+ `tools/e2e_smoke.gd`, `tools/smoke/**`). Skills: `.agents/skills/`, `.cursor/skills/`, `.opencode/skill/`, `.grok/skills/`. Docs-only / skills-only OK.
 
@@ -73,7 +74,7 @@ EOF
 
 Prefer draft until reviewable. Title/body say **why**; cite `REQ-*`/`RUB-*` when relevant.
 
-**While open:** `gh pr checks` · `gh pr view` · `gh pr comment`. Push fixes; avoid force-push unless rewriting a private draft.
+**While open:** `gh pr checks` · `gh pr view` · `gh pr comment`. Push fixes; avoid force-push on shared drafts.
 
 **Merge:** prefer squash auto-merge ([Automerge](../.github/workflows/automerge.yml)):
 
@@ -87,5 +88,5 @@ Never merge to `main` outside a PR that satisfied the ruleset checks.
 
 - [ ] Maps to a pillar (`P1`–`P5`) or is docs/tooling-only
 - [ ] Opened/updated with `gh`
-- [ ] Checks green (`skills-isolation`, `ai-bench-report`, `ux-vlm` as needed)
+- [ ] Checks green (`tools-hygiene`, `skills-isolation`, `ux-vlm` as needed)
 - [ ] Branch current with `main`; squash / `--auto` — no bypass

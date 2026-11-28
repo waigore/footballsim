@@ -30,17 +30,11 @@ func _check_rules() -> void:
 			var was_shot: bool = ball.shot_team >= 0 and not ball.shot_saved
 			var gk = _gk_of(goal_team)
 			if gk != null:
-				var gpos: Vector2 = Vector2(own_goal_pos(goal_team).x, ball.pos.y)
-				var gd: float = gk.pos.distance_to(gpos)
-				var reach: float = Attrs.gk_dive_reach(gk) + 1.05
-				gk_debug.append("GOALCHECK gkdist=%.1f reach=%.1f z=%.1f speed=%.1f" % [gd, reach, ball.z, ball.vel.length()])
-				var save_p: float = 0.91 + (reach - gd) * 0.06 + (Attrs.gk_handling(gk) - 0.8) * 0.25 - ball.vel.length() * 0.003
-				save_p = clampf(save_p, 0.18, 0.985)
-
-
-				var kept_out: bool = ball.planned_save
-				if not kept_out and gd < reach + 3.2:
-					kept_out = rng.randf() < save_p
+				var cross_y: float = MatchStats.goal_plane_point(
+					ball.pos, ball.vel, ball.z, ball.vz, 0.0 if at_left else L).x
+				var save_p: float = line_save_chance(gk, goal_team, cross_y, ball.vel.length())
+				gk_debug.append("GOALCHECK reach_p=%.2f z=%.1f speed=%.1f" % [save_p, ball.z, ball.vel.length()])
+				var kept_out: bool = save_p > 0.0 and rng.randf() < save_p
 				if kept_out and not ball.planned_goal:
 
 					var push: Vector2 = Vector2(teams[goal_team]["dir"], rng.randf_range(-1.0, 1.0)).normalized()
@@ -50,7 +44,6 @@ func _check_rules() -> void:
 					ball.vz = 1.8
 					ball.shot_team = -1
 					ball.shot_saved = true
-					ball.planned_save = false
 					gk.cooldown = 0.5
 					if was_shot:
 						gk.stats["saves"] += 1
@@ -112,7 +105,6 @@ func _score_goal(conceding_team: int) -> void:
 	phase = "goal"
 	goal_timer = 3.4
 	ball.planned_goal = false
-	ball.planned_save = false
 	ball.owner_id = -1
 	ball.vel *= 0.2
 	ball.vz = 0.0
@@ -159,7 +151,6 @@ func _woodwork(goal_team: int, frame: String) -> bool:
 	ball.shot_team = -1
 	ball.shot_saved = false
 	ball.planned_goal = false
-	ball.planned_save = false
 	ball.loose_t = 0.0
 	if shooter != null:
 		_add_involvement(shooter, "woodwork", "Off the %s" % frame, shooter.pos)

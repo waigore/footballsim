@@ -160,6 +160,34 @@ def _check_cta_parse(screens: list[dict]) -> None:
     Path(image.name).unlink(missing_ok=True)
 
 
+def _check_truncated_json_retry(screens: list[dict]) -> None:
+    """Truncated grader JSON retries once instead of FAIL-closed."""
+    import check_screens as cs
+
+    rubrics, _, _ = load_catalogue()
+    image = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+    image.write(b"not really a png")
+    image.close()
+    rows = [
+        {"rubric_id": r["id"], "pass": True, "reason": "ok"} for r in rubrics
+    ]
+    good = json.dumps({"results": rows})
+    calls = {"n": 0}
+
+    def chat(messages: list[dict], timeout: float = 45.0, **kwargs) -> str:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return '{"results":[{"rubric_id":"overflow","pass":true,"reason":"'
+        return good
+
+    cs._chat = chat
+    results = cs.grade_image(image.name, rubrics, screen=_screen(screens, "match-hud"))
+    _assert(calls["n"] == 2, f"expected one retry, got {calls['n']}")
+    _assert(all(r["pass"] for r in results), f"retry must parse: {results}")
+
+    Path(image.name).unlink(missing_ok=True)
+
+
 def _check_cta_enforcement(screens: list[dict]) -> None:
     hub = _screen(screens, "league-hub")
     ok, = enforce_cta(hub, _cta(label="CONTINUE", side="right"))
@@ -228,6 +256,7 @@ def main() -> int:
     _check_cta_requirement(screens)
     _check_cta_enforcement(screens)
     _check_cta_parse(screens)
+    _check_truncated_json_retry(screens)
     _check_validation()
 
     _assert(is_ui_path("scripts/ui/menu_screen.gd"), "menu script is UI")

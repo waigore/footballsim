@@ -2,6 +2,12 @@ class_name MatchPlayback
 extends RefCounted
 
 
+const SKIP_BUDGET_USEC := 16000
+
+const SKIP_TICK_CAP := 240
+
+const BREAK_PHASES := ["half_time", "et_break", "full_time"]
+
 var game = null
 
 func _init(host: Node) -> void:
@@ -30,16 +36,20 @@ func tick(delta: float) -> void:
 		game.view.hover(game.mouse)
 
 	if game.replay != null:
-
-
 		if game.replay.step(delta):
 			game.replay = null
 		return
 	if game.engine.phase == "full_time":
+		game.skip_armed = false
+		if game.highlights.flush():
+			return
 		if not game.result_recorded:
 			game.result_recorded = PLSimStats.record_match(game.engine)
 		return
 	if game.engine.phase == "half_time" or game.engine.phase == "et_break":
+		game.skip_armed = false
+		if game.highlights.flush():
+			return
 		if game.half_time_timer < 0.0:
 			game.half_time_timer = 4.0
 		game.half_time_timer -= delta
@@ -49,8 +59,13 @@ func tick(delta: float) -> void:
 			game.highlights.restart()
 		return
 	if game.paused:
+		game.skip_armed = false
 		return
 
+	if game.skip_armed:
+		advance_skip()
+		post_tick()
+		return
 	advance_ticks(game.view.ticks_this_frame(delta))
 	post_tick()
 
@@ -68,11 +83,12 @@ func advance_ticks(n: int) -> void:
 
 func post_tick() -> void:
 	game.replay_banner = maxf(0.0, game.replay_banner - game.get_process_delta_time())
-	if game.in_highlight:
-		if game.engine.clock > game.highlight_until:
-			end_highlight()
-	elif game.mode != "full":
-		game.fast_mode = true
+	if game.replay == null:
+		if game.in_highlight:
+			if game.engine.clock > game.highlight_until:
+				end_highlight()
+		elif game.mode != "full":
+			game.fast_mode = true
 	if game.camera != null:
 		game.camera.update_target()
 	game._apply_camera(false)
@@ -89,13 +105,33 @@ func skip() -> void:
 		game.replay.finish(true)
 		game.replay = null
 		return
-	if game.mode != "full":
-		if game.in_highlight:
-			end_highlight()
-		elif game.fast_mode:
-			advance_ticks(60 * 10)
-	else:
-		advance_ticks(60 * 10)
+	if game.skip_armed:
+		game.skip_armed = false
+		return
+	if game.engine == null or str(game.engine.phase) in BREAK_PHASES:
+		return
+	if game.in_highlight:
+		end_highlight()
+	game.paused = false
+	game.skip_armed = true
+	advance_skip()
+
+
+func advance_skip() -> void:
+	var engine = game.engine
+	if engine == null:
+		game.skip_armed = false
+		return
+	var budget := Time.get_ticks_usec() + SKIP_BUDGET_USEC
+	for i in range(SKIP_TICK_CAP):
+		if str(engine.phase) in BREAK_PHASES or game.batch_abort:
+			game.batch_abort = false
+			game.skip_armed = false
+			return
+		engine.tick()
+		game.highlights.sample()
+		if Time.get_ticks_usec() > budget:
+			return
 
 
 func on_engine_event(e: Dictionary) -> void:
@@ -111,4 +147,8 @@ func on_engine_event(e: Dictionary) -> void:
 		game.audio.play("whistle", -14.0, randf_range(0.97, 1.03))
 	elif kind == "miss" or kind == "penalty_missed":
 		game.audio.play("ooh", -12.0)
+	if game.skip_armed:
+		if kind == "goal":
+			game.highlights.capture(e)
+		return
 	game.highlights.on_event(e)

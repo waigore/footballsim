@@ -224,7 +224,6 @@ func _ball_interactions(dt: float) -> void:
 				ball.z = maxf(ball.z, 0.3)
 				ball.shot_team = -1
 				ball.planned_goal = false
-				ball.planned_save = false
 				ball.last_touch_id = q.id
 				ball.last_touch_team = q.team
 				q.cooldown = 0.5

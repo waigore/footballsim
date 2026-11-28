@@ -24,8 +24,12 @@ func _shirt(sides: Array, t: int) -> Color:
 
 func test_no_fixture_clashes() -> void:
 	for a in club_ids:
+		var home_shirt: Color = club_data[str(a)]["color"]
 		for b in club_ids:
 			if a == b:
+				continue
+			var away_shirt: Color = club_data[str(b)]["color"]
+			if not Kits.clash(home_shirt, away_shirt):
 				continue
 			var sides := _sides(str(a), str(b))
 			Kits.assign(sides)

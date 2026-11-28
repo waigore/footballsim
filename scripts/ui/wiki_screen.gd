@@ -1,3 +1,4 @@
+class_name WikiScreen
 extends Control
 
 
@@ -27,12 +28,20 @@ var interest := InterestHold.new()
 
 var menu_layer: InterestLayer = null
 
-var stack: Array = []
+var nav := WikiNav.new()
 var page_data: Dictionary = {}
+var strip := WikiPageStrip.new()
+var input: WikiScreenInput = null
 
 var f_bold: FontFile
 var f_med: FontFile
 var f_body: FontFile
+
+var stack: Array:
+	get:
+		return nav.entries
+	set(value):
+		nav.entries = value
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -45,6 +54,7 @@ func _ready() -> void:
 	add_child(body)
 	rows_hints = body.hints
 	tooltip = DateOverlay.attach(self, body, true)
+	input = WikiScreenInput.new(self)
 
 
 	interest.club_at = func(p: Vector2) -> String:
@@ -64,47 +74,39 @@ func _ready() -> void:
 
 
 func open(page: String = WikiModel.LEAGUE, id: String = "") -> void:
-	if not WikiModel.has_page(page, id):
-		page = WikiModel.LEAGUE
-		id = ""
-	stack = [{"page": page, "id": id}]
+	nav.open(page, id)
 	_refresh()
 
 func push(page: String, id: String) -> void:
-	if not WikiModel.has_page(page, id):
-		return
-	if not stack.is_empty():
-		var top: Dictionary = stack.back()
-		if str(top["page"]) == page and str(top["id"]) == id:
-			return
-	stack.append({"page": page, "id": id})
-	_refresh()
+	if nav.push(page, id):
+		_refresh()
 
 func back() -> void:
-	if stack.size() > 1:
-		stack.pop_back()
+	if nav.back():
 		_refresh()
 		return
 	close()
 
 func close() -> void:
-	stack.clear()
+	nav.close()
 	page_data = {}
+	strip.clear()
 	closed.emit()
 
 func current() -> Dictionary:
-	return stack.back() if not stack.is_empty() else {}
+	return nav.current()
 
 func is_open() -> bool:
-	return not stack.is_empty()
+	return nav.is_open()
 
 
 func crumb_pages() -> Array:
-	return stack.slice(0, maxi(stack.size() - 1, 0))
+	return nav.crumb_pages()
 
 func _refresh() -> void:
 	var top := current()
 	page_data = WikiModel.page(str(top.get("page", WikiModel.LEAGUE)), str(top.get("id", "")))
+	_strip_sync()
 	if body != null:
 		var box := body_rect(design_vp())
 		body.touch = touch
@@ -115,71 +117,31 @@ func _refresh() -> void:
 	queue_redraw()
 
 
+func _strip_sync() -> void:
+	var width: float = float(WikiHeader.metrics(design_vp(), is_compact(), touch, false)["width"])
+	strip.rebuild(page_data, f_bold, width)
+
+
 func click(id: String) -> void:
-	if interest.click(id):
-		return
-	if id == "back":
-		back()
-	elif id == "close":
-		close()
-	elif id.begins_with("crumb:"):
-		stack = stack.slice(0, int(id.substr(6)) + 1)
-		_refresh()
-	elif id.begins_with("interest:"):
-		interest_toggled.emit(id.substr(9))
+	if input != null:
+		input.click(id)
 
 
 func tap(p: Vector2) -> bool:
-	if body == null:
-		return false
-	var target: Dictionary = body.hit(p)
-	if target.is_empty():
-		return false
-	push(str(target.get("page", "")), str(target.get("id", "")))
-	return true
+	return input.tap(p) if input != null else false
 
 
-func scroll_by(delta: float, _dx: float = 0.0) -> void:
-	if body != null:
-		body.scroll_by(delta)
+func scroll_by(delta: float, dx: float = 0.0) -> void:
+	if input != null:
+		input.scroll_by(delta, dx)
 
 
 func key(code: int) -> bool:
-	if interest.is_open() and (code == KEY_ESCAPE or code == KEY_BACKSPACE):
-		interest.close()
-		queue_redraw()
-		return true
-	if code == KEY_ESCAPE or code == KEY_BACKSPACE or code == KEY_LEFT:
-		back()
-	elif code == KEY_UP or code == KEY_W:
-		scroll_by(-120.0)
-	elif code == KEY_DOWN or code == KEY_S:
-		scroll_by(120.0)
-	elif code == KEY_PAGEUP:
-		scroll_page(-1.0)
-	elif code == KEY_PAGEDOWN:
-		scroll_page(1.0)
-	elif code == KEY_HOME:
-		scroll_to(0.0)
-	elif code == KEY_END:
-		scroll_to(INF)
-	else:
-		return false
-	return true
+	return input.key(code) if input != null else false
 
-func scroll_page(direction: float) -> void:
-	if body != null:
-		body.scroll_by(direction * body.size.y * 0.9)
-
-func scroll_to(at: float) -> void:
-	if body != null:
-		body.scroll_to(at)
 
 func button_at(p: Vector2) -> String:
-	for b in buttons:
-		if (b["rect"] as Rect2).has_point(p):
-			return str(b["id"])
-	return ""
+	return input.button_at(p) if input != null else ""
 
 
 func design_vp() -> Vector2:
@@ -190,103 +152,14 @@ func is_compact() -> bool:
 
 
 func body_rect(vp: Vector2) -> Rect2:
-	var header := 150.0 if is_compact() else 168.0
-	var w: float = minf(vp.x - 48.0, 1160.0)
-	return Rect2((vp.x - w) * 0.5, header, w, vp.y - header - 34.0)
+	return WikiHeader.body_rect(vp, is_compact(), touch, not strip.chips.is_empty())
 
 
 func _draw() -> void:
-	var vp := design_vp()
-	buttons.clear()
-	hints.clear()
-	names.clear()
-	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.012, 0.020, 0.026, 0.985))
-	draw_rect(Rect2(0, 0, vp.x, 3), Color(0, 0, 0, 0.5))
-	draw_rect(Rect2(0, vp.y - 3, vp.x, 3), Color(0, 0, 0, 0.5))
-	if body != null:
-		body.mouse = mouse
-	var accent: Color = page_data.get("accent", WikiChrome.GOLD)
-	var x := 24.0
-	var compact := is_compact()
-	var title_y := 92.0 if compact else 108.0
-	var back_rect := Rect2(x, 8.0 if compact else 10.0, 104, 30.0 if compact else 34.0)
-	var close_rect := Rect2(vp.x - 68.0, back_rect.position.y, 44, back_rect.size.y)
-	WikiChrome.button(self, f_bold, back_rect, "‹  BACK", back_rect.has_point(mouse))
-	_add("back", back_rect)
-	WikiChrome.button(self, f_bold, close_rect, "✕", close_rect.has_point(mouse))
-	_add("close", close_rect)
-	var follow := WikiInterest.door(current(), LeagueSeason.active, vp, back_rect, close_rect)
-	if not follow.is_empty():
-		WikiInterest.draw(self, f_bold, follow["rect"], str(follow["text"]),
-			bool(follow["followed"]), (follow["rect"] as Rect2).has_point(mouse))
-		_add(str(follow["id"]), follow["rect"])
-	WikiChrome.label(self, f_bold, Vector2(x, title_y - (32.0 if compact else 38.0)), str(page_data.get("eyebrow", "")), 10, accent.lightened(0.35))
-	draw_rect(Rect2(x, title_y - 28.0, 3, 28), accent)
-	var title := str(page_data.get("title", ""))
-	var title_size := 26 if compact else 34
-	WikiChrome.label(self, f_bold, Vector2(x + 12, title_y), title, title_size)
-	if str(current().get("page", "")) == WikiModel.TEAM:
-		names.add(InterestNames.strip(f_bold, title, x + 12.0, title_y, title_size),
-			str(current().get("id", "")))
-	_draw_subtitle(x + 12.0, title_y + 18.0)
-	_draw_crumbs(body_rect(vp).position.y - 16.0)
-	var br := body_rect(vp)
-	draw_line(Vector2(br.position.x, br.position.y - 8.0), Vector2(br.position.x + br.size.x, br.position.y - 8.0), Color(1, 1, 1, 0.07), 1)
-	_draw_furniture(vp, br)
+	WikiHeader.paint(self)
 
 func _add(id: String, r: Rect2) -> void:
 	buttons.append({"id": id, "rect": r})
-
-
-func _draw_subtitle(sub_x: float, y: float) -> void:
-	var sub := str(page_data.get("subtitle", ""))
-	WikiChrome.label(self, f_med, Vector2(sub_x, y), sub, 10, WikiChrome.DIM)
-	var snap := str(page_data.get("snapshot", ""))
-	if snap == "":
-		return
-	var label := FixtureCalendar.day_label(snap)
-	var at := Vector2(sub_x + DateHints.width(f_med, sub, 10), y)
-	WikiChrome.label(self, f_med, at, label, 10, WikiChrome.DIM)
-	hints.add(DateHints.strip(f_med, label, at, 10), snap)
-
-func _draw_crumbs(y: float) -> void:
-	var trail: Array = crumb_pages()
-	var x := 24.0
-	for i in range(trail.size()):
-		var entry: Dictionary = trail[i]
-		var label := WikiModel.label(str(entry["page"]), str(entry["id"]))
-		var w: float = maxf(46.0, f_bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 22.0)
-		var r := Rect2(x, y - 18.0, w, 24.0)
-		var hovered := r.has_point(mouse)
-		WikiChrome.box(self, WikiChrome.PANEL_LIGHT if hovered else WikiChrome.PANEL, r, 6, Color(1, 1, 1, 0.12 if hovered else 0.06))
-		WikiChrome.label(self, f_bold, Vector2(x + 11.0, y - 1.0), label, 11, WikiChrome.TEXT if hovered else WikiChrome.DIM)
-		_add("crumb:%d" % i, r)
-		x += w + 6.0
-	if not trail.is_empty():
-		WikiChrome.label(self, f_bold, Vector2(x + 2.0, y - 1.0), str(page_data.get("title", "")), 10, WikiChrome.GOLD)
-
-
-func _draw_furniture(vp: Vector2, br: Rect2) -> void:
-	var can_scroll := body != null and body.max_scroll() > 0.0
-	if can_scroll:
-		var track := Rect2(br.position.x + br.size.x + 6.0, br.position.y, 3.0, br.size.y)
-		var frac: float = clampf(body.size.y / maxf(body.content_height(), 1.0), 0.06, 1.0)
-
-
-		var offset: float = clampf(body.scroll / maxf(body.max_scroll(), 0.001), 0.0, 1.0)
-		var h: float = track.size.y * frac
-		draw_rect(track, Color(1, 1, 1, 0.05))
-		draw_rect(Rect2(track.position.x, track.position.y + (track.size.y - h) * offset, 3.0, h), Color(1, 1, 1, 0.22))
-	var can_open := body != null and body.has_open_row_in_view()
-	var hint := WikiChrome.footer_hint(touch, can_open, can_scroll)
-	if hint != "":
-		WikiChrome.label(self, f_med, Vector2(br.position.x, vp.y - 14.0), hint, 10, WikiChrome.DIM)
-	var snap := str(WikiModel.repo().meta().get("snapshot_date", ""))
-	var label := FixtureCalendar.day_label(snap)
-	WikiChrome.label_r(self, f_med, br.end.x, vp.y - 14.0, "DATA  ·  %s" % label, 10,
-		Color(0.96, 0.78, 0.30, 0.55))
-	if snap != "":
-		hints.add(DateHints.strip_right(f_med, label, br.end.x, vp.y - 14.0, 10), snap)
 
 func _process(d: float) -> void:
 	if interest.tick(d):
@@ -296,4 +169,7 @@ func _process(d: float) -> void:
 		body.mouse = mouse
 		body.position = box.position
 		body.size = box.size
+		var width: float = float(WikiHeader.metrics(design_vp(), is_compact(), touch, false)["width"])
+		if strip.stale(page_data, width):
+			_strip_sync()
 	queue_redraw()

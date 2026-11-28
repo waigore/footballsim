@@ -146,6 +146,42 @@ static func leaders(limit: int = 5, competition_id: String = "", stat: String = 
 	bindings.append(limit)
 	return PLDatabase.rows(sql, bindings)
 
+static func player_events(player_id: String, club_id: String, limit: int = 10) -> Array:
+	if player_id == "" or club_id == "":
+		return []
+	var rows := PLDatabase.rows(
+		"SELECT e.fixture_id, e.minute, e.kind, e.penalty, f.kickoff, f.matchday, "
+		+ "f.home_club_id, f.away_club_id, f.home_goals, f.away_goals, "
+		+ "h.abbr AS home_abbr, a.abbr AS away_abbr "
+		+ "FROM match_event e JOIN league_fixture f ON f.id = e.fixture_id "
+		+ "JOIN club h ON h.id = f.home_club_id JOIN club a ON a.id = f.away_club_id "
+		+ "WHERE e.player_id = ? AND f.status = 'played' "
+		+ "ORDER BY f.kickoff DESC, f.kickoff_time DESC, f.id DESC, e.minute ASC, e.id ASC;",
+		[player_id])
+	var out: Array = []
+	var seen := {}
+	for row in rows:
+		var fid := str(row["fixture_id"])
+		if not seen.has(fid):
+			if out.size() >= limit:
+				break
+			seen[fid] = out.size()
+			var home := str(row["home_club_id"]) == club_id
+			out.append({
+				"fixture_id": fid, "kickoff": str(row["kickoff"]),
+				"matchday": int(row.get("matchday", 0)), "home": home,
+				"opponent_id": str(row["away_club_id"]) if home else str(row["home_club_id"]),
+				"opponent_abbr": str(row["away_abbr"]) if home else str(row["home_abbr"]),
+				"home_goals": int(row["home_goals"]), "away_goals": int(row["away_goals"]),
+				"events": [],
+			})
+		out[seen[fid]]["events"].append({
+			"minute": int(row["minute"]), "kind": str(row["kind"]),
+			"penalty": int(row.get("penalty", 0)) > 0,
+		})
+	return out
+
+
 static func _placeholders(count: int) -> PackedStringArray:
 	var out := PackedStringArray()
 	for i in range(count):

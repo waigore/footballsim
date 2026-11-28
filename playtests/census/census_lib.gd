@@ -5,6 +5,18 @@ extends RefCounted
 const VAR_TARGET := 0.10
 
 
+const GOAL_TARGET := 0.10
+
+
+const GOAL_Z := 1.96
+
+
+const BLANK_XG := 2.00
+
+
+const BLANK_RATE := 0.25
+
+
 const MATCH_BUDGET_MS := 120_000
 
 
@@ -42,6 +54,8 @@ static func run_match(home: String, away: String, seed_in: int) -> Dictionary:
 		"seed": seed_in, "home_goals": int(eng.score[0]), "away_goals": int(eng.score[1]),
 		"ms": ms, "xg_home": float(eng.stats[0]["xg"]), "xg_away": float(eng.stats[1]["xg"]),
 		"shots_home": int(eng.stats[0]["shots"]), "shots_away": int(eng.stats[1]["shots"]),
+		"ot_home": int(eng.stats[0]["on_target"]), "ot_away": int(eng.stats[1]["on_target"]),
+		"saves_home": int(eng.stats[0]["saves"]), "saves_away": int(eng.stats[1]["saves"]),
 	}
 
 
@@ -79,6 +93,51 @@ static func variance_sampling_sd(lam: float, n: int) -> float:
 
 static func variance_tolerance(lam: float, n: int) -> float:
 	return VAR_TARGET + VAR_Z * variance_sampling_sd(lam, n) / maxf(lam, 0.001)
+
+
+static func goals_tolerance(xg_mean: float, goal_sd: float, n: int) -> float:
+	if xg_mean <= 0.0:
+		return GOAL_TARGET
+	if n < 2:
+		return 1.0
+	return GOAL_TARGET + GOAL_Z * goal_sd / sqrt(float(n)) / xg_mean
+
+
+static func xg_pooled(by_anchor: Dictionary) -> Dictionary:
+	var goals := 0.0
+	var xg := 0.0
+	var d := 0.0
+	var d2 := 0.0
+	var n := 0
+	var high := 0
+	var blanks := 0
+	for anchor in by_anchor.keys():
+		for r in by_anchor[anchor]:
+			for side in ["home", "away"]:
+				var g: float = float(r.get("%s_goals" % side, 0))
+				var x: float = float(r.get("xg_%s" % side, 0.0))
+				goals += g
+				xg += x
+				d += g - x
+				d2 += (g - x) * (g - x)
+				n += 1
+				if x >= BLANK_XG:
+					high += 1
+					if g <= 0.0:
+						blanks += 1
+	if n < 2 or xg <= 0.0:
+		return {"n": n, "goals": 0.0, "xg": 0.0, "gap": 0.0, "tol": GOAL_TARGET,
+			"high_xg": high, "blank_rate": 0.0}
+	var mean_d: float = d / float(n)
+	var var_d: float = maxf(0.0, (d2 - float(n) * mean_d * mean_d) / float(n - 1))
+	var goal_mean: float = goals / float(n)
+	var xg_mean: float = xg / float(n)
+	return {
+		"n": n, "goals": goal_mean, "xg": xg_mean,
+		"gap": rel_gap(goal_mean, xg_mean),
+		"tol": goals_tolerance(xg_mean, sqrt(var_d), n),
+		"high_xg": high, "blank_rate": float(blanks) / float(maxi(high, 1)),
+	}
 
 
 static func env_int(key: String, fallback: int) -> int:
@@ -182,31 +241,44 @@ static func anchor_lambda(anchor: String) -> Array:
 static func summarise(anchor: String, rows: Array) -> Dictionary:
 	var home: Array = []
 	var away: Array = []
+	var diff_h: Array = []
+	var diff_a: Array = []
 	var xg_h := 0.0
 	var xg_a := 0.0
 	for r in rows:
 		home.append(int(r["home_goals"]))
 		away.append(int(r["away_goals"]))
+		diff_h.append(int(r["home_goals"]) - float(r["xg_home"]))
+		diff_a.append(int(r["away_goals"]) - float(r["xg_away"]))
 		xg_h += float(r["xg_home"])
 		xg_a += float(r["xg_away"])
 	var n := rows.size()
 	var lam := anchor_lambda(anchor)
 	var var_h := sample_variance(home)
 	var var_a := sample_variance(away)
+	var xg_h_mean: float = xg_h / maxf(float(n), 1.0)
+	var xg_a_mean: float = xg_a / maxf(float(n), 1.0)
+	var mean_h: float = mean(home)
+	var mean_a: float = mean(away)
 	return {
 		"anchor": anchor, "n": n,
-		"mean_home": mean(home), "mean_away": mean(away),
+		"mean_home": mean_h, "mean_away": mean_a,
 		"lambda_home": lam[0], "lambda_away": lam[1],
 		"var_home": var_h, "var_away": var_a,
 		"gap_home": rel_gap(var_h, lam[0]), "gap_away": rel_gap(var_a, lam[1]),
 		"tol_home": variance_tolerance(lam[0], n), "tol_away": variance_tolerance(lam[1], n),
-		"xg_home": xg_h / maxf(float(n), 1.0), "xg_away": xg_a / maxf(float(n), 1.0),
+		"xg_home": xg_h_mean, "xg_away": xg_a_mean,
+		"xg_gap_home": rel_gap(mean_h, xg_h_mean), "xg_gap_away": rel_gap(mean_a, xg_a_mean),
+		"xg_tol_home": goals_tolerance(xg_h_mean, sqrt(sample_variance(diff_h)), n),
+		"xg_tol_away": goals_tolerance(xg_a_mean, sqrt(sample_variance(diff_a)), n),
 		"slowest_ms": int(slowest(rows).get("ms", 0)),
 	}
 
 
 static func summary_line(s: Dictionary) -> String:
-	return "CENSUS %s n=%d  goals %.2f-%.2f (λ %.2f-%.2f)  var %.2f-%.2f (band %.0f%%/%.0f%%, gap %.0f%%/%.0f%%)  xG %.2f-%.2f  slowest %d ms" % [
+	return "CENSUS %s n=%d  goals %.2f-%.2f (λ %.2f-%.2f)  var %.2f-%.2f (band %.0f%%/%.0f%%, gap %.0f%%/%.0f%%)  xG %.2f-%.2f (gap %.0f%%/%.0f%%, band %.0f%%/%.0f%%)  slowest %d ms" % [
 		s["anchor"], s["n"], s["mean_home"], s["mean_away"], s["lambda_home"], s["lambda_away"],
 		s["var_home"], s["var_away"], s["tol_home"] * 100.0, s["tol_away"] * 100.0,
-		s["gap_home"] * 100.0, s["gap_away"] * 100.0, s["xg_home"], s["xg_away"], s["slowest_ms"]]
+		s["gap_home"] * 100.0, s["gap_away"] * 100.0, s["xg_home"], s["xg_away"],
+		s["xg_gap_home"] * 100.0, s["xg_gap_away"] * 100.0,
+		s["xg_tol_home"] * 100.0, s["xg_tol_away"] * 100.0, s["slowest_ms"]]

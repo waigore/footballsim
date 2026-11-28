@@ -98,3 +98,17 @@ func test_continue_plays_a_german_matchday() -> void:
 		for row in (after["tables"] as Dictionary)[cid]:
 			total += int(row["points"])
 		assert_gte(total, 2, "%s paid no points" % cid)
+
+
+func test_the_repository_reads_the_bound_german_season() -> void:
+	var season := _pair()
+	assert_not_null(season, "the German pair season was not created")
+	assert_true(PLRepository.shared().season_active(), "the season is not bound")
+	assert_eq(PLRepository.shared().table("BL").size(), 18, "the live Bundesliga table is short")
+	assert_eq(PLRepository.shared().table("LL").size(), 0, "a German save exposes La Liga")
+	assert_true(PLRepository.shared().fixtures("", 5, "BL") is Array, "bound fixtures failed")
+	assert_true(PLRepository.shared().upcoming("", 5, "BL") is Array, "bound upcoming failed")
+	var club_id := str(TeamData.team_ids("BL")[0])
+	assert_true(PLRepository.shared().sim_club(club_id) is Dictionary, "bound club record failed")
+	assert_true(PLRepository.shared().sim_leaders(3, "BL", "goals") is Array,
+		"bound sim leaders failed")

@@ -28,6 +28,12 @@ var pinned: Array = []
 
 var host: LeagueHost = null
 
+var cue := false
+
+var cue_font: Font = null
+
+const CUE_H := 30.0
+
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
@@ -126,6 +132,9 @@ func hit(p: Vector2) -> String:
 			return str(item["id"])
 	return ""
 
+func more_below() -> bool:
+	return cue and can_scroll() and scroll < max_scroll() - 0.5
+
 # gd-tools: no cover start
 
 
@@ -133,5 +142,25 @@ func _draw() -> void:
 	if painter.is_valid():
 		draw_set_transform(Vector2(-hscroll, -position.y - scroll))
 		painter.call(self)
+		draw_set_transform(Vector2.ZERO)
+	if not more_below():
+		return
+	_draw_cue()
+
+
+func _draw_cue() -> void:
+	var h := CUE_H
+	var top := size.y - h
+	for i in range(5):
+		var t := float(i) / 5.0
+		draw_rect(Rect2(0.0, top + float(i) * h / 5.0, size.x, h / 5.0 + 1.0),
+			Color(0.012, 0.020, 0.026, 0.94 * t))
+	var font: Font = cue_font if cue_font != null else UiChrome.fonts()["bold"]
+	var rule_w := 22.0
+	var cx := size.x * 0.5
+	draw_rect(Rect2(cx - rule_w * 0.5, size.y - 4.0, rule_w, 2.0), Color(0.96, 0.78, 0.30, 0.85))
+	var label := "MORE BELOW"
+	var at := Vector2(cx - UiChrome.text_width(font, label, 10) * 0.5, size.y - 8.0)
+	UiChrome.text(self, at, label, 10, UiChrome.C_GOLD, font)
 
 # gd-tools: no cover end

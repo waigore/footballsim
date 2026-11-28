@@ -14,6 +14,8 @@ var t := 0.0
 var length := 0.0
 var goal_shown := false
 var on_done := Callable()
+var live := false
+var held: Dictionary = {}
 
 
 static func open(host_in, clip: Dictionary, done := Callable()) -> GoalReplay:
@@ -43,6 +45,76 @@ static func open(host_in, clip: Dictionary, done := Callable()) -> GoalReplay:
 	return replay
 
 
+static func open_live(host_in: Object, clip: Dictionary, done := Callable()) -> GoalReplay:
+	if clip.is_empty() or host_in == null or host_in.engine == null:
+		return null
+	var replay := GoalReplay.new()
+	replay.host = host_in
+	replay.pack = clip
+	replay.frames = clip.get("frames", [])
+	replay.keys = clip.get("keys", [])
+	replay.on_done = done
+	if replay.frames.size() < 2:
+		return null
+	replay.length = float(replay.frames[replay.frames.size() - 1].get("t", 0.0))
+	replay.engine = host_in.engine
+	replay.live = true
+	replay.hold()
+	for player in replay.engine.players:
+		replay.bound[str(player.key)] = player
+	host_in.replay_banner = 2.2
+	replay.apply(true)
+	return replay
+
+
+func hold() -> void:
+	if engine == null:
+		return
+	var poses: Array = []
+	for player in engine.players:
+		poses.append({
+			"pos": player.pos, "target": player.target, "vel": player.vel,
+			"facing": player.facing, "celebrate": player.celebrate,
+		})
+	held = {
+		"poses": poses, "clock": engine.clock, "half": engine.half, "phase": engine.phase,
+		"score": engine.score.duplicate(), "events": engine.events.duplicate(true),
+		"ball": {"pos": engine.ball.pos, "vel": engine.ball.vel, "z": engine.ball.z,
+			"owner_id": engine.ball.owner_id},
+		"ref": {"pos": engine.referee.pos, "facing": engine.referee.facing},
+	}
+
+
+func release() -> void:
+	if held.is_empty() or engine == null:
+		return
+	var poses: Array = held["poses"]
+	for i in range(mini(poses.size(), engine.players.size())):
+		var player = engine.players[i]
+		var pose: Dictionary = poses[i]
+		player.pos = pose["pos"]
+		player.target = pose["target"]
+		player.vel = pose["vel"]
+		player.facing = pose["facing"]
+		player.celebrate = pose["celebrate"]
+	var ball: Dictionary = held["ball"]
+	engine.ball.pos = ball["pos"]
+	engine.ball.vel = ball["vel"]
+	engine.ball.z = ball["z"]
+	engine.ball.owner_id = ball["owner_id"]
+	var ref: Dictionary = held["ref"]
+	engine.referee.pos = ref["pos"]
+	engine.referee.facing = ref["facing"]
+	engine.clock = held["clock"]
+	engine.half = held["half"]
+	engine.phase = held["phase"]
+	engine.score = (held["score"] as Array).duplicate()
+	engine.teams[0]["score"] = engine.score[0]
+	engine.teams[1]["score"] = engine.score[1]
+	engine.events = held["events"]
+	held = {}
+
+
 func step(delta: float) -> bool:
 	if host == null or engine == null:
 		return true
@@ -58,6 +130,16 @@ func step(delta: float) -> bool:
 func finish(notify: bool = true) -> void:
 	if host != null:
 		host.replay_banner = 0.0
+	if live:
+		release()
+		live = false
+		if host != null:
+			host.in_highlight = false
+			host.highlight_until = -1.0
+			if host.actors != null:
+				host.actors.ball_trail.clear()
+			if host.mode != "full":
+				host.fast_mode = true
 	var done := on_done
 	on_done = Callable()
 	engine = null
@@ -101,7 +183,10 @@ func apply(first: bool) -> void:
 	engine.clock = float(a.get("c", engine.clock))
 	engine.half = 1 if engine.clock < 2700.0 else 2
 	engine.phase = "play"
-	set_score(int(a["s"][0]) if a.has("s") else 0, int(a["s"][1]) if a.has("s") else 0)
+	if live and held.has("score"):
+		set_score(int(held["score"][0]), int(held["score"][1]))
+	else:
+		set_score(int(a["s"][0]) if a.has("s") else 0, int(a["s"][1]) if a.has("s") else 0)
 	if first:
 		host.actors.ball_trail.clear()
 	if int(a.get("g", 0)) == 1 and not goal_shown:
@@ -118,6 +203,8 @@ func set_score(home: int, away: int) -> void:
 
 
 func _show_line(frame: Dictionary) -> void:
+	if live:
+		return
 	var text := str(pack.get("commentary", ""))
 	if text == "":
 		text = "%s — %s" % [str(pack.get("scorer", "")), str(pack.get("minute", ""))]

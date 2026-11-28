@@ -2,9 +2,6 @@ class_name LeaguePlanRows
 extends RefCounted
 
 
-const LINE := 17.0
-
-
 static func clubs_x(rect: Rect2, kickoff: String, font: Font) -> float:
 	if kickoff == "":
 		return rect.position.x + LeagueBlock.INSET
@@ -22,7 +19,7 @@ static func paint_fixture(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dic
 		LeagueBlock.paint(c, rect, fx, fonts, names, home_ink, away_ink)
 		return
 	var x := rect.position.x
-	var line_y := rect.position.y + LINE
+	var line_y: float = rect.position.y + rect.size.y * 0.5 + 4.0
 	var time := str(fx.get("kickoff_time", ""))
 	if time != "":
 		UiChrome.text(c, Vector2(x + 8.0, line_y), time, 10, UiChrome.C_DIM, med)
@@ -38,7 +35,8 @@ static func paint_fixture(c: CanvasItem, rect: Rect2, fx: Dictionary, fonts: Dic
 	InterestNames.run(c, names, str(fx.get("away_club_id", "")), away_name,
 		Vector2(x, line_y), 13, away_ink, bold)
 	if int(fx.get("suggested", 0)) == 1:
-		UiChrome.text_r(c, rect.end.x - 78.0, rect.position.y + 15.0, "TOP-6", 10, UiChrome.C_GOLD, bold)
+		UiChrome.text_r(c, rect.end.x - 78.0, rect.position.y + rect.size.y * 0.5 + 2.0,
+			"TOP-6", 10, UiChrome.C_GOLD, bold)
 
 
 static func paint_toggle(c: CanvasItem, rect: Rect2, fx: Dictionary, cache: Dictionary,
@@ -46,7 +44,7 @@ static func paint_toggle(c: CanvasItem, rect: Rect2, fx: Dictionary, cache: Dict
 	var watch := int(fx.get("watched", 0)) == 1
 	var fill: Color = UiChrome.C_GOLD.darkened(0.15) if watch else UiChrome.C_PANEL_LIGHT
 	UiChrome.panel(c, cache, rect, fill, 5, UiChrome.C_GOLD if watch else UiChrome.C_BORDER, 1)
-	UiChrome.text_c(c, rect.get_center().x, rect.position.y + 14.0,
+	UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 3.0,
 		"WATCH" if watch else "AUTO", 10, Color(0.06, 0.06, 0.05) if watch else UiChrome.C_DIM, bold)
 
 

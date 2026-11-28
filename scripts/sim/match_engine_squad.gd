@@ -1,9 +1,6 @@
 extends "res://scripts/sim/match_engine_core.gd"
 
 
-const FINISH_EFFICIENCY := 1.0
-
-
 const XG_SCALE := 0.50
 
 
@@ -13,7 +10,28 @@ const XG_CONTEST_ELASTICITY := 0.13
 const XG_HOME_EDGE := 0.0
 
 
+const XG_ON_TARGET_BASE := 0.26
+
+
+const PENALTY_BASE := 0.76
+
+
+const PENALTY_PER_SHOOTING := 0.0018
+
+
 var xg_form: Array = [1.0, 1.0]
+
+
+func _shot_split(xg: float, save_chance: float) -> Array:
+	var save: float = clampf(save_chance, 0.0, 1.0)
+	var land: float = 1.0 - save
+	var on_target: float = clampf(minf(XG_ON_TARGET_BASE + xg, xg / maxf(land, 0.0001)), 0.0, 0.92)
+	var planned: float = clampf((xg - on_target * land) / maxf(save, 0.06), 0.0, on_target)
+	return [planned, maxf(0.0, on_target - planned)]
+
+
+func penalty_conversion(p: Player) -> float:
+	return clampf(PENALTY_BASE + float(p.attr["sho"]) * PENALTY_PER_SHOOTING, 0.05, 0.95)
 
 
 func style_of(t: int) -> Dictionary:
@@ -78,6 +96,7 @@ func _blank_stats() -> Dictionary:
 
 func _build_squads() -> void:
 	players.clear()
+	appeared.clear()
 	by_id.clear()
 	for t in range(2):
 		var data: Dictionary = teams[t]["data"]
@@ -85,6 +104,7 @@ func _build_squads() -> void:
 		for pd in data["starters"]:
 			var p = _make_player(pd, t, t * 100 + i)
 			players.append(p)
+			appeared.append(p)
 			by_id[p.id] = p
 			i += 1
 	_touch_squad()

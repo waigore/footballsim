@@ -120,6 +120,24 @@ func test_the_back_door_and_the_close_door() -> void:
 	assert_false(wiki.is_open(), "the close door did not close the sheet")
 	assert_eq(closed[0], 2, "the close door did not signal the host")
 
+func test_a_phone_header_lays_its_doors_for_a_finger() -> void:
+	var was: bool = wiki.touch
+	wiki.touch = true
+	wiki.open(WikiModel.LEAGUE, "")
+	await get_tree().process_frame
+	var back := Rect2()
+	var close := Rect2()
+	for b in wiki.buttons:
+		if str(b["id"]) == "back":
+			back = b["rect"]
+		elif str(b["id"]) == "close":
+			close = b["rect"]
+	assert_gte(back.size.y, UiChrome.TAP_H, "the phone's BACK is under a finger")
+	assert_gte(close.size.y, UiChrome.TAP_H, "the phone's close door is under a finger")
+	assert_lte(back.end.x, close.position.x, "the phone's header doors overlap")
+	wiki.touch = was
+
+
 func test_the_german_hubs_browse_on_desktop_and_phone() -> void:
 	for phone in [false, true]:
 		wiki.touch = phone
@@ -248,6 +266,19 @@ func test_the_league_table_keeps_the_row_hint() -> void:
 	assert_true(body.has_open_row_in_view(), "the league table's own rows are not read as links")
 	body.free()
 
+func test_the_club_page_opens_its_manager() -> void:
+	wiki.open(WikiModel.TEAM, "MUN")
+	var chip: Dictionary = _chip_with_target("manager")
+	assert_false(chip.is_empty(), "the club page has no door to its manager")
+	var point: Vector2 = wiki.body.position + (chip["rect"] as Rect2).position + Vector2(20.0, 8.0)
+	assert_true(wiki.tap(point), "the manager chip did not answer a tap")
+	assert_eq(str(wiki.current()["page"]), "manager", "the manager chip opened another page")
+	assert_eq(str(wiki.current()["id"]), "MUN", "the manager chip opened another club's manager")
+	assert_eq(str(wiki.page_data["title"]), "R. AMORIM", "the manager page did not render")
+	assert_eq(wiki.crumb_pages().size(), 1, "the club should be one crumb back")
+	wiki.key(KEY_ESCAPE)
+	assert_eq(str(wiki.current()["page"]), "team", "escape did not walk back to the club")
+
 func _first_data_row() -> Dictionary:
 	for row in wiki.body.rows():
 		if str(row["k"]) == "trow" and row.has("target"):
@@ -260,3 +291,85 @@ func _row_with_target(page: String) -> Dictionary:
 		if str(row["k"]) == "trow" and str(target.get("page", "")) == page:
 			return row
 	return {}
+
+func _chip_with_target(page: String) -> Dictionary:
+	for row in wiki.body.rows():
+		var target: Dictionary = row.get("target", {})
+		if str(row["k"]) == "chip" and str(target.get("page", "")) == page:
+			return row
+	return {}
+
+
+func test_a_phone_league_page_opens_on_the_table() -> void:
+	for vp in [Vector2(914.0, 411.0), Vector2(640.0, 360.0)]:
+		var box: Rect2 = WikiHeader.body_rect(vp, true, true, true)
+		assert_lt(box.position.y, 120.0,
+			"the phone header still spends the phone's screen on chrome at %s" % vp)
+		var laid := WikiBody.layout(WikiModel.page(WikiModel.LEAGUE, "")["blocks"],
+			box.size.x, true, true)
+		var shown := 0
+		for row in laid["rows"]:
+			var r: Rect2 = row["rect"]
+			if str(row["k"]) == "trow" and r.position.y >= 0.0 and r.end.y <= box.size.y:
+				shown += 1
+		assert_gte(shown, 4, "the phone league page opens on %d club rows at %s" % [shown, vp])
+
+
+func test_a_phone_league_page_keeps_its_competition_doors() -> void:
+	var width: float = WikiHeader.metrics(Vector2(914.0, 411.0), true, true, true)["width"]
+	var chips := WikiPageStrip.items(WikiModel.page(WikiModel.LEAGUE, ""))
+	var built := WikiPageStrip.layout(wiki.f_bold, width, chips)
+	var rects: Array = built["rects"]
+	assert_eq(rects.size(), 8, "the phone strip dropped a competition")
+	var doors := WikiPageStrip.doors(Vector2(24.0, 60.0), rects, chips)
+	assert_eq(doors.size(), 7, "the phone strip lost a door to another competition")
+	for door in doors:
+		var r: Rect2 = door["rect"]
+		assert_gte(r.size.y, 24.0, "a strip door is too short to press")
+		assert_lte(r.end.x, 24.0 + width + 0.5, "a strip door ran off the sheet")
+	var seen: Array = []
+	for row in WikiBody.layout(WikiModel.page(WikiModel.LEAGUE, "")["blocks"], width, true, true)["rows"]:
+		if str(row["k"]) == "chip":
+			seen.append(str(row["text"]))
+	assert_eq(seen.size(), 20, "the phone body still repeats the competition strip's chips")
+
+
+func test_a_competition_strip_door_opens_that_league() -> void:
+	wiki.touch = true
+	wiki.open(WikiModel.LEAGUE, "")
+	var doors := WikiPageStrip.doors(Vector2.ZERO, wiki.strip.rects, wiki.strip.chips)
+	assert_gte(doors.size(), 1, "the strip had no other competition to open")
+	var door: Dictionary = doors[0]
+	var want: String = str(door["id"]).substr(5)
+	var cut := want.find(":")
+	assert_gt(cut, 0, "a strip door lost its page id")
+	wiki.click(str(door["id"]))
+	assert_eq(str(wiki.current()["page"]), want.substr(0, cut),
+		"the strip door opened another page kind")
+	assert_eq(str(wiki.current()["id"]), want.substr(cut + 1),
+		"the strip door opened another competition")
+
+
+func test_a_phone_strip_names_the_league_it_cannot_fit() -> void:
+	var chips := WikiPageStrip.items(WikiModel.page(WikiModel.LEAGUE, ""))
+	var built := WikiPageStrip.layout(wiki.f_bold, 150.0, chips)
+	assert_true(bool(built["short"]), "a strip narrower than its names kept the long ones")
+	var rects: Array = built["rects"]
+	assert_eq(rects.size(), 8, "the squeezed strip dropped a competition")
+	assert_lte((rects[7] as Rect2).end.x, 150.5, "the squeezed strip ran past its band")
+
+
+func test_the_desktop_header_keeps_its_title_and_dense_rows() -> void:
+	var vp := Vector2(1600.0, 900.0)
+	var box: Rect2 = WikiHeader.body_rect(vp, false, false, true)
+	assert_almost_eq(box.position.y, 168.0, 0.01, "the desktop header moved")
+	assert_almost_eq(box.size.y, vp.y - 168.0 - 34.0, 0.01, "the desktop body moved")
+	var laid := WikiBody.layout(WikiModel.page(WikiModel.LEAGUE, "")["blocks"], box.size.x,
+		false, false)
+	var pitches: Array = []
+	for row in laid["rows"]:
+		if str(row["k"]) == "trow":
+			pitches.append(row["rect"])
+	assert_almost_eq((pitches[1] as Rect2).position.y - (pitches[0] as Rect2).position.y, 22.0,
+		0.01, "the desktop table stopped being dense")
+

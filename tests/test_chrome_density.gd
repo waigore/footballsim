@@ -150,7 +150,6 @@ func test_a_date_strip_still_covers_the_lifted_caption() -> void:
 
 func test_a_menu_door_is_tappable_in_window_space() -> void:
 
-
 	game.menus.open_menu()
 	var shell = game.menus.shell
 	var door := Rect2()
@@ -165,3 +164,11 @@ func test_a_menu_door_is_tappable_in_window_space() -> void:
 	down.position = at
 	game._input(down)
 	assert_eq(shell.screen, AppShell.SCREEN_SETTINGS, "a window-space click missed the settings door")
+
+
+func test_the_tap_floor_lifts_a_small_control_only_on_touch() -> void:
+	assert_almost_eq(UiChrome.tap_h(24.0, false), 24.0, 0.001, "a mouse grew a control")
+	assert_almost_eq(UiChrome.tap_h(24.0, true), UiChrome.TAP_H, 0.001,
+		"a finger kept a control below the tap floor")
+	assert_almost_eq(UiChrome.tap_h(52.0, true), 52.0, 0.001,
+		"a door already over the floor was shrunk to it")
