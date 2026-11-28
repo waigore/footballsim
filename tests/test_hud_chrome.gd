@@ -585,3 +585,49 @@ func test_a_finished_match_offers_no_play_doors() -> void:
 	assert_eq(hud.roster_band.state_label(hud.game, "SIM", "full_time"), "FULL TIME  ·  MATCH OVER",
 		"the state line still calls a finished match live")
 	hud.queue_free()
+
+
+func test_a_league_watch_takes_away_the_picker_and_restart() -> void:
+	var eng := MatchEngine.new(418)
+	var hud := _hud(eng)
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 900.0
+	var paint := HudPaint.new(hud.chrome, hud.design_vp())
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var door := Rect2()
+	for b in hud.buttons:
+		if str(b["id"]) == "teams":
+			door = b["rect"]
+	assert_true(door.size.x > 0.0, "a single match has no CHANGE TEAMS door")
+	assert_eq(hud.button_at(door.get_center()), "teams", "a single match's CHANGE TEAMS answered nothing")
+
+	hud.game.billing.bind_fixture("MUN", {"matchday": 3})
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var ids: Array = []
+	for b in hud.buttons:
+		ids.append(str(b["id"]))
+	assert_false(ids.has("teams"), "a league watch drew the fixture picker: %s" % str(ids))
+	for id in ["menu", "league", "mode", "camera"]:
+		assert_true(ids.has(id), "a league watch lost %s: %s" % [id, str(ids)])
+	assert_eq(hud.button_at(door.get_center()), "", "a league watch's CHANGE TEAMS still answered a press")
+
+	for phase in ["play", "full_time"]:
+		for touch in [false, true]:
+			for spec in hud.controls_band.control_specs(paint, hud.game, touch, phase):
+				if str(spec[0]) in ["restart", "teams"]:
+					assert_false(bool(spec[3]), "%s stayed live over a league watch (touch=%s, phase=%s)" % [str(spec[0]), touch, phase])
+
+	hud.game.billing.bind_friendly("MUN", "MCI")
+	hud.queue_redraw()
+	await get_tree().process_frame
+	ids = []
+	for b in hud.buttons:
+		ids.append(str(b["id"]))
+	assert_true(ids.has("teams"), "the picker did not come back for a single match: %s" % str(ids))
+	var restart_live := false
+	for spec in hud.controls_band.control_specs(paint, hud.game, true, "play"):
+		if str(spec[0]) == "restart":
+			restart_live = bool(spec[3])
+	assert_true(restart_live, "a single match lost its RESTART")
+	hud.queue_free()
