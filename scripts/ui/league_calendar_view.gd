@@ -94,9 +94,10 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		var comp := str(fx.get("competition_id", ""))
 		if comp != last_comp and int((view.get("day_fixtures", []) as Array).size()) > 0:
 			last_comp = comp
-			if _has_many_comps(view):
+			var stage := str(fx.get("stage", ""))
+			if _has_many_comps(view) or stage != "":
 				items.append({"id": "", "kind": "league_head", "competition": comp,
-					"matchday": int(fx.get("matchday", 1)), "stage": str(fx.get("stage", "")),
+					"matchday": int(fx.get("matchday", 1)), "stage": stage,
 					"rect": Rect2(24.0, y, vp.x - 48.0, 16.0)})
 				y += 18.0
 		var h: float = maxf(22.0, LeagueBlock.height(fx, true))
@@ -123,6 +124,15 @@ static func is_uefa_night(view: Dictionary) -> bool:
 		return false
 	for fx in fixtures:
 		if not LeagueEurope.is_continental(str((fx as Dictionary).get("competition_id", ""))):
+			return false
+	return true
+
+
+static func _cup_only(by_league: Dictionary) -> bool:
+	if by_league.is_empty():
+		return false
+	for cid in by_league:
+		if not LeagueCup.is_cup(str(cid)):
 			return false
 	return true
 
@@ -230,13 +240,22 @@ func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 
 
 		var by_league: Dictionary = info.get("by_league", {})
-		if by_league.size() > 1:
+		if by_league.size() > 1 or _cup_only(by_league):
+			if _cup_only(by_league):
+				var count := 0
+				for cid in by_league:
+					count += int((by_league[cid] as Dictionary).get("n", 0))
+				UiChrome.text(c, Vector2(rect.position.x + 4.0, rect.end.y - 4.0),
+					"CUP %d" % count, 7, ink if selected else UiChrome.C_GOLD, fonts["med"])
 			var mx := rect.position.x + 4.0
 			for cid in by_league:
+				if _cup_only(by_league):
+					continue
 				var short: String = PLRepository.shared().competition_name(str(cid)).substr(0, 1)
 				UiChrome.text(c, Vector2(mx, rect.end.y - 4.0),
 					"%s%d" % [short, int((by_league[cid] as Dictionary).get("n", 0))], 7,
 					ink if selected else UiChrome.C_SOFT, fonts["med"])
 				mx += 12.0
+
 
 # gd-tools: no cover end

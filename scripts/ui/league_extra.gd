@@ -119,9 +119,14 @@ static func draw_league_head(c: CanvasItem, rect: Rect2, competition_id: String,
 	var text := "%s  ·  GW %d" % [name, matchday]
 	var width_template := "%s  ·  GW 00" % name
 	if stage != "":
-		text = "%s  ·  %s" % [name, LeagueEurope.round_short(stage)]
+		if LeagueEurope.is_continental(competition_id):
+			text = "%s  ·  %s" % [name, LeagueEurope.round_short(stage)]
+		elif LeagueCup.is_cup(competition_id):
+			text = "%s  ·  %s" % [name, LeagueCupView.stage_name(competition_id, stage)]
+		else:
+			text = "%s  ·  %s" % [name, stage]
 		width_template = text
-	elif PLRepository.shared().competition_kind(competition_id) != "league":
+	elif LeagueEurope.is_continental(competition_id):
 		text = name
 		width_template = name
 	UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),

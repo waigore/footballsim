@@ -36,7 +36,7 @@ func _clean() -> void:
 
 func _boot() -> LeagueSeason:
 	return LeagueSeason.create("Europe Season", "generated", "fixture_days", SEED,
-		["PL"], false, true)
+		["PL"], false, [], true)
 
 
 func _advance_until(round_id: String, competition_id: String = "UCL", cap: int = 200) -> void:
@@ -57,7 +57,7 @@ func _advance_complete(cap: int = 500) -> void:
 
 func test_a_domestic_save_has_no_continental_state() -> void:
 	var domestic := LeagueSeason.create("Domestic Only", "generated", "fixture_days", SEED + 1,
-		["PL"], false, false)
+		["PL"], false, [], false)
 	var hub := LeagueEurope.hub(domestic.save)
 	assert_false(bool(hub["on"]), "a domestic save claims a Europe hub")
 	assert_true((hub["cards"] as Array).is_empty(), "a domestic save has continental cards")
@@ -87,6 +87,27 @@ func test_the_first_qualifying_round_draws_two_legged_ties() -> void:
 		assert_true(str(tie["away_name"]) != "", "a tie has no away club name")
 		assert_eq((tie["leg_lines"] as Array).size(), 2, "a tie does not have two legs")
 		assert_false(bool(tie["played"]), "an unplayed tie claims a result")
+
+
+func test_a_continental_tie_settles_through_the_watch_path() -> void:
+	var first := LeagueUefa.first_round("UCL")
+	var rows := PLDatabase.rows(
+		"SELECT * FROM league_fixture WHERE competition_id = 'UCL' AND stage = ? "
+		+ "ORDER BY id LIMIT 2;", [first])
+	assert_eq(rows.size(), 2, "the first round has no first tie")
+	var leg1: Dictionary = rows[0]
+	var leg2: Dictionary = rows[1]
+	assert_eq(int(leg1["leg"]), 1, "the first fixture is not a first leg")
+	assert_true(season.set_watch(str(leg1["id"]), true), "a continental fixture refused a watch")
+	assert_true(season.set_watch(str(leg1["id"]), false), "a continental fixture kept a watch")
+	LeagueCupTie.record_engine(season, leg1, 2, 0)
+	var tie := LeagueCupTie.one("UCL", first, 0)
+	assert_eq(str(tie.get("winner_club_id", "")), "", "a first leg decided the tie")
+	assert_eq(int(tie.get("home_goals", 0)) + int(tie.get("away_goals", 0)), 2,
+		"the first leg did not reach the aggregate")
+	LeagueCupTie.record_engine(season, leg2, 1, 0)
+	assert_true(str(LeagueCupTie.one("UCL", first, 0).get("winner_club_id", "")) != "",
+		"the second leg did not decide the tie")
 
 
 func test_the_rail_names_every_round_and_marks_the_open_one() -> void:

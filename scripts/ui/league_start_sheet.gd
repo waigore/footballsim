@@ -92,6 +92,12 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 				"rect": Rect2(24.0 + float(col) * w * 0.52, y + float(line) * pitch, w * 0.48, toggle_h),
 				"selected": chosen.has(cid)})
 		y += pitch * float(ceili(float(leagues.size()) / 2.0)) + 6.0
+		if cup_ready(view, str(group["id"])):
+			items.append({"id": "wcups:" + str(group["id"]), "kind": "switch",
+				"label": "DOMESTIC CUPS — %s" % str(group["label"]),
+				"rect": Rect2(24.0, y, w, toggle_h),
+				"selected": not (view.get("cups_off", []) as Array).has(str(group["id"]))})
+			y += pitch + 2.0
 	items.append({"id": "", "kind": "section", "label": "EUROPE",
 		"rect": Rect2(24.0, y, w, 16.0)})
 	y += 22.0
@@ -111,6 +117,13 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append(create_item(vp, y, w, touch))
 	items.append(LeagueExtra.back_item(touch))
 	return items
+
+
+static func cup_ready(view: Dictionary, country: String) -> bool:
+	for cid in view.get("competitions", ["PL"]):
+		if LeagueTiers.country_of(str(cid)) == country:
+			return true
+	return false
 
 
 static func create_item(vp: Vector2, y: float, w: float, touch: bool) -> Dictionary:
@@ -227,6 +240,23 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 				Color(0.06, 0.06, 0.05) if chosen else UiChrome.C_TEXT, bold)
 		elif kind == "button":
 			UiChrome.button(c, cache, rect, str(item["label"]), bold, bool(item.get("primary", false)))
+		elif kind == "switch":
+			_draw_switch(c, rect, item, bold, cache)
+
+
+static func _draw_switch(c: CanvasItem, rect: Rect2, item: Dictionary, bold: Font,
+		panel_cache: Dictionary) -> void:
+	c.draw_rect(Rect2(rect.position.x, rect.position.y, 3.0, rect.size.y), UiChrome.C_GOLD)
+	UiChrome.panel(c, panel_cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_BORDER, 1)
+	UiChrome.text(c, Vector2(rect.position.x + 14.0, rect.position.y + rect.size.y * 0.5 + 4.0),
+		str(item["label"]), 11, UiChrome.C_TEXT, bold)
+	var track := Rect2(rect.end.x - 62.0, rect.position.y + rect.size.y * 0.5 - 10.0, 46.0, 20.0)
+	var on := bool(item.get("selected", false))
+	UiChrome.panel(c, panel_cache, track,
+		UiChrome.C_GOLD.darkened(0.1) if on else UiChrome.C_PANEL_LIGHT,
+		9, UiChrome.C_GOLD if on else UiChrome.C_BORDER, 1)
+	c.draw_circle(track.position + Vector2(32.0 if on else 13.0, 10.0), 7.0,
+		Color(0.06, 0.06, 0.05) if on else UiChrome.C_DIM)
 
 
 func draw_load_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, _view: Dictionary,

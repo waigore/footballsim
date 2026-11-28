@@ -18,7 +18,7 @@ func before_all() -> void:
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
 	season = LeagueSeason.create("Europe UI", "generated", "fixture_days", SEED,
-		["PL"], false, true)
+		["PL"], false, [], true)
 	screen = LeagueScreen.new()
 	add_child(screen)
 	screen.size = WIDE
@@ -77,11 +77,14 @@ func test_the_panel_carries_a_europe_row_with_its_own_icon() -> void:
 func test_every_panel_row_fits_a_phone_and_keeps_its_tap() -> void:
 	var panel := LeaguePanel.new()
 	panel.touch = true
+	panel.cups = true
+	panel.europe = true
 	panel.open()
 	panel.settle()
+	var rows := LeaguePanel.rows(true, true)
 	for vp in [PHONE, Vector2(411, 914), Vector2(1024, 600)]:
-		for i in range(LeaguePanel.ITEMS.size()):
-			var row: Dictionary = LeaguePanel.ITEMS[i]
+		for i in range(rows.size()):
+			var row: Dictionary = rows[i]
 			var rect: Rect2 = panel.item_rect(vp, i)
 			assert_gte(rect.size.y, 44.0, "%s is below the tap floor at %s" % [row["id"], vp])
 			assert_lte(rect.end.y, vp.y - 12.0, "%s falls off the panel at %s" % [row["id"], vp])
@@ -173,7 +176,7 @@ func test_back_walks_the_stage_to_the_hub_and_stops_there() -> void:
 
 func test_a_domestic_save_reads_an_honest_hub() -> void:
 	var domestic := LeagueSeason.create("No Europe", "generated", "fixture_days", SEED + 3,
-		["PL"], false, false)
+		["PL"], false, [], false)
 	screen.season = domestic
 	screen.mode = LeagueScreen.MODE_EUROPE
 	screen.size = PHONE
@@ -185,7 +188,7 @@ func test_a_domestic_save_reads_an_honest_hub() -> void:
 	assert_false(bool(view["on"]), "a domestic save's hub claims Europe is on")
 	domestic.close()
 	season = LeagueSeason.create("Europe UI", "generated", "fixture_days", SEED,
-		["PL"], false, true)
+		["PL"], false, [], true)
 
 
 func test_the_wizard_toggle_rides_the_save() -> void:

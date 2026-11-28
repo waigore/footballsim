@@ -65,8 +65,9 @@ func _press_panel_row(id: String) -> void:
 	panel.open()
 	panel.settle()
 	screen().refresh()
-	for i in range(LeaguePanel.ITEMS.size()):
-		if str(LeaguePanel.ITEMS[i]["id"]) == id:
+	var nav_rows: Array = LeaguePanel.rows(panel.cups, panel.europe)
+	for i in range(nav_rows.size()):
+		if str(nav_rows[i]["id"]) == id:
 			press(panel.item_rect(screen().design_vp(), i).get_center())
 			panel.settle()
 			return

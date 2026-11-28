@@ -3,7 +3,8 @@ extends RefCounted
 
 
 static func create(name: String, calendar_mode: String, advance_mode: String, seed: int = 0,
-		competitions: Array = ["PL"], cups: bool = false, uefa: bool = false) -> LeagueSeason:
+		competitions: Array = ["PL"], cups: bool = false,
+		cup_countries: Array = [], uefa: bool = false) -> LeagueSeason:
 	var saved_mode := calendar_mode if LeagueRules.CALENDAR_MODES.has(calendar_mode) else "generated"
 	var saved_advance := advance_mode if LeagueRules.ADVANCE_MODES.has(advance_mode) else "fixture_days"
 	if seed == 0:
@@ -54,6 +55,7 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	season.rules = save.rules
 	season.rng.seed = seed
 	save.put_meta("cups", "on" if cups else "off")
+	save.put_meta("cups_off", ",".join(PackedStringArray(_off_countries(cup_countries))))
 	save.put_meta("uefa", "on" if uefa else "off")
 	LeagueCupState.start(season)
 	save.reload()
@@ -65,6 +67,16 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	season.rules = save.rules
 	LeagueSeason.active = season
 	return season
+
+
+static func _off_countries(cup_countries: Array) -> Array:
+	var off: Array = []
+	if cup_countries.is_empty():
+		return off
+	for country in LeagueCup.countries():
+		if not cup_countries.has(country):
+			off.append(str(country))
+	return off
 
 
 static func known_competitions(wanted: Array) -> Array:

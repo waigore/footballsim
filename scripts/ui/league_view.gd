@@ -9,6 +9,8 @@ static func pose_names() -> Dictionary:
 		LeagueScreen.MODE_STATS: "stats", LeagueScreen.MODE_SYSTEM: "system",
 		LeagueScreen.MODE_REPORT: "fixtures", LeagueScreen.MODE_PODIUM: "stats",
 		LeagueScreen.MODE_EUROPE: "europe", LeagueScreen.MODE_EUROPE_STAGE: "europe",
+		LeagueScreen.MODE_CUPS: "cups", LeagueScreen.MODE_CUP: "cups",
+		LeagueScreen.MODE_BRACKET: "cups", LeagueScreen.MODE_CUP_DRAW: "cups",
 	}
 
 
@@ -27,6 +29,10 @@ static func sheets() -> Dictionary:
 		LeagueScreen.MODE_INTEREST: ["interest", "layout", "draw_body", "draw_chrome"],
 		LeagueScreen.MODE_EUROPE: ["europe", "layout", "draw_hub_body", "draw_hub_chrome"],
 		LeagueScreen.MODE_EUROPE_STAGE: ["europe_stage", "layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_CUPS: ["cups", "cups_layout", "draw_cups_body", "draw_cups_chrome"],
+		LeagueScreen.MODE_CUP: ["cup", "cup_layout", "draw_cup_body", "draw_cup_chrome"],
+		LeagueScreen.MODE_BRACKET: ["bracket", "bracket_layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_CUP_DRAW: ["draw", "draw_layout", "draw_body", "draw_chrome"],
 	}
 
 
@@ -46,10 +52,23 @@ static func build(screen) -> Dictionary:
 		var wiz: Dictionary = screen.wizard.duplicate()
 		wiz["focus"] = str(screen.focus.kind)
 		wiz["touch"] = bool(screen.touch)
+		wiz["cup_countries"] = LeagueWizardActions.cup_countries(screen)
+		wiz["cups_on"] = LeagueWizardActions.cups_on(screen)
 		return wiz
 	var season = screen.season
 	var rules: Dictionary = season.rules if season != null else LeagueRules.defaults()
 	var state: Dictionary = season.state() if season != null else {"rules": rules}
+	if mode == LeagueScreen.MODE_CUPS:
+		return {"cups": LeagueCupView.cups(screen.season), "touch": bool(screen.touch),
+			"name": str(state.get("name", ""))}
+	if mode == LeagueScreen.MODE_CUP or mode == LeagueScreen.MODE_BRACKET:
+		return LeagueCupView.cup(screen.season, str(screen.cup_focus), str(screen.cups_round))
+	if mode == LeagueScreen.MODE_CUP_DRAW:
+		var drawn := LeagueCupView.draw(screen.season, str(screen.cup_focus),
+			str(screen.cups_round))
+		drawn["shown"] = int((screen.draw_state as Dictionary).get("shown", 0))
+		drawn["touch"] = bool(screen.touch)
+		return drawn
 	if mode == LeagueScreen.MODE_SYSTEM:
 		return LeagueSystemActions.view(screen)
 

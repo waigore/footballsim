@@ -40,11 +40,14 @@ func _settings_ids(vp: Vector2) -> Array:
 func _panel_nav_ids(vp: Vector2, touch: bool) -> Array:
 	var panel := LeaguePanel.new()
 	panel.touch = touch
+	panel.cups = true
+	panel.europe = true
 	panel.open()
 	panel.settle()
 	var ids: Array = []
-	for i in range(LeaguePanel.ITEMS.size()):
-		var item: Dictionary = LeaguePanel.ITEMS[i]
+	var rows: Array = LeaguePanel.rows(panel.cups, panel.europe)
+	for i in range(rows.size()):
+		var item: Dictionary = rows[i]
 		var hit: String = panel.hit(panel.item_rect(vp, i).get_center(), vp)
 		assert_eq(hit, str(item["id"]), "panel row %s missed at %s (touch=%s)" % [item["id"], vp, touch])
 		ids.append(hit)
@@ -102,7 +105,7 @@ func test_confirm_intents_match_across_viewports() -> void:
 
 func test_league_panel_intents_match_across_viewports() -> void:
 	var desk := _panel_nav_ids(DESKTOP, false)
-	assert_eq(desk.size(), LeaguePanel.ITEMS.size(), "desktop panel lost a nav row")
+	assert_eq(desk.size(), LeaguePanel.rows(true, true).size(), "desktop panel lost a nav row")
 	for vp in [PHONE, TABLET]:
 		_assert_not_weaker(desk, _panel_nav_ids(vp, true), "league panel@%s" % vp)
 
