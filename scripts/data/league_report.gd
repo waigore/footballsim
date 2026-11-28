@@ -116,7 +116,8 @@ func add_player_lines(rows: Array) -> void:
 func top_scorers(limit: int = 5, competition_id: String = "") -> Array:
 	save.ensure_open()
 	var sql := (
-		"SELECT s.goals, s.assists, s.apps, p.name, p.id AS player_id, c.abbr "
+		"SELECT s.goals, s.assists, s.apps, p.name, p.id AS player_id, c.abbr, "
+		+ "c.name AS club_name "
 		+ "FROM league_player_stat s JOIN player p ON p.id = s.player_id "
 		+ "JOIN club c ON c.id = s.club_id WHERE s.goals > 0"
 	)

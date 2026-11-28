@@ -23,7 +23,7 @@ static func blocks(player_id: String, club_id: String, limit: int = LIMIT) -> Ar
 			"cells": [
 				FixtureCalendar.day_label(str(fx["kickoff"])),
 				"GW %d" % int(fx["matchday"]),
-				"%s (%s)" % [str(fx["opponent_abbr"]), venue],
+				"%s (%s)" % [str(fx["opponent_name"]), venue],
 				"%d – %d" % [int(fx["home_goals"]), int(fx["away_goals"])],
 				parts(fx["events"]),
 			],

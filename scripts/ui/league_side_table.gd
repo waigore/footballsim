@@ -8,8 +8,8 @@ const EUROPE_GAP := 6.0
 const ROWS := 20
 
 
-const CLUB_MIN := 46.0
-const CLUB_SHARE := 0.14
+const CLUB_MIN := 100.0
+const CLUB_SHARE := 0.24
 
 var cache := {}
 

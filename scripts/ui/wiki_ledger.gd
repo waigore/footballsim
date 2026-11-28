@@ -52,7 +52,7 @@ static func competition_blocks(competition_id: String = "") -> Array:
 	var top: Array = []
 	for row in repo().sim_leaders(5, competition_id):
 		top.append({
-			"cells": [str(row["name"]), str(row["abbr"]), str(int(row["apps"])), str(int(row["goals"]))],
+			"cells": [str(row["name"]), str(row["club_name"]), str(int(row["apps"])), str(int(row["goals"]))],
 			"target": {"page": WikiModel.PLAYER, "id": str(row["player_id"])},
 		})
 	if top.is_empty():
