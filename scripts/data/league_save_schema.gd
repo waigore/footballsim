@@ -154,14 +154,14 @@ static func migrate() -> void:
 		add_column(table, "competition_id", "TEXT NOT NULL DEFAULT ''")
 	add_column("league_fixture", "stage", "TEXT NOT NULL DEFAULT ''")
 	add_column("league_fixture", "leg", "INTEGER NOT NULL DEFAULT 0")
-	for table in SEASON_TABLES:
-		add_column(table, "season_index", "INTEGER NOT NULL DEFAULT 0")
 	var hint_rows := hint()
 	var owner := str(hint_rows[0]) if not hint_rows.is_empty() else "PL"
 	for table in ["league_fixture", "league_table", "league_player_stat"]:
 		backfill(table, owner)
 	_rebuild_table_for_two_tables()
 	_rebuild_player_stat_for_season()
+	for table in SEASON_TABLES:
+		add_column(table, "season_index", "INTEGER NOT NULL DEFAULT 0")
 	for sql in INDEXES:
 		PLDatabase.execute(sql)
 	create_two_table_index()
@@ -222,6 +222,13 @@ static func create_two_table_index() -> void:
 		+ "ON league_table (club_id, competition_id);")
 
 
+static func player_stat_table() -> String:
+	for sql in TABLES:
+		if "CREATE TABLE IF NOT EXISTS league_player_stat (" in sql:
+			return sql
+	return ""
+
+
 static func _rebuild_player_stat_for_season() -> void:
 	var row := PLDatabase.row(
 		"SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'league_player_stat';")
@@ -236,7 +243,7 @@ static func _rebuild_player_stat_for_season() -> void:
 		carried.append(column)
 	PLDatabase.transaction("BEGIN TRANSACTION;")
 	PLDatabase.execute("ALTER TABLE league_player_stat RENAME TO league_player_stat_pre_season;")
-	PLDatabase.execute(TABLES[9])
+	PLDatabase.execute(player_stat_table())
 	var sets := carried.duplicate()
 	if _columns("league_player_stat_pre_season").has("season_index"):
 		sets.append("season_index")

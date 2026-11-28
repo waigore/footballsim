@@ -243,7 +243,7 @@ static func read_podium(screen) -> void:
 	screen.refresh()
 
 
-static func start_season(screen) -> void:
+static func start_season(screen: Object) -> void:
 	if screen.season == null:
 		return
 	var result := SeasonRollover.apply(screen.season)
