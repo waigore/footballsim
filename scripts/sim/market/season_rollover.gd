@@ -15,6 +15,7 @@ static func apply(season: LeagueSeason) -> Dictionary:
 	var label := SeasonCalendar.next_label(season.save.season_label())
 	var start := _start_date(season)
 	var ageing := SeasonAgeing.apply(season, index, start)
+	var contracts := MarketContracts.review(season.save, index, start)
 	SeasonArchive.clear_live(season)
 	season.save.put_meta(SeasonSettle.LINKED_KEY, "")
 	season.record.report.memo.clear()
@@ -40,7 +41,7 @@ static func apply(season: LeagueSeason) -> Dictionary:
 	return {
 		"ok": true, "season_index": index, "season_label": label, "date": first,
 		"settled": not settled.is_empty(), "archived": archived, "aged": ageing,
-		"fixtures": installed,
+		"contracts": contracts, "fixtures": installed,
 	}
 
 

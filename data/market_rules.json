@@ -1,0 +1,45 @@
+{
+  "contract": {
+    "clause_years": 2,
+    "option_share": 0.34,
+    "option_step": 0.1,
+    "renewal_years": 2,
+    "years_max": 4,
+    "years_min": 1
+  },
+  "revenue": {
+    "default_multiplier": 1.0,
+    "default_ticket_price": 14,
+    "home_fixtures": 19,
+    "multiplier": {
+      "BL": 3.2,
+      "BL2": 1.3,
+      "CH": 1.5,
+      "L1": 1.3,
+      "L2": 1.2,
+      "LL": 3.2,
+      "NL": 1.1,
+      "PL": 3.6,
+      "SA": 3.0,
+      "SB": 1.3
+    },
+    "ticket_price": {
+      "BL": 32,
+      "BL2": 18,
+      "CH": 24,
+      "L1": 19,
+      "L2": 16,
+      "LL": 34,
+      "NL": 12,
+      "PL": 42,
+      "SA": 30,
+      "SB": 15
+    }
+  },
+  "wage": {
+    "budget_share": 0.55,
+    "round_to": 10,
+    "safety": 0.96,
+    "weight_floor": 30
+  }
+}

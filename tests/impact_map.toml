@@ -240,6 +240,9 @@ suites = [
   # Multi-season (#440): the season-scoped schema, the one settle step, the
   # rollover, the archives and the podium's NEW SEASON door.
   "test_season_rollover.gd",
+  # Contracts (#441): the bootstrap envelope, expiry, options and the free-agent
+  # pool the rollover opens.
+  "test_market_contracts.gd",
 ]
 
 # Europe's own destination (#437): the hub read models, the two sheets and the
@@ -473,13 +476,18 @@ match = "scripts/sim/league_*.gd*"
 domain = "league"
 
 # The market's season modules (#440): settle, rollover, ageing, the archives,
-# the date shifts and the tick that hangs off the clock.
+# the date shifts and the tick that hangs off the clock. Contracts (#441) ride
+# here too: the bootstrap envelope, expiry and options run on the same clock.
 [[rules]]
 match = "scripts/sim/market/**"
 domain = "league"
 
 [[rules]]
 match = "tests/test_season_rollover.gd*"
+domain = "league"
+
+[[rules]]
+match = "tests/test_market_contracts.gd*"
 domain = "league"
 
 # Season availability and the pre-match briefing (#155–#157): the absence model,
@@ -605,6 +613,12 @@ domain = "league"
 [[rules]]
 match = "scripts/data/pl_competitions.gd*"
 domain = "pl_data"
+
+# The market's data tables (#441): the revenue anchor, ticket prices and the
+# contract terms the season suites read. Never the snapshot's own suites.
+[[rules]]
+match = "scripts/data/market_*.gd*"
+domain = "league"
 
 # The club page's position race: positions recomputed from the days the ledger
 # has played. Its own suite pins the reading.

@@ -11,7 +11,10 @@ static func page(player_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 	var season: Dictionary = p.get("season", {})
 	var career: Dictionary = p.get("career", {})
 	var sim: Dictionary = p.get("sim", {})
-	var identity := "%s  ·  %s  ·  #%d" % [str(club.get("name", "")).to_upper(), str(p["pos"]), int(p["number"])]
+	var club_name := str(club.get("name", "")).to_upper()
+	if club_name == "":
+		club_name = "FREE AGENT"
+	var identity := "%s  ·  %s  ·  #%d" % [club_name, str(p["pos"]), int(p["number"])]
 	var extra: Array = []
 	if int(p.get("age", 0)) > 0:
 		extra.append("%d" % int(p["age"]))
@@ -65,6 +68,7 @@ static func page(player_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 			for pair in [["pac", "PACE"], ["sho", "SHOOTING"], ["pas", "PASSING"], ["dri", "DRIBBLING"], ["def", "DEFENDING"], ["phy", "PHYSICAL"]]:
 				bars.append([str(pair[1]), float(p[pair[0]]) / 100.0])
 		out["blocks"].append({"k": "bars", "items": bars})
+	out["blocks"].append_array(contract_blocks(player_id, club_name, str(p.get("club_id", ""))))
 	var season_label := str(season.get("season_label", ""))
 	var season_head := "SEASON"
 	if season_label != "":
@@ -97,12 +101,36 @@ static func page(player_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 	out["blocks"].append({"k": "section", "text": WikiLedger.heading("IN FOOTBALLSIM")})
 	out["blocks"].append(WikiLedger.player_line(sim, season_open))
 	out["blocks"].append_array(WikiPlayerLog.blocks(player_id, str(p["club_id"])))
-	out["blocks"].append({"k": "chips", "items": [{
-		"text": str(club.get("name", "")).to_upper(),
-		"target": {"page": WikiModel.TEAM, "id": str(p["club_id"])},
-		"accent": WikiModel.hex(club.get("color", Color.WHITE)),
-	}]})
+	if str(p.get("club_id", "")) != "":
+		out["blocks"].append({"k": "chips", "items": [{
+			"text": str(club.get("name", "")).to_upper(),
+			"target": {"page": WikiModel.TEAM, "id": str(p["club_id"])},
+			"accent": WikiModel.hex(club.get("color", Color.WHITE)),
+		}]})
 	out["blocks"].append(WikiCompetitions.link(str(club.get("competition", ""))))
+	return out
+
+
+static func contract_blocks(player_id: String, club_name: String, registered: String) -> Array:
+	if not MarketContracts.available():
+		return []
+	var contract := MarketContracts.of_player(player_id)
+	var out: Array = [{"k": "section", "text": "CONTRACT"}]
+	if contract.is_empty():
+		out.append({"k": "note", "text": "NO CONTRACT ON FILE"})
+		return out
+	var clause := int(contract.get("release_clause", 0))
+	var items: Array = [
+		["CLUB", "FREE AGENT" if registered == "" else club_name, true],
+		["WAGE", MarketWages.weekly(int(contract.get("wage", 0))), true],
+		["EXPIRES", str(contract.get("end_date", "")), false],
+		["EMPLOYMENT", "FREE AGENT" if registered == "" else "CONTRACTED", false],
+		["CLAUSE", "NONE" if clause <= 0 else MarketWages.money(clause), false],
+	]
+	var options := int(contract.get("option_years", 0))
+	if options > 0:
+		items.append(["OPTION", "+%d YR" % options, false])
+	out.append({"k": "kv", "items": items})
 	return out
 
 
