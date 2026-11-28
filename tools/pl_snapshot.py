@@ -5,14 +5,17 @@ The snapshot is `data/pl_snapshot.json` (readable source of truth) and the game
 loads the SQLite copy `data/pl_seed.sqlite` it produces. Rebuild the database
 after every snapshot edit; bump `db_version` so the game replaces its cache.
 
-The seed holds more than one competition: the Premier League and La Liga share
-one database, one season window and one set of stable ids. Club ids carry the
-competition's namespace (`LL-` for La Liga) so a refresh can never collide a
-Spanish club with an English one.
+The seed holds more than one competition: the Premier League, La Liga, the
+Bundesliga and the English pyramid share one database, one season window and one
+set of stable ids. A club's id is `{FIFA country}-{abbr}{N}` (for example
+`ENG-MUN1`) and a player's id is a UUID: both are minted once and kept, so a
+promotion, a relegation or a roster refresh never rewrites an identity.
+Abbreviations stay display-only.
 
 Usage:
     python tools/pl_snapshot.py seed --competition LL --season 2026
     python tools/pl_snapshot.py fetch --source espn --season 2026 --competition all
+    python tools/pl_snapshot.py remap
     python tools/pl_snapshot.py build
     python tools/pl_snapshot.py verify
 
@@ -28,6 +31,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sqlite3
 import ssl
 import sys
@@ -35,6 +39,7 @@ import time
 import unicodedata
 import urllib.error
 import urllib.request
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -42,20 +47,34 @@ ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "data" / "pl_snapshot.json"
 SEED_DB = ROOT / "data" / "pl_seed.sqlite"
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 SOURCE_ESPN = "espn"
 ESPN_SITE = "https://site.api.espn.com/apis/site/v2/sports"
 ESPN_CORE = "https://sports.core.api.espn.com/v2"
 
-## One row per shipped competition. `prefix` namespaces every id the league
-## owns; the Premier League keeps the bare ids the first seed shipped with.
+## FIFA alpha-3 codes for the associations the seed ships.
+FIFA_COUNTRY = {"England": "ENG", "Wales": "WAL", "Spain": "ESP", "Germany": "GER"}
+## Clubs that play in the English pyramid but belong to another association.
+## The id carries the club's own country, never its competition's.
+COUNTRY_BY_CLUB = {
+    ("CH", "CAR"): "Wales",
+    ("CH", "SWA"): "Wales",
+    ("CH", "WXM"): "Wales",
+    ("L2", "NEW"): "Wales",
+}
+CLUB_ID_RE = re.compile(r"^([A-Z]{3})-([A-Z0-9]{2,5})([1-9][0-9]*)$")
+PLAYER_ID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+## Every player id is a UUID drawn from this namespace, so a re-seed of the same
+## ESPN athlete mints the same id without ever embedding a club.
+PLAYER_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "https://github.com/waigore/footballsim/player")
+
+## One row per shipped competition.
 COMPETITIONS = {
     "PL": {
         "espn": "eng.1",
         "name": "Premier League",
         "short_name": "PREMIER LEAGUE",
         "country": "England",
-        "prefix": "",
         "rules": {
             "win_points": 3, "draw_points": 1, "relegation_places": 3,
             "ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38,
@@ -68,7 +87,6 @@ COMPETITIONS = {
         "name": "La Liga",
         "short_name": "LA LIGA",
         "country": "Spain",
-        "prefix": "LL-",
         "rules": {
             # Spain runs the same 20-club, 38-matchday shape as England. The
             # band counts are La Liga's own: 1-4 UCL, 5th UEL and 6th UECL (the
@@ -86,7 +104,6 @@ COMPETITIONS = {
         "name": "Bundesliga",
         "short_name": "BUNDESLIGA",
         "country": "Germany",
-        "prefix": "BL-",
         "rules": {
             # The Bundesliga's 18-club, 34-matchday shape. Without a domestic
             # cup in the save, 1-4 go to the Champions League, 5th to the
@@ -105,7 +122,6 @@ COMPETITIONS = {
         "name": "2. Bundesliga",
         "short_name": "2. BUNDESLIGA",
         "country": "Germany",
-        "prefix": "BL2-",
         "rules": {
             # 18 clubs, 34 matchdays. 1st and 2nd go up, 3rd plays the
             # Relegation against the Bundesliga's 16th; 17th and 18th are
@@ -136,7 +152,6 @@ COMPETITIONS = {
         "name": "Championship",
         "short_name": "CHAMPIONSHIP",
         "country": "England",
-        "prefix": "CH-",
         "strength": (78.0, 68.0),
         "capacity": (33000, 12000),
         "rules": {
@@ -154,7 +169,6 @@ COMPETITIONS = {
         "name": "League One",
         "short_name": "LEAGUE ONE",
         "country": "England",
-        "prefix": "L1-",
         "strength": (72.0, 63.0),
         "capacity": (28000, 9000),
         "rules": {
@@ -172,7 +186,6 @@ COMPETITIONS = {
         "name": "League Two",
         "short_name": "LEAGUE TWO",
         "country": "England",
-        "prefix": "L2-",
         "strength": (68.0, 59.0),
         "capacity": (20000, 6000),
         "rules": {
@@ -190,7 +203,6 @@ COMPETITIONS = {
         "name": "National League",
         "short_name": "NATIONAL LEAGUE",
         "country": "England",
-        "prefix": "NL-",
         "strength": (64.0, 55.0),
         "capacity": (12000, 3000),
         "rules": {
@@ -344,7 +356,9 @@ CREATE TABLE competition (
     rules TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE club (
-    id TEXT PRIMARY KEY, competition_id TEXT NOT NULL, name TEXT NOT NULL,
+    id TEXT PRIMARY KEY, competition_id TEXT NOT NULL,
+    country TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL,
     short TEXT NOT NULL, abbr TEXT NOT NULL, nickname TEXT NOT NULL,
     manager TEXT NOT NULL, stadium TEXT NOT NULL, city TEXT NOT NULL,
     capacity INTEGER NOT NULL, formation TEXT NOT NULL,
@@ -481,8 +495,41 @@ def spec_for(competition_id: str) -> dict:
     return COMPETITIONS[competition_id]
 
 
-def club_id_for(competition_id: str, abbr: str, espn_id: str = "") -> str:
-    return spec_for(competition_id)["prefix"] + shippable_abbr(competition_id, abbr, espn_id)
+def club_id_for(competition_id: str, abbr: str, taken: set[str]) -> str:
+    """Mint a club's permanent id: `{FIFA country}-{abbr}{N}`.
+
+    `N` starts at 1 for every (country, abbr) pair and only moves on when the
+    pair is already in use, so two Barnets in two countries never collide.
+    """
+    stem = f"{club_country(competition_id, abbr)}-{abbr}"
+    n = 1
+    while f"{stem}{n}" in taken:
+        n += 1
+    return f"{stem}{n}"
+
+
+def club_country(competition_id: str, abbr: str) -> str:
+    default = str(spec_for(competition_id)["country"])
+    name = str(COUNTRY_BY_CLUB.get((competition_id, abbr), default))
+    return FIFA_COUNTRY.get(name, "ENG")
+
+
+def player_id_for(espn_id: str, club_name: str, player_name: str, taken: set[str]) -> str:
+    """Mint a player's UUID: keyed on the ESPN athlete, never on the club.
+
+    The seed can list the same athlete under two clubs (a stale roster), so a
+    taken key falls back to the club it was first seen at. Assigned once and
+    stored in the snapshot; a refresh keeps whatever id the player already has.
+    """
+    key = f"espn:{espn_id}" if espn_id else f"name:{club_name}|{player_name}"
+    player = str(uuid.uuid5(PLAYER_NAMESPACE, key))
+    if player in taken:
+        player = str(uuid.uuid5(PLAYER_NAMESPACE, f"{key}|{club_name}"))
+    n = 2
+    while player in taken:
+        player = str(uuid.uuid5(PLAYER_NAMESPACE, f"{key}|{club_name}#{n}"))
+        n += 1
+    return player
 
 
 def shippable_abbr(competition_id: str, abbr: str, espn_id: str = "") -> str:
@@ -824,11 +871,26 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
     for entry in entries:
         stats = {s["name"]: s.get("value") for s in entry["stats"] if s.get("value") is not None}
         rank_of[str(entry["team"]["id"])] = int(stats.get("rank", size))
+    # Ids are minted before the roster fan-out: a club keeps the id it already
+    # has, and new clubs are numbered in club-name order so a rebuild of the
+    # same league mints the same suffixes.
+    taken = {str(c["id"]) for c in snapshot.get("clubs", [])
+             if str(c.get("competition_id", "PL")) != competition_id}
+    prior = {str(c.get("abbr", "")): str(c["id"]) for c in snapshot.get("clubs", [])
+             if str(c.get("competition_id", "PL")) == competition_id
+             and CLUB_ID_RE.match(str(c.get("id", "")))}
+    club_of: dict[str, dict] = {}
+    for entry in sorted(entries, key=lambda e: str(e["team"].get("displayName", ""))):
+        team = entry["team"]
+        abbr = shippable_abbr(competition_id, team["abbreviation"], team.get("id", ""))
+        club_id = prior.get(abbr) or club_id_for(competition_id, abbr, taken)
+        taken.add(club_id)
+        club_of[str(team["id"])] = {"id": club_id, "abbr": abbr}
 
     def build(entry: dict) -> dict:
         team = entry["team"]
-        abbr = shippable_abbr(competition_id, team["abbreviation"], team.get("id", ""))
-        club_id = club_id_for(competition_id, abbr)
+        club_id = club_of[str(team["id"])]["id"]
+        abbr = club_of[str(team["id"])]["abbr"]
         meta = get_json(f"{ESPN_SITE}/soccer/{league}/teams/{team['id']}").get("team", {})
         roster = get_json(
             f"{ESPN_SITE}/soccer/{league}/teams/{team['id']}/roster?season={season}"
@@ -843,7 +905,6 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
         club_base = float(high) - float(rank - 1) * ((float(high) - float(low)) / float(size - 1))
         ground, city, capacity = _ground(competition_id, season, team, abbr, rank, size)
         players: list[dict] = []
-        seen_ids: set[str] = set()
         role_counts: dict[str, int] = {}
         for athlete in roster:
             name = str(athlete.get("shortName") or athlete.get("displayName") or "")
@@ -852,18 +913,11 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
             group = str((athlete.get("position") or {}).get("abbreviation", "M"))
             role = _role_for(group, role_counts)
             role_counts[role] = role_counts.get(role, 0) + 1
-            suffix = f"{slug(initial_key(name))}-{slug(name.split()[-1])}" if initial_key(name) else slug(name)
-            player_id = f"{club_id}-{suffix}"
-            n = 2
-            while player_id in seen_ids:
-                player_id = f"{club_id}-{suffix}-{n}"
-                n += 1
-            seen_ids.add(player_id)
             attrs = _attributes(club_base, role, name + club_id)
             height = athlete.get("height")
             cm = int(round(float(height) * 2.54)) if height else 180
             player = {
-                "id": player_id, "name": name,
+                "id": "", "name": name,
                 "number": int(str(athlete.get("jersey") or 0).replace("'", "") or 0) or len(players) + 1,
                 "role": role, "pos": role,
                 **{k: attrs[k] for k in PLAYER_ATTRS},
@@ -880,18 +934,17 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
         # ESPN lists keepers first; pick one body per formation slot so the XI
         # really covers all eleven roles, then order the sheet by line.
         rank_role = {role: i for i, role in enumerate(ROLE_ORDER)}
-        used: set[str] = set()
+        used: set[int] = set()
         for role in ROLE_ORDER:
-            pool = [p for p in players if p["role"] == role and p["id"] not in used]
+            pool = [i for i, p in enumerate(players) if p["role"] == role and i not in used]
             if pool:
-                best = max(pool, key=lambda p: p["ovr"])
-                used.add(best["id"])
+                used.add(max(pool, key=lambda i: players[i]["ovr"]))
             elif len(used) < 11:
-                rest = [p for p in players if p["id"] not in used]
+                rest = [i for i in range(len(players)) if i not in used]
                 if rest:
-                    used.add(max(rest, key=lambda p: p["ovr"])["id"])
-        for player in players:
-            player["squad"] = "starter" if player["id"] in used else "bench"
+                    used.add(max(rest, key=lambda i: players[i]["ovr"]))
+        for i, player in enumerate(players):
+            player["squad"] = "starter" if i in used else "bench"
         players.sort(key=lambda p: (
             0 if p["squad"] == "starter" else 1,
             rank_role.get(p["role"], 99), -p["ovr"]))
@@ -910,6 +963,7 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
         }
         return {
             "id": club_id, "competition_id": competition_id,
+            "country": club_country(competition_id, abbr),
             "name": team["displayName"], "short": team.get("shortDisplayName", team["displayName"]),
             "abbr": abbr, "nickname": meta.get("nickname", ""),
             "manager": GERMAN_MANAGERS.get(competition_id, {}).get(abbr)
@@ -930,6 +984,16 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
         seeded = list(pool.map(build, entries))
     kept = [c for c in snapshot.get("clubs", [])
             if str(c.get("competition_id", "PL")) != competition_id]
+    # Player ids are minted after the roster fan-out, in club-name order, so
+    # every athlete gets one UUID for the whole snapshot.
+    taken_players = {str(p["id"]) for c in kept for p in c.get("players", [])
+                     if PLAYER_ID_RE.match(str(p.get("id", "")))}
+    for club in sorted(seeded, key=lambda c: str(c["name"])):
+        for player in club["players"]:
+            player["id"] = player_id_for(
+                str(player.get("espn_id", "")), str(club["name"]),
+                str(player["name"]), taken_players)
+            taken_players.add(player["id"])
     snapshot["clubs"] = kept + seeded
 
 
@@ -947,6 +1011,7 @@ def cmd_seed(args: argparse.Namespace) -> int:
             })
         seed_competition(cid, args.season, snapshot)
         print(f"seeded {cid}: {len(comp_clubs(snapshot, cid))} clubs")
+    snapshot = remap_ids(snapshot)
     snapshot["db_version"] = int(snapshot.get("db_version", 1)) + (1 if args.bump_version else 0)
     snapshot["schema_version"] = SCHEMA_VERSION
     save(args.snapshot, snapshot)
@@ -974,6 +1039,7 @@ def cmd_fetch(args: argparse.Namespace) -> int:
         snapshot["fixtures"] = others + fixtures
         fetch_players(cid, args.season, snapshot, espn_ids)
         print(f"fetched {cid}: {len(fixtures)} fixtures")
+    snapshot = remap_ids(snapshot)
     snapshot["db_version"] = int(snapshot.get("db_version", 1)) + (1 if args.bump_version else 0)
     snapshot["schema_version"] = SCHEMA_VERSION
     save(args.snapshot, snapshot)
@@ -1017,9 +1083,10 @@ def build_db(snapshot: dict) -> dict:
         comp_id = str(club.get("competition_id", primary["id"]))
         style = club.get("style", {})
         con.execute(
-            "INSERT INTO club VALUES (" + ",".join("?" * 25) + ")",
+            "INSERT INTO club VALUES (" + ",".join("?" * 26) + ")",
             (
-                club["id"], comp_id, club["name"], club["short"], club["abbr"],
+                club["id"], comp_id, str(club.get("country", "")),
+                club["name"], club["short"], club["abbr"],
                 club.get("nickname", ""), club.get("manager", ""), club["stadium"],
                 club["city"], int(club["capacity"]), club["formation"],
                 club["color"], club["color_dark"], club["color_light"],
@@ -1089,17 +1156,133 @@ def cmd_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def remap_ids(snapshot: dict) -> dict:
+    """Mint the ids the seed ships: country-stable clubs, UUID players.
+
+    One-time and idempotent: a club or player that already carries a valid id
+    keeps it, so running the command twice changes nothing. New ids are minted
+    in competition-then-club-name order so the same clubs always get the same
+    suffixes.
+    """
+    order = {cid: i for i, cid in enumerate(COMPETITIONS)}
+    clubs = snapshot["clubs"]
+
+    def by_club(club: dict) -> tuple[int, str]:
+        return (order.get(str(club.get("competition_id", "PL")), len(order)),
+                str(club.get("name", "")))
+
+    club_map: dict[str, str] = {}
+    taken_clubs: set[str] = set()
+    pending: list[dict] = []
+    for club in clubs:
+        old = str(club["id"])
+        if CLUB_ID_RE.match(old):
+            club_map[old] = old
+            taken_clubs.add(old)
+        else:
+            pending.append(club)
+    for club in sorted(pending, key=by_club):
+        cid = str(club.get("competition_id", "PL"))
+        minted = club_id_for(cid, str(club["abbr"]), taken_clubs)
+        club_map[str(club["id"])] = minted
+        taken_clubs.add(minted)
+
+    player_map: dict[str, str] = {}
+    taken_players: set[str] = set()
+    pending_players: list[tuple[dict, dict]] = []
+    for club in clubs:
+        for player in club["players"]:
+            old = str(player["id"])
+            if PLAYER_ID_RE.match(old):
+                player_map[old] = old
+                taken_players.add(old)
+            else:
+                pending_players.append((club, player))
+    for club, player in sorted(pending_players, key=lambda pair: by_club(pair[0])):
+        minted = player_id_for(str(player.get("espn_id", "")), str(club["name"]),
+                               str(player["name"]), taken_players)
+        player_map[str(player["id"])] = minted
+        taken_players.add(minted)
+
+    for club in clubs:
+        club["id"] = club_map[str(club["id"])]
+        club["country"] = club_country(str(club.get("competition_id", "PL")), str(club["abbr"]))
+        for player in club["players"]:
+            player["id"] = player_map[str(player["id"])]
+    for row in snapshot.get("table", []):
+        row["club_id"] = club_map.get(str(row["club_id"]), str(row["club_id"]))
+    for fixture in snapshot.get("fixtures", []):
+        for side in ("home", "away"):
+            fixture[side] = club_map.get(str(fixture[side]), str(fixture[side]))
+    # A stat line can outlive its player (a squad trimmed after a refresh). The
+    # line still needs a UUID, so it is detached from the old club-embedded id.
+    for stat in snapshot.get("season_stats", []):
+        stat["player_id"] = _stat_player_id(str(stat["player_id"]), player_map)
+    for career in snapshot.get("career", []):
+        career["player_id"] = _stat_player_id(str(career["player_id"]), player_map)
+    return snapshot
+
+
+def _stat_player_id(old: str, player_map: dict[str, str]) -> str:
+    if old in player_map:
+        return player_map[old]
+    if PLAYER_ID_RE.match(old):
+        return old
+    return str(uuid.uuid5(PLAYER_NAMESPACE, f"stat:{old}"))
+
+
+def cmd_remap(args: argparse.Namespace) -> int:
+    snapshot = load(args.snapshot)
+    snapshot = remap_ids(snapshot)
+    snapshot["db_version"] = int(snapshot.get("db_version", 1)) + (1 if args.bump_version else 0)
+    snapshot["schema_version"] = SCHEMA_VERSION
+    save(args.snapshot, snapshot)
+    clubs = len(snapshot["clubs"])
+    players = sum(len(c["players"]) for c in snapshot["clubs"])
+    print(f"remapped {clubs} clubs and {players} players; db_version {snapshot['db_version']}")
+    return 0
+
+
 def _audit_ids(snapshot: dict) -> list[str]:
     problems: list[str] = []
-    club_ids = [str(c["id"]) for c in snapshot["clubs"]]
+    clubs = snapshot["clubs"]
+    club_ids = [str(c["id"]) for c in clubs]
     if len(club_ids) != len(set(club_ids)):
         problems.append("club ids collide across competitions")
-    player_ids = [str(p["id"]) for c in snapshot["clubs"] for p in c["players"]]
+    for club in clubs:
+        club_id = str(club["id"])
+        if club_id == str(club.get("abbr", "")):
+            problems.append(f"{club_id}: a club id is never a bare abbreviation")
+        match = CLUB_ID_RE.match(club_id)
+        if match is None:
+            problems.append(f"{club_id}: club id is not {{FIFA country}}-{{abbr}}{{N}}")
+            continue
+        country = club_country(str(club.get("competition_id", "PL")), str(club["abbr"]))
+        if match.group(1) != country:
+            problems.append(f"{club_id}: club id country is not {country}")
+        if match.group(2) != str(club.get("abbr", "")):
+            problems.append(f"{club_id}: club id does not carry its abbreviation")
+    player_ids = [str(p["id"]) for c in clubs for p in c["players"]]
     if len(player_ids) != len(set(player_ids)):
         problems.append("player ids collide across competitions")
+    bad_players = [pid for pid in player_ids if not PLAYER_ID_RE.match(pid)]
+    if bad_players:
+        problems.append(f"{len(bad_players)} player ids are not UUIDs, first {bad_players[0]}")
     fixture_ids = [str(fx["id"]) for fx in snapshot.get("fixtures", [])]
     if len(fixture_ids) != len(set(fixture_ids)):
         problems.append("fixture ids collide across competitions")
+    known_clubs = set(club_ids)
+    for row in snapshot.get("table", []):
+        if str(row["club_id"]) not in known_clubs:
+            problems.append(f"table row names an unknown club {row['club_id']}")
+    for fixture in snapshot.get("fixtures", []):
+        for side in ("home", "away"):
+            if str(fixture[side]) not in known_clubs:
+                problems.append(f"fixture {fixture['id']} names an unknown club {fixture[side]}")
+    bad_stats = [str(stat["player_id"]) for stat in snapshot.get("season_stats", [])
+                 + snapshot.get("career", []) if not PLAYER_ID_RE.match(str(stat["player_id"]))]
+    if bad_stats:
+        problems.append(f"{len(bad_stats)} stat lines carry no UUID player id, first {bad_stats[0]}")
     return problems
 
 
@@ -1176,6 +1359,9 @@ def main(argv: list[str] | None = None) -> int:
     fetch.add_argument("--date", default="")
     fetch.add_argument("--bump-version", action="store_true")
     fetch.set_defaults(func=cmd_fetch)
+    remap = sub.add_parser("remap", help="mint country-stable club ids and UUID player ids")
+    remap.add_argument("--bump-version", action="store_true")
+    remap.set_defaults(func=cmd_remap)
     build = sub.add_parser("build", help="write data/pl_seed.sqlite from the snapshot")
     build.set_defaults(func=cmd_build)
     verify = sub.add_parser("verify", help="check the shipped seed against the snapshot")

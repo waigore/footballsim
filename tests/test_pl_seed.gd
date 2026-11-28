@@ -63,8 +63,8 @@ func test_the_seed_ships_the_multi_competition_set() -> void:
 		var german := TeamData.team_ids(cid)
 		assert_eq(german.size(), 18, "%s should ship eighteen clubs" % cid)
 		for id in german:
-			assert_true(str(id).begins_with(cid + "-"),
-				"%s does not carry its competition namespace" % id)
+			assert_eq(str(PLRepository.shared().club(str(id))["competition_id"]), cid,
+				"%s is not a %s club" % [id, cid])
 
 
 	for cid in ["CH", "L1", "L2", "NL"]:
@@ -72,14 +72,44 @@ func test_the_seed_ships_the_multi_competition_set() -> void:
 		var tier := TeamData.team_ids(cid)
 		assert_eq(tier.size(), 24, "%s should ship twenty-four clubs" % cid)
 		for id in tier:
-			assert_true(str(id).begins_with(cid + "-"),
-				"%s does not carry its competition namespace" % id)
+			assert_eq(str(PLRepository.shared().club(str(id))["competition_id"]), cid,
+				"%s is not a %s club" % [id, cid])
 	var all_ids := TeamData.team_ids()
 	assert_eq(all_ids.size(), 172, "the seed should ship the whole pyramid")
 	var unique := {}
 	for id in all_ids:
 		unique[str(id)] = true
 	assert_eq(unique.size(), all_ids.size(), "club ids collide across competitions")
+
+
+func test_club_ids_are_country_stable() -> void:
+	var shape := RegEx.create_from_string("^[A-Z]{3}-[A-Z0-9]{2,5}[1-9][0-9]*$")
+	for id in TeamData.team_ids():
+		var club := PLRepository.shared().club(str(id))
+		assert_true(shape.search(str(id)) != null, "%s is not {FIFA country}-{abbr}{N}" % id)
+		assert_true(str(id).begins_with(str(club["country"]) + "-"),
+			"%s does not carry its FIFA country" % id)
+		assert_ne(str(club["abbr"]), str(id), "%s is a bare abbreviation, not an id" % id)
+	assert_eq(str(PLRepository.shared().club("ENG-MUN1")["abbr"]), "MUN",
+		"the abbreviation is no longer display-only")
+	assert_eq(str(PLRepository.shared().club("WAL-CAR1")["name"]), "Cardiff City",
+		"a Welsh club lost its own country")
+	assert_eq(str(PLRepository.shared().club("ENG-MUN1")["name"]), "Manchester United",
+		"a club id no longer names the club")
+
+
+func test_player_ids_are_uuids_detached_from_the_club() -> void:
+	var shape := RegEx.create_from_string(
+		"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+	var seen := {}
+	for club_id in PLRepository.shared().club_ids():
+		var club := str(club_id)
+		for p in PLRepository.shared().squad(club):
+			var pid := str(p["id"])
+			assert_true(shape.search(pid) != null, "%s is not a UUID" % pid)
+			assert_false(pid.contains(club), "%s embeds its club" % pid)
+			assert_false(seen.has(pid), "%s is not unique" % pid)
+			seen[pid] = true
 
 
 func test_league_table_is_the_snapshot_reading() -> void:
@@ -136,8 +166,8 @@ func test_fixtures_cover_the_season() -> void:
 	assert_eq(played % 10, 0, "results do not come in whole gameweeks")
 
 func test_player_dossier_carries_snapshot_and_career() -> void:
-	var p := PLRepository.shared().player("MUN-b-fernandes")
-	assert_eq(str(p["club_id"]), "MUN", "the dossier lost its club")
+	var p := PLRepository.shared().player(TestSquad.id_of("ENG-MUN1", "B. Fernandes"))
+	assert_eq(str(p["club_id"]), "ENG-MUN1", "the dossier lost its club")
 	assert_eq(int(p["ovr"]), 88, "ratings are the game's own dataset and must survive")
 	assert_gte(int(p["season"].get("matches", 0)), 1, "no real-world season line")
 	assert_gte(int(p["career"].get("matches", 0)), 1, "no career line")
@@ -155,11 +185,11 @@ func test_season_reads_cover_filter_branches() -> void:
 	assert_gte(assists.size(), 1, "assist leaders are empty")
 	var ahead := PLRepository.shared().upcoming("", 5, "PL")
 	assert_gte(ahead.size(), 1, "the competition ahead list is empty")
-	assert_gte(PLRepository.shared().upcoming("MUN", 3, "PL").size(), 1,
+	assert_gte(PLRepository.shared().upcoming("ENG-MUN1", 3, "PL").size(), 1,
 		"a club ahead list is empty")
-	var by_team := PLRepository.shared().sim_leaders(3, "PL", "assists", ["MUN", "MCI"])
+	var by_team := PLRepository.shared().sim_leaders(3, "PL", "assists", ["ENG-MUN1", "ENG-MCI1"])
 	assert_true(by_team is Array, "team-filtered assist leaders failed")
-	assert_true(PLRepository.shared().sim_leaders(3, "PL", "goals", ["MUN"]) is Array,
+	assert_true(PLRepository.shared().sim_leaders(3, "PL", "goals", ["ENG-MUN1"]) is Array,
 		"team-filtered goal leaders failed")
 
 func _clean_cache() -> void:

@@ -37,11 +37,11 @@ func test_no_fixture_clashes() -> void:
 				"%s v %s both wear %s" % [a, b, _shirt(sides, 0).to_html(false)])
 
 func test_home_keeps_first_choice() -> void:
-	var eng := MatchEngine.new(1, "ARS", "NFO")
+	var eng := MatchEngine.new(1, "ENG-ARS1", "ENG-NFO1")
 	assert_eq(eng.kit_color(0), eng.teams[0]["data"]["color"], "home side changed kit")
 
 func test_visitors_change_when_shirts_clash() -> void:
-	var eng := MatchEngine.new(1, "ARS", "NFO")
+	var eng := MatchEngine.new(1, "ENG-ARS1", "ENG-NFO1")
 	assert_ne(eng.kit_color(1), eng.teams[1]["data"]["color"], "Forest kept a red shirt at Arsenal")
 	assert_false(Kits.clash(eng.kit_color(0), eng.kit_color(1)), "change kit still clashes")
 

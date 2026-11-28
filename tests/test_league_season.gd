@@ -404,7 +404,7 @@ func test_a_lonely_season_object_is_safe() -> void:
 
 func test_engine_finish_without_watching_is_a_no_op() -> void:
 	var before := season.record.fixtures.played()
-	var engine := MatchEngine.new(SEED, "MUN", "MCI")
+	var engine := MatchEngine.new(SEED, "ENG-MUN1", "ENG-MCI1")
 	engine.score[0] = 1
 	engine.score[1] = 1
 	LeagueSeason.engine_finished(engine)

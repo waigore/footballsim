@@ -105,7 +105,7 @@ func test_marking_a_club_puts_all_its_games_on_watch() -> void:
 	assert_true((season.state()["interests"] as Array).has(club_id), "the view does not carry the shortlist")
 
 func test_unmarking_reverts_to_auto_unless_the_opponent_is_followed() -> void:
-	var fx: Dictionary = _open_fixtures("MUN")[0]
+	var fx: Dictionary = _open_fixtures("ENG-MUN1")[0]
 	var home := str(fx["home_club_id"])
 	var away := str(fx["away_club_id"])
 	var other := _fixture_against_neither(home, away)

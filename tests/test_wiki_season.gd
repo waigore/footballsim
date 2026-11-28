@@ -48,7 +48,12 @@ func test_the_league_page_scorer_chart_is_the_season_s() -> void:
 	assert_eq(str(rows[0]["cells"][1]), str(scorers[0]["club_name"]), "the chart names the wrong club")
 
 func test_the_club_page_reads_the_live_row() -> void:
-	var club_id := str(first["home_club_id"])
+	var club_id := ""
+	for fx in season.record.fixtures.all(1):
+		if int(fx["home_goals"]) > 0:
+			club_id = str(fx["home_club_id"])
+			break
+	assert_ne(club_id, "", "the first day scored no home goal")
 	var page := WikiModel.page(WikiModel.TEAM, club_id)
 	var text := _flatten(page)
 	assert_true(text.contains("SEASON  ·  IN PLAY"), "the season block is not labelled as the season in play")
@@ -88,7 +93,7 @@ func test_closing_the_season_returns_the_snapshot_pages() -> void:
 	var text := _flatten(WikiModel.page(WikiModel.LEAGUE, ""))
 	assert_true(text.contains("LATEST RESULTS  ·  SNAPSHOT"), "the league page did not fall back to the snapshot")
 	assert_false(text.contains("LATEST RESULTS  ·  SEASON"), "the league page kept the closed season's ledger")
-	assert_eq(_kv_value(WikiModel.page(WikiModel.TEAM, "MUN"), "PLAYED"), "11", "the club page did not fall back to the snapshot")
+	assert_eq(_kv_value(WikiModel.page(WikiModel.TEAM, "ENG-MUN1"), "PLAYED"), "11", "the club page did not fall back to the snapshot")
 
 	season = LeagueSeason.open(LeagueSave.current.slug if LeagueSave.current != null else season.save.slug)
 	assert_not_null(season, "the save could not be reopened")

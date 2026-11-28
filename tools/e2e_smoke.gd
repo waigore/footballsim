@@ -8,8 +8,8 @@ extends SceneTree
 ## once full time is reached, non-zero if the match never finishes inside the
 ## wall budget. Any scoreline passes, 0-0 included.
 
-const HOME := "MUN"
-const AWAY := "MCI"
+const HOME := "ENG-MUN1"
+const AWAY := "ENG-MCI1"
 const SEED := 1000
 ## CI gives the e2e-smoke job 4 minutes; the engine must never sit until then.
 ## A local M-series desktop finishes the match in ~100 s, so 210 s leaves the

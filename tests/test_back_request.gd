@@ -153,7 +153,7 @@ func test_back_on_the_briefing_returns_without_kicking_off() -> void:
 	reset()
 	game.menus.open_menu()
 	game.open_select(true)
-	game._on_fixture_confirmed("ARS", "LIV")
+	game._on_fixture_confirmed("ENG-ARS1", "ENG-LIV1")
 	assert_true(TestBriefing.is_open(game), "KICK OFF skipped the briefing")
 	back()
 	assert_false(TestBriefing.is_open(game), "back left the briefing up")
@@ -178,7 +178,7 @@ func test_back_on_the_encyclopedia_closes_it_and_keeps_the_session() -> void:
 
 func test_back_in_a_match_opens_the_menu_instead_of_quitting() -> void:
 	reset()
-	game.fixture.start("ARS", "LIV")
+	game.fixture.start("ENG-ARS1", "ENG-LIV1")
 	assert_true(game.match_started, "the match did not start")
 	var phase := str(game.engine.phase)
 	back()

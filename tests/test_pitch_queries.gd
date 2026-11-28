@@ -2,7 +2,7 @@ extends GdToolsTest
 
 
 func _engine(seed_in: int = 31) -> MatchEngine:
-	var eng := MatchEngine.new(seed_in, "MUN", "MCI")
+	var eng := MatchEngine.new(seed_in, "ENG-MUN1", "ENG-MCI1")
 	eng.phase = "play"
 	eng.possession_team = 0
 	return eng

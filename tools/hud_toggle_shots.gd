@@ -25,7 +25,7 @@ func _initialize() -> void:
 	await _frames(3)
 	scene.menus.close()
 	scene.hud_layer.visible = true
-	scene._on_fixture_confirmed("MUN", "MCI")
+	scene._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 	scene.paused = true
 	scene.engine.clock = 63.0 * 60.0
 	scene.engine.score[0] = 2

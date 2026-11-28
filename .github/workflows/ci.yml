@@ -79,6 +79,31 @@ jobs:
           ARCH_LINT_RULES_DIFF: "1"
         run: python tools/lint_arch.py --require-rules-tests
 
+  # Identity guardrail: club ids are country-stable and player ids are UUIDs, so
+  # the data-access layer may never key a club by abbreviation or rebuild a
+  # player id out of a club id. Abbreviations stay display-only.
+  data-ids:
+    name: data-ids
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Prove the identity rules catch their samples
+        run: python tools/lint_data_ids.py --self-test
+
+      - name: Lint data-access indirection
+        run: python tools/lint_data_ids.py
+
+      - name: Verify the shipped seed's id shapes
+        run: python tools/pl_snapshot.py verify
+
   # Ban code ∩ skills in one PR so agents cannot rewrite their own workflows
   # while shipping game/test changes. Docs-only and skills-only PRs are fine.
   skills-isolation:

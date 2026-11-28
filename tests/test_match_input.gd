@@ -22,7 +22,7 @@ func before_all() -> void:
 
 		g.menus.restore_hud()
 		g.menus.restore_mode()
-	game._on_fixture_confirmed("MUN", "MCI")
+	game._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 
 	TestBriefing.kick(game)
 	game.paused = true
@@ -306,7 +306,7 @@ func test_a_league_watch_has_no_picker_or_reseed_in_the_router() -> void:
 	var scene := WatchScene.new()
 	var router := MatchInput.new(scene)
 	scene.view = WatchView.new()
-	scene.billing.bind_fixture("MUN", {"matchday": 3})
+	scene.billing.bind_fixture("ENG-MUN1", {"matchday": 3})
 	_keyed(router, KEY_T)
 	_keyed(router, KEY_R)
 	scene.view.door = "teams"
@@ -317,7 +317,7 @@ func test_a_league_watch_has_no_picker_or_reseed_in_the_router() -> void:
 	assert_eq(scene.matches, 0, "R / restart began a new match over a league watch")
 	assert_false(scene.select_open, "a league watch left the picker open")
 
-	scene.billing.bind_friendly("MUN", "MCI")
+	scene.billing.bind_friendly("ENG-MUN1", "ENG-MCI1")
 	scene.view.door = "teams"
 	router.click(Vector2.ZERO)
 	assert_eq(scene.opens, 1, "a single match lost its picker door")
