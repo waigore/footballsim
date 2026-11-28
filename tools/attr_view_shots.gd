@@ -20,7 +20,7 @@ func _initialize() -> void:
 	await _frames(2)
 	Prefs.save_attrs("SIMPLIFIED")
 	var host = scene.wiki_host
-	host.open_page(WikiModel.PLAYER, "MUN-b-fernandes")
+	host.open_page(WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "B. Fernandes"))
 	await _frames(4)
 	_report("player_simplified", host.screen)
 	await _shot("attrs_player_simplified")
@@ -30,7 +30,7 @@ func _initialize() -> void:
 	_report("player_full", host.screen)
 	await _shot("attrs_player_full")
 
-	host.open_page(WikiModel.TEAM, "MUN")
+	host.open_page(WikiModel.TEAM, "ENG-MUN1")
 	await _frames(5)
 	_report("club_full", host.screen)
 	await _shot("attrs_club_full")
@@ -59,7 +59,7 @@ func _initialize() -> void:
 	await _frames(8)
 	_report_card("match_full_phone")
 	await _shot("attrs_match_full_phone")
-	host.open_page(WikiModel.PLAYER, "MUN-b-fernandes")
+	host.open_page(WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "B. Fernandes"))
 	await _frames(6)
 	_report("player_full_phone", host.screen)
 	await _shot("attrs_player_full_phone")
