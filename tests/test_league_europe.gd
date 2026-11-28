@@ -141,6 +141,57 @@ func test_a_watched_tie_aggregates_both_legs() -> void:
 	season.close()
 
 
+func test_the_league_phase_seeds_from_the_frozen_bands() -> void:
+	var season := _season()
+	_run_to(season, "UCL", "POLP")
+	var save: LeagueSave = season.save
+	assert_true(LeagueUefa.has_stage("UCL", "LP"), "the league phase never drew")
+	var seeded := LeagueUefaBands.pot_bands("UCL")
+	assert_gte(seeded.size(), 36, "the seed carries no frozen bands")
+	var pots := LeagueEurope.pots(save, "UCL", "LP")
+	assert_eq(pots.size(), 4, "the league phase is not four pots")
+	var last := 0
+	for pot in pots:
+		for club in pot:
+			var band := LeagueUefaBands.band(seeded, str((club as Dictionary)["id"]))
+			assert_gte(band, last, "a pot mixes a better band below a worse one")
+			last = band
+	season.close()
+
+
+func test_an_unbanded_club_takes_its_association_median_or_pot_three() -> void:
+	var season := _season()
+	var save: LeagueSave = season.save
+	var seeded := LeagueUefaBands.pot_bands("UCL")
+	var peers: Array = []
+	for row in PLDatabase.rows(
+			"SELECT member_id FROM competition_member WHERE competition_id = 'UCL' "
+			+ "AND member_kind = 'club';"):
+		var other := str(row["member_id"])
+		if LeagueUefa.association_of(other) == "ENG" and seeded.has(other) and not peers.has(other):
+			peers.append(int(seeded[other]))
+	assert_gte(peers.size(), 2, "the seed carries no English banded entrants")
+	var club := ""
+	var spare := ""
+	for row in PLDatabase.rows("SELECT id FROM club WHERE country = 'ENG' ORDER BY id;"):
+		if seeded.has(str(row["id"])):
+			continue
+		if club == "":
+			club = str(row["id"])
+		else:
+			spare = str(row["id"])
+			break
+	assert_true(club != "" and spare != "", "every English club already carries a band")
+	var known := LeagueUefaBands.ensure_bands(save, "UCL", [club])
+	peers.sort()
+	var expected := int(peers[peers.size() / 2])
+	assert_eq(int(known[club]), expected, "an unbanded club took no association median")
+	assert_eq(int(LeagueUefaBands.saved_bands(save)[club]), expected, "the inherited band did not stick")
+	assert_eq(int(LeagueUefaBands.ensure_bands(save, "", [spare])[spare]), 3,
+		"a club with no association peers did not take pot three")
+	season.close()
+
+
 func test_a_complete_bracket_keeps_its_table_and_names_three_winners() -> void:
 	var season := _season()
 	for cid in LeagueUefa.IDS:

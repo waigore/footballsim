@@ -118,6 +118,36 @@ func test_the_hub_and_draw_lay_out_on_desktop_and_phone() -> void:
 	fake.season.close()
 
 
+func test_the_stage_names_every_entrant_and_the_hub_says_where_they_came_from() -> void:
+	var fake := _screen(false)
+	fake.europe["tab"] = "entrants"
+	var stage := LeagueEuropeStage.new()
+	for touch in [false, true]:
+		fake.touch = touch
+		var vp := Vector2(1600, 900) if not touch else Vector2(913, 411)
+		var items: Array = stage.layout(vp, LeagueEuropeView.stage(fake))
+		assert_true(_ids(items).has("europe:tab:entrants"), "the stage has no ENTRANTS tab")
+		var rows := 0
+		var groups := 0
+		for item in items:
+			var kind := str(item.get("kind", ""))
+			if kind == "eu_entrant":
+				rows += 1
+				assert_true(str((item["row"] as Dictionary).get("source", "")) != "",
+					"an entrant is not named with its source")
+				assert_lte(float((item["rect"] as Rect2).end.x), vp.x + 0.5,
+					"an entrant row runs off the screen at %s" % vp)
+			elif kind == "eu_group":
+				groups += 1
+		assert_gte(rows, 36, "the entrants tab does not name the field")
+		assert_gte(groups, 1, "the entrants tab has no round headings")
+	var hub: Dictionary = LeagueEuropeView.hub(fake)
+	var cards: Array = hub["cards"]
+	assert_true(str((cards[0] as Dictionary).get("entry", "")) != "",
+		"the hub card does not say where its entrants came from")
+	fake.season.close()
+
+
 func test_the_wizard_offers_europe_and_the_panel_fits_a_phone() -> void:
 	var start := LeagueStartSheet.new()
 	var view := {"name": "", "competitions": ["PL"], "calendar_mode": "generated",

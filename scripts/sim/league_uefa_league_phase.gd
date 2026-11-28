@@ -21,7 +21,7 @@ static func draw(season: LeagueSeason, competition_id: String) -> bool:
 	if clubs.size() < need:
 		return false
 	clubs = clubs.slice(0, need)
-	var ranked := _by_rank(clubs)
+	var ranked := _by_rank(season, competition_id, clubs)
 	var pots := _pots(ranked, LeagueUefa.pots(competition_id))
 	var matches := LeagueUefa.league_matches(competition_id)
 	var pairs := _schedule(season, competition_id, pots, matches)
@@ -33,19 +33,8 @@ static func draw(season: LeagueSeason, competition_id: String) -> bool:
 	return true
 
 
-static func _by_rank(clubs: Array) -> Array:
-	var rows: Array = []
-	for club_id in clubs:
-		rows.append({"id": str(club_id), "rank": LeagueUefa.club_rank(str(club_id))})
-	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		if is_equal_approx(float(a["rank"]), float(b["rank"])):
-			return str(a["id"]) < str(b["id"])
-		return float(a["rank"]) > float(b["rank"])
-	)
-	var out: Array = []
-	for row in rows:
-		out.append(str(row["id"]))
-	return out
+static func _by_rank(season: LeagueSeason, competition_id: String, clubs: Array) -> Array:
+	return LeagueUefaBands.ranked(LeagueUefaBands.ensure_bands(season.save, competition_id, clubs), clubs)
 
 
 static func _pots(ranked: Array, count: int) -> Array:
