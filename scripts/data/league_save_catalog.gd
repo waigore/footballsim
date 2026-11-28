@@ -46,6 +46,7 @@ static func list() -> Array:
 			"current_date": str(info.get("current_date", "")),
 			"matchday": int(info.get("matchday", 1)),
 			"competitions": str(info.get("competitions", "PL")),
+			"uefa": str(info.get("uefa", "off")),
 			"modified": FileAccess.get_modified_time(file),
 		})
 	out.sort_custom(func(a, b): return int(a["modified"]) > int(b["modified"]))

@@ -53,11 +53,13 @@ static func _record_league(season: LeagueSeason, fx: Dictionary, score: Vector2i
 	var home := str(fx["home_club_id"])
 	var away := str(fx["away_club_id"])
 	var cid := str(fx.get("competition_id", ""))
+	var stage := str(fx.get("stage", ""))
 	var hxi := StrongestXI.pick(TeamData.get_team(home))
 	var axi := StrongestXI.pick(TeamData.get_team(away))
 	var events := _events(fx, score, seed)
-	season.record.report.save_result(fixture_id, score.x, score.y, home, away,
-		season.record.standings, cid)
+	var table: LeagueStandings = season.record.standings \
+		if stage == LeagueUefa.LEAGUE_STAGE else null
+	season.record.report.save_result(fixture_id, score.x, score.y, home, away, table, cid)
 	season.record.report.add_events(events)
 	LeagueSettle.auto(season.record, fixture_id, home, away, hxi, axi, events, seed,
 		str(fx["kickoff"]), int(fx["matchday"]))

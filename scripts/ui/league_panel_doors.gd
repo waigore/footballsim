@@ -12,6 +12,9 @@ static func nav(screen, pose: String) -> void:
 		LeagueDoors.go(screen, LeagueScreen.MODE_INTEREST)
 	elif pose == "fixtures":
 		LeagueDoors.go(screen, LeagueScreen.MODE_HUB)
+	elif pose == "europe":
+		LeagueEuropeActions.open(screen)
+		return
 	elif pose == "table":
 		LeagueDoors.go(screen, LeagueScreen.MODE_TABLE)
 		attach_table(screen)

@@ -7,6 +7,8 @@ static func open(screen) -> void:
 	var season = screen.season
 	if season != null:
 		for fx in season.record.fixtures.all():
+			if not _keep(screen, fx):
+				continue
 			var date: String = str(fx["kickoff"])
 			if not screen.days_cache.has(date):
 				screen.days_cache[date] = {"n": 0, "played": 0, "by_league": {}}
@@ -36,6 +38,18 @@ static func open(screen) -> void:
 	pick(screen, chosen)
 
 
+static func set_filter(screen, competition_id: String) -> void:
+	if str(screen.calendar_filter) == competition_id:
+		return
+	screen.calendar_filter = competition_id
+	open(screen)
+
+
+static func _keep(screen, fx: Dictionary) -> bool:
+	var filter := str(screen.calendar_filter)
+	return filter == "" or str(fx.get("competition_id", "")) == filter
+
+
 static func shift(screen, delta: int) -> void:
 	screen.month = LeagueMonth.shift(screen.month, delta)
 	var keys: Array = screen.days_cache.keys()
@@ -53,6 +67,8 @@ static func pick(screen, date: String) -> void:
 	screen.day_fixtures = []
 	if screen.season != null:
 		for fx in screen.season.record.fixtures.on(date):
+			if not _keep(screen, fx):
+				continue
 			if str(fx["status"]) == "played":
 				fx["events"] = screen.season.record.report.events(str(fx["id"]))
 			screen.day_fixtures.append(fx)

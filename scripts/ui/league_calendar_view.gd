@@ -23,10 +23,40 @@ static func cell_pitch(vp: Vector2, touch: bool) -> float:
 	return maxf(base, UiChrome.TAP_H + CELL_GAP) if touch else base
 
 
-static func grid_top(touch: bool) -> float:
-	if touch:
-		return HEADER + 4.0 + UiChrome.TAP_H + 20.0
-	return HEADER + 50.0
+static func has_filters(view: Dictionary) -> bool:
+	return (view.get("filters", []) as Array).size() > 1
+
+
+static func chips_top(touch: bool) -> float:
+	return HEADER + (4.0 + UiChrome.TAP_H + 6.0 if touch else 38.0)
+
+
+static func chip_h(touch: bool) -> float:
+	return UiChrome.tap_h(22.0, touch)
+
+
+static func chip_rects(vp: Vector2, view: Dictionary) -> Array:
+	var filters: Array = view.get("filters", [])
+	var touch := bool(view.get("touch", false))
+	var out: Array = []
+	if filters.size() <= 1:
+		return out
+	var gap := 6.0
+	var w: float = minf(96.0,
+		(vp.x - 48.0 - gap * float(filters.size() - 1)) / float(filters.size()))
+	for i in range(filters.size()):
+		var row: Dictionary = filters[i]
+		out.append({"id": "cal:" + str(row.get("id", "")), "kind": "cal_chip",
+			"label": str(row.get("label", "")), "selected": bool(row.get("selected", false)),
+			"rect": Rect2(24.0 + float(i) * (w + gap), chips_top(touch), w, chip_h(touch))})
+	return out
+
+
+static func grid_top(touch: bool, filters: bool = false) -> float:
+	var out: float = HEADER + 4.0 + UiChrome.TAP_H + 20.0 if touch else HEADER + 50.0
+	if filters:
+		out = maxf(out, chips_top(touch) + chip_h(touch) + 10.0)
+	return out
 
 
 static func month_door_rects(vp: Vector2, touch: bool) -> Array:
@@ -72,7 +102,10 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 	var month := str(view.get("month", ""))
 
 
-	var top := grid_top(touch)
+	var filtered := has_filters(view)
+	for chip in chip_rects(vp, view):
+		items.append(chip)
+	var top := grid_top(touch, filtered)
 	var cw := (vp.x - 48.0) / 7.0
 	var ch: float = cell_pitch(vp, touch)
 	var count := LeagueMonth.days(month)
@@ -92,13 +125,14 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 	var last_comp := ""
 	for fx in view.get("day_fixtures", []):
 		var comp := str(fx.get("competition_id", ""))
-		if comp != last_comp and int((view.get("day_fixtures", []) as Array).size()) > 0:
+		var heading := comp != last_comp and (_has_many_comps(view)
+			or LeagueUefa.is_continental(comp))
+		if heading:
 			last_comp = comp
-			if _has_many_comps(view):
-				items.append({"id": "", "kind": "league_head", "competition": comp,
-					"matchday": int(fx.get("matchday", 1)),
-					"rect": Rect2(24.0, y, vp.x - 48.0, 16.0)})
-				y += 18.0
+			items.append({"id": "", "kind": "league_head", "competition": comp,
+				"matchday": int(fx.get("matchday", 1)),
+				"rect": Rect2(24.0, y, vp.x - 48.0, 16.0)})
+			y += 18.0
 		var h: float = maxf(22.0, LeagueBlock.height(fx, true))
 		items.append({"id": "match:" + str(fx["id"]), "kind": "fixture",
 			"fixture": fx, "rect": Rect2(24.0, y, vp.x - 48.0, h)})
@@ -145,7 +179,7 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 	var bold: Font = fonts["bold"]
 	var med: Font = fonts["med"]
 	var labels := ["S", "M", "T", "W", "T", "F", "S"]
-	var rows_y: float = grid_top(bool(view.get("touch", false))) - 8.0
+	var rows_y: float = grid_top(bool(view.get("touch", false)), has_filters(view)) - 8.0
 	for i in range(7):
 		var cw := (vp.x - 48.0) / 7.0
 		UiChrome.text_c(c, 24.0 + cw * float(i) + cw * 0.5, rows_y, labels[i], 10, UiChrome.C_DIM, med)
@@ -154,10 +188,21 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		var kind := str(item["kind"])
 		if kind == "cell":
 			_draw_cell(c, rect, item, fonts)
+		elif kind == "cal_chip":
+			var on := bool(item.get("selected", false))
+			UiChrome.panel(c, cache, rect, UiChrome.C_GOLD.darkened(0.1) if on else UiChrome.C_PANEL,
+				4, UiChrome.C_GOLD if on else UiChrome.C_BORDER, 1)
+			UiChrome.text_c(c, rect.get_center().x, rect.position.y + rect.size.y * 0.5 + 4.0,
+				str(item.get("label", "")), 9,
+				Color(0.06, 0.06, 0.05) if on else UiChrome.C_SOFT, bold)
 		elif kind == "league_head":
-			var name: String = PLRepository.shared().competition_name(str(item.get("competition", "")))
+			var comp := str(item.get("competition", ""))
+			var name: String = PLRepository.shared().competition_name(comp)
+			var text := "%s  ·  GW %d" % [name, int(item.get("matchday", 1))]
+			if LeagueUefa.is_continental(comp):
+				text = "UEFA NIGHT  ·  " + name
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
-				"%s  ·  GW %d" % [name, int(item.get("matchday", 1))], 9, UiChrome.C_GOLD, bold)
+				text, 9, UiChrome.C_GOLD, bold)
 		elif kind == "fixture":
 
 
