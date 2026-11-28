@@ -55,6 +55,17 @@ func _player_at(club_id: String) -> String:
 		[club_id]).get("id", ""))
 
 
+func _free_slots(club_id: String, count: int) -> void:
+	var low := PLDatabase.rows(
+		"SELECT id FROM player WHERE club_id = ? ORDER BY ovr, id LIMIT ?;",
+		[club_id, maxi(count, 1)])
+	for row in low:
+		var player_id := str(row["id"])
+		PLDatabase.execute("DELETE FROM player_registration WHERE player_id = ? AND club_id = ?;",
+			[player_id, club_id])
+		PLDatabase.execute("UPDATE player SET club_id = '' WHERE id = ?;", [player_id])
+
+
 func _player_club(player_id: String) -> String:
 	return str(PLDatabase.row("SELECT club_id FROM player WHERE id = ?;",
 		[player_id]).get("club_id", ""))
@@ -138,6 +149,7 @@ func test_the_caps_refuse_the_seventh_out() -> void:
 func test_the_in_cap_refuses_a_seventh_at_the_loanee() -> void:
 	var season := _fresh("Loan In Cap")
 	var recipient := _club_in("PL", 15)
+	_free_slots(recipient, 3)
 	var parents: Array = []
 	for i in range(7):
 		var parent := _club_in("PL", i)

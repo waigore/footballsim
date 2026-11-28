@@ -262,6 +262,32 @@ suites = [
   "test_market_ai.gd",
 ]
 
+# Registration (#448): lists, homegrown, association-trained, non-EU caps,
+# U21 exemption, permits and the window freeze, plus the club page's block.
+[domains.market_registration]
+suites = [
+  "test_market_registration.gd",
+  "test_market_deals.gd",
+  "test_market_contracts.gd",
+  "test_market_finance.gd",
+  "test_market_windows.gd",
+  "test_wiki_model.gd",
+  "test_wiki_season.gd",
+  "test_strongest_xi.gd",
+]
+
+# Financial fair play (#449): the rolling three-year measure, the embargo and
+# the points deduction at the next table start.
+[domains.market_ffp]
+suites = [
+  "test_market_ffp.gd",
+  "test_market_finance.gd",
+  "test_market_deals.gd",
+  "test_market_windows.gd",
+  "test_league_save.gd",
+  "test_season_rollover.gd",
+]
+
 # Player encyclopedia page only: attributes, contracts, TRANSFER. Kept off the
 # full wiki domain so a player-page edit stays inside the tier-1 budget.
 [domains.wiki_player]
@@ -649,6 +675,40 @@ domain = "squad_list"
 [[rules]]
 match = "tests/test_squad_list.gd*"
 domain = "squad_list"
+
+# Registration (#448): the list/permit model and the club page's reading.
+[[rules]]
+match = "scripts/sim/market/market_registration.gd*"
+domain = "market_registration"
+
+[[rules]]
+match = "scripts/sim/market/market_eligibility.gd*"
+domain = "market_registration"
+
+[[rules]]
+match = "scripts/ui/wiki_registration.gd*"
+domain = "market_registration"
+
+[[rules]]
+match = "tools/market_sim/register.gd*"
+domain = "market_registration"
+
+[[rules]]
+match = "tests/test_market_registration.gd*"
+domain = "market_registration"
+
+# Financial fair play (#449): the measure and the sanctions.
+[[rules]]
+match = "scripts/sim/market/market_ffp.gd*"
+domain = "market_ffp"
+
+[[rules]]
+match = "tools/market_sim/ffp.gd*"
+domain = "market_ffp"
+
+[[rules]]
+match = "tests/test_market_ffp.gd*"
+domain = "market_ffp"
 
 [[rules]]
 match = "scripts/data/market_deal_copy.gd*"

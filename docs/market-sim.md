@@ -27,6 +27,8 @@ invariant.
 | `loan` | a loan split, trigger and return | registration, splits, caps, obligations |
 | `clauses` | clause, sell-on, agent, solidarity | the money beyond the fee |
 | `clearance` | a cross-association move | pending, failure, the window close |
+| `register` | lists and permits | slots, homegrown, non-EU, U21, permit, freeze |
+| `ffp` | the rolling three-year measure | the measure, the embargo, the deduction |
 
 Each verb owns a file under `tools/market_sim/`; `tools/market_sim.gd` only
 parses flags, loads the verb and prints its dictionary.
@@ -79,3 +81,28 @@ deal's own reading: state, reason, cash and headroom after the move.
 
 The sandbox is development tooling. A player reaches the same code through the
 season, the club page's finances block and the player page's contract block.
+
+## The register verb
+
+```bash
+godot --headless --path . --script res://tools/market_sim.gd -- register \
+  --competition ucl --inject homegrown_min
+```
+
+It opens one save, prints the club's own list, then one verdict per rule —
+slots, under-21 exemption, homegrown, non-EU cap, association-trained and the
+permit — and runs `--inject` to prove a path: `none` signs, `list_full`,
+`homegrown_min`, `non_eu_cap`, `u21` and `permit`. Lists are per
+`competition_id`; `--competition ucl` declares a UEFA entrant's list.
+
+## The ffp verb
+
+```bash
+godot --headless --path . --script res://tools/market_sim.gd -- ffp \
+  --seasons 3 --inject deduction
+```
+
+It posts three seasons of revenue, wages and amortisation, prints the rolling
+measure term by term, and proves season one is monitored. `--inject embargo`
+attempts an incoming registration at a non-compliant club; `--inject deduction`
+books and applies the points once at the next table start.

@@ -30,6 +30,10 @@ static func validate(season: LeagueSeason, parent_id: String, loanee_id: String,
 		return fail(CAP_OUT, "the parent already lends out the cap")
 	if int(MarketLoanRecords.count_pair(parent_id, loanee_id, index, exclude)) >= cap("cap_pair", 2):
 		return fail(CAP_PAIR, "the pair already holds the cap between them")
+	var competition_id := str(_club(loanee_id).get("competition_id", ""))
+	var listed := MarketRegistration.admit(player_id, loanee_id, competition_id)
+	if not bool(listed.get("ok", false)):
+		return fail(str(listed.get("code", "list_full")), "the loanee's list refuses him")
 	var player := PLDatabase.row("SELECT id, club_id FROM player WHERE id = ?;", [player_id])
 	if player.is_empty() or str(player.get("club_id", "x")) != parent_id:
 		return fail("not_at_club", "the player is not at the parent club")

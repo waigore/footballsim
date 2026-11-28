@@ -246,14 +246,10 @@ static func _register(loan: Dictionary) -> bool:
 	var parent := str(loan.get("parent_club_id", ""))
 	var index := int(loan.get("season_index", 0))
 	var competition_id := _competition_of(loanee)
-	PLDatabase.execute(
-		"UPDATE player_registration SET state = 'closed', reason = 'loaned', deal_id = ? "
-		+ "WHERE club_id = ? AND player_id = ? AND state <> 'closed';",
-		[str(loan.get("id", "")), parent, player_id])
-	return PLDatabase.execute(
-		"INSERT OR REPLACE INTO player_registration (player_id, competition_id, club_id, kind, "
-		+ "state, reason, deal_id, season_index) VALUES (?, ?, ?, 'loan', 'registered', '', ?, ?);",
-		[player_id, competition_id, loanee, str(loan.get("id", "")), index]) \
+	MarketRegistration.close(player_id, parent, str(loan.get("id", "")))
+	var verdict := MarketRegistration.register(player_id, loanee, competition_id, "loan",
+		str(loan.get("id", "")), index)
+	return bool(verdict.get("ok", false)) \
 		and PLDatabase.execute("UPDATE player SET club_id = ? WHERE id = ?;", [loanee, player_id]) \
 		and MarketContracts.rehome(player_id, loanee) >= 0
 
@@ -269,10 +265,7 @@ static func _mark_registered(player_id: String, club_id: String, index: int) -> 
 	var competition_id := _competition_of(club_id)
 	if competition_id == "":
 		return
-	PLDatabase.execute(
-		"INSERT OR REPLACE INTO player_registration (player_id, competition_id, club_id, kind, "
-		+ "state, reason, deal_id, season_index) VALUES (?, ?, ?, 'permanent', 'registered', '', "
-		+ "'', ?);", [player_id, competition_id, club_id, index])
+	MarketRegistration.verify(player_id, club_id, competition_id, "permanent", "", index)
 
 
 static func _competition_of(club_id: String) -> String:

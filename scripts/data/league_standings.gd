@@ -102,6 +102,22 @@ func recompute() -> void:
 		bindings.append(str(parts[0]))
 		bindings.append(str(parts[1]) if parts.size() > 1 else "")
 		PLDatabase.execute(sql, bindings)
+	_apply_penalties(season_index)
+
+
+func _apply_penalties(season_index: int) -> void:
+	var row := PLDatabase.row(
+		"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'season_penalty';")
+	if row.is_empty():
+		return
+	for penalty in PLDatabase.rows(
+			"SELECT SUM(points) AS points, club_id, competition_id FROM season_penalty "
+			+ "WHERE season_index = ? AND applied = 1 GROUP BY club_id, competition_id;",
+			[season_index]):
+		PLDatabase.execute(
+			"UPDATE league_table SET points = points - ? WHERE club_id = ? AND competition_id = ?;",
+			[int(penalty.get("points", 0)), str(penalty["club_id"]),
+			 str(penalty["competition_id"])])
 
 
 func _table_clubs(competition_id: String) -> Array:

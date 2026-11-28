@@ -30,6 +30,7 @@ static func apply(season: LeagueSeason) -> Dictionary:
 	var entries := LeagueEuropeEntries.regenerate(season, played_index, cup_winners)
 	var pools := LeagueCupPools.rebuild(season, played_index, cup_winners, cup_runners)
 	var installed := _install_fixtures(season, index)
+	MarketFFP.apply_all(season)
 	season.record.standings.recompute()
 	StrongestXI.apply_all()
 	MarketFinanceFlows.roll(season, start)
