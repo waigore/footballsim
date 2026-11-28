@@ -100,6 +100,13 @@ suites = [
   "test_league_season.gd",
 ]
 
+# The shared Theme (visual source of truth) and the chrome modules that read it.
+# A palette or font change moves every non-match surface and the broadcast ink.
+[domains.ui_theme]
+suites = [
+  "test_ui_theme.gd",
+]
+
 [domains.shell]
 suites = [
   "test_menu_nav.gd",
@@ -801,6 +808,24 @@ domain = "shell"
 [[rules]]
 match = "scripts/ui/ui_chrome.gd*"
 domain = "shell"
+
+# The one Theme and its adapter: the palette, fonts and styleboxes every chrome
+# module reads (DR-20261128-37).
+[[rules]]
+match = "scripts/ui/ui_theme.gd*"
+domain = "ui_theme"
+
+[[rules]]
+match = "ui/**"
+domain = "ui_theme"
+
+[[rules]]
+match = "tests/test_ui_theme.gd*"
+domain = "ui_theme"
+
+[[rules]]
+match = "tools/theme_shots.gd*"
+domain = "misc"
 
 [[rules]]
 match = "scripts/audio/**"
