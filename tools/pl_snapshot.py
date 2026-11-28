@@ -48,6 +48,10 @@ from cup_seed_data import (  # noqa: E402
     CUPS, NAME_POOLS, NORTH_CITIES, PL_EUROPE, PRIORS, SPANISH_NORTH,
     ENGLISH_STUBS, GERMAN_STUBS, SPANISH_STUBS,
 )
+from uefa_seed_data import (  # noqa: E402
+    ASSOCIATIONS, CLUB_ALIASES as UEFA_ALIASES, COMPETITIONS as UEFA_COMPETITIONS,
+    ENTRANTS as UEFA_ENTRANTS, STUB_NAMES, STUBS as UEFA_STUBS, TIER as UEFA_TIER,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "data" / "pl_snapshot.json"
@@ -590,25 +594,35 @@ def upgrade(data: dict) -> dict:
 def spec_for(competition_id: str) -> dict:
     if competition_id in CUPS:
         return CUPS[competition_id]
+    if competition_id in UEFA_COMPETITIONS:
+        return UEFA_COMPETITIONS[competition_id]
     if competition_id not in COMPETITIONS:
-        raise SystemExit(f"unknown competition {competition_id}; known: {', '.join(list(COMPETITIONS) + list(CUPS))}")
+        raise SystemExit(f"unknown competition {competition_id}; known: "
+                         + ", ".join(list(COMPETITIONS) + list(CUPS) + list(UEFA_COMPETITIONS)))
     return COMPETITIONS[competition_id]
 
 
-def club_id_for(competition_id: str, abbr: str, taken: set[str]) -> str:
+def club_id_for(competition_id: str, abbr: str, taken: set[str],
+                country: str = "") -> str:
     """Mint a club's permanent id: `{FIFA country}-{abbr}{N}`.
 
     `N` starts at 1 for every (country, abbr) pair and only moves on when the
     pair is already in use, so two Barnets in two countries never collide.
+    `country` names a UEFA stub's own association; a domestic club reads its
+    competition's country instead.
     """
-    stem = f"{club_country(competition_id, abbr)}-{abbr}"
+    stem = f"{club_country(competition_id, abbr, country)}-{abbr}"
     n = 1
     while f"{stem}{n}" in taken:
         n += 1
     return f"{stem}{n}"
 
 
-def club_country(competition_id: str, abbr: str) -> str:
+def club_country(competition_id: str, abbr: str, declared: str = "") -> str:
+    if competition_id in UEFA_COMPETITIONS:
+        if len(declared) == 3 and declared.isupper():
+            return declared
+        return FIFA_COUNTRY.get(declared, "ENG")
     default = str(spec_for(competition_id)["country"])
     name = str(COUNTRY_BY_CLUB.get((competition_id, abbr), default))
     return FIFA_COUNTRY.get(name, "ENG")
@@ -1312,6 +1326,100 @@ def cmd_seed_cups(args: argparse.Namespace) -> int:
     return 0
 
 
+def _uefa_stub_club(competition_id: str, iso: str, name: str, abbr: str, city: str,
+                    band: int) -> dict:
+    """A continental entrant's identity: no licensed squad, a playable band."""
+    club = _stub_club(competition_id, "England", name, abbr, city, 1, "", band)
+    club["id"] = f"STUB-{name}"
+    club["competition_id"] = competition_id
+    club["country"] = iso
+    club["stadium"] = f"{city} Stadium"
+    club["capacity"] = 8000 + (int(hashlib.sha1(name.encode()).hexdigest()[:4], 16) % 24) * 1000
+    pool = STUB_NAMES
+    for i, player in enumerate(club["players"]):
+        first = pool["first"][(i * 3 + len(name)) % len(pool["first"])]
+        last = pool["last"][(i * 7 + len(name) * 3) % len(pool["last"])]
+        player["name"] = f"{first} {last}"
+        player["nationality"] = iso
+        player["id"] = f"{name}-{i + 1}-{player['name']}"
+    return club
+
+
+def _uefa_members(snapshot: dict) -> list[dict]:
+    """One row per (competition, club) with role = the round the club enters."""
+    by_name: dict[str, dict] = {}
+    for club in snapshot["clubs"]:
+        by_name.setdefault(str(club.get("name", "")), club)
+    members: list[dict] = []
+    problems: list[str] = []
+    for cid, rounds in UEFA_ENTRANTS.items():
+        for round_id, entrants in rounds.items():
+            for iso, name in entrants:
+                key = UEFA_ALIASES.get(name, name)
+                club = by_name.get(key)
+                if club is None:
+                    problems.append(f"{cid} {round_id}: {iso} {name} has no club")
+                    continue
+                members.append({"competition_id": cid, "member_id": str(club["id"]),
+                                "role": round_id})
+    if problems:
+        raise SystemExit("UEFA entrants unresolved:\n  " + "\n  ".join(problems[:20]))
+    return members
+
+
+def seed_uefa(snapshot: dict) -> dict:
+    """Add the three continental competitions, their stubs and entry membership."""
+    for cid, spec in UEFA_COMPETITIONS.items():
+        row = {
+            "id": cid, "name": spec["name"], "short_name": spec["short_name"],
+            "country": spec["country"], "espn": "",
+            "rules": dict(spec["rules"], kind=spec["kind"]),
+        }
+        existing = next((c for c in snapshot["competitions"] if str(c["id"]) == cid), None)
+        if existing is None:
+            snapshot["competitions"].append(row)
+        else:
+            existing.update(row)
+    wanted = {name: (abbr, city, band, iso) for name, abbr, city, band, iso in UEFA_STUBS}
+    entry_of: dict[str, str] = {}
+    for cid, rounds in UEFA_ENTRANTS.items():
+        for entrants in rounds.values():
+            for _, name in entrants:
+                entry_of.setdefault(name, cid)
+    by_name = {str(c.get("name", "")): c for c in snapshot["clubs"]}
+    for name, (abbr, city, band, iso) in wanted.items():
+        existing = by_name.get(name)
+        if existing is not None and int(existing.get("stub", 0)) == 0:
+            continue
+        cid = entry_of.get(name, "UCL")
+        club = _uefa_stub_club(cid, iso, name, abbr, city, band)
+        if existing is not None:
+            snapshot["clubs"].remove(existing)
+        snapshot["clubs"].append(club)
+        by_name[name] = club
+    kept = [m for m in snapshot.get("members", [])
+            if str(m.get("competition_id", "")) not in UEFA_COMPETITIONS]
+    snapshot["members"] = kept + _uefa_members(snapshot)
+    return snapshot
+
+
+def cmd_seed_uefa(args: argparse.Namespace) -> int:
+    snapshot = load(args.snapshot)
+    snapshot = upgrade(snapshot)
+    seed_uefa(snapshot)
+    snapshot = remap_ids(snapshot)
+    snapshot["db_version"] = int(snapshot.get("db_version", 1)) + (1 if args.bump_version else 0)
+    snapshot["schema_version"] = SCHEMA_VERSION
+    save(args.snapshot, snapshot)
+    for cid in UEFA_COMPETITIONS:
+        roles: dict[str, int] = {}
+        for row in snapshot["members"]:
+            if row["competition_id"] == cid:
+                roles[row["role"]] = roles.get(row["role"], 0) + 1
+        print(f"{cid}: {sum(roles.values())} entrants {roles}")
+    return 0
+
+
 def cmd_seed(args: argparse.Namespace) -> int:
     snapshot = load(args.snapshot)
     targets = list(COMPETITIONS) if args.competition == "all" else [args.competition]
@@ -1506,7 +1614,8 @@ def remap_ids(snapshot: dict) -> dict:
             pending.append(club)
     for club in sorted(pending, key=by_club):
         cid = str(club.get("competition_id", "PL"))
-        minted = club_id_for(cid, str(club["abbr"]), taken_clubs)
+        minted = club_id_for(cid, str(club["abbr"]), taken_clubs,
+                             str(club.get("country", "")))
         club_map[str(club["id"])] = minted
         taken_clubs.add(minted)
 
@@ -1582,7 +1691,8 @@ def _audit_ids(snapshot: dict) -> list[str]:
         if match is None:
             problems.append(f"{club_id}: club id is not {{FIFA country}}-{{abbr}}{{N}}")
             continue
-        country = club_country(str(club.get("competition_id", "PL")), str(club["abbr"]))
+        country = club_country(str(club.get("competition_id", "PL")), str(club["abbr"]),
+                               str(club.get("country", "")))
         if match.group(1) != country:
             problems.append(f"{club_id}: club id country is not {country}")
         if match.group(2) != str(club.get("abbr", "")):
@@ -1706,6 +1816,10 @@ def main(argv: list[str] | None = None) -> int:
     cups.add_argument("--season", type=int, default=2026)
     cups.add_argument("--bump-version", action="store_true")
     cups.set_defaults(func=cmd_seed_cups)
+    uefa = sub.add_parser("uefa", help="add UCL/UEL/UECL, their entrants and stub clubs")
+    uefa.add_argument("--season", type=int, default=2026)
+    uefa.add_argument("--bump-version", action="store_true")
+    uefa.set_defaults(func=cmd_seed_uefa)
     build = sub.add_parser("build", help="write data/pl_seed.sqlite from the snapshot")
     build.set_defaults(func=cmd_build)
     verify = sub.add_parser("verify", help="check the shipped seed against the snapshot")

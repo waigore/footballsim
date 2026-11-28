@@ -692,3 +692,21 @@ COMPETITIONS = {
 
 ## The competition above each one: a losing club drops down this chain.
 TIER = {"UCL": "", "UEL": "UCL", "UECL": "UEL"}
+
+## Stub squads are synthetic: initials and plain surnames, drawn from this pool so
+## a stub reads like a team sheet without pretending to a licensed roster.
+STUB_NAMES = {
+    "first": ["A.", "B.", "C.", "D.", "E.", "F.", "G.", "H.", "I.", "J.",
+              "K.", "L.", "M.", "N.", "O.", "P.", "R.", "S.", "T.", "V."],
+    "last": [
+        "Novak", "Horvat", "Kowalski", "Nielsen", "Jansen", "Petrov", "Popescu",
+        "Novakovic", "Ivanov", "Svoboda", "Kovac", "Berg", "Lindqvist", "Doyle",
+        "Murphy", "Rossi", "Bianchi", "Silva", "Costa", "Garcia", "Martins",
+        "Yilmaz", "Demir", "Hassan", "Cohen", "Adeyemi", "Mensah", "Okafor",
+        "Virtanen", "Laine", "Eriksen", "Bergström", "Kask", "Lukic", "Babic",
+        "Markovic", "Stankovic", "Andersson", "Nilsson", "Hansen", "Larsen",
+        "Bakker", "Visser", "De Smet", "Peeters", "Novotny", "Dvorak", "Urban",
+        "Zeman", "Kral", "Ferenc", "Nagy", "Toth", "Szabo", "Papp", "Ilves",
+        "Kolk", "Raudsepp", "Magi", "Vasiljev", "Kuusk", "Saar", "Sepsi",
+    ],
+}
