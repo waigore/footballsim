@@ -103,3 +103,69 @@ func test_the_hub_binds_and_releases_its_season() -> void:
 	assert_eq(game.menus.league.bus.season, season, "the hub opened without binding the season")
 	game.menus.league.detach_season()
 	assert_null(game.menus.league.bus.season, "the hub kept a season it detached")
+
+
+func test_every_forwarded_field_reads_and_writes_the_bag() -> void:
+	var screen := LeagueScreen.new()
+	var fields := {
+		"wizard": {"name": "Held"},
+		"saves": [{"slug": "one"}],
+		"report": {"fixture": {"id": "a"}},
+		"roundup": [{"fixture": {"id": "b"}}],
+		"report_filter": {"league": "PL"},
+		"month": "2026-08",
+		"day": "2026-08-15",
+		"day_fixtures": [{"id": "c"}],
+		"days_cache": {"2026-08-15": [{"id": "d"}]},
+		"europe": {"comp": "UCL"},
+		"europe_draw": {"round": "r1"},
+		"calendar_filter": "PL",
+		"cups_round": "r2",
+		"cup_focus": "FA",
+		"draw_state": {"shown": 2},
+		"interest_query": "ars",
+		"stats_filter": {"stat": "assists"},
+		"report_back": "hub",
+		"sys": {"status": "ok"},
+		"load_from": "menu",
+	}
+	for name in fields.keys():
+		screen.set(name, fields[name])
+		assert_eq(screen.get(name), fields[name], "the %s forwarder lost its value" % name)
+	assert_eq(screen.state.month, "2026-08", "the bag did not take the month")
+	screen.queue_free()
+
+
+func test_the_state_bag_opens_a_wizard_and_sets_both_filters() -> void:
+	var state := LeagueUiState.new()
+	var scopes: Array = []
+	state.changed.connect(func(scope: String) -> void: scopes.append(scope))
+	state.open_wizard(true)
+	assert_eq(state.mode, "wizard", "the wizard did not open")
+	assert_true(bool(state.wizard["uefa"]), "the wizard forgot the available Europe pot")
+	state.set_filter("report", "interest", true)
+	assert_true(bool(state.report_filter["interest"]), "the report filter did not take")
+	state.set_filter("elsewhere", "interest", true)
+	assert_eq(scopes, ["wizard", "report"], "a stray scope announced a change")
+
+
+func test_a_session_change_binds_the_season_once() -> void:
+	var screen := LeagueScreen.new()
+	screen.bus = UiBus.make()
+	screen.season = season
+	screen.on_session_changed()
+	assert_eq(screen.bus.season, season, "the session change did not bind the season")
+	screen.on_session_changed()
+	assert_eq(screen.bus.season, season, "a second session change rebound the season")
+	screen.bus.unbind_season()
+	assert_null(screen.bus.season, "the bus kept the season")
+	screen.queue_free()
+
+
+func test_the_bus_announces_a_selection() -> void:
+	var bus := UiBus.make()
+	var seen: Array = []
+	bus.selection_changed.connect(func(kind: String, id: String) -> void: seen.append([kind, id]))
+	bus.announce_selection("club", "ENG-MUN1")
+	bus.announce("ledger")
+	assert_eq(seen, [["club", "ENG-MUN1"]], "the selection did not reach the bus")
