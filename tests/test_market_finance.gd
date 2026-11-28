@@ -370,3 +370,24 @@ func test_an_unfunded_club_reads_no_finances_block() -> void:
 	for block in page.get("blocks", []):
 		assert_ne(str((block as Dictionary).get("text", "")), "FINANCES",
 			"an unfunded club reads a finances block")
+
+
+func test_the_isolated_ledger_run_posts_a_season_with_no_deal_engine() -> void:
+	var script: Script = load("res://tools/market_sim/ledger.gd")
+	assert_not_null(script, "the ledger verb is missing")
+	var pounds: Dictionary = script.run({"seed": "7311", "clubs": "20", "currency": "GBP"})
+	assert_true(bool(pounds.get("ok", false)), "the isolated ledger run failed")
+	assert_gt(int(pounds.get("rows", 0)), 0, "the isolated run posted no ledger line")
+	var kinds: Array = pounds.get("kinds", [])
+	for kind in [MarketFinance.KIND_GATE, MarketFinance.KIND_WAGE, MarketFinance.KIND_PRIZE,
+			MarketFinance.KIND_AMORTISATION]:
+		assert_true(kinds.has(kind), "the isolated run posted no %s line" % kind)
+	assert_gt(int(pounds.get("amortisation", 0)), 0, "the isolated run posted no amortisation")
+	assert_gt(int(pounds.get("prize_clubs", 0)), 0, "the isolated run paid no prize")
+	assert_false(kinds.has(MarketFinance.KIND_FEE), "the isolated run posted a deal's fee line")
+	var euros: Dictionary = script.run({"seed": "7311", "clubs": "20", "currency": "EUR"})
+	assert_eq(str(euros.get("currency", "")), "EUR", "the run did not read its currency flag")
+	assert_eq(int(euros.get("cash", -1)), int(pounds.get("cash", -2)),
+		"the currency flag moved the stored cash")
+	assert_eq(int(euros.get("rows", -1)), int(pounds.get("rows", -2)),
+		"the currency flag changed how many lines the run posted")
