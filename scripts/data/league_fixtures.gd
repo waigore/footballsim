@@ -26,19 +26,21 @@ func install(fixtures: Array, competition_id: String, set_clock: bool = true) ->
 	var values: Array = []
 	var bindings: Array = []
 	for fx in fixtures:
-		values.append("(?, ?, ?, ?, ?, ?, ?, 'pending')")
+		values.append("(?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, '', 0)")
 		bindings.append_array([
 			str(fx["id"]), competition_id, int(fx["matchday"]), str(fx["kickoff"]),
 			str(fx.get("kickoff_time", "")), str(fx["home"]), str(fx["away"]),
 		])
 	PLDatabase.execute(
 		"INSERT INTO league_fixture (id, competition_id, matchday, kickoff, kickoff_time, "
-		+ "home_club_id, away_club_id, status) VALUES " + ", ".join(values) + ";",
+		+ "home_club_id, away_club_id, status, watched, suggested, stage, leg) VALUES "
+		+ ", ".join(values) + ";",
 		bindings,
 	)
-	PLDatabase.execute(
-		"INSERT INTO league_table (club_id, competition_id) SELECT id, competition_id "
-		+ "FROM club WHERE competition_id = ?;", [competition_id])
+	if not LeagueCup.is_cup(competition_id):
+		PLDatabase.execute(
+			"INSERT INTO league_table (club_id, competition_id) SELECT id, competition_id "
+			+ "FROM club WHERE competition_id = ?;", [competition_id])
 	if set_clock:
 		save.set_date(str(fixtures[0]["kickoff"]))
 		save.set_matchday(int(fixtures[0]["matchday"]))
@@ -178,6 +180,9 @@ func next_date(after: String, competition_id: String = "") -> String:
 
 func set_watch(fixture_id: String, watch: bool) -> bool:
 	save.ensure_open()
+	var fx := one(fixture_id)
+	if not fx.is_empty() and str(fx.get("stage", "")) != "":
+		return false
 	return PLDatabase.execute(
 		"UPDATE league_fixture SET watched = ? WHERE id = ?;",
 		[1 if watch else 0, fixture_id],

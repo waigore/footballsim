@@ -76,7 +76,7 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 	items.append({"id": "", "kind": "caption", "label": "LEAGUES",
 		"rect": Rect2(24.0, y - 8.0, w, 10.0)})
 	var chosen: Array = view.get("competitions", ["PL"])
-	var groups := _league_groups(PLRepository.shared().competitions())
+	var groups := _league_groups(PLRepository.shared().leagues())
 	for group in groups:
 		items.append({"id": "", "kind": "country", "label": str(group["label"]),
 			"rect": Rect2(24.0, y, w, 16.0)})

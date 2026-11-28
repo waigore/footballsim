@@ -12,6 +12,16 @@ const TABLES := [
 	"CREATE TABLE IF NOT EXISTS save_competition (competition_id TEXT PRIMARY KEY, "
 	+ "active INTEGER NOT NULL DEFAULT 1, position INTEGER NOT NULL DEFAULT 0);",
 	"CREATE TABLE IF NOT EXISTS league_interest (club_id TEXT PRIMARY KEY);",
+	"CREATE TABLE IF NOT EXISTS cup_round (competition_id TEXT NOT NULL, "
+	+ "round_id TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0, "
+	+ "status TEXT NOT NULL DEFAULT 'open', PRIMARY KEY (competition_id, round_id));",
+	"CREATE TABLE IF NOT EXISTS cup_tie (competition_id TEXT NOT NULL, "
+	+ "round_id TEXT NOT NULL, tie_index INTEGER NOT NULL, "
+	+ "home_club_id TEXT NOT NULL, away_club_id TEXT NOT NULL, "
+	+ "winner_club_id TEXT NOT NULL DEFAULT '', home_goals INTEGER NOT NULL DEFAULT 0, "
+	+ "away_goals INTEGER NOT NULL DEFAULT 0, pens_home INTEGER NOT NULL DEFAULT -1, "
+	+ "pens_away INTEGER NOT NULL DEFAULT -1, extra_time INTEGER NOT NULL DEFAULT 0, "
+	+ "PRIMARY KEY (competition_id, round_id, tie_index));",
 	"CREATE TABLE IF NOT EXISTS league_fixture (id TEXT PRIMARY KEY, "
 	+ "competition_id TEXT NOT NULL DEFAULT '', matchday INTEGER NOT NULL, "
 	+ "kickoff TEXT NOT NULL, kickoff_time TEXT NOT NULL DEFAULT '', "
@@ -64,6 +74,7 @@ const INDEXES := [
 	"CREATE INDEX IF NOT EXISTS league_fixture_comp_idx ON league_fixture (competition_id);",
 	"CREATE INDEX IF NOT EXISTS match_event_fixture_idx ON match_event (fixture_id);",
 	"CREATE INDEX IF NOT EXISTS goal_highlight_fixture_idx ON goal_highlight (fixture_id);",
+	"CREATE INDEX IF NOT EXISTS cup_tie_round_idx ON cup_tie (competition_id, round_id);",
 ]
 
 
@@ -112,6 +123,8 @@ static func migrate() -> void:
 		PLDatabase.execute(sql)
 	for table in ["league_fixture", "league_table", "league_player_stat"]:
 		add_column(table, "competition_id", "TEXT NOT NULL DEFAULT ''")
+	add_column("league_fixture", "stage", "TEXT NOT NULL DEFAULT ''")
+	add_column("league_fixture", "leg", "INTEGER NOT NULL DEFAULT 0")
 	var hint_rows := hint()
 	var owner := str(hint_rows[0]) if not hint_rows.is_empty() else "PL"
 	for table in ["league_fixture", "league_table", "league_player_stat"]:
@@ -133,6 +146,8 @@ static func ensure_schema(save: LeagueSave) -> void:
 
 	add_column("match_event", "penalty")
 	add_column("goal_highlight", "penalty")
+	add_column("league_fixture", "stage", "TEXT NOT NULL DEFAULT ''")
+	add_column("league_fixture", "leg", "INTEGER NOT NULL DEFAULT 0")
 	for cid in save.actives:
 		PLDatabase.execute(
 			"INSERT INTO save_competition (competition_id, active, position) VALUES (?, 1, ?) "
