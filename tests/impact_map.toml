@@ -246,6 +246,9 @@ suites = [
   # Windows and association calendars (#443): the four associations, the state a
   # date alone decides, the per-date market tick and the buying-club rule.
   "test_market_windows.gd",
+  # Cups after NEW SEASON (#506): the entry pools rebuilt from the live tiers,
+  # stable stub slots and the supercup pairings read from last season's honours.
+  "test_cup_rollover_pools.gd",
 ]
 
 # Europe's own destination (#437): the hub read models, the two sheets and the
@@ -501,6 +504,12 @@ domain = "league"
 
 [[rules]]
 match = "tests/test_market_windows.gd*"
+domain = "league"
+
+# Cups after NEW SEASON (#506): the entry pools follow the live tiers, the stub
+# slots stay put and the supercup pairings read last season's honours.
+[[rules]]
+match = "tests/test_cup_rollover_pools.gd*"
 domain = "league"
 
 # Season availability and the pre-match briefing (#155–#157): the absence model,
