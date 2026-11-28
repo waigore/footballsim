@@ -8,7 +8,9 @@ static func run(options: Dictionary) -> Dictionary:
 	var seasons := maxi(int(options.get("seasons", "2")), 1)
 	var seed_value := int(options.get("seed", "7001"))
 	var name := str(options.get("name", "Market Sim"))
-	var season := LeagueSeason.create(name, "generated", "fixture_days", seed_value, ["PL"])
+	var uefa := str(options.get("uefa", "0")) == "1"
+	var season := LeagueSeason.create(name, "generated", "fixture_days", seed_value, ["PL"],
+		false, [], uefa)
 	if season == null:
 		return {"ok": false, "reason": "the save could not be created"}
 	var log: Array = []
@@ -39,12 +41,19 @@ static func run(options: Dictionary) -> Dictionary:
 			"settled": not settled.is_empty(),
 			"settle_repeat_is_a_no_op": _same(settled, again),
 			"archive_fingerprint": _fingerprint(season, index),
+			"pools": rollover.get("pools", {}),
+			"entrants": LeagueUefaPools.note(season.save),
 		})
 		print("season %d: clubs %d, players %d, retired %d, next %s from %s" % [
 			index, int((rollover["archived"] as Dictionary).get("clubs", 0)),
 			int((rollover["archived"] as Dictionary).get("players", 0)),
 			int((rollover["aged"] as Dictionary).get("retired", 0)),
 			str(rollover.get("season_label", "")), str(rollover.get("date", ""))])
+		if uefa:
+			print("entrants: %s" % LeagueUefaPools.note(season.save))
+			for cid in LeagueUefa.IDS:
+				print("  %s league phase: %s" % [str(cid),
+					", ".join(PackedStringArray(LeagueUefa.entrants(str(cid), "LP")))])
 	print("archive:")
 	for row in SeasonArchive.table(0, ""):
 		print("  %s %2d %-4s %3d pts  %s" % [str(row["club_id"]), int(row["position"]),
