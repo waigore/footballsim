@@ -46,7 +46,7 @@ Shipped (wiki domains playable; DRs accepted):
 | Transfers, finances, training, second season, mid-season refresh | Season Out of scope (v1); DR-20261124-01 |
 | VAR; weather; referee outcome bias | Match playable-slice Out |
 | Concussion subs; extra injury stoppage beyond added-time | Substitutions Out; DR-20261122-05 |
-| Licensed data beyond English pyramid, La Liga, German pair | requirements Non-goals; DR-20261123-01 (Italy widens with #420) |
+| Licensed data beyond English pyramid, La Liga, German and Italian pairs | requirements Non-goals; DR-20261123-01 / DR-20261128-18 |
 | Match HUD under the non-match type rule | DR-20261124-03 |
 | Photoreal / 3D primary | requirements Non-goals |
 | Serie C; German-style Relegation for Italy | Season Out of scope |
