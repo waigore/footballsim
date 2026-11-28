@@ -47,6 +47,8 @@ static func build(season: LeagueSeason) -> Dictionary:
 		"slug": save.slug,
 		"name": save.name(),
 		"status": save.status(),
+		"season_index": save.season_index(),
+		"season_label": save.season_label(),
 		"date": date,
 		"day": FixtureCalendar.day_label(date),
 		"matchday": save.matchday(),

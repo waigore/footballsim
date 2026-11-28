@@ -233,6 +233,9 @@ suites = [
   "test_league_cups.gd",
   "test_cup_season.gd",
   "test_league_cup_ui.gd",
+  # Multi-season (#440): the season-scoped schema, the one settle step, the
+  # rollover, the archives and the podium's NEW SEASON door.
+  "test_season_rollover.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -444,6 +447,16 @@ domain = "league"
 # Season helpers split out of the season loop to keep its P3 size ratchet.
 [[rules]]
 match = "scripts/sim/league_*.gd*"
+domain = "league"
+
+# The market's season modules (#440): settle, rollover, ageing, the archives,
+# the date shifts and the tick that hangs off the clock.
+[[rules]]
+match = "scripts/sim/market/**"
+domain = "league"
+
+[[rules]]
+match = "tests/test_season_rollover.gd*"
 domain = "league"
 
 # Season availability and the pre-match briefing (#155–#157): the absence model,

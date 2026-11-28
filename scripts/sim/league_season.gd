@@ -26,6 +26,9 @@ var finishing := false
 var captured: Array = []
 var last_advance: Dictionary = {}
 
+var market_ticks := 0
+var market_date := ""
+
 
 static func create(name: String, calendar_mode: String, advance_mode: String, seed: int = 0,
 		competitions: Array = ["PL"], cups: bool = false,
@@ -117,6 +120,7 @@ func advance() -> Dictionary:
 	rules = save.rules
 	if save.status() == "complete" or record.fixtures.unplayed() == 0:
 		save.set_status("complete")
+		SeasonSettle.apply(self)
 		return {"ok": true, "date": save.current_date(), "played": [], "pending": [], "complete": true}
 	var date := save.current_date()
 	var played: Array = []
@@ -136,11 +140,10 @@ func advance() -> Dictionary:
 	var next := _next_date(date)
 	if next == "":
 		save.set_status("complete")
+		SeasonSettle.apply(self)
 		last_advance = {"ok": true, "date": date, "played": played, "pending": [], "complete": true}
 		return last_advance
-	save.set_date(next)
-	save.set_matchday(_matchday_of(next))
-	SeasonAvailability.month_tick(date, next)
+	LeagueClock.move(self, date, next)
 	last_advance = {"ok": true, "date": date, "next_date": next, "played": played, "pending": [], "complete": false}
 	return last_advance
 
@@ -150,17 +153,17 @@ func roll_clock() -> void:
 		return
 	if record.fixtures.unplayed() == 0:
 		save.set_status("complete")
+		SeasonSettle.apply(self)
 		return
 	if not record.fixtures.pending_upto(save.current_date()).is_empty():
 		return
 	var next := _next_date(save.current_date())
 	if next == "":
 		save.set_status("complete")
+		SeasonSettle.apply(self)
 		return
 	var crossed := save.current_date()
-	save.set_date(next)
-	save.set_matchday(_matchday_of(next))
-	SeasonAvailability.month_tick(crossed, next)
+	LeagueClock.move(self, crossed, next)
 
 func _next_date(date: String) -> String:
 	if str(rules.get("advance_mode", "fixture_days")) == "every_day":
@@ -170,7 +173,7 @@ func _next_date(date: String) -> String:
 		return d
 	return record.fixtures.next_date(date)
 
-func _matchday_of(date: String) -> int:
+func matchday_of(date: String) -> int:
 	var rows := record.fixtures.on(date)
 	var gw := 0
 	for fx in rows:
@@ -215,4 +218,5 @@ func record_engine(engine) -> void:
 
 
 func summary() -> Dictionary:
+	SeasonSettle.apply(self)
 	return LeagueSeasonSummary.build(self)

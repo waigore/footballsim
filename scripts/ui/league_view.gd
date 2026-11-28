@@ -141,6 +141,7 @@ static func build(screen) -> Dictionary:
 		}
 	if mode == LeagueScreen.MODE_PODIUM:
 		return {"summary": state.get("summary", {}), "name": state.get("name", ""),
+			"season": state.get("season_label", ""),
 			"table": state.get("table", []), "rules": state.get("rules", rules),
 			"touch": bool(screen.touch)}
 	var view: Dictionary = state.duplicate()

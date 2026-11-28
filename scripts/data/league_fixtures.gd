@@ -25,22 +25,24 @@ func install(fixtures: Array, competition_id: String, set_clock: bool = true) ->
 	PLDatabase.execute("DELETE FROM league_table WHERE competition_id = ?;", [competition_id])
 	var values: Array = []
 	var bindings: Array = []
+	var season_index := save.season_index()
 	for fx in fixtures:
-		values.append("(?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, '', 0)")
+		values.append("(?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, '', 0, ?)")
 		bindings.append_array([
 			str(fx["id"]), competition_id, int(fx["matchday"]), str(fx["kickoff"]),
-			str(fx.get("kickoff_time", "")), str(fx["home"]), str(fx["away"]),
+			str(fx.get("kickoff_time", "")), str(fx["home"]), str(fx["away"]), season_index,
 		])
 	PLDatabase.execute(
 		"INSERT INTO league_fixture (id, competition_id, matchday, kickoff, kickoff_time, "
-		+ "home_club_id, away_club_id, status, watched, suggested, stage, leg) VALUES "
-		+ ", ".join(values) + ";",
+		+ "home_club_id, away_club_id, status, watched, suggested, stage, leg, season_index) "
+		+ "VALUES " + ", ".join(values) + ";",
 		bindings,
 	)
 	if not LeagueCup.is_cup(competition_id):
 		PLDatabase.execute(
-			"INSERT INTO league_table (club_id, competition_id) SELECT id, competition_id "
-			+ "FROM club WHERE competition_id = ?;", [competition_id])
+			"INSERT INTO league_table (club_id, competition_id, season_index) "
+			+ "SELECT id, competition_id, ? FROM club WHERE competition_id = ?;",
+			[season_index, competition_id])
 	if set_clock:
 		save.set_date(str(fixtures[0]["kickoff"]))
 		save.set_matchday(int(fixtures[0]["matchday"]))
@@ -220,5 +222,7 @@ func completed_matchdays(competition_id: String = "") -> int:
 			"SELECT MAX(matchday) AS r FROM league_fixture"
 			+ (" WHERE competition_id = ?" if competition_id != "" else "") + ";",
 			_comp_bindings(competition_id))
-		return int(total.get("r", 0))
+		if total.get("r", null) == null:
+			return 0
+		return int(total["r"])
 	return maxi(int(row["r"]) - 1, 0)

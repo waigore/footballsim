@@ -81,11 +81,13 @@ func recompute() -> void:
 		_tally(acc, "%s|%s" % [str(fx["away_club_id"]), cid_key],
 			int(fx["away_goals"]), int(fx["home_goals"]), rules, "away")
 	PLDatabase.execute("DELETE FROM league_table;")
+	var season_index := save.season_index()
 	for cid in comps:
 		for club_id in _table_clubs(str(cid)):
 			PLDatabase.execute(
-				"INSERT INTO league_table (club_id, competition_id) VALUES (?, ?);",
-				[str(club_id), str(cid)])
+				"INSERT INTO league_table (club_id, competition_id, season_index) "
+				+ "VALUES (?, ?, ?);",
+				[str(club_id), str(cid), season_index])
 	var sets: Array = []
 	for key in TABLE_FIELDS:
 		sets.append(key + " = ?")

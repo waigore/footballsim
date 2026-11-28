@@ -16,9 +16,15 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		"rect": Rect2(24.0, HEADER, vp.x - 48.0, frame_height(view))})
 	items.append(LeagueExtra.back_item(bool(view.get("touch", false))))
 	items.append({"id": "table", "kind": "button", "label": "TABLE", "primary": false, "pinned": true,
-		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 130.0, BAR_H - 14.0)})
-	items.append({"id": "menu", "kind": "button", "label": "MAIN MENU", "primary": true, "pinned": true,
-		"rect": Rect2(24.0 + 142.0, vp.y - BAR_H + 6.0, 170.0, BAR_H - 14.0)})
+		"rect": Rect2(24.0, vp.y - BAR_H + 6.0, 104.0, BAR_H - 14.0)})
+	items.append({"id": "menu", "kind": "button", "label": "MAIN MENU", "primary": false, "pinned": true,
+		"rect": Rect2(24.0 + 116.0, vp.y - BAR_H + 6.0, 148.0, BAR_H - 14.0)})
+	var new_x := 24.0 + 116.0 + 148.0 + 12.0
+	if vp.x - 24.0 - 160.0 > new_x:
+		new_x = vp.x - 24.0 - 160.0
+	items.append({"id": "season:new", "kind": "button", "label": "NEW SEASON", "primary": true,
+		"pinned": true,
+		"rect": Rect2(new_x, vp.y - BAR_H + 6.0, 160.0, BAR_H - 14.0)})
 	return items
 
 
@@ -86,7 +92,10 @@ func _paint_band(c: CanvasItem, body: Callable) -> void:
 
 func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary,
 		_hints: DateHints) -> void:
-	LeagueExtra.header(c, vp, fonts, "SEASON COMPLETE", str(view.get("name", "")), 0.0, true,
+	var caption := str(view.get("name", ""))
+	if str(view.get("season", "")) != "":
+		caption += "  ·  " + str(view.get("season", ""))
+	LeagueExtra.header(c, vp, fonts, "SEASON COMPLETE", caption, 0.0, true,
 		bool(view.get("touch", false)))
 
 func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, _items: Array, view: Dictionary) -> void:

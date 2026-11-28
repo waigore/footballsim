@@ -4,6 +4,8 @@ extends RefCounted
 
 const DEFAULT_DIR := "user://saves"
 const EXT := ".sqlite"
+const SCHEMA_VERSION := 18
+const NEW_SAVE_MESSAGE := "This save predates the transfer market. Start a new league."
 
 
 static var dir := DEFAULT_DIR
@@ -47,6 +49,8 @@ static func create(name: String, rules: Dictionary, seed: int = 0,
 	save.put_meta("status", "in_progress")
 	save.put_meta("seed", str(seed))
 	save.put_meta("matchday", "1")
+	save.put_meta("db_version", str(SCHEMA_VERSION))
+	save.put_meta("season_index", "0")
 	save.actives = LeagueSaveSchema.valid(competitions)
 	save.put_meta("competitions", ",".join(PackedStringArray(save.actives)))
 	for i in range(save.actives.size()):
@@ -80,6 +84,7 @@ static func _rules_for_input(rules: Dictionary, competition_id: String) -> Dicti
 
 
 static func open(slug_or_path: String) -> LeagueSave:
+	last_error = ""
 	var file := slug_or_path
 	if not file.ends_with(EXT):
 		file = dir.path_join(slug_or_path + EXT)
@@ -87,8 +92,6 @@ static func open(slug_or_path: String) -> LeagueSave:
 		return null
 	if not PLDatabase.open_path(file):
 		return null
-	PLRepository.shared().invalidate()
-	LeagueSaveSchema.migrate()
 	var save := LeagueSave.new()
 	save.path = file
 	save.slug = file.get_file().trim_suffix(EXT)
@@ -96,6 +99,12 @@ static func open(slug_or_path: String) -> LeagueSave:
 	if save.meta.is_empty():
 		PLDatabase.reset()
 		return null
+	if not save.theme_ready():
+		last_error = NEW_SAVE_MESSAGE
+		PLDatabase.reset()
+		return null
+	PLRepository.shared().invalidate()
+	LeagueSaveSchema.migrate()
 	save.actives = LeagueSaveSchema.valid(LeagueSaveSchema.active_from_disk())
 	save.rules_by = LeagueRules.read_all()
 	save.rules = save.rules_by.get(str(save.actives[0]), LeagueRules.read(str(save.actives[0])))
@@ -184,6 +193,24 @@ func put_meta(key: String, value: String) -> bool:
 
 func name() -> String:
 	return str(meta.get("name", slug))
+
+
+func theme_ready() -> bool:
+	return meta.has("season_index")
+
+
+func season_index() -> int:
+	return int(str(meta.get("season_index", "0")))
+
+
+func season_label() -> String:
+	return str(meta.get("season_label", ""))
+
+
+func set_season(index: int, label: String) -> bool:
+	var ok := put_meta("season_index", str(maxi(index, 0)))
+	return put_meta("season_label", label) and ok
+
 
 func status() -> String:
 	return str(meta.get("status", "in_progress"))

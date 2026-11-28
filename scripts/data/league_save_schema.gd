@@ -7,6 +7,11 @@ const SIDE_COLUMNS := [
 	"away_played", "away_won", "away_drawn", "away_lost", "away_gf", "away_ga",
 ]
 
+const SEASON_TABLES := [
+	"league_fixture", "league_table", "league_player_stat", "cup_round", "cup_tie",
+	"season_archive", "player_season_archive", "player_history",
+]
+
 const TABLES := [
 	"CREATE TABLE IF NOT EXISTS save_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
 	"CREATE TABLE IF NOT EXISTS save_competition (competition_id TEXT PRIMARY KEY, "
@@ -46,11 +51,13 @@ const TABLES := [
 	+ "fixture_id TEXT NOT NULL, minute INTEGER NOT NULL, kind TEXT NOT NULL, "
 	+ "player_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL DEFAULT '', "
 	+ "detail TEXT NOT NULL DEFAULT '', penalty INTEGER NOT NULL DEFAULT 0);",
-	"CREATE TABLE IF NOT EXISTS league_player_stat (player_id TEXT PRIMARY KEY, "
+	"CREATE TABLE IF NOT EXISTS league_player_stat (player_id TEXT NOT NULL, "
 	+ "competition_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL, "
+	+ "season_index INTEGER NOT NULL DEFAULT 0, "
 	+ "apps INTEGER NOT NULL DEFAULT 0, goals INTEGER NOT NULL DEFAULT 0, "
 	+ "assists INTEGER NOT NULL DEFAULT 0, yellow INTEGER NOT NULL DEFAULT 0, "
-	+ "red INTEGER NOT NULL DEFAULT 0);",
+	+ "red INTEGER NOT NULL DEFAULT 0, "
+	+ "PRIMARY KEY (player_id, competition_id, club_id));",
 	"CREATE TABLE IF NOT EXISTS league_absence (player_id TEXT PRIMARY KEY, "
 	+ "club_id TEXT NOT NULL, kind TEXT NOT NULL, grade TEXT NOT NULL DEFAULT '', "
 	+ "days_left INTEGER NOT NULL DEFAULT 0, matches_left INTEGER NOT NULL DEFAULT 0, "
@@ -68,6 +75,27 @@ const TABLES := [
 	+ "version INTEGER NOT NULL DEFAULT 0, home_club_id TEXT NOT NULL DEFAULT '', "
 	+ "away_club_id TEXT NOT NULL DEFAULT '', bytes BLOB, "
 	+ "penalty INTEGER NOT NULL DEFAULT 0, UNIQUE(fixture_id, goal_index));",
+	"CREATE TABLE IF NOT EXISTS season_archive (season_index INTEGER NOT NULL, "
+	+ "competition_id TEXT NOT NULL, club_id TEXT NOT NULL, "
+	+ "club_name TEXT NOT NULL DEFAULT '', position INTEGER NOT NULL DEFAULT 0, "
+	+ "played INTEGER NOT NULL DEFAULT 0, won INTEGER NOT NULL DEFAULT 0, "
+	+ "drawn INTEGER NOT NULL DEFAULT 0, lost INTEGER NOT NULL DEFAULT 0, "
+	+ "gf INTEGER NOT NULL DEFAULT 0, ga INTEGER NOT NULL DEFAULT 0, "
+	+ "points INTEGER NOT NULL DEFAULT 0, "
+	+ "PRIMARY KEY (season_index, competition_id, club_id));",
+	"CREATE TABLE IF NOT EXISTS player_season_archive (season_index INTEGER NOT NULL, "
+	+ "player_id TEXT NOT NULL, player_name TEXT NOT NULL DEFAULT '', "
+	+ "competition_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL, "
+	+ "apps INTEGER NOT NULL DEFAULT 0, goals INTEGER NOT NULL DEFAULT 0, "
+	+ "assists INTEGER NOT NULL DEFAULT 0, yellow INTEGER NOT NULL DEFAULT 0, "
+	+ "red INTEGER NOT NULL DEFAULT 0, "
+	+ "PRIMARY KEY (season_index, player_id, competition_id, club_id));",
+	"CREATE TABLE IF NOT EXISTS player_history (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+	+ "player_id TEXT NOT NULL, season_index INTEGER NOT NULL, "
+	+ "club_id TEXT NOT NULL DEFAULT '', competition_id TEXT NOT NULL DEFAULT '', "
+	+ "kind TEXT NOT NULL DEFAULT 'spell', from_date TEXT NOT NULL DEFAULT '', "
+	+ "to_date TEXT NOT NULL DEFAULT '', "
+	+ "UNIQUE (player_id, season_index, club_id, kind));",
 ]
 
 const INDEXES := [
@@ -126,11 +154,14 @@ static func migrate() -> void:
 		add_column(table, "competition_id", "TEXT NOT NULL DEFAULT ''")
 	add_column("league_fixture", "stage", "TEXT NOT NULL DEFAULT ''")
 	add_column("league_fixture", "leg", "INTEGER NOT NULL DEFAULT 0")
+	for table in SEASON_TABLES:
+		add_column(table, "season_index", "INTEGER NOT NULL DEFAULT 0")
 	var hint_rows := hint()
 	var owner := str(hint_rows[0]) if not hint_rows.is_empty() else "PL"
 	for table in ["league_fixture", "league_table", "league_player_stat"]:
 		backfill(table, owner)
 	_rebuild_table_for_two_tables()
+	_rebuild_player_stat_for_season()
 	for sql in INDEXES:
 		PLDatabase.execute(sql)
 	create_two_table_index()
@@ -189,6 +220,38 @@ static func create_two_table_index() -> void:
 	PLDatabase.execute(
 		"CREATE UNIQUE INDEX IF NOT EXISTS league_table_pair_idx "
 		+ "ON league_table (club_id, competition_id);")
+
+
+static func _rebuild_player_stat_for_season() -> void:
+	var row := PLDatabase.row(
+		"SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'league_player_stat';")
+	if row.is_empty():
+		return
+	var sql := str(row.get("sql", ""))
+	if "PRIMARY KEY (player_id, competition_id, club_id)" in sql:
+		return
+	var carried := []
+	for column in ["player_id", "competition_id", "club_id", "apps", "goals", "assists",
+			"yellow", "red"]:
+		carried.append(column)
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	PLDatabase.execute("ALTER TABLE league_player_stat RENAME TO league_player_stat_pre_season;")
+	PLDatabase.execute(TABLES[9])
+	var sets := carried.duplicate()
+	if _columns("league_player_stat_pre_season").has("season_index"):
+		sets.append("season_index")
+	PLDatabase.execute(
+		"INSERT INTO league_player_stat (" + ", ".join(sets) + ") SELECT "
+		+ ", ".join(sets) + " FROM league_player_stat_pre_season;")
+	PLDatabase.execute("DROP TABLE league_player_stat_pre_season;")
+	PLDatabase.transaction("COMMIT;")
+
+
+static func _columns(table: String) -> Dictionary:
+	var out := {}
+	for row in PLDatabase.rows("PRAGMA table_info(%s);" % table):
+		out[str(row["name"])] = true
+	return out
 
 
 static func add_column(table: String, column: String,

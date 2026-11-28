@@ -114,8 +114,9 @@ static func draw_stage(season: LeagueSeason, competition_id: String, round_id: S
 		return false
 	var position := LeagueUefa.round_ids(competition_id).find(round_id) + 1
 	PLDatabase.execute(
-		"INSERT OR REPLACE INTO cup_round (competition_id, round_id, position, status) "
-		+ "VALUES (?, ?, ?, 'open');", [competition_id, round_id, position])
+		"INSERT OR REPLACE INTO cup_round (competition_id, round_id, position, status, "
+		+ "season_index) VALUES (?, ?, ?, 'open', ?);",
+		[competition_id, round_id, position, season.save.season_index()])
 	var legs := int(rule.get("legs", 2))
 	for i in range(pairs.size()):
 		var pair: Dictionary = pairs[i]
@@ -124,8 +125,9 @@ static func draw_stage(season: LeagueSeason, competition_id: String, round_id: S
 		PLDatabase.execute(
 			"INSERT OR REPLACE INTO cup_tie (competition_id, round_id, tie_index, "
 			+ "home_club_id, away_club_id, winner_club_id, home_goals, away_goals, "
-			+ "pens_home, pens_away, extra_time) VALUES (?, ?, ?, ?, ?, '', 0, 0, -1, -1, 0);",
-			[competition_id, round_id, i, home, away])
+			+ "pens_home, pens_away, extra_time, season_index) "
+			+ "VALUES (?, ?, ?, ?, ?, '', 0, 0, -1, -1, 0, ?);",
+			[competition_id, round_id, i, home, away, season.save.season_index()])
 		for leg in range(1, legs + 1):
 			_install(season, competition_id, round_id, str(rule.get("date", "")),
 				str(rule.get("second_leg", "")), position, i, leg, home, away)
@@ -143,12 +145,12 @@ static func _install(season: LeagueSeason, competition_id: String, round_id: Str
 	var fixture_away := away if leg == 1 else home
 	PLDatabase.execute(
 		"INSERT OR REPLACE INTO league_fixture (id, competition_id, matchday, kickoff, "
-		+ "kickoff_time, home_club_id, away_club_id, status, watched, suggested, stage, leg) "
-		+ "VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, ?);",
+		+ "kickoff_time, home_club_id, away_club_id, status, watched, suggested, stage, leg, "
+		+ "season_index) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, ?, ?);",
 		["uefa-%s-%s-%02d-%d" % [competition_id, round_id, tie_index, leg],
 		 competition_id, position, date,
 		 FixtureCalendar.KICKOFF_TIMES[(tie_index + leg) % FixtureCalendar.KICKOFF_TIMES.size()],
-		 fixture_home, fixture_away, round_id, leg])
+		 fixture_home, fixture_away, round_id, leg, season.save.season_index()])
 
 
 static func _unique(pool: Array) -> Array:

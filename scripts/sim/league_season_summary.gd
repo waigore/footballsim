@@ -18,7 +18,9 @@ static func build(season: LeagueSeason) -> Dictionary:
 	out["competitions"] = sections
 	out["cups"] = _cups(season)
 	out["one_podium"] = true
-	_end_of_linked_season(season, out)
+	var linked := SeasonSettle.read(season)
+	for key in linked.keys():
+		out[key] = linked[key]
 	_mark_playouts(out)
 	return out
 
@@ -48,38 +50,6 @@ static func _mark_playouts(out: Dictionary) -> void:
 			relegated.append(entry)
 		row["relegated"] = relegated
 
-
-static func _end_of_linked_season(season: LeagueSeason, out: Dictionary) -> void:
-	var stored: Variant = season.save.meta.get("linked_end", "")
-	if stored is String and str(stored) != "":
-		var parsed: Variant = JSON.parse_string(str(stored))
-		if parsed is Dictionary:
-			for key in ["playoffs", "pyramid", "relegation", "promotion", "playout"]:
-				if (parsed as Dictionary).has(key):
-					out[key] = (parsed as Dictionary)[key]
-			return
-	var payload := {}
-	var brackets := LeaguePlayoffs.build_all(season)
-	if not brackets.is_empty():
-		payload["playoffs"] = brackets
-		var pyramid := LeaguePyramid.movers(season, brackets)
-		if not pyramid.is_empty():
-			LeaguePyramid.apply(season, pyramid)
-			payload["pyramid"] = pyramid
-	var playouts := LeagueSerieB.playouts(season)
-	if not playouts.is_empty():
-		payload["playout"] = playouts
-	var tie := LeagueRelegation.build(season)
-	if not tie.is_empty():
-		payload["relegation"] = tie
-		var movers := LeaguePromotion.movers(season, tie)
-		if not movers.is_empty():
-			LeaguePromotion.apply(season, movers)
-			payload["promotion"] = movers
-	for key in payload.keys():
-		out[key] = payload[key]
-	if not payload.is_empty():
-		season.save.put_meta("linked_end", JSON.stringify(payload))
 
 static func _cups(season: LeagueSeason) -> Array:
 	var out: Array = []

@@ -412,7 +412,7 @@ func test_engine_finish_without_watching_is_a_no_op() -> void:
 	assert_eq(season.watching_fixture, "", "the season is waiting for a match nobody started")
 
 func test_an_unknown_date_falls_back_to_the_saved_gameweek() -> void:
-	assert_eq(season._matchday_of("1999-01-01"), season.save.matchday(), "an empty day lost the gameweek")
+	assert_eq(season.matchday_of("1999-01-01"), season.save.matchday(), "an empty day lost the gameweek")
 
 
 func test_every_side_total_matches_the_fixture_ledger() -> void:
@@ -526,7 +526,7 @@ func _sync_clock_to_unplayed() -> void:
 		return
 	var date := str(row["d"])
 	season.save.set_date(date)
-	season.save.set_matchday(season._matchday_of(date))
+	season.save.set_matchday(season.matchday_of(date))
 
 
 func _clean() -> void:

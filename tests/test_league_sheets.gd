@@ -1226,7 +1226,7 @@ func test_the_podium_lays_out_with_and_without_a_summary() -> void:
 			doors += 1
 		elif str(item["kind"]) == "extent":
 			extent += 1
-	assert_eq(doors, 3, "the podium lost a door (BACK, TABLE, MAIN MENU)")
+	assert_eq(doors, 4, "the podium lost a door (BACK, TABLE, MAIN MENU, NEW SEASON)")
 	assert_eq(extent, 1, "the podium lost its measured summary height")
 	var summary := {
 		"champion": {"club": "Arsenal", "club_id": "ENG-ARS1", "points": 90},

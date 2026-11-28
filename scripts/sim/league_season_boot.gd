@@ -48,7 +48,7 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	season.rules = save.rules
 
 	save.set_date(first)
-	save.set_matchday(season._matchday_of(first))
+	save.set_matchday(season.matchday_of(first))
 	StrongestXI.apply_all()
 	save.reload()
 	season.rules_by = save.rules_by
