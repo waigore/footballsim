@@ -19,6 +19,7 @@ static func hub(screen: Object) -> Dictionary:
 	return {"date": date, "day": FixtureCalendar.day_label(date) if date != "" else "",
 		"cards": cards, "tonight": plan,
 		"draws": draws.slice(0, 1), "draws_more": maxi(draws.size() - 1, 0),
+		"entrants": LeagueUefaPools.note(save),
 		"interests": season.record.interest.interests() if season != null else [],
 		"touch": bool(screen.touch)}
 

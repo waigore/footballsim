@@ -5,6 +5,7 @@ extends RefCounted
 static func start(season: LeagueSeason) -> void:
 	if season == null or season.save == null:
 		return
+	LeagueUefaBands.ensure(season)
 	for competition_id in LeagueUefa.active_ids(season.save):
 		resume(season, str(competition_id))
 

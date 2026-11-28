@@ -39,6 +39,11 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 			"label": "THIS SAVE DOES NOT RUN THE UEFA CLUB COMPETITIONS",
 			"rect": Rect2(24.0, y, width, 20.0)})
 		y += 28.0
+	var entrants := str(view.get("entrants", ""))
+	if entrants != "":
+		items.append({"id": "", "kind": "note", "label": entrants,
+			"rect": Rect2(24.0, y, width, 20.0)})
+		y += 28.0
 	var draws: Array = view.get("draws", [])
 	if not draws.is_empty():
 		items.append({"id": "", "kind": "caption", "label": "DRAW CEREMONY",

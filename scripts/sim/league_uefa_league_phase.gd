@@ -22,7 +22,7 @@ static func draw(season: LeagueSeason, competition_id: String) -> bool:
 		return false
 	clubs = clubs.slice(0, need)
 	var ranked := _by_rank(clubs)
-	var pots := _pots(ranked, LeagueUefa.pots(competition_id))
+	var pots := LeagueUefaBands.pots(season.save, competition_id, clubs)
 	var matches := LeagueUefa.league_matches(competition_id)
 	var pairs := _schedule(season, competition_id, pots, matches)
 	if pairs.is_empty():
@@ -46,17 +46,6 @@ static func _by_rank(clubs: Array) -> Array:
 	for row in rows:
 		out.append(str(row["id"]))
 	return out
-
-
-static func _pots(ranked: Array, count: int) -> Array:
-	var pots: Array = []
-	var size := int(ceil(float(ranked.size()) / float(maxi(count, 1))))
-	for p in range(count):
-		var start := p * size
-		if start >= ranked.size():
-			break
-		pots.append(ranked.slice(start, mini(start + size, ranked.size())))
-	return pots
 
 
 static func _schedule(season: LeagueSeason, competition_id: String, pots: Array,

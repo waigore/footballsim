@@ -11,6 +11,7 @@ static func apply(season: LeagueSeason) -> Dictionary:
 	var index := played_index + 1
 	var settled := SeasonSettle.apply(season)
 	var archived := SeasonArchive.write(season, played_index)
+	var pools := LeagueUefaPools.regenerate(season)
 	SeasonCalendar.shift(season, 1)
 	var label := SeasonCalendar.next_label(season.save.season_label())
 	var start := _start_date(season)
@@ -40,7 +41,7 @@ static func apply(season: LeagueSeason) -> Dictionary:
 	return {
 		"ok": true, "season_index": index, "season_label": label, "date": first,
 		"settled": not settled.is_empty(), "archived": archived, "aged": ageing,
-		"fixtures": installed,
+		"fixtures": installed, "pools": pools,
 	}
 
 

@@ -186,12 +186,12 @@ static func draw_data(save: LeagueSave, competition_id: String, round_id: String
 		"round": round_id,
 		"title": round_title(competition_id, round_id) + " DRAW",
 		"date": str(LeagueUefa.round_rule(competition_id, round_id).get("date", "")),
-		"pots": pots(competition_id, round_id),
+		"pots": pots(save, competition_id, round_id),
 		"fixtures": pairs(competition_id, round_id),
 	}
 
 
-static func pots(competition_id: String, round_id: String) -> Array:
+static func pots(save: LeagueSave, competition_id: String, round_id: String) -> Array:
 	if round_id != LeagueUefa.LEAGUE_STAGE:
 		var entrants: Array = []
 		for tie in LeagueEuropeTies.rows(competition_id, round_id, {}, {}):
@@ -199,14 +199,9 @@ static func pots(competition_id: String, round_id: String) -> Array:
 				if not entrants.has(str(tie[key])):
 					entrants.append(str(tie[key]))
 		return [pot(entrants)]
-	var ranked := ranked_clubs(competition_id)
 	var out: Array = []
-	var each := int(ceil(float(ranked.size()) / float(maxi(LeagueUefa.pots(competition_id), 1))))
-	for i in range(LeagueUefa.pots(competition_id)):
-		var start := i * each
-		if start >= ranked.size():
-			break
-		out.append(pot(ranked.slice(start, mini(start + each, ranked.size()))))
+	for group in LeagueUefaBands.pots(save, competition_id, ranked_clubs(competition_id)):
+		out.append(pot(group as Array))
 	return out
 
 

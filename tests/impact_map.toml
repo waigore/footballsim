@@ -243,6 +243,9 @@ suites = [
   # Windows and association calendars (#443): the four associations, the state a
   # date alone decides, the per-date market tick and the buying-club rule.
   "test_market_windows.gd",
+  # Season-two Europe (#481): the refilled entry pools, the frozen pot band and
+  # the hub reading.
+  "test_uefa_pools.gd",
 ]
 
 # Europe's own destination (#437): the hub read models, the two sheets and the
