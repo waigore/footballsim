@@ -16,14 +16,44 @@ var league: LeagueHost = null
 
 
 func _initialize() -> void:
+	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
 	scene = load("res://scenes/main.tscn").instantiate()
 	root.add_child(scene)
 	await _frames(3)
 	league = scene.menus.league
 	await _league()
 	await _wiki()
+	await _phone()
 	print("EXIT window=%s" % str(DisplayServer.window_get_size()))
 	quit()
+
+
+func _phone() -> void:
+	root.size = Vector2i(914, 411)
+	await _frames(3)
+	scene.dev.ui_scale = 0.0
+	scene.hud_scale = 1.0
+	scene.chrome_scale = 1.0
+	scene.touch = true
+	scene.menus.sync(Transform2D.IDENTITY, 1.0, scene.touch)
+	if scene.wiki_host != null:
+		scene.wiki_host.screen.touch = scene.touch
+		scene.wiki_host.sync_scale()
+	await _frames(3)
+	var season := LeagueSeason.open(LeagueSave.current.slug if LeagueSave.current != null else "")
+	if season != null:
+		league.show_season(season)
+		await _frames(2)
+		LeagueDoors.open_table(league.screen)
+		league.screen.book.table.mode = LeagueTableView.COMPACT
+		league.screen.refresh()
+		await _shot("issue407_table_phone")
+		league.close()
+		await _frames(2)
+	scene.wiki_host.open_page(WikiModel.LEAGUE, "")
+	await _shot("issue407_encyclopedia_phone")
+	scene.wiki_host.close()
+	await _frames(2)
 
 
 func _league() -> void:
