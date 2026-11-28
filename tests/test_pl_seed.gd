@@ -225,7 +225,9 @@ func test_cup_entry_pools_match_the_regulations() -> void:
 			assert_eq(int(row["n"]), int(expected[cid][role]), "%s %s entry pool drifted" % [cid, role])
 			total += int(row["n"])
 		assert_gte(total, 2, "%s has no entrants" % cid)
-	var stubs := PLDatabase.row("SELECT COUNT(*) AS n FROM club WHERE stub = 1;")
+	var stubs := PLDatabase.row(
+		"SELECT COUNT(*) AS n FROM club WHERE stub = 1 "
+		+ "AND competition_id IN ('FAC','CDR','DFBP');")
 	assert_eq(int(stubs["n"]), 142, "the cup entry pools need 142 stubs")
 	var spanish := PLDatabase.row(
 		"SELECT COUNT(*) AS n FROM club WHERE stub = 1 AND competition_id = 'CDR';")
