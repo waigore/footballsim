@@ -25,14 +25,14 @@ Shipped (wiki domains playable; DRs accepted):
 | Shape-pass shared path; competition hubs; match billing | DR-20261125-11 / 26-01 / 26-06 |
 | Phone tap ≥44 dp; match `SKIP` to whistle | DR-20261128-02 / 03 / 05 |
 | Club country ids + player UUIDs; watched assist row | DR-20261128-16 / 19 |
+| Domestic cups and supercups | DR-20261128-17; `league_cup_*.gd`; [#455](https://github.com/waigore/footballsim/issues/455)–[#459](https://github.com/waigore/footballsim/issues/459) |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
 | 1 | Italian Serie A + Serie B pyramid | Rules [DR-20261128-18](https://github.com/waigore/footballsim/wiki/dr-20261128-18); seed has no `SA`/`SB`; [#420](https://github.com/waigore/footballsim/issues/420)–[#424](https://github.com/waigore/footballsim/issues/424). Unblocks UEFA |
-| 2 | Domestic cups and supercups | Rules [DR-20261128-17](https://github.com/waigore/footballsim/wiki/dr-20261128-17); no `league_cup_*` yet; [#455](https://github.com/waigore/footballsim/issues/455)–[#459](https://github.com/waigore/footballsim/issues/459). ENG/ESP/GER now; Italy with #420 |
-| 3 | Native match hot loop | DR-20261123-02 under the 120 s budget; tick still GDScript |
+| 2 | Native match hot loop | DR-20261123-02 under the 120 s budget; tick still GDScript |
 
 ## Next pick
 
