@@ -17,12 +17,33 @@ licensed one.
 ## Extra time only where the real competition plays it: the Carabao rounds 1-4
 ## and both one-match supercups go straight to penalties.
 
+## Season two and later: the rollover rebuilds each entry pool from these slots.
+## A slot names its source:
+##   {"league": "L1"}                        every club now in that league
+##   {"league": "L2", "to": 20}              clubs ranked 1-20 in last season's table
+##   {"league": "L2", "from": 21}            clubs ranked 21 and below
+##   {"league": "PL", "europe": True}        clubs in Europe this season
+##   {"league": "LL", "only": "supercopa"}   the season's Supercopa field
+##   {"league": "LL", "without": "supercopa"} the rest of that league
+##   {"stubs": {"tier": 5}}                  the cup's own stub clubs at a tier
+##   {"stubs": {"min_tier": 3, "max_tier": 4}}
+## Slots fill in order and never take a club twice; the round is then cut or
+## topped up from the same country's league places to its `entrants` count.
+## Season one keeps its frozen pools above; these slots pick season two's field.
+##
+## `pairing` names a supercup field the same way: a league place or a cup
+## result, then the next league place whenever a slot is taken or missing.
 FA_CUP = {
     "id": "FAC", "name": "FA Cup", "short_name": "FA CUP", "country": "England",
     "prefix": "FAC-", "kind": "cup",
     "rules": {
         "season_start": "2026-11-07", "season_end": "2027-05-22",
         "entrants": {"R1": 80, "R3": 44},
+        "entry": {
+            "R1": [{"league": "L1"}, {"league": "L2"}, {"league": "NL"},
+                   {"stubs": {"tier": 6}}],
+            "R3": [{"league": "PL"}, {"league": "CH"}],
+        },
         "rounds": [
             {"id": "R1", "name": "First round", "date": "2026-11-07", "ties": 40, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
             {"id": "R2", "name": "Second round", "date": "2026-12-05", "ties": 20, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
@@ -43,6 +64,12 @@ CARABAO_CUP = {
     "rules": {
         "season_start": "2026-07-27", "season_end": "2027-03-21",
         "entrants": {"PR": 4, "R1": 68, "R2": 11, "R3": 9},
+        "entry": {
+            "PR": [{"league": "L2", "from": 21}],
+            "R1": [{"league": "CH"}, {"league": "L1"}, {"league": "L2", "to": 20}],
+            "R2": [{"league": "PL", "europe": False}],
+            "R3": [{"league": "PL", "europe": True}],
+        },
         "rounds": [
             {"id": "PR", "name": "Preliminary round", "date": "2026-07-27", "ties": 2, "legs": 1, "extra_time": False, "host": "draw", "regional": True},
             {"id": "R1", "name": "First round", "date": "2026-08-03", "ties": 35, "legs": 1, "extra_time": False, "host": "lower", "regional": True},
@@ -63,6 +90,7 @@ COMMUNITY_SHIELD = {
     "rules": {
         "season_start": "2026-08-16", "season_end": "2026-08-16",
         "entrants": {"F": 2},
+        "pairing": {"F": [{"league": "PL", "place": 1}, {"cup": "FAC", "result": "winner"}]},
         "rounds": [{"id": "F", "name": "Final", "date": "2026-08-16", "ties": 1, "legs": 1, "extra_time": False, "host": "neutral", "regional": False}],
         "europe": {},
     },
@@ -74,6 +102,12 @@ COPA_DEL_REY = {
     "rules": {
         "season_start": "2026-09-26", "season_end": "2027-04-24",
         "entrants": {"PR": 20, "R1": 102, "R32": 4},
+        "entry": {
+            "PR": [{"stubs": {"tier": 5}}],
+            "R1": [{"league": "LL", "without": "supercopa"},
+                   {"stubs": {"min_tier": 3, "max_tier": 4}}],
+            "R32": [{"league": "LL", "only": "supercopa"}],
+        },
         "rounds": [
             {"id": "PR", "name": "Preliminary round", "date": "2026-09-26", "second_leg": "2026-10-03", "ties": 10, "legs": 2, "extra_time": True, "host": "draw", "regional": False},
             {"id": "R1", "name": "First round", "date": "2026-10-27", "ties": 56, "legs": 1, "extra_time": True, "host": "lower", "regional": True},
@@ -94,6 +128,9 @@ SUPERCOPA = {
     "rules": {
         "season_start": "2027-02-02", "season_end": "2027-02-06",
         "entrants": {"SF": 4},
+        "pairing": {"SF": [{"league": "LL", "place": 1}, {"league": "LL", "place": 2},
+                           {"cup": "CDR", "result": "winner"},
+                           {"cup": "CDR", "result": "runner_up"}]},
         "rounds": [
             {"id": "SF", "name": "Semi-finals", "date": "2027-02-02", "ties": 2, "legs": 1, "extra_time": True, "host": "neutral", "regional": False},
             {"id": "F", "name": "Final", "date": "2027-02-06", "ties": 1, "legs": 1, "extra_time": True, "host": "neutral", "regional": False},
@@ -108,6 +145,8 @@ DFB_POKAL = {
     "rules": {
         "season_start": "2026-08-21", "season_end": "2027-05-29",
         "entrants": {"R1": 64},
+        "entry": {"R1": [{"league": "BL"}, {"league": "BL2"},
+                         {"stubs": {"min_tier": 3, "max_tier": 4}}]},
         "rounds": [
             {"id": "R1", "name": "First round", "date": "2026-08-21", "ties": 32, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
             {"id": "R2", "name": "Second round", "date": "2026-10-27", "ties": 16, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
@@ -126,6 +165,7 @@ DFL_SUPERCUP = {
     "rules": {
         "season_start": "2026-08-22", "season_end": "2026-08-22",
         "entrants": {"F": 2},
+        "pairing": {"F": [{"league": "BL", "place": 1}, {"cup": "DFBP", "result": "winner"}]},
         "rounds": [{"id": "F", "name": "Final", "date": "2026-08-22", "ties": 1, "legs": 1, "extra_time": False, "host": "neutral", "regional": False}],
         "europe": {},
     },
@@ -143,6 +183,11 @@ COPPA_ITALIA = {
     "rules": {
         "season_start": "2026-08-08", "season_end": "2027-05-15",
         "entrants": {"PR": 8, "R1": 28, "R16": 8},
+        "entry": {
+            "PR": [{"league": "SB", "from": 17}, {"stubs": {"tier": 3}}],
+            "R1": [{"league": "SA", "from": 9}, {"league": "SB", "to": 16}],
+            "R16": [{"league": "SA", "to": 8}],
+        },
         "rounds": [
             {"id": "PR", "name": "Preliminary round", "date": "2026-08-08", "ties": 4, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
             {"id": "R1", "name": "First round", "date": "2026-08-14", "ties": 16, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
@@ -164,6 +209,7 @@ SUPERCOPPA_ITALIANA = {
     "rules": {
         "season_start": "2027-01-06", "season_end": "2027-01-06",
         "entrants": {"F": 2},
+        "pairing": {"F": [{"league": "SA", "place": 1}, {"cup": "CI", "result": "winner"}]},
         "rounds": [{"id": "F", "name": "Final", "date": "2027-01-06", "ties": 1, "legs": 1, "extra_time": True, "host": "neutral", "regional": False}],
         "europe": {},
     },

@@ -1002672,6 +1002672,32 @@
      "R1": 80,
      "R3": 44
     },
+    "entry": {
+     "R1": [
+      {
+       "league": "L1"
+      },
+      {
+       "league": "L2"
+      },
+      {
+       "league": "NL"
+      },
+      {
+       "stubs": {
+        "tier": 6
+       }
+      }
+     ],
+     "R3": [
+      {
+       "league": "PL"
+      },
+      {
+       "league": "CH"
+      }
+     ]
+    },
     "rounds": [
      {
       "id": "R1",
@@ -1002776,6 +1002802,38 @@
      "R2": 11,
      "R3": 9
     },
+    "entry": {
+     "PR": [
+      {
+       "league": "L2",
+       "from": 21
+      }
+     ],
+     "R1": [
+      {
+       "league": "CH"
+      },
+      {
+       "league": "L1"
+      },
+      {
+       "league": "L2",
+       "to": 20
+      }
+     ],
+     "R2": [
+      {
+       "league": "PL",
+       "europe": false
+      }
+     ],
+     "R3": [
+      {
+       "league": "PL",
+       "europe": true
+      }
+     ]
+    },
     "rounds": [
      {
       "id": "PR",
@@ -1002877,6 +1002935,18 @@
     "entrants": {
      "F": 2
     },
+    "pairing": {
+     "F": [
+      {
+       "league": "PL",
+       "place": 1
+      },
+      {
+       "cup": "FAC",
+       "result": "winner"
+      }
+     ]
+    },
     "rounds": [
      {
       "id": "F",
@@ -1002906,6 +1002976,33 @@
      "PR": 20,
      "R1": 102,
      "R32": 4
+    },
+    "entry": {
+     "PR": [
+      {
+       "stubs": {
+        "tier": 5
+       }
+      }
+     ],
+     "R1": [
+      {
+       "league": "LL",
+       "without": "supercopa"
+      },
+      {
+       "stubs": {
+        "min_tier": 3,
+        "max_tier": 4
+       }
+      }
+     ],
+     "R32": [
+      {
+       "league": "LL",
+       "only": "supercopa"
+      }
+     ]
     },
     "rounds": [
      {
@@ -1003010,6 +1003107,26 @@
     "entrants": {
      "SF": 4
     },
+    "pairing": {
+     "SF": [
+      {
+       "league": "LL",
+       "place": 1
+      },
+      {
+       "league": "LL",
+       "place": 2
+      },
+      {
+       "cup": "CDR",
+       "result": "winner"
+      },
+      {
+       "cup": "CDR",
+       "result": "runner_up"
+      }
+     ]
+    },
     "rounds": [
      {
       "id": "SF",
@@ -1003057,6 +1003174,22 @@
     "season_end": "2027-05-29",
     "entrants": {
      "R1": 64
+    },
+    "entry": {
+     "R1": [
+      {
+       "league": "BL"
+      },
+      {
+       "league": "BL2"
+      },
+      {
+       "stubs": {
+        "min_tier": 3,
+        "max_tier": 4
+       }
+      }
+     ]
     },
     "rounds": [
      {
@@ -1003138,6 +1003271,18 @@
     "season_end": "2026-08-22",
     "entrants": {
      "F": 2
+    },
+    "pairing": {
+     "F": [
+      {
+       "league": "BL",
+       "place": 1
+      },
+      {
+       "cup": "DFBP",
+       "result": "winner"
+      }
+     ]
     },
     "rounds": [
      {
@@ -1005053,6 +1005198,35 @@
      "R1": 28,
      "R16": 8
     },
+    "entry": {
+     "PR": [
+      {
+       "league": "SB",
+       "from": 17
+      },
+      {
+       "stubs": {
+        "tier": 3
+       }
+      }
+     ],
+     "R1": [
+      {
+       "league": "SA",
+       "from": 9
+      },
+      {
+       "league": "SB",
+       "to": 16
+      }
+     ],
+     "R16": [
+      {
+       "league": "SA",
+       "to": 8
+      }
+     ]
+    },
     "rounds": [
      {
       "id": "PR",
@@ -1005144,6 +1005318,18 @@
     "season_end": "2027-01-06",
     "entrants": {
      "F": 2
+    },
+    "pairing": {
+     "F": [
+      {
+       "league": "SA",
+       "place": 1
+      },
+      {
+       "cup": "CI",
+       "result": "winner"
+      }
+     ]
     },
     "rounds": [
      {

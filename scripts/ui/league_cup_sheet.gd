@@ -33,6 +33,8 @@ static func caption(view: Dictionary) -> String:
 		parts.append("NEXT  %s" % FixtureCalendar.day_label(str(view["next_date"])))
 	if str(view.get("winner", "")) != "":
 		parts = ["WINNER  %s" % str(view["winner"])]
+	elif str(view.get("entry", "")) != "":
+		parts.append(str(view["entry"]))
 	return "  ·  ".join(PackedStringArray(parts))
 
 

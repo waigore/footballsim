@@ -83,6 +83,7 @@ static func card(season: LeagueSeason, competition_id: String) -> Dictionary:
 		"winner": str(honour.get("winner_name", "")),
 		"complete": not honour.is_empty(),
 		"pending_draw": pending_draw(season, competition_id, stage),
+		"entry": LeagueCupEntries.note(season.save, competition_id),
 	}
 
 
@@ -100,7 +101,7 @@ static func cup(season: LeagueSeason, competition_id: String, round_id: String) 
 		"id": competition_id, "name": short_name(competition_id),
 		"full": long_name(competition_id), "rounds": [], "ties": [], "chosen": "",
 		"stage": "", "stage_name": "", "next_date": "", "clubs": 0, "winner": "",
-		"pending_draw": false, "inactive": true, "draw": {},
+		"pending_draw": false, "inactive": true, "draw": {}, "entry": "",
 	}
 	var active := LeagueCup.active_ids(season.save) if season != null and season.save != null else []
 	if not active.has(competition_id):
@@ -144,6 +145,7 @@ static func cup(season: LeagueSeason, competition_id: String, round_id: String) 
 	base["winner"] = str(LeagueCupState.honours(competition_id).get("winner_name", ""))
 	base["pending_draw"] = pending_draw(season, competition_id, chosen)
 	base["inactive"] = false
+	base["entry"] = LeagueCupEntries.note(season.save, competition_id)
 	base["draw"] = draw(season, competition_id, chosen)
 	return base
 
