@@ -24,6 +24,7 @@ Rules: [wiki](https://github.com/waigore/footballsim/wiki).
 | Multi-season settle, archive, age/retire | DR-20261128-30; `scripts/sim/market/`; [#440](https://github.com/waigore/footballsim/issues/440) |
 | Contracts, windows, club money | DR-20261128-23 / 24 / 32; `market_*.gd`; [#441](https://github.com/waigore/footballsim/issues/441)–[#443](https://github.com/waigore/footballsim/issues/443) |
 | Deal engine | DR-20261128-23 / 28; `market_deal*.gd`; [#444](https://github.com/waigore/footballsim/issues/444) |
+| Market AI and valuation | DR-20261128-40; `market_ai*.gd`, `market_valuation.gd`; [#450](https://github.com/waigore/footballsim/issues/450) |
 | Loans, clauses, clearance | DR-20261128-23; `market_loan*.gd`, `market_attribution.gd`; [#445](https://github.com/waigore/footballsim/issues/445)–[#447](https://github.com/waigore/footballsim/issues/447) |
 
 ## Remaining gaps (impact order)

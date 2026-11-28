@@ -69,6 +69,7 @@ static func page(player_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 				bars.append([str(pair[1]), float(p[pair[0]]) / 100.0])
 		out["blocks"].append({"k": "bars", "items": bars})
 	out["blocks"].append_array(contract_blocks(player_id, club_name, str(p.get("club_id", ""))))
+	out["blocks"].append_array(value_blocks(p, player_id))
 	out["blocks"].append_array(loan_blocks(player_id))
 	out["blocks"].append_array(transfer_blocks(player_id))
 	var season_label := str(season.get("season_label", ""))
@@ -139,6 +140,25 @@ static func contract_blocks(player_id: String, club_name: String, registered: St
 static func count(source: Dictionary, key: String) -> String:
 	var value := int(source.get(key, -1))
 	return "—" if value < 0 else str(value)
+
+
+static func value_blocks(player: Dictionary, player_id: String) -> Array:
+	if int(player.get("ovr", 0)) <= 0:
+		return []
+	var contract := MarketContracts.of_player(player_id)
+	var worth := MarketValuation.value(player, contract, _valuation_date())
+	var wage := MarketValuation.weekly_wage(worth, int(contract.get("wage", 0)))
+	var items: Array = [
+		["VALUE", MarketCurrency.format(worth), true],
+		["WAGE ASK", MarketWages.weekly(wage), false],
+	]
+	return [{"k": "section", "text": "VALUE"}, {"k": "kv", "items": items}]
+
+
+static func _valuation_date() -> String:
+	if LeagueSave.current == null:
+		return ""
+	return LeagueSave.current.current_date()
 
 
 static func transfer_blocks(player_id: String) -> Array:

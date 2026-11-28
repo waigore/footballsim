@@ -3,50 +3,59 @@ extends RefCounted
 
 
 const DAY_KEY := "market_day"
+const AI_KEY := "market_ai"
+
+static var _clubs_key := ""
+static var _club_ids: Array = []
+
+
+static func enabled(save: LeagueSave) -> bool:
+	if save == null:
+		return false
+	return str(save.meta.get(AI_KEY, "on")) == "on"
 
 
 static func advance(save: LeagueSave, from_date: String, to_date: String) -> Dictionary:
 	if save == null or to_date == "" or from_date == to_date:
 		return {"ok": false, "days": 0, "date": to_date}
-	var days := walk(save, from_date, to_date)
-	post_months(save, from_date, to_date)
-	MarketLoans.review(save, to_date)
+	var days := 0
+	for day in pending_days(save, from_date, to_date):
+		step(save, str(day))
+		days += 1
 	return {"ok": true, "days": days, "date": to_date}
 
 
-static func post_months(save: LeagueSave, from_date: String, to_date: String) -> int:
-	if from_date.length() < 7 or to_date.length() < 7:
-		return 0
-	var year := int(from_date.substr(0, 4))
-	var month := int(from_date.substr(5, 2))
-	var last_year := int(to_date.substr(0, 4))
-	var last_month := int(to_date.substr(5, 2))
-	var posted := 0
-	while year < last_year or (year == last_year and month < last_month):
-		month += 1
-		if month > 12:
-			month = 1
-			year += 1
-		var stamp := "%04d-%02d-01" % [year, month]
-		posted += MarketFinanceFlows.month(stamp)
-		MarketFinanceFlows.tick_gates(save, stamp)
-	return posted
+static func step(save: LeagueSave, day: String) -> void:
+	if save == null or day == "":
+		return
+	if day.ends_with("-01"):
+		MarketFinanceFlows.month(day)
+		MarketFinanceFlows.tick_gates(save, day)
+	MarketLoans.review(save, day)
+	if not enabled(save):
+		return
+	MarketAi.run_day(save, day)
+	MarketCompleteness.ensure_day(save, day)
 
 
-static func walk(save: LeagueSave, from_date: String, to_date: String) -> int:
+static func pending_days(save: LeagueSave, from_date: String, to_date: String) -> Array:
+	var out: Array = []
 	if save == null or from_date == "" or to_date <= from_date:
-		return 0
+		return out
 	var seen := str(save.meta.get(DAY_KEY, ""))
 	var day := from_date
-	var walked := 0
 	while day < to_date:
 		day = FixtureCalendar.add_days(day, 1)
 		if seen != "" and day <= seen:
 			continue
-		walked += 1
-	if walked > 0:
+		out.append(day)
+	if not out.is_empty():
 		save.put_meta(DAY_KEY, to_date)
-	return walked
+	return out
+
+
+static func walk(save: LeagueSave, from_date: String, to_date: String) -> int:
+	return pending_days(save, from_date, to_date).size()
 
 
 static func window_days(from_date: String, to_date: String, country: String) -> int:
@@ -59,6 +68,29 @@ static func window_days(from_date: String, to_date: String, country: String) -> 
 		if not MarketWindows.open_window(day, country).is_empty():
 			count += 1
 	return count
+
+
+static func clubs() -> Array:
+	var key := "%s#%d" % [PLDatabase.current_path(), _season_index()]
+	if key == _clubs_key and not _club_ids.is_empty():
+		return _club_ids
+	_clubs_key = key
+	_club_ids = []
+	for row in PLDatabase.rows(
+			"SELECT c.id FROM club c JOIN club_finance f ON f.club_id = c.id "
+			+ "WHERE c.stub = 0 ORDER BY c.id;"):
+		_club_ids.append(str(row.get("id", "")))
+	return _club_ids
+
+
+static func invalidate() -> void:
+	_clubs_key = ""
+	_club_ids = []
+	MarketNeeds.invalidate()
+
+
+static func _season_index() -> int:
+	return LeagueSave.current.season_index() if LeagueSave.current != null else 0
 
 
 static func roll(save: LeagueSave, date: String, key: String) -> float:
