@@ -129,13 +129,16 @@ func test_the_wizard_offers_europe_and_the_panel_fits_a_phone() -> void:
 			found = item
 	assert_false(found.is_empty(), "the wizard has no UEFA toggle")
 	assert_true(bool(found.get("selected", false)), "the UEFA toggle does not default on")
-	var row := LeaguePanel.row_h(Vector2(913, 411))
-	assert_lte(84.0 + float(LeaguePanel.ITEMS.size()) * (row + LeaguePanel.ROW_GAP), 411.0,
-		"the drawer's items do not fit a phone")
 	var panel := LeaguePanel.new()
 	var total := LeaguePanel.ITEMS.size()
 	panel.cups = true
 	panel.europe_on = true
+	var fit := panel.metrics(Vector2(913, 411))
+	assert_gte(float(fit["row"]), 44.0, "the drawer's rows fall under the tap floor on a phone")
+	assert_eq(int(fit["cols"]), 2, "eight rows do not fold into two columns on a phone")
+	for i in range(panel.items().size()):
+		assert_lte(panel.item_rect(Vector2(913, 411), i).end.y, 411.0 - 12.0,
+			"a drawer row falls off a phone")
 	assert_eq(panel.items().size(), total, "the drawer lost a door")
 	panel.europe_on = false
 	assert_eq(panel.items().size(), total - 1,

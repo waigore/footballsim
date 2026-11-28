@@ -215,6 +215,28 @@ func test_every_panel_destination_opens() -> void:
 		await get_tree().process_frame
 	assert_eq(screen().mode, "hub", "the last destination did not land on the hub")
 
+func test_eight_rows_keep_a_phone_tap_and_stay_on_the_panel() -> void:
+	var panel := LeaguePanel.new()
+	panel.touch = true
+	panel.cups = true
+	panel.europe_on = true
+	var doors := panel.items()
+	assert_gte(doors.size(), 8, "the drawer lost a door")
+	for vp in [Vector2(913, 411), Vector2(730, 411), Vector2(411, 914), Vector2(1024, 600)]:
+		panel.open()
+		panel.settle()
+		var fit := panel.metrics(vp)
+		assert_gte(float(fit["row"]), 44.0, "the rows fall under the tap floor at %s" % vp)
+		for i in range(doors.size()):
+			var rect: Rect2 = panel.item_rect(vp, i)
+			assert_lte(rect.end.y, vp.y - 12.0, "%s falls off the panel at %s" % [doors[i]["id"], vp])
+			assert_eq(panel.hit(rect.get_center(), vp), str(doors[i]["id"]),
+				"%s is not hittable at %s" % [doors[i]["id"], vp])
+		panel.close()
+		panel.settle()
+	assert_eq(int(panel.metrics(Vector2(1600, 900))["cols"]), 1, "a desktop drawer split into columns")
+
+
 func test_the_panel_icons_are_distinct_assets() -> void:
 	var seen := {}
 	for item in LeaguePanel.ITEMS:

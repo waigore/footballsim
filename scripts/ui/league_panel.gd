@@ -84,8 +84,43 @@ func settle() -> void:
 static func eased(u: float) -> float:
 	return u * u * (3.0 - 2.0 * u)
 
+const TAP_FLOOR := 44.0
+
+const TIGHT_HEAD := 66.0
+
+const FOOT := 22.0
+
+const COLUMN_GAP := 6.0
+
+const WIDE_PANEL := 560.0
+
+
+func metrics(vp: Vector2, count: int = -1) -> Dictionary:
+	var n: int = items().size() if count < 0 else count
+	var head := HEAD
+	var gap := ROW_GAP
+	var row := ROW_H
+	var cols := 1
+	if n <= 0 or float(n) * (row + gap) - gap <= vp.y - head - FOOT:
+		return {"head": head, "row": row, "gap": gap, "cols": cols}
+	gap = 2.0
+	head = TIGHT_HEAD
+	var room: float = vp.y - head - FOOT
+	if float(n) * (row + gap) - gap <= room:
+		row = TAP_FLOOR
+		return {"head": head, "row": row, "gap": gap, "cols": cols}
+	cols = 2
+	var lines: int = int(ceil(float(n) / 2.0))
+	var fit: float = (room + gap) / float(lines) - gap
+	row = maxf(minf(fit, ROW_H), TAP_FLOOR)
+	return {"head": head, "row": row, "gap": gap, "cols": cols}
+
+
 func width(vp: Vector2) -> float:
-	return minf(300.0, vp.x * 0.84)
+	var base: float = minf(300.0, vp.x * 0.84)
+	if int(metrics(vp)["cols"]) == 2:
+		return minf(maxf(base, WIDE_PANEL), vp.x * 0.94)
+	return base
 
 func panel_rect(vp: Vector2) -> Rect2:
 	var w := width(vp)
@@ -110,13 +145,14 @@ func items() -> Array:
 
 
 func item_rect(vp: Vector2, index: int) -> Rect2:
-	return Rect2(panel_rect(vp).position.x + 12.0, HEAD + float(index) * (row_h(vp, items().size()) + ROW_GAP),
-		width(vp) - 24.0, row_h(vp, items().size()))
-
-
-static func row_h(vp: Vector2, count: int = ITEMS.size()) -> float:
-	var room: float = vp.y - HEAD - 14.0
-	return minf(ROW_H, maxf(30.0, room / float(count) - ROW_GAP))
+	var fit := metrics(vp)
+	var cols := int(fit["cols"])
+	var col := index % cols
+	var line := index / cols
+	var cell: float = (width(vp) - 24.0 - (float(cols) - 1.0) * COLUMN_GAP) / float(cols)
+	return Rect2(panel_rect(vp).position.x + 12.0 + float(col) * (cell + COLUMN_GAP),
+		float(fit["head"]) + float(line) * (float(fit["row"]) + float(fit["gap"])),
+		cell, float(fit["row"]))
 
 
 func hit(p: Vector2, vp: Vector2) -> String:
@@ -153,9 +189,10 @@ func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, active_pose: String) ->
 	UiChrome.panel(c, cache, rect, UiChrome.C_BG.lerp(Color(0.02, 0.03, 0.04), 0.5), 0,
 		Color(0.96, 0.78, 0.30, 0.35), 1)
 	c.draw_rect(Rect2(rect.position.x + rect.size.x - 3.0, 0.0, 3.0, vp.y), UiChrome.C_GOLD)
-	UiChrome.text(c, Vector2(rect.position.x + 22.0, 34.0), "LEAGUE", 12, UiChrome.C_GOLD, bold)
-	UiChrome.text(c, Vector2(rect.position.x + 22.0, 54.0), "NAVIGATION", 10, UiChrome.C_DIM, med)
-	c.draw_rect(Rect2(rect.position.x + 22.0, 66.0, rect.size.x - 46.0, 1.0), UiChrome.C_BORDER)
+	var head := float(metrics(vp)["head"])
+	UiChrome.text(c, Vector2(rect.position.x + 22.0, head - 50.0), "LEAGUE", 12, UiChrome.C_GOLD, bold)
+	UiChrome.text(c, Vector2(rect.position.x + 22.0, head - 30.0), "NAVIGATION", 10, UiChrome.C_DIM, med)
+	c.draw_rect(Rect2(rect.position.x + 22.0, head - 18.0, rect.size.x - 46.0, 1.0), UiChrome.C_BORDER)
 	var list := items()
 	for i in range(list.size()):
 		_draw_item(c, vp, list[i], i, active_pose, fonts)
