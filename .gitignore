@@ -27,6 +27,8 @@ Thumbs.db
 
 # Debug captures
 shots/
+# Godot's CSV sidecar for the ratings sheet is generated on import
+data/*.csv.import
 
 # Exports / builds
 build/

@@ -25,13 +25,13 @@ static func has_page(page: String, id: String) -> bool:
 	return false
 
 
-static func page(page: String, id: String) -> Dictionary:
+static func page(page: String, id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 	if page == CUP:
 		return WikiCup.page(id)
 	if page == TEAM:
-		return team_page(id)
+		return team_page(id, mode)
 	if page == PLAYER:
-		return player_page(id)
+		return player_page(id, mode)
 	if page == MANAGER:
 		return WikiManager.page(id)
 	return league_page(id)
@@ -54,12 +54,12 @@ static func league_page(competition_id: String = "") -> Dictionary:
 	return WikiLeague.page(competition_id)
 
 
-static func team_page(club_id: String) -> Dictionary:
-	return WikiTeam.page(club_id)
+static func team_page(club_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
+	return WikiTeam.page(club_id, mode)
 
 
-static func player_page(player_id: String) -> Dictionary:
-	return WikiPlayer.page(player_id)
+static func player_page(player_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
+	return WikiPlayer.page(player_id, mode)
 
 
 static func hex(col: Variant) -> String:

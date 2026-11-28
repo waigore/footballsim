@@ -122,7 +122,10 @@ func test_the_chrome_slides_away_and_leaves_the_score_and_the_toggle() -> void:
 	assert_almost_eq(game.hud.slide, 0.0, 0.001, "the bands never finished sliding away")
 	await _draw()
 	assert_eq(_door("league"), Rect2(), "a hidden band kept its league door")
-	assert_eq(_door("pause"), Rect2(), "a hidden band kept its pause door")
+	assert_eq(game.hud.button_at(HudLayout.controls_rect(vp, game.hud.touch).get_center()), "",
+		"a hidden control bar still answered a press")
+	assert_ne(_door("pause"), Rect2(),
+		"a paused match with the chrome hidden kept no RESUME door at all")
 	assert_eq(_door("hud"), HudLayout.hud_toggle_rect(vp, game.hud.touch), "the pill is not the one door left")
 	assert_ne(_door("team_0"), Rect2(), "the scoreboard stopped being a door")
 	assert_eq(game.hud.button_at(HudLayout.controls_rect(vp, game.hud.touch).get_center()), "",

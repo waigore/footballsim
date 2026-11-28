@@ -29,9 +29,9 @@ var last_advance: Dictionary = {}
 
 static func create(name: String, calendar_mode: String, advance_mode: String, seed: int = 0,
 		competitions: Array = ["PL"], cups: bool = false,
-		cup_countries: Array = []) -> LeagueSeason:
+		cup_countries: Array = [], uefa: bool = false) -> LeagueSeason:
 	return LeagueSeasonBoot.create(name, calendar_mode, advance_mode, seed, competitions, cups,
-		cup_countries)
+		cup_countries, uefa)
 
 
 static func open(slug: String) -> LeagueSeason:

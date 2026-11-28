@@ -29,7 +29,7 @@ const TABLES := [
 	+ "home_goals INTEGER NOT NULL DEFAULT 0, away_goals INTEGER NOT NULL DEFAULT 0, "
 	+ "status TEXT NOT NULL DEFAULT 'pending', watched INTEGER NOT NULL DEFAULT 0, "
 	+ "suggested INTEGER NOT NULL DEFAULT 0);",
-	"CREATE TABLE IF NOT EXISTS league_table (club_id TEXT PRIMARY KEY, "
+	"CREATE TABLE IF NOT EXISTS league_table (club_id TEXT NOT NULL, "
 	+ "competition_id TEXT NOT NULL DEFAULT '', "
 	+ "played INTEGER NOT NULL DEFAULT 0, won INTEGER NOT NULL DEFAULT 0, "
 	+ "drawn INTEGER NOT NULL DEFAULT 0, lost INTEGER NOT NULL DEFAULT 0, "
@@ -40,7 +40,8 @@ const TABLES := [
 	+ "home_gf INTEGER NOT NULL DEFAULT 0, home_ga INTEGER NOT NULL DEFAULT 0, "
 	+ "away_played INTEGER NOT NULL DEFAULT 0, away_won INTEGER NOT NULL DEFAULT 0, "
 	+ "away_drawn INTEGER NOT NULL DEFAULT 0, away_lost INTEGER NOT NULL DEFAULT 0, "
-	+ "away_gf INTEGER NOT NULL DEFAULT 0, away_ga INTEGER NOT NULL DEFAULT 0);",
+	+ "away_gf INTEGER NOT NULL DEFAULT 0, away_ga INTEGER NOT NULL DEFAULT 0, "
+	+ "PRIMARY KEY (club_id, competition_id));",
 	"CREATE TABLE IF NOT EXISTS match_event (id INTEGER PRIMARY KEY AUTOINCREMENT, "
 	+ "fixture_id TEXT NOT NULL, minute INTEGER NOT NULL, kind TEXT NOT NULL, "
 	+ "player_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL DEFAULT '', "
@@ -129,8 +130,10 @@ static func migrate() -> void:
 	var owner := str(hint_rows[0]) if not hint_rows.is_empty() else "PL"
 	for table in ["league_fixture", "league_table", "league_player_stat"]:
 		backfill(table, owner)
+	_rebuild_table_for_two_tables()
 	for sql in INDEXES:
 		PLDatabase.execute(sql)
+	create_two_table_index()
 	LeagueRules.migrate(owner)
 
 
@@ -153,6 +156,39 @@ static func ensure_schema(save: LeagueSave) -> void:
 			"INSERT INTO save_competition (competition_id, active, position) VALUES (?, 1, ?) "
 			+ "ON CONFLICT(competition_id) DO UPDATE SET active = 1;",
 			[str(cid), save.actives.find(cid)])
+
+
+static func _rebuild_table_for_two_tables() -> void:
+	var row := PLDatabase.row(
+		"SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'league_table';")
+	if row.is_empty():
+		return
+	var sql := str(row.get("sql", ""))
+	if "PRIMARY KEY (club_id, competition_id)" in sql:
+		return
+	var have := {}
+	for column in PLDatabase.rows("PRAGMA table_info(league_table);"):
+		have[str(column["name"])] = true
+	if not have.has("competition_id"):
+		return
+	var carried := ["club_id", "competition_id"]
+	for column in ["played", "won", "drawn", "lost", "gf", "ga", "points"] + SIDE_COLUMNS:
+		if have.has(column):
+			carried.append(column)
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	PLDatabase.execute("ALTER TABLE league_table RENAME TO league_table_pre_two;")
+	PLDatabase.execute(TABLES[6])
+	PLDatabase.execute(
+		"INSERT INTO league_table (" + ", ".join(carried) + ") SELECT "
+		+ ", ".join(carried) + " FROM league_table_pre_two;")
+	PLDatabase.execute("DROP TABLE league_table_pre_two;")
+	PLDatabase.transaction("COMMIT;")
+
+
+static func create_two_table_index() -> void:
+	PLDatabase.execute(
+		"CREATE UNIQUE INDEX IF NOT EXISTS league_table_pair_idx "
+		+ "ON league_table (club_id, competition_id);")
 
 
 static func add_column(table: String, column: String,
