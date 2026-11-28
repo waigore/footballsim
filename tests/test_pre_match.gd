@@ -650,6 +650,18 @@ func test_the_picker_footer_names_the_file_s_competition() -> void:
 		"the picker footer is hard-coded to one league")
 
 
+func test_the_league_watch_answer_is_the_binding_and_nothing_else() -> void:
+	assert_false(MatchBilling.league_watch(null), "a bare scene reads as a league watch")
+	var game := StubScene.new()
+	assert_false(MatchBilling.league_watch(game), "a fresh scene reads as a league watch")
+	MatchBilling.bind_scene(game, "MUN", {"matchday": 5})
+	assert_true(MatchBilling.league_watch(game), "a fixture-bound scene does not read as a league watch")
+	game.billing.bind_friendly("MUN", "MCI")
+	assert_false(MatchBilling.league_watch(game), "a friendly still reads as a league watch")
+	assert_false(MatchBilling.league_watch({"paused": false}), "a host with no binding reads as a league watch")
+	game.free()
+
+
 class StubScene extends Node:
 	var billing := MatchBilling.new()
 	var prematch = null
