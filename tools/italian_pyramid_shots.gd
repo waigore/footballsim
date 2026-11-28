@@ -34,7 +34,7 @@ func _initialize() -> void:
 			LeagueTableChrome.bands_for(season.save.rules_for("SB")), true))])
 	scene.menus.close()
 	await _frames(2)
-	scene.wiki_host.open_page(WikiModel.LEAGUE, "SA")
+	scene.wiki_host.open_page_over_league(WikiModel.LEAGUE, "SA")
 	await _shot("issue420_encyclopedia_serie_a")
 	var page := WikiModel.page(WikiModel.LEAGUE, "SA")
 	print("ENCYCLOPEDIA title=%s chips=%d" % [str(page.get("title", "")), _chips(page)])
