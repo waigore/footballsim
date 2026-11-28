@@ -28,7 +28,8 @@ static func _resume(season: LeagueSeason, competition_id: String) -> void:
 		var next := str((rounds[i + 1] as Dictionary).get("id", ""))
 		if not LeagueCup.has_round(competition_id, next):
 			draw_round(season, competition_id, next,
-				_winners(competition_id, rid) + LeagueCup.entrants(competition_id, next))
+				LeagueCupTie.winners(competition_id, rid)
+				+ LeagueCup.entrants(competition_id, next))
 
 
 static func draw_round(season: LeagueSeason, competition_id: String, round_id: String,
@@ -40,41 +41,9 @@ static func draw_round(season: LeagueSeason, competition_id: String, round_id: S
 	if pairs.is_empty():
 		return false
 	var position := LeagueCup.round_index(competition_id, round_id) + 1
-	PLDatabase.execute(
-		"INSERT OR REPLACE INTO cup_round (competition_id, round_id, position, status) "
-		+ "VALUES (?, ?, ?, 'open');", [competition_id, round_id, position])
-	var legs := int(rule.get("legs", 1))
-	for i in range(pairs.size()):
-		var pair: Dictionary = pairs[i]
-		var home := str(pair["home"])
-		var away := str(pair["away"])
-		PLDatabase.execute(
-			"INSERT OR REPLACE INTO cup_tie (competition_id, round_id, tie_index, "
-			+ "home_club_id, away_club_id, winner_club_id, home_goals, away_goals, "
-			+ "pens_home, pens_away, extra_time) VALUES (?, ?, ?, ?, ?, '', 0, 0, -1, -1, 0);",
-			[competition_id, round_id, i, home, away])
-		for leg in range(1, legs + 1):
-			_install(season, competition_id, round_id, position, i, leg, home, away, rule)
-	return true
-
-
-static func _install(season: LeagueSeason, competition_id: String, round_id: String,
-		position: int, tie_index: int, leg: int, home: String, away: String,
-		rule: Dictionary) -> void:
-	var date := str(rule.get("date", ""))
-	if leg > 1:
-		date = str(rule.get("second_leg", FixtureCalendar.add_days(date, 7)))
-	var fixture_home := home if leg == 1 else away
-	var fixture_away := away if leg == 1 else home
-	var fixture_id := "cup-%s-%s-%02d-%d" % [competition_id, round_id, tie_index, leg]
-	PLDatabase.execute(
-		"INSERT OR REPLACE INTO league_fixture (id, competition_id, matchday, kickoff, "
-		+ "kickoff_time, home_club_id, away_club_id, status, watched, suggested, stage, leg) "
-		+ "VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, ?);",
-		[fixture_id, competition_id, position, date,
-		 FixtureCalendar.KICKOFF_TIMES[(tie_index + leg) % FixtureCalendar.KICKOFF_TIMES.size()],
-		 fixture_home, fixture_away, round_id, leg])
+	LeagueCupTie.install_round(competition_id, round_id, position, pairs, rule, "cup")
 	season.save.set_status("in_progress")
+	return true
 
 
 static func after_played(season: LeagueSeason, fixture: Dictionary) -> void:
@@ -91,16 +60,8 @@ static func after_played(season: LeagueSeason, fixture: Dictionary) -> void:
 	if next == "" or LeagueCup.has_round(competition_id, next):
 		return
 	draw_round(season, competition_id, next,
-		_winners(competition_id, round_id) + LeagueCup.entrants(competition_id, next))
-
-
-static func _winners(competition_id: String, round_id: String) -> Array:
-	var out: Array = []
-	for row in PLDatabase.rows(
-			"SELECT winner_club_id FROM cup_tie WHERE competition_id = ? AND round_id = ? "
-			+ "AND winner_club_id <> '' ORDER BY tie_index;", [competition_id, round_id]):
-		out.append(str(row["winner_club_id"]))
-	return out
+		LeagueCupTie.winners(competition_id, round_id)
+		+ LeagueCup.entrants(competition_id, next))
 
 
 static func bracket(competition_id: String) -> Array:

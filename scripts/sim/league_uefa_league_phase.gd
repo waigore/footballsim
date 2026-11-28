@@ -16,7 +16,7 @@ static func field(competition_id: String) -> Array:
 static func draw(season: LeagueSeason, competition_id: String) -> bool:
 	if season == null or season.save == null:
 		return false
-	var clubs := _unique(field(competition_id))
+	var clubs := LeagueCupDraw.unique(field(competition_id))
 	var need := LeagueUefa.league_clubs(competition_id)
 	if clubs.size() < need:
 		return false
@@ -31,18 +31,6 @@ static func draw(season: LeagueSeason, competition_id: String) -> bool:
 	_install_fixtures(competition_id, ranked, pairs, matches)
 	season.save.set_status("in_progress")
 	return true
-
-
-static func _unique(pool: Array) -> Array:
-	var seen := {}
-	var out: Array = []
-	for club_id in pool:
-		var key := str(club_id)
-		if key == "" or seen.has(key):
-			continue
-		seen[key] = true
-		out.append(key)
-	return out
 
 
 static func _by_rank(clubs: Array) -> Array:
