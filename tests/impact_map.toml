@@ -108,6 +108,29 @@ suites = [
   "test_hud_layout.gd",
 ]
 
+# Pure league screen wiring: the screen node, its pages/input, the host and the
+# view builder. These files move what a sheet shows, not what the season does,
+# so the UI suites that mount the hub cover them; the season loop, doors, cups
+# and Europe engines keep riding [domains.league].
+[domains.league_ui]
+suites = [
+  "test_league_ui.gd",
+  "test_league_sheets.gd",
+  "test_league_nav_stack.gd",
+  "test_league_doors.gd",
+  "test_league_panel_ui.gd",
+  "test_league_text_fields.gd",
+  "test_league_table_chrome.gd",
+  "test_league_table_order.gd",
+  "test_league_interest.gd",
+  "test_league_cup_ui.gd",
+  "test_league_europe_ui.gd",
+  "test_interest_long_press.gd",
+  "test_multi_ui.gd",
+  "test_ux_parity.gd",
+  "test_hud_layout.gd",
+]
+
 [domains.shell]
 suites = [
   "test_menu_nav.gd",
@@ -853,6 +876,19 @@ domain = "wiki"
 [[rules]]
 match = "scripts/ui/sheet_pointer.gd*"
 domain = "sheet_pointer"
+
+# Screen wiring only: the hub's node, host, pages and view builder.
+[[rules]]
+match = "scripts/ui/league_screen*.gd*"
+domain = "league_ui"
+
+[[rules]]
+match = "scripts/ui/league_host.gd*"
+domain = "league_ui"
+
+[[rules]]
+match = "scripts/ui/league_view.gd*"
+domain = "league_ui"
 
 [[rules]]
 match = "scripts/ui/league_*.gd*"
