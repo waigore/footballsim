@@ -3,7 +3,8 @@ extends RefCounted
 
 
 static func create(name: String, calendar_mode: String, advance_mode: String, seed: int = 0,
-		competitions: Array = ["PL"], cups: bool = false, cup_countries: Array = []) -> LeagueSeason:
+		competitions: Array = ["PL"], cups: bool = false, cup_countries: Array = [],
+		uefa: bool = false) -> LeagueSeason:
 	var saved_mode := calendar_mode if LeagueRules.CALENDAR_MODES.has(calendar_mode) else "generated"
 	var saved_advance := advance_mode if LeagueRules.ADVANCE_MODES.has(advance_mode) else "fixture_days"
 	if seed == 0:
@@ -55,8 +56,13 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	season.rng.seed = seed
 	save.put_meta("cups", "on" if cups else "off")
 	save.put_meta("cup_countries", ",".join(selected_cup_countries(cups, cup_countries, wanted)))
+	save.put_meta("uefa", "on" if uefa else "off")
 	LeagueCupState.start(season)
 	_clock_to_first_competition(season)
+	save.reload()
+	season.rules_by = save.rules_by
+	season.rules = save.rules
+	LeagueUefaState.start(season)
 	save.reload()
 	season.rules_by = save.rules_by
 	season.rules = save.rules
@@ -122,6 +128,7 @@ static func open(slug: String) -> LeagueSeason:
 
 	season.record.interest.force_watch()
 	LeagueCupState.start(season)
+	LeagueUefaState.start(season)
 	season.roll_clock()
 	LeagueSeason.active = season
 	return season
