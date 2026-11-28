@@ -1638,7 +1638,8 @@ def remap_ids(snapshot: dict) -> dict:
 
     for club in clubs:
         club["id"] = club_map[str(club["id"])]
-        club["country"] = club_country(str(club.get("competition_id", "PL")), str(club["abbr"]))
+        club["country"] = club_country(str(club.get("competition_id", "PL")), str(club["abbr"]),
+                                       str(club.get("country", "")))
         for player in club["players"]:
             player["id"] = player_map[str(player["id"])]
     for row in snapshot.get("table", []):
@@ -1752,6 +1753,13 @@ def cmd_verify(args: argparse.Namespace) -> int:
         problems.append(f"missing {SEED_DB.relative_to(ROOT)}; run build")
     known_clubs = {str(c["id"]) for c in snapshot["clubs"]}
     for cid in comps:
+        if cid in UEFA_COMPETITIONS:
+            for row in snapshot.get("members", []):
+                if str(row.get("competition_id", "")) != cid:
+                    continue
+                if str(row.get("member_id", "")) not in known_clubs:
+                    problems.append(f"{cid}: entry {row.get('member_id', '')} has no club")
+            continue
         if cid in CUPS:
             roles: dict[str, int] = {}
             for row in snapshot.get("members", []):
