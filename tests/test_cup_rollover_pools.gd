@@ -220,12 +220,12 @@ func test_the_dfp_pokal_takes_both_bundesligas() -> void:
 
 
 func test_cups_off_write_nothing() -> void:
-	var plain := LeagueSeason.create("Cup Pools Off", "generated", "fixture_days", 8102,
-		["PL"], false)
-	assert_not_null(plain, "the cup-less save was not created")
-	opened.append(plain)
+	_seed(0)
+	var season := _live()
+	season.save.put_meta("cups", "off")
 	var before := _members("FAC", "R1")
-	var pools := LeagueCupPools.rebuild(plain, 0, {}, {})
+	var pools := LeagueCupPools.rebuild(season, 0, {}, {})
+	season.save.put_meta("cups", "on")
 	assert_eq(int(pools.get("cups", -1)), 0, "a cup-less save rebuilt a cup pool")
 	assert_eq(int(pools.get("supercups", -1)), 0, "a cup-less save rebuilt a supercup")
 	assert_eq(_members("FAC", "R1"), before, "a cup-less save rewrote the FA Cup pool")
