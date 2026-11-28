@@ -24,34 +24,34 @@ static func rebuild(season: LeagueSeason, previous_index: int, winners: Dictiona
 			continue
 		if _places(previous_index, str(leagues[0])).is_empty():
 			continue
-		var filled := _fill(name, leagues, previous_index, winners, runners)
+		var filled := _fill(name, previous_index, winners, runners)
 		out["cups"] = int(out["cups"]) + int(filled.get("cups", 0))
 		out["supercups"] = int(out["supercups"]) + int(filled.get("supercups", 0))
 	PLDatabase.transaction("COMMIT;")
 	return out
 
 
-static func _fill(country: String, leagues: Array, previous: int, winners: Dictionary,
+static func _fill(country: String, previous: int, winners: Dictionary,
 		runners: Dictionary) -> Dictionary:
 	match country:
 		"England":
-			return _england(leagues, previous, winners, runners)
+			return _england(previous, winners, runners)
 		"Spain":
-			return _spain(leagues, previous, winners, runners)
+			return _spain(previous, winners, runners)
 		"Germany":
-			return _germany(leagues, previous, winners, runners)
+			return _germany(previous, winners, runners)
 		"Italy":
-			return _italy(leagues, previous, winners, runners)
+			return _italy(previous, winners, runners)
 	return {"cups": 0, "supercups": 0}
 
 
-static func _england(leagues: Array, previous: int, winners: Dictionary,
+static func _england(previous: int, winners: Dictionary,
 		runners: Dictionary) -> Dictionary:
-	var pl := _tier(leagues, previous, "PL")
-	var ch := _tier(leagues, previous, "CH")
-	var l1 := _tier(leagues, previous, "L1")
-	var l2 := _tier(leagues, previous, "L2")
-	var nl := _tier(leagues, previous, "NL")
+	var pl := _tier(previous, "PL")
+	var ch := _tier(previous, "CH")
+	var l1 := _tier(previous, "L1")
+	var l2 := _tier(previous, "L2")
+	var nl := _tier(previous, "NL")
 	var pr := _tail(l2, _slots("EFLC", "PR"))
 	var later := _byes(pl, _slots("EFLC", "R3"))
 	_clear("FAC")
@@ -67,9 +67,9 @@ static func _england(leagues: Array, previous: int, winners: Dictionary,
 	return {"cups": 2, "supercups": 1}
 
 
-static func _spain(leagues: Array, previous: int, winners: Dictionary,
+static func _spain(previous: int, winners: Dictionary,
 		runners: Dictionary) -> Dictionary:
-	var ll := _tier(leagues, previous, "LL")
+	var ll := _tier(previous, "LL")
 	var four := _supercopa_four(_places(previous, "LL"), winners, runners)
 	_clear("SCE")
 	_add("SCE", "SF", four)
@@ -79,10 +79,10 @@ static func _spain(leagues: Array, previous: int, winners: Dictionary,
 	return {"cups": 1, "supercups": 1}
 
 
-static func _germany(leagues: Array, previous: int, winners: Dictionary,
+static func _germany(previous: int, winners: Dictionary,
 		runners: Dictionary) -> Dictionary:
-	var bl := _tier(leagues, previous, "BL")
-	var bl2 := _tier(leagues, previous, "BL2")
+	var bl := _tier(previous, "BL")
+	var bl2 := _tier(previous, "BL2")
 	_clear("DFBP")
 	_add("DFBP", "R1", bl + bl2)
 	_clear("DFLS")
@@ -90,10 +90,10 @@ static func _germany(leagues: Array, previous: int, winners: Dictionary,
 	return {"cups": 1, "supercups": 1}
 
 
-static func _italy(leagues: Array, previous: int, winners: Dictionary,
+static func _italy(previous: int, winners: Dictionary,
 		runners: Dictionary) -> Dictionary:
-	var sa := _tier(leagues, previous, "SA")
-	var sb := _tier(leagues, previous, "SB")
+	var sa := _tier(previous, "SA")
+	var sb := _tier(previous, "SB")
 	var r16 := _head(sa, _slots("CI", "R16"))
 	var pr := _tail(sb, _slots("CI", "PR"))
 	_clear("CI")
@@ -161,9 +161,7 @@ static func _european() -> Dictionary:
 	return out
 
 
-static func _tier(leagues: Array, previous: int, league: String) -> Array:
-	if not leagues.has(league):
-		return []
+static func _tier(previous: int, league: String) -> Array:
 	return _order(_places(previous, league), _club_ids(league))
 
 
