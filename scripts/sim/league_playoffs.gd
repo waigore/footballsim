@@ -38,6 +38,8 @@ static func build(season: LeagueSeason, competition_id: String) -> Dictionary:
 	var format := str(rules.get("playoff_format", ""))
 	if format == LeagueSerieB.FORMAT:
 		return LeagueSerieB.build(season, competition_id, rules)
+	if format == LeagueSegunda.FORMAT:
+		return LeagueSegunda.build(season, competition_id, rules)
 	if not FORMATS.has(format):
 		return {}
 	var need := int((FORMATS[format] as Dictionary)["places"])

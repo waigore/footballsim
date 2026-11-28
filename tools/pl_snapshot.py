@@ -75,7 +75,7 @@ ESPN_CORE = "https://sports.core.api.espn.com/v2"
 
 ## FIFA alpha-3 codes for the associations the seed ships.
 FIFA_COUNTRY = {"England": "ENG", "Wales": "WAL", "Spain": "ESP", "Germany": "GER",
-                "Italy": "ITA"}
+                "Italy": "ITA", "Andorra": "AND"}
 ## Clubs that play in the English pyramid but belong to another association.
 ## The id carries the club's own country, never its competition's.
 COUNTRY_BY_CLUB = {
@@ -83,6 +83,12 @@ COUNTRY_BY_CLUB = {
     ("CH", "SWA"): "Wales",
     ("CH", "WXM"): "Wales",
     ("L2", "NEW"): "Wales",
+    ("LL2", "AND"): "Andorra",
+}
+## A reserve side ships the senior club's abbreviation: the season refuses it a
+## promotion place, and the seed is the only thing that knows a filial by.
+RESERVE_OF = {
+    "LL2": {"CEL": "CEL", "RSO2": "RSO"},
 }
 CLUB_ID_RE = re.compile(r"^([A-Z]{3})-([A-Z0-9]{2,5})([1-9][0-9]*)$")
 PLAYER_ID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
@@ -119,6 +125,28 @@ COMPETITIONS = {
             "ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38,
             "season_start": "2026-08-15", "season_end": "2027-05-23",
             "weekend_bias": 0.88, "midweek_matchdays": 4,
+        },
+    },
+    "LL2": {
+        "espn": "esp.2",
+        "name": "La Liga 2",
+        "short_name": "LA LIGA 2",
+        "country": "Spain",
+        "strength": (74.0, 64.0),
+        "capacity": (24000, 4000),
+        "rules": {
+            # Segunda's 22-club, 42-matchday shape and its own end of season:
+            # two automatic promotions, a four-team bracket for a third, four
+            # RELEGATED labels with nowhere to go (Primera Federación is out of
+            # scope) and no European places. The bracket is
+            # `segunda_four_two_leg` (wiki DR-20261128-33); reserve sides are
+            # barred from the promotion places by the seed's `reserve_of`.
+            "win_points": 3, "draw_points": 1, "clubs": 22, "matchdays": 42,
+            "promotion_places": 2, "promotion_playoff_places": 4,
+            "relegation_places": 4, "playoff_format": "segunda_four_two_leg",
+            "ucl_places": 0, "uel_places": 0, "uecl_places": 0,
+            "season_start": "2026-08-14", "season_end": "2027-06-06",
+            "weekend_bias": 0.85, "midweek_matchdays": 6,
         },
     },
     "BL": {
@@ -597,6 +625,30 @@ VENUES_BY_COMP = {
         "VIC": ("Stadio Romeo Menti", "Vicenza", 12000),
         "EMP": ("Stadio Carlo Castellani", "Empoli", 16284),
     },
+    "LL2": {
+        "ALM": ("Estadio de los Juegos Mediterráneos", "Almería", 15000),
+        "CAS": ("Estadio de Castalia", "Castellón", 15500),
+        "GIR": ("Estadi Montilivi", "Girona", 14624),
+        "GRA": ("Estadio Nuevo Los Cármenes", "Granada", 19336),
+        "BUR": ("Estadio Municipal de El Plantío", "Burgos", 12200),
+        "MLL": ("Estadi Mallorca Son Moix", "Palma", 23142),
+        "EIB": ("Estadio Municipal de Ipurua", "Eibar", 8164),
+        "COR": ("Estadio El Arcángel", "Córdoba", 21822),
+        "LPA": ("Estadio de Gran Canaria", "Las Palmas", 32400),
+        "RSG": ("Estadio El Molinón", "Gijón", 30000),
+        "OVI": ("Estadio Carlos Tartiere", "Oviedo", 30500),
+        "CDS": ("Estadi de la Nova Creu Alta", "Sabadell", 11981),
+        "VLL": ("Estadio José Zorrilla", "Valladolid", 27618),
+        "TEN": ("Estadio Heliodoro Rodríguez López", "Santa Cruz de Tenerife", 22824),
+        "LEG": ("Estadio Municipal de Butarque", "Leganés", 12450),
+        "ELD": ("Estadio Nuevo Pepico Amat", "Elda", 4036),
+        "CAD": ("Estadio Nuevo Mirandilla", "Cádiz", 20724),
+        "CEL": ("Estadio Municipal de Barreiro", "Vigo", 1170),
+        "RSO2": ("Instalaciones de Zubieta", "San Sebastián", 1000),
+        "ALB": ("Estadio Carlos Belmonte", "Albacete", 17000),
+        "AND": ("Estadi Nacional", "Andorra la Vella", 3306),
+        "CEU": ("Estadio Municipal Alfonso Murube", "Ceuta", 6500),
+    },
 }
 
 SCHEMA = """
@@ -619,7 +671,7 @@ CREATE TABLE club (
     style_width REAL, style_directness REAL, style_crossing REAL,
     style_aggression REAL,
     stub INTEGER NOT NULL DEFAULT 0, tier INTEGER NOT NULL DEFAULT 0,
-    region TEXT NOT NULL DEFAULT ''
+    region TEXT NOT NULL DEFAULT '', reserve_of TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE competition_member (
     competition_id TEXT NOT NULL, member_kind TEXT NOT NULL,
@@ -1249,6 +1301,7 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
             "color_dark": _shade(color, 0.65), "color_light": _shade(color, 1.35),
             "shorts": "#ffffff", "gk_color": "#1a1a1a", "text": _ink(color),
             "style": style, "players": players,
+            "reserve_of": "",
         }
 
     with ThreadPoolExecutor(max_workers=4) as pool:
@@ -1266,6 +1319,29 @@ def seed_competition(competition_id: str, season: int, snapshot: dict) -> None:
                 str(player["name"]), taken_players)
             taken_players.add(player["id"])
     snapshot["clubs"] = kept + seeded
+    for club in seeded:
+        club["reserve_of"] = reserve_senior(snapshot, competition_id, str(club["abbr"]),
+                                            str(club["id"]))
+
+
+def reserve_senior(snapshot: dict, competition_id: str, abbr: str, club_id: str) -> str:
+    """The senior club a reserve side belongs to, or '' when it is a senior side.
+
+    The seed is the only surface that knows a filial: the season reads the flag
+    and never guesses one from a name. The senior sits in the tier above, so a
+    club of the same competition that happens to print the same abbreviation is
+    not it.
+    """
+    want = RESERVE_OF.get(competition_id, {}).get(abbr, "")
+    if not want:
+        return ""
+    same = [c for c in snapshot.get("clubs", [])
+            if str(c.get("abbr", "")) == want and str(c.get("id", "")) != club_id
+            and not int(c.get("stub", 0))]
+    above = [c for c in same if str(c.get("competition_id", "")) != competition_id]
+    for club in above or same:
+        return str(club["id"])
+    return ""
 
 
 STUB_ROLES = [
@@ -1336,7 +1412,7 @@ def _stub_squad(country: str, club_name: str, band: int,
             "squad": "starter" if i < 11 else "bench",
             "age": 19 + (int(hashlib.sha1(f"{club_name}{player_name}".encode()).hexdigest()[:4], 16) % 16),
             "nationality": country, "date_of_birth": "",
-            "subs": subs,
+            "subs": subs, "club_base": float(base),
             "extras": {
                 "potential": 0, "weak_foot": 0, "skill_moves": 0, "work_rate": "",
                 "play_styles": "", "traits": "", "international_reputation": 1,
@@ -1461,7 +1537,7 @@ def seed_cups(snapshot: dict) -> dict:
             club["region"] = "north" if city in NORTH_CITIES else "south"
             if str(club.get("name", "")) == "Barnsley":
                 club["region"] = "north"
-        elif cid == "LL":
+        elif cid in ("LL", "LL2"):
             club["region"] = "north" if city in SPANISH_NORTH else "south"
 
     ## Drop only the cup catalogue's own stale stubs: a stub owned by another
@@ -1813,8 +1889,14 @@ def remap_ratings(snapshot: dict, sheet: list[dict]) -> dict:
                 if starter:
                     xi_matched[competition_id] = xi_matched.get(competition_id, 0) + 1
             else:
-                club_base = float(player.get("club_base", 0.0)) or _club_base(snapshot, club)
-                player["subs"] = fc_ratings.synthesize(club_base, role, _wobble(str(player["name"])))
+                authored = player.get("subs") if int(club.get("stub", 0)) else None
+                if authored:
+                    player["subs"] = authored
+                else:
+                    club_base = float(player.get("club_base", 0.0)) or _club_base(snapshot, club)
+                    player["club_base"] = club_base
+                    player["subs"] = fc_ratings.synthesize(
+                        club_base, role, _wobble(str(player["name"])))
                 player["extras"] = {
                     "potential": 0, "weak_foot": 0, "skill_moves": 0, "work_rate": "",
                     "play_styles": "", "traits": "", "international_reputation": 1,
@@ -2031,7 +2113,7 @@ def build_db(snapshot: dict) -> dict:
         comp_id = str(club.get("competition_id", primary["id"]))
         style = club.get("style", {})
         con.execute(
-            "INSERT INTO club VALUES (" + ",".join("?" * 29) + ")",
+            "INSERT INTO club VALUES (" + ",".join("?" * 30) + ")",
             (
                 club["id"], comp_id, str(club.get("country", "")),
                 club["name"], club["short"], club["abbr"],
@@ -2041,6 +2123,7 @@ def build_db(snapshot: dict) -> dict:
                 club["shorts"], club["gk_color"], club["text"],
                 *[float(style.get(k, 0.5)) for k in STYLE_KEYS],
                 int(club.get("stub", 0)), int(club.get("tier", 0)), str(club.get("region", "")),
+                str(club.get("reserve_of", "")),
             ),
         )
         if not int(club.get("stub", 0)):
@@ -2348,8 +2431,17 @@ def cmd_verify(args: argparse.Namespace) -> int:
             problems.append(f"{club['id']}: duplicate player ids")
         if sum(1 for p in club["players"] if p["squad"] == "starter") != 11:
             problems.append(f"{club['id']}: needs eleven starters")
+        senior = str(club.get("reserve_of", ""))
+        if senior != "" and senior not in known_clubs:
+            problems.append(f"{club['id']}: reserve_of {senior} is not a club")
         for p in club["players"]:
             problems.extend(_audit_card(club["id"], p))
+    for abbr in RESERVE_OF.get("LL2", {}):
+        for club in snapshot["clubs"]:
+            if str(club.get("competition_id", "")) != "LL2" or str(club.get("abbr", "")) != abbr:
+                continue
+            if str(club.get("reserve_of", "")) == "":
+                problems.append(f"{club['id']}: a reserve side with no senior club")
     problems.extend(_audit_ids(snapshot))
     if problems:
         print("\n".join(f"FAIL {p}" for p in problems), file=sys.stderr)

@@ -179,6 +179,9 @@ suites = [
   # The Italian pair (#420): the seed's Serie A and Serie B, their bands and the
   # season that promotes three and drops three.
   "test_italian_pyramid.gd",
+  # The Spanish pair (#496/#498/#500): the seed's La Liga 2, the Segunda bracket,
+  # the filial block and the three-up three-down swap.
+  "test_spanish_pyramid.gd",
 ]
 
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
@@ -229,6 +232,9 @@ suites = [
   # The Italian pyramid (#420): the Serie A/Serie B pair, its six-team bracket,
   # the 14-point skip, the 16th-17th play-out and the three-up three-down swap.
   "test_italian_pyramid.gd",
+  # The Spanish pyramid (#496/#498): the La Liga/La Liga 2 pair, the two-leg
+  # bracket with no penalties and the filial block on the promotion places.
+  "test_spanish_pyramid.gd",
   # The table's form reading (DR-20261128-12): the fold over the ledger's
   # played fixtures and the rows the season state decorates with it.
   "test_form_guide.gd",
@@ -888,6 +894,12 @@ domain = "league"
 # play-out and swap, pinned against the shipped seed.
 [[rules]]
 match = "tests/test_italian_pyramid.gd*"
+domain = "league"
+
+# The Spanish pyramid's own suite (#496/#498): the pair's tiers, rules, bracket,
+# filial block and swap, pinned against the shipped seed.
+[[rules]]
+match = "tests/test_spanish_pyramid.gd*"
 domain = "league"
 
 # ------------------------------------------------------------- project ---

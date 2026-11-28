@@ -185,7 +185,7 @@ func test_the_bands_read_each_tier() -> void:
 		"the Premier League's drop changed")
 
 func test_the_tier_graph_is_one_chain_per_country() -> void:
-	assert_eq(LeagueTiers.order(), ["PL", "CH", "L1", "L2", "NL", "LL", "BL", "BL2", "SA", "SB"],
+	assert_eq(LeagueTiers.order(), ["PL", "CH", "L1", "L2", "NL", "LL", "LL2", "BL", "BL2", "SA", "SB"],
 		"the published competition order moved")
 	assert_eq(LeagueSeason.COMPETITION_ORDER, LeagueTiers.order(),
 		"the season's fixture order and the tier graph disagree")

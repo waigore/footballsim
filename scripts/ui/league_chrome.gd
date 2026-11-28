@@ -62,6 +62,8 @@ static func competition_chip_label(row: Dictionary, width: float) -> String:
 			return "PL"
 		"LL":
 			return "LL"
+		"LL2":
+			return "LL2"
 		"CH":
 			return "CHAMP"
 		"L1":

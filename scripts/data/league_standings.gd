@@ -154,7 +154,8 @@ func _tally(acc: Dictionary, club_id: String, goals_for: int, goals_against: int
 func table(competition_id: String = "") -> Array:
 	save.ensure_open()
 	var sql := (
-		"SELECT t.*, c.name AS club_name, c.abbr AS club_abbr, c.color AS club_color "
+		"SELECT t.*, c.name AS club_name, c.abbr AS club_abbr, c.color AS club_color, "
+		+ "c.reserve_of AS club_reserve_of "
 		+ "FROM league_table t JOIN club c ON c.id = t.club_id"
 	)
 	var rows: Array = []
@@ -173,4 +174,5 @@ func table(competition_id: String = "") -> Array:
 		place = 1 if comp != last else place + 1
 		last = comp
 		rows[i]["position"] = place
+		rows[i]["filial"] = str(rows[i].get("club_reserve_of", "")) != ""
 	return rows

@@ -5,7 +5,7 @@ extends RefCounted
 const ACCENT := "#f7c948"
 
 const SHORT := {
-	"BL": "BL", "BL2": "2.BL", "CH": "CHAMP", "LL": "LA LIGA",
+	"BL": "BL", "BL2": "2.BL", "CH": "CHAMP", "LL": "LA LIGA", "LL2": "LA LIGA 2",
 	"L1": "L1", "L2": "L2", "NL": "NL", "PL": "PL", "SA": "SERIE A", "SB": "SERIE B",
 	"UCL": "UCL", "UEL": "UEL", "UECL": "UECL",
 }
