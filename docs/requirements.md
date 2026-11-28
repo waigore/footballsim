@@ -60,4 +60,4 @@ Score with [`rubric.md`](rubric.md). **Rules SoT:** [wiki](https://github.com/wa
 
 ## Non-goals
 
-Club-manager career; licensed data beyond shipped English pyramid, La Liga and German pair ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01)) except cup stubs as identity and a rating band, no squad; photoreal/3D primary; desktop-only mobile.
+Club-manager career; licensed data beyond the English pyramid, La Liga, German pair ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01)) — cup and UEFA stubs are identity and a rating band ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15)); photoreal/3D primary; desktop-only mobile.
