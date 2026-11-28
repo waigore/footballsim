@@ -25,7 +25,7 @@ func after_all() -> void:
 			game.menus.league.close()
 		game.queue_free()
 	LeagueSeason.active = null
-	LeagueSave.close()
+	LeagueSaveBoot.close()
 	_clean()
 	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR

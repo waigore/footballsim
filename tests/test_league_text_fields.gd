@@ -53,7 +53,7 @@ func after_all() -> void:
 		season.close()
 		season = null
 	LeagueSeason.active = null
-	LeagueSave.close()
+	LeagueSaveBoot.close()
 	_clean()
 	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR

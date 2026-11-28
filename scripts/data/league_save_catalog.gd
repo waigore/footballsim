@@ -69,6 +69,6 @@ static func remove(slug: String) -> bool:
 	if not FileAccess.file_exists(file):
 		return false
 	if PLDatabase.current_path() == file:
-		LeagueSave.close()
+		LeagueSaveBoot.close()
 	PLRepository.shared().invalidate()
 	return DirAccess.remove_absolute(ProjectSettings.globalize_path(file)) == OK

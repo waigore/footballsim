@@ -181,7 +181,7 @@ func _fail(reason: String) -> void:
 	quit(1)
 
 func _clean() -> void:
-	LeagueSave.close()
+	LeagueSaveBoot.close()
 	PLDatabase.reset()
 	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR

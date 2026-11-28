@@ -31,7 +31,7 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 			first = str(fixtures[0]["kickoff"])
 		built.append({"competition_id": cid, "fixtures": fixtures})
 		rules_map[cid] = comp_rules
-	var save := LeagueSave.create(name, rules_map, seed, wanted)
+	var save := LeagueSaveBoot.create(name, rules_map, seed, wanted)
 	if save == null:
 		return null
 	var season := LeagueSeason.new()
@@ -41,7 +41,7 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	for i in range(built.size()):
 		var entry: Dictionary = built[i]
 		if not season.record.fixtures.install(entry["fixtures"], str(entry["competition_id"]), i == 0):
-			LeagueSave.close()
+			LeagueSaveBoot.close()
 			return null
 	save.reload()
 	season.rules_by = save.rules_by
@@ -103,7 +103,7 @@ static func known_competitions(wanted: Array) -> Array:
 
 
 static func open(slug: String) -> LeagueSeason:
-	var save := LeagueSave.open(slug)
+	var save := LeagueSaveBoot.open(slug)
 	if save == null:
 		return null
 	var season := LeagueSeason.new()
