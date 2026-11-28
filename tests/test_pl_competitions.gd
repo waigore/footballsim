@@ -113,6 +113,32 @@ func test_an_unknown_competition_is_rejected() -> void:
 		"the crumb numbers the wrong league")
 
 
+func test_a_cup_reads_a_hub_with_a_bracket_not_a_table() -> void:
+	assert_true(WikiModel.has_page(WikiModel.CUP, "FAC"), "the encyclopedia rejects a cup")
+	assert_false(WikiModel.has_page(WikiModel.CUP, "PL"), "a league resolved as a cup")
+	assert_eq(WikiModel.label(WikiModel.CUP, "FAC"), "FA CUP", "the cup crumb names nothing")
+	var page := WikiModel.page(WikiModel.CUP, "FAC")
+	assert_eq(str(page["title"]), "FA CUP", "the cup hub is not the cup's own page")
+	var sections: Array = []
+	for block in page.get("blocks", []):
+		if str((block as Dictionary).get("k", "")) == "section":
+			sections.append(str((block as Dictionary).get("text", "")))
+	assert_false(sections.has("LEAGUE TABLE"), "a cup hub carried a league table")
+	var cups := 0
+	var cup_targets := 0
+	for item in _chips(page):
+		if str((item as Dictionary).get("text", "")) == "FA CUP":
+			cups += 1
+			assert_true((item as Dictionary).get("target", {}).is_empty(),
+				"the cup you are reading should be a badge, not a door to itself")
+		var target: Dictionary = (item as Dictionary).get("target", {})
+		if str(target.get("page", "")) == WikiModel.CUP:
+			cup_targets += 1
+	assert_eq(cups, 1, "the index lost the cup being read")
+	assert_gt(cup_targets, 0, "the index offers no door into another cup")
+	assert_true(sections.has("THE DRAW"), "the cup hub does not read its draw")
+
+
 func _index_size() -> int:
 	return PLCompetitions.all().size() + PLRepository.shared().cups().size()
 

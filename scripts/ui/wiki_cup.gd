@@ -9,18 +9,26 @@ static func page(competition_id: String) -> Dictionary:
 	var comp := PLRepository.shared().competition(competition_id)
 	var name := str(comp.get("name", competition_id))
 	var season := str(comp.get("season_label", PLRepository.shared().meta().get("season_label", "")))
-	var stage := LeagueCupState.stage(competition_id)
-	var honour := LeagueCupState.honours(competition_id)
+	var bound := LeagueLedger.bound()
+	var stage := LeagueCupState.stage(competition_id) if bound else ""
+	var honour := LeagueCupState.honours(competition_id) if bound else {}
 	var out := {
-		"page": WikiModel.LEAGUE, "id": competition_id, "title": name.to_upper(),
+		"page": WikiModel.CUP, "id": competition_id, "title": name.to_upper(),
 		"eyebrow": "%s  ·  %s" % [str(comp.get("short_name", name)).to_upper(), season],
-		"subtitle": subtitle(competition_id, stage, honour),
-		"snapshot": "", "accent": Color(ACCENT), "blocks": [],
+		"subtitle": subtitle(competition_id, stage, honour, bound),
+		"snapshot": str(PLRepository.shared().meta().get("snapshot_date", "")),
+		"accent": Color(ACCENT), "blocks": [],
 	}
 	out["blocks"].append(WikiCompetitions.index(competition_id))
-	out["blocks"].append({"k": "kv", "items": facts(competition_id, stage, honour)})
+	out["blocks"].append({"k": "kv", "items": facts(competition_id, stage, honour, bound)})
 	out["blocks"].append({"k": "section", "text": "THE DRAW"})
-	out["blocks"].append({"k": "note", "text": draw_note(competition_id)})
+	out["blocks"].append({"k": "note", "text": draw_note(competition_id, stage)})
+	if not bound:
+		out["blocks"].append({"k": "note",
+			"text": "OPEN A SEASON TO READ THIS CUP'S BRACKET  ·  THE SHIPPED SEED CARRIES NO TIES"})
+		out["blocks"].append({"k": "note",
+			"text": "A CUP HAS NO TABLE  ·  ITS STANDING IS ITS BRACKET"})
+		return out
 	out["blocks"].append({"k": "section", "text": "BRACKET"})
 	for row in LeagueCupState.bracket(competition_id):
 		var round_row: Dictionary = row
@@ -57,18 +65,22 @@ static func page(competition_id: String) -> Dictionary:
 	return out
 
 
-static func subtitle(competition_id: String, stage: String, honour: Dictionary) -> String:
+static func subtitle(competition_id: String, stage: String, honour: Dictionary,
+		bound: bool = true) -> String:
 	if not honour.is_empty():
 		return "WINNER  ·  %s" % str(honour.get("winner_name", ""))
+	if not bound:
+		return "%d ROUNDS" % LeagueCup.rounds(competition_id).size()
 	if stage == "":
 		return "NOT DRAWN YET"
 	return "%s  ·  %d CLUBS IN" % [LeagueCupView.stage_name(competition_id, stage),
 		LeagueCupView.clubs_left(competition_id)]
 
 
-static func facts(competition_id: String, stage: String, honour: Dictionary) -> Array:
+static func facts(competition_id: String, stage: String, honour: Dictionary,
+		bound: bool = true) -> Array:
 	var rule := LeagueCup.round_rule(competition_id, stage)
-	var next := LeagueCupView.next_date(competition_id)
+	var next := LeagueCupView.next_date(competition_id) if bound else ""
 	var items: Array = [
 		["KIND", LeagueCup.kind(competition_id).to_upper()],
 		["ROUNDS", str(LeagueCup.rounds(competition_id).size())],
@@ -79,13 +91,14 @@ static func facts(competition_id: String, stage: String, honour: Dictionary) -> 
 		items.append(["EXTRA TIME", "YES" if bool(rule.get("extra_time", false)) else "PENALTIES ONLY"])
 	if next != "":
 		items.append(["NEXT NIGHT", FixtureCalendar.day_label(next)])
+	elif not bound:
+		items.append(["BRACKET", "READS THE OPEN SEASON"])
 	if not honour.is_empty():
 		items.append(["RUNNER-UP", str(honour.get("runner_up_name", ""))])
 	return items
 
 
-static func draw_note(competition_id: String) -> String:
-	var stage := LeagueCupState.stage(competition_id)
+static func draw_note(competition_id: String, stage: String = "") -> String:
 	var rule := LeagueCup.round_rule(competition_id, stage)
 	var parts: Array = []
 	if bool(rule.get("regional", false)):
