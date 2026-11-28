@@ -162,6 +162,9 @@ func test_a_cup_off_league_names_the_fallback() -> void:
 	var uecl := _real_clubs("UECL", "POMP", "ENG")
 	assert_eq(uecl[0], str(table[8]), "a cup-off association did not fall back to the league")
 	assert_true(_fallback_names(result, "cup_off"), "the cup-off fallback is not named")
+	assert_eq(LeagueUefaPools.note(season.save),
+		"ENTRANTS: ESP CARRIED OVER · GER CARRIED OVER · ITA CARRIED OVER "
+		+ "· ENG CUP SLOT TO THE LEAGUE", "the hub reading does not name every move")
 	season.close()
 
 
