@@ -2,7 +2,7 @@ class_name LeagueReportActions
 extends RefCounted
 
 
-static func press(screen, id: String) -> bool:
+static func press(screen: LeagueScreen, id: String) -> bool:
 	if id.begins_with(LeagueReportSheet.ALL_CHIP):
 		var comp := id.substr(LeagueReportSheet.ALL_CHIP.length())
 		screen.report_filter["league"] = "" \
@@ -16,5 +16,5 @@ static func press(screen, id: String) -> bool:
 	return false
 
 
-static func reset(screen) -> void:
+static func reset(screen: LeagueScreen) -> void:
 	screen.report_filter = {"league": "", "interest": false}
