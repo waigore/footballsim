@@ -20,15 +20,15 @@ A `db_version` bump replaces the cache and clears in-sim stats.
 
 Ten leagues: England's five linked tiers (`PL`, `CH`, `L1`, `L2`, `NL`), La
 Liga (`LL`), Germany's pair (`BL`, `BL2`) and Italy's pair (`SA`, `SB`) — 212
-league clubs, 354 with cup stubs. Ids are country-stable (`ENG-MUN1`, `ITA-INT1`)
+league clubs, 358 with cup stubs. Ids are country-stable (`ENG-MUN1`, `ITA-INT1`)
 and player ids are UUIDs, minted once and kept. Rules: wiki
 [DR-20261128-16](https://github.com/waigore/footballsim/wiki/dr-20261128-16) /
 [18](https://github.com/waigore/footballsim/wiki/dr-20261128-18).
 
-Seven cups and supercups ship beside them: `FAC`, `EFLC`, `CS`, `CDR`, `SCE`,
-`DFBP`, `DFLS`. The wiki is their rules source of truth
+Nine cups and supercups ship beside them: `FAC`, `EFLC`, `CS`, `CDR`, `SCE`,
+`DFBP`, `DFLS`, `CI`, `SCI`. The wiki is their rules source of truth
 ([Domestic cups](https://github.com/waigore/footballsim/wiki/domestic-cups)).
-Their pools need 142 **stub** clubs outside the shipped tiers: identity,
+Their pools need 146 **stub** clubs outside the shipped tiers: identity,
 colours, a tier band and a synthetic squad. A stub never matches the sheet; its
 invented names would pair with real players.
 

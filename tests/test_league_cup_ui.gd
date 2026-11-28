@@ -104,6 +104,17 @@ func test_the_wizard_defaults_every_active_country_on() -> void:
 	assert_false(has_id("wcups:England"), "England lost its league but kept its cups switch")
 	assert_true(has_id("wcups:Spain"), "Spain lost its cups switch with its league still on")
 
+func test_the_italian_cups_switch_follows_serie_a() -> void:
+	open_wizard()
+	assert_false(has_id("wcups:Italy"), "Italy offered cups with no Italian league on")
+	press_id("wleague:SA")
+	assert_true(screen().wizard["competitions"].has("SA"), "Serie A left the form")
+	assert_true(has_id("wcups:Italy"), "Serie A did not bring the Italian cups switch")
+	press_id("wcups:Italy")
+	assert_eq(screen().wizard["cups_off"], ["Italy"], "the Italian cups switch did not turn off")
+	press_id("wleague:SA")
+	assert_false(has_id("wcups:Italy"), "Serie A lost its league but kept its cups switch")
+
 func test_a_country_switched_off_creates_a_save_without_its_cups() -> void:
 	open_wizard()
 	press_id("wleague:LL")

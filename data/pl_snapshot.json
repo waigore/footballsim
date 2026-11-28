@@ -1,6 +1,6 @@
 {
  "schema_version": 3,
- "db_version": 16,
+ "db_version": 17,
  "season_label": "2026-27",
  "snapshot_date": "2026-11-28",
  "source": "ESPN",
@@ -872080,6 +872080,5402 @@
    "stub": 1,
    "tier": 1,
    "region": ""
+  },
+  {
+   "id": "ITA-CTA1",
+   "name": "Catania",
+   "short": "Catania",
+   "abbr": "CTA",
+   "nickname": "",
+   "manager": "",
+   "stadium": "Catania Stadio",
+   "city": "Catania",
+   "capacity": 7500,
+   "formation": "4-4-2",
+   "color": "#1f3f7a",
+   "color_dark": "#13274b",
+   "color_light": "#2955a4",
+   "shorts": "#ffffff",
+   "gk_color": "#1a1a1a",
+   "text": "#ffffff",
+   "style": {
+    "possession": 0.41,
+    "tempo": 0.42,
+    "press": 0.42,
+    "line": 0.53,
+    "width": 0.43,
+    "directness": 0.61,
+    "crossing": 0.42,
+    "aggression": 0.56
+   },
+   "players": [
+    {
+     "id": "2ba99e5e-c72f-53a0-8cd3-ac4b54b599a9",
+     "name": "R. Ricci",
+     "number": 1,
+     "role": "GK",
+     "pos": "GK",
+     "height": 170,
+     "squad": "starter",
+     "age": 20,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 48,
+      "sprint_speed": 50,
+      "agility": 44,
+      "balance": 54,
+      "reactions": 68,
+      "ball_control": 44,
+      "dribbling": 38,
+      "composure": 64,
+      "crossing": 44,
+      "curve": 40,
+      "fk_accuracy": 34,
+      "finishing": 24,
+      "heading_accuracy": 40,
+      "long_shots": 30,
+      "long_passing": 54,
+      "short_passing": 50,
+      "shot_power": 44,
+      "volleys": 24,
+      "aggression": 44,
+      "interceptions": 30,
+      "positioning": 30,
+      "vision": 50,
+      "penalties": 34,
+      "jumping": 70,
+      "stamina": 54,
+      "strength": 64,
+      "marking_awareness": 24,
+      "standing_tackle": 24,
+      "sliding_tackle": 24,
+      "gk_diving": 68,
+      "gk_handling": 68,
+      "gk_kicking": 62,
+      "gk_positioning": 66,
+      "gk_reflexes": 68
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 68,
+     "gk": {
+      "div": 68,
+      "han": 68,
+      "kic": 62,
+      "ref": 68,
+      "pos": 66,
+      "spd": 49
+     },
+     "pac": 49,
+     "sho": 30,
+     "pas": 48,
+     "dri": 44,
+     "def": 27,
+     "phy": 58
+    },
+    {
+     "id": "044ad8bc-21fa-599c-b56f-73d33e29ba90",
+     "name": "V. Costa",
+     "number": 2,
+     "role": "RB",
+     "pos": "RB",
+     "height": 176,
+     "squad": "starter",
+     "age": 29,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 76,
+      "sprint_speed": 76,
+      "agility": 70,
+      "balance": 66,
+      "reactions": 66,
+      "ball_control": 64,
+      "dribbling": 62,
+      "composure": 60,
+      "crossing": 68,
+      "curve": 60,
+      "fk_accuracy": 48,
+      "finishing": 50,
+      "heading_accuracy": 58,
+      "long_shots": 52,
+      "long_passing": 62,
+      "short_passing": 66,
+      "shot_power": 54,
+      "volleys": 48,
+      "aggression": 64,
+      "interceptions": 64,
+      "positioning": 56,
+      "vision": 60,
+      "penalties": 48,
+      "jumping": 64,
+      "stamina": 72,
+      "strength": 64,
+      "marking_awareness": 62,
+      "standing_tackle": 62,
+      "sliding_tackle": 62,
+      "gk_diving": 12,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 10,
+      "gk_reflexes": 12
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 68,
+     "gk": {
+      "div": 12,
+      "han": 10,
+      "kic": 12,
+      "ref": 12,
+      "pos": 10,
+      "spd": 76
+     },
+     "pac": 76,
+     "sho": 51,
+     "pas": 63,
+     "dri": 64,
+     "def": 62,
+     "phy": 66
+    },
+    {
+     "id": "94a2fb63-d84f-55eb-b257-b6f2191a5ea2",
+     "name": "M. Fontana",
+     "number": 3,
+     "role": "RCB",
+     "pos": "CB",
+     "height": 166,
+     "squad": "starter",
+     "age": 21,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 54,
+      "sprint_speed": 56,
+      "agility": 48,
+      "balance": 56,
+      "reactions": 58,
+      "ball_control": 52,
+      "dribbling": 46,
+      "composure": 58,
+      "crossing": 44,
+      "curve": 38,
+      "fk_accuracy": 34,
+      "finishing": 34,
+      "heading_accuracy": 62,
+      "long_shots": 34,
+      "long_passing": 52,
+      "short_passing": 56,
+      "shot_power": 48,
+      "volleys": 36,
+      "aggression": 62,
+      "interceptions": 64,
+      "positioning": 52,
+      "vision": 48,
+      "penalties": 38,
+      "jumping": 66,
+      "stamina": 60,
+      "strength": 68,
+      "marking_awareness": 66,
+      "standing_tackle": 66,
+      "sliding_tackle": 62,
+      "gk_diving": 6,
+      "gk_handling": 4,
+      "gk_kicking": 6,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 63,
+     "gk": {
+      "div": 6,
+      "han": 4,
+      "kic": 6,
+      "ref": 6,
+      "pos": 4,
+      "spd": 55
+     },
+     "pac": 55,
+     "sho": 38,
+     "pas": 49,
+     "dri": 50,
+     "def": 65,
+     "phy": 65
+    },
+    {
+     "id": "59bd5f13-651a-5a47-8db1-73f9df475c01",
+     "name": "S. Bianchi",
+     "number": 4,
+     "role": "LCB",
+     "pos": "CB",
+     "height": 176,
+     "squad": "starter",
+     "age": 31,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 58,
+      "sprint_speed": 60,
+      "agility": 54,
+      "balance": 60,
+      "reactions": 64,
+      "ball_control": 56,
+      "dribbling": 50,
+      "composure": 62,
+      "crossing": 48,
+      "curve": 44,
+      "fk_accuracy": 38,
+      "finishing": 38,
+      "heading_accuracy": 66,
+      "long_shots": 38,
+      "long_passing": 56,
+      "short_passing": 60,
+      "shot_power": 54,
+      "volleys": 40,
+      "aggression": 66,
+      "interceptions": 68,
+      "positioning": 56,
+      "vision": 54,
+      "penalties": 44,
+      "jumping": 70,
+      "stamina": 64,
+      "strength": 72,
+      "marking_awareness": 70,
+      "standing_tackle": 72,
+      "sliding_tackle": 66,
+      "gk_diving": 10,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 68,
+     "gk": {
+      "div": 10,
+      "han": 10,
+      "kic": 12,
+      "ref": 10,
+      "pos": 8,
+      "spd": 59
+     },
+     "pac": 59,
+     "sho": 43,
+     "pas": 54,
+     "dri": 54,
+     "def": 69,
+     "phy": 69
+    },
+    {
+     "id": "7f7c5bb1-d777-5a06-aac3-da4bb2e77eb1",
+     "name": "C. Gallo",
+     "number": 5,
+     "role": "LB",
+     "pos": "LB",
+     "height": 173,
+     "squad": "starter",
+     "age": 20,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 72,
+      "sprint_speed": 72,
+      "agility": 66,
+      "balance": 62,
+      "reactions": 62,
+      "ball_control": 60,
+      "dribbling": 58,
+      "composure": 56,
+      "crossing": 64,
+      "curve": 56,
+      "fk_accuracy": 44,
+      "finishing": 46,
+      "heading_accuracy": 54,
+      "long_shots": 48,
+      "long_passing": 58,
+      "short_passing": 62,
+      "shot_power": 52,
+      "volleys": 44,
+      "aggression": 60,
+      "interceptions": 60,
+      "positioning": 52,
+      "vision": 56,
+      "penalties": 44,
+      "jumping": 60,
+      "stamina": 68,
+      "strength": 62,
+      "marking_awareness": 58,
+      "standing_tackle": 60,
+      "sliding_tackle": 58,
+      "gk_diving": 8,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 6,
+      "gk_reflexes": 8
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 64,
+     "gk": {
+      "div": 8,
+      "han": 8,
+      "kic": 10,
+      "ref": 8,
+      "pos": 6,
+      "spd": 72
+     },
+     "pac": 72,
+     "sho": 48,
+     "pas": 59,
+     "dri": 60,
+     "def": 59,
+     "phy": 63
+    },
+    {
+     "id": "a0a9eea7-1a1e-5f06-81a8-843b46e42e40",
+     "name": "A. Lombardi",
+     "number": 6,
+     "role": "RDM",
+     "pos": "CDM",
+     "height": 173,
+     "squad": "starter",
+     "age": 25,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 58,
+      "sprint_speed": 58,
+      "agility": 58,
+      "balance": 60,
+      "reactions": 62,
+      "ball_control": 64,
+      "dribbling": 60,
+      "composure": 64,
+      "crossing": 56,
+      "curve": 54,
+      "fk_accuracy": 44,
+      "finishing": 48,
+      "heading_accuracy": 50,
+      "long_shots": 56,
+      "long_passing": 68,
+      "short_passing": 70,
+      "shot_power": 56,
+      "volleys": 44,
+      "aggression": 60,
+      "interceptions": 66,
+      "positioning": 54,
+      "vision": 64,
+      "penalties": 46,
+      "jumping": 56,
+      "stamina": 66,
+      "strength": 62,
+      "marking_awareness": 62,
+      "standing_tackle": 64,
+      "sliding_tackle": 60,
+      "gk_diving": 6,
+      "gk_handling": 4,
+      "gk_kicking": 6,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 6,
+      "han": 4,
+      "kic": 6,
+      "ref": 6,
+      "pos": 4,
+      "spd": 58
+     },
+     "pac": 58,
+     "sho": 51,
+     "pas": 64,
+     "dri": 61,
+     "def": 62,
+     "phy": 62
+    },
+    {
+     "id": "c45830ed-cb98-5c1a-b3e8-f6a312b1e50b",
+     "name": "D. Russo",
+     "number": 7,
+     "role": "LDM",
+     "pos": "CDM",
+     "height": 176,
+     "squad": "starter",
+     "age": 30,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 60,
+      "sprint_speed": 60,
+      "agility": 60,
+      "balance": 62,
+      "reactions": 64,
+      "ball_control": 66,
+      "dribbling": 62,
+      "composure": 66,
+      "crossing": 58,
+      "curve": 56,
+      "fk_accuracy": 46,
+      "finishing": 50,
+      "heading_accuracy": 52,
+      "long_shots": 58,
+      "long_passing": 70,
+      "short_passing": 72,
+      "shot_power": 58,
+      "volleys": 46,
+      "aggression": 62,
+      "interceptions": 68,
+      "positioning": 56,
+      "vision": 66,
+      "penalties": 48,
+      "jumping": 58,
+      "stamina": 68,
+      "strength": 64,
+      "marking_awareness": 64,
+      "standing_tackle": 66,
+      "sliding_tackle": 62,
+      "gk_diving": 8,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 6,
+      "gk_reflexes": 8
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 68,
+     "gk": {
+      "div": 8,
+      "han": 6,
+      "kic": 8,
+      "ref": 8,
+      "pos": 6,
+      "spd": 60
+     },
+     "pac": 60,
+     "sho": 53,
+     "pas": 66,
+     "dri": 63,
+     "def": 64,
+     "phy": 64
+    },
+    {
+     "id": "e7d257e4-ed1a-59ac-a6d2-25c598323df0",
+     "name": "N. Marino",
+     "number": 8,
+     "role": "RW",
+     "pos": "RW",
+     "height": 166,
+     "squad": "starter",
+     "age": 19,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 78,
+      "sprint_speed": 76,
+      "agility": 76,
+      "balance": 68,
+      "reactions": 68,
+      "ball_control": 72,
+      "dribbling": 76,
+      "composure": 66,
+      "crossing": 68,
+      "curve": 66,
+      "fk_accuracy": 54,
+      "finishing": 68,
+      "heading_accuracy": 46,
+      "long_shots": 62,
+      "long_passing": 60,
+      "short_passing": 68,
+      "shot_power": 62,
+      "volleys": 50,
+      "aggression": 46,
+      "interceptions": 42,
+      "positioning": 68,
+      "vision": 68,
+      "penalties": 54,
+      "jumping": 54,
+      "stamina": 64,
+      "strength": 52,
+      "marking_awareness": 34,
+      "standing_tackle": 36,
+      "sliding_tackle": 34,
+      "gk_diving": 10,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 71,
+     "gk": {
+      "div": 10,
+      "han": 8,
+      "kic": 10,
+      "ref": 10,
+      "pos": 8,
+      "spd": 77
+     },
+     "pac": 77,
+     "sho": 64,
+     "pas": 66,
+     "dri": 74,
+     "def": 37,
+     "phy": 54
+    },
+    {
+     "id": "d1675735-c58e-5089-8635-8be6ace0afcf",
+     "name": "A. Giordano",
+     "number": 9,
+     "role": "CAM",
+     "pos": "CAM",
+     "height": 169,
+     "squad": "starter",
+     "age": 25,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 68,
+      "sprint_speed": 64,
+      "agility": 72,
+      "balance": 68,
+      "reactions": 68,
+      "ball_control": 74,
+      "dribbling": 74,
+      "composure": 70,
+      "crossing": 66,
+      "curve": 66,
+      "fk_accuracy": 56,
+      "finishing": 64,
+      "heading_accuracy": 46,
+      "long_shots": 66,
+      "long_passing": 66,
+      "short_passing": 74,
+      "shot_power": 62,
+      "volleys": 52,
+      "aggression": 48,
+      "interceptions": 46,
+      "positioning": 68,
+      "vision": 74,
+      "penalties": 58,
+      "jumping": 52,
+      "stamina": 62,
+      "strength": 52,
+      "marking_awareness": 38,
+      "standing_tackle": 40,
+      "sliding_tackle": 38,
+      "gk_diving": 8,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 6,
+      "gk_reflexes": 8
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 71,
+     "gk": {
+      "div": 8,
+      "han": 8,
+      "kic": 10,
+      "ref": 8,
+      "pos": 6,
+      "spd": 66
+     },
+     "pac": 66,
+     "sho": 63,
+     "pas": 70,
+     "dri": 73,
+     "def": 41,
+     "phy": 54
+    },
+    {
+     "id": "5382c4ea-7532-5780-a741-32e0506ff962",
+     "name": "F. Santoro",
+     "number": 10,
+     "role": "LW",
+     "pos": "LW",
+     "height": 167,
+     "squad": "starter",
+     "age": 33,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 80,
+      "sprint_speed": 78,
+      "agility": 78,
+      "balance": 70,
+      "reactions": 70,
+      "ball_control": 74,
+      "dribbling": 78,
+      "composure": 68,
+      "crossing": 70,
+      "curve": 68,
+      "fk_accuracy": 56,
+      "finishing": 70,
+      "heading_accuracy": 48,
+      "long_shots": 64,
+      "long_passing": 62,
+      "short_passing": 70,
+      "shot_power": 64,
+      "volleys": 52,
+      "aggression": 48,
+      "interceptions": 44,
+      "positioning": 70,
+      "vision": 70,
+      "penalties": 56,
+      "jumping": 56,
+      "stamina": 66,
+      "strength": 54,
+      "marking_awareness": 36,
+      "standing_tackle": 38,
+      "sliding_tackle": 36,
+      "gk_diving": 12,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 10,
+      "gk_reflexes": 12
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 73,
+     "gk": {
+      "div": 12,
+      "han": 10,
+      "kic": 12,
+      "ref": 12,
+      "pos": 10,
+      "spd": 79
+     },
+     "pac": 79,
+     "sho": 66,
+     "pas": 68,
+     "dri": 76,
+     "def": 39,
+     "phy": 56
+    },
+    {
+     "id": "a136ab12-51a7-55e9-b124-b2f11da21548",
+     "name": "E. Romano",
+     "number": 11,
+     "role": "ST",
+     "pos": "ST",
+     "height": 166,
+     "squad": "starter",
+     "age": 31,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 70,
+      "sprint_speed": 72,
+      "agility": 64,
+      "balance": 62,
+      "reactions": 68,
+      "ball_control": 66,
+      "dribbling": 66,
+      "composure": 68,
+      "crossing": 54,
+      "curve": 52,
+      "fk_accuracy": 44,
+      "finishing": 72,
+      "heading_accuracy": 66,
+      "long_shots": 62,
+      "long_passing": 50,
+      "short_passing": 60,
+      "shot_power": 70,
+      "volleys": 54,
+      "aggression": 52,
+      "interceptions": 36,
+      "positioning": 70,
+      "vision": 56,
+      "penalties": 60,
+      "jumping": 66,
+      "stamina": 60,
+      "strength": 66,
+      "marking_awareness": 28,
+      "standing_tackle": 30,
+      "sliding_tackle": 28,
+      "gk_diving": 8,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 6,
+      "gk_reflexes": 8
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 68,
+     "gk": {
+      "div": 8,
+      "han": 6,
+      "kic": 8,
+      "ref": 8,
+      "pos": 6,
+      "spd": 71
+     },
+     "pac": 71,
+     "sho": 68,
+     "pas": 55,
+     "dri": 66,
+     "def": 34,
+     "phy": 62
+    },
+    {
+     "id": "e0f91167-0cde-514a-8bb3-1df628e5f8f5",
+     "name": "M. Conti",
+     "number": 12,
+     "role": "GK",
+     "pos": "GK",
+     "height": 164,
+     "squad": "bench",
+     "age": 29,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 41,
+      "sprint_speed": 43,
+      "agility": 38,
+      "balance": 48,
+      "reactions": 61,
+      "ball_control": 38,
+      "dribbling": 31,
+      "composure": 58,
+      "crossing": 38,
+      "curve": 33,
+      "fk_accuracy": 28,
+      "finishing": 18,
+      "heading_accuracy": 33,
+      "long_shots": 23,
+      "long_passing": 48,
+      "short_passing": 43,
+      "shot_power": 38,
+      "volleys": 18,
+      "aggression": 38,
+      "interceptions": 23,
+      "positioning": 23,
+      "vision": 43,
+      "penalties": 28,
+      "jumping": 63,
+      "stamina": 48,
+      "strength": 58,
+      "marking_awareness": 18,
+      "standing_tackle": 18,
+      "sliding_tackle": 18,
+      "gk_diving": 61,
+      "gk_handling": 61,
+      "gk_kicking": 55,
+      "gk_positioning": 59,
+      "gk_reflexes": 61
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 61,
+     "gk": {
+      "div": 61,
+      "han": 61,
+      "kic": 55,
+      "ref": 61,
+      "pos": 59,
+      "spd": 42
+     },
+     "pac": 42,
+     "sho": 24,
+     "pas": 42,
+     "dri": 38,
+     "def": 21,
+     "phy": 52
+    },
+    {
+     "id": "1e5a939c-6f58-5a11-9835-d949592ba441",
+     "name": "L. Moretti",
+     "number": 13,
+     "role": "RCB",
+     "pos": "CB",
+     "height": 165,
+     "squad": "bench",
+     "age": 21,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 51,
+      "sprint_speed": 53,
+      "agility": 46,
+      "balance": 53,
+      "reactions": 56,
+      "ball_control": 49,
+      "dribbling": 43,
+      "composure": 55,
+      "crossing": 41,
+      "curve": 36,
+      "fk_accuracy": 31,
+      "finishing": 31,
+      "heading_accuracy": 59,
+      "long_shots": 31,
+      "long_passing": 49,
+      "short_passing": 53,
+      "shot_power": 46,
+      "volleys": 33,
+      "aggression": 59,
+      "interceptions": 61,
+      "positioning": 49,
+      "vision": 46,
+      "penalties": 36,
+      "jumping": 63,
+      "stamina": 57,
+      "strength": 65,
+      "marking_awareness": 63,
+      "standing_tackle": 64,
+      "sliding_tackle": 59,
+      "gk_diving": 3,
+      "gk_handling": 2,
+      "gk_kicking": 4,
+      "gk_positioning": 1,
+      "gk_reflexes": 3
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 60,
+     "gk": {
+      "div": 3,
+      "han": 2,
+      "kic": 4,
+      "ref": 3,
+      "pos": 1,
+      "spd": 52
+     },
+     "pac": 52,
+     "sho": 35,
+     "pas": 47,
+     "dri": 47,
+     "def": 62,
+     "phy": 62
+    },
+    {
+     "id": "428cd94c-1c45-50fb-a4c3-24c9ed289afc",
+     "name": "P. Ferrari",
+     "number": 14,
+     "role": "LB",
+     "pos": "LB",
+     "height": 174,
+     "squad": "bench",
+     "age": 27,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 65,
+      "sprint_speed": 65,
+      "agility": 59,
+      "balance": 55,
+      "reactions": 55,
+      "ball_control": 53,
+      "dribbling": 51,
+      "composure": 49,
+      "crossing": 57,
+      "curve": 49,
+      "fk_accuracy": 37,
+      "finishing": 39,
+      "heading_accuracy": 47,
+      "long_shots": 41,
+      "long_passing": 51,
+      "short_passing": 55,
+      "shot_power": 44,
+      "volleys": 37,
+      "aggression": 53,
+      "interceptions": 53,
+      "positioning": 45,
+      "vision": 49,
+      "penalties": 37,
+      "jumping": 53,
+      "stamina": 61,
+      "strength": 54,
+      "marking_awareness": 51,
+      "standing_tackle": 52,
+      "sliding_tackle": 51,
+      "gk_diving": 1,
+      "gk_handling": 1,
+      "gk_kicking": 2,
+      "gk_positioning": 1,
+      "gk_reflexes": 1
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 57,
+     "gk": {
+      "div": 1,
+      "han": 1,
+      "kic": 2,
+      "ref": 1,
+      "pos": 1,
+      "spd": 65
+     },
+     "pac": 65,
+     "sho": 41,
+     "pas": 52,
+     "dri": 53,
+     "def": 51,
+     "phy": 56
+    },
+    {
+     "id": "2dc52fbf-2b72-547c-9aa8-5c5d9b913855",
+     "name": "T. Greco",
+     "number": 15,
+     "role": "RDM",
+     "pos": "CDM",
+     "height": 175,
+     "squad": "bench",
+     "age": 29,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 53,
+      "sprint_speed": 53,
+      "agility": 53,
+      "balance": 55,
+      "reactions": 57,
+      "ball_control": 59,
+      "dribbling": 55,
+      "composure": 59,
+      "crossing": 51,
+      "curve": 49,
+      "fk_accuracy": 39,
+      "finishing": 44,
+      "heading_accuracy": 45,
+      "long_shots": 51,
+      "long_passing": 63,
+      "short_passing": 65,
+      "shot_power": 51,
+      "volleys": 39,
+      "aggression": 55,
+      "interceptions": 61,
+      "positioning": 49,
+      "vision": 59,
+      "penalties": 41,
+      "jumping": 51,
+      "stamina": 61,
+      "strength": 57,
+      "marking_awareness": 57,
+      "standing_tackle": 59,
+      "sliding_tackle": 55,
+      "gk_diving": 1,
+      "gk_handling": 1,
+      "gk_kicking": 2,
+      "gk_positioning": 1,
+      "gk_reflexes": 1
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 61,
+     "gk": {
+      "div": 1,
+      "han": 1,
+      "kic": 2,
+      "ref": 1,
+      "pos": 1,
+      "spd": 53
+     },
+     "pac": 53,
+     "sho": 47,
+     "pas": 59,
+     "dri": 56,
+     "def": 57,
+     "phy": 57
+    },
+    {
+     "id": "8bc83c6a-8d50-5cc6-8ca8-582bd5bd7769",
+     "name": "G. Mancini",
+     "number": 16,
+     "role": "RW",
+     "pos": "RW",
+     "height": 174,
+     "squad": "bench",
+     "age": 21,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 69,
+      "sprint_speed": 67,
+      "agility": 67,
+      "balance": 59,
+      "reactions": 59,
+      "ball_control": 63,
+      "dribbling": 67,
+      "composure": 57,
+      "crossing": 59,
+      "curve": 57,
+      "fk_accuracy": 45,
+      "finishing": 59,
+      "heading_accuracy": 37,
+      "long_shots": 53,
+      "long_passing": 51,
+      "short_passing": 59,
+      "shot_power": 53,
+      "volleys": 41,
+      "aggression": 37,
+      "interceptions": 33,
+      "positioning": 59,
+      "vision": 59,
+      "penalties": 45,
+      "jumping": 45,
+      "stamina": 55,
+      "strength": 44,
+      "marking_awareness": 25,
+      "standing_tackle": 27,
+      "sliding_tackle": 25,
+      "gk_diving": 1,
+      "gk_handling": 1,
+      "gk_kicking": 2,
+      "gk_positioning": 1,
+      "gk_reflexes": 1
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 62,
+     "gk": {
+      "div": 1,
+      "han": 1,
+      "kic": 2,
+      "ref": 1,
+      "pos": 1,
+      "spd": 68
+     },
+     "pac": 68,
+     "sho": 55,
+     "pas": 57,
+     "dri": 65,
+     "def": 28,
+     "phy": 45
+    },
+    {
+     "id": "adc3a61e-25d9-5ef7-a4ef-1aa90a6674ac",
+     "name": "R. Mariani",
+     "number": 17,
+     "role": "LW",
+     "pos": "LW",
+     "height": 177,
+     "squad": "bench",
+     "age": 26,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 70,
+      "sprint_speed": 68,
+      "agility": 68,
+      "balance": 60,
+      "reactions": 60,
+      "ball_control": 64,
+      "dribbling": 68,
+      "composure": 58,
+      "crossing": 60,
+      "curve": 58,
+      "fk_accuracy": 46,
+      "finishing": 60,
+      "heading_accuracy": 38,
+      "long_shots": 54,
+      "long_passing": 52,
+      "short_passing": 60,
+      "shot_power": 54,
+      "volleys": 42,
+      "aggression": 38,
+      "interceptions": 34,
+      "positioning": 60,
+      "vision": 60,
+      "penalties": 46,
+      "jumping": 46,
+      "stamina": 56,
+      "strength": 45,
+      "marking_awareness": 26,
+      "standing_tackle": 28,
+      "sliding_tackle": 26,
+      "gk_diving": 2,
+      "gk_handling": 1,
+      "gk_kicking": 3,
+      "gk_positioning": 1,
+      "gk_reflexes": 2
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 63,
+     "gk": {
+      "div": 2,
+      "han": 1,
+      "kic": 3,
+      "ref": 2,
+      "pos": 1,
+      "spd": 69
+     },
+     "pac": 69,
+     "sho": 56,
+     "pas": 58,
+     "dri": 66,
+     "def": 29,
+     "phy": 46
+    },
+    {
+     "id": "5e033da7-1c00-5365-9ebd-384bd9a525e1",
+     "name": "V. Colombo",
+     "number": 18,
+     "role": "ST",
+     "pos": "ST",
+     "height": 180,
+     "squad": "bench",
+     "age": 22,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 66,
+      "sprint_speed": 68,
+      "agility": 60,
+      "balance": 58,
+      "reactions": 64,
+      "ball_control": 62,
+      "dribbling": 62,
+      "composure": 64,
+      "crossing": 50,
+      "curve": 48,
+      "fk_accuracy": 40,
+      "finishing": 68,
+      "heading_accuracy": 62,
+      "long_shots": 58,
+      "long_passing": 47,
+      "short_passing": 56,
+      "shot_power": 66,
+      "volleys": 50,
+      "aggression": 48,
+      "interceptions": 32,
+      "positioning": 66,
+      "vision": 52,
+      "penalties": 56,
+      "jumping": 62,
+      "stamina": 56,
+      "strength": 62,
+      "marking_awareness": 24,
+      "standing_tackle": 26,
+      "sliding_tackle": 24,
+      "gk_diving": 4,
+      "gk_handling": 3,
+      "gk_kicking": 5,
+      "gk_positioning": 2,
+      "gk_reflexes": 4
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 64,
+     "gk": {
+      "div": 4,
+      "han": 3,
+      "kic": 5,
+      "ref": 4,
+      "pos": 2,
+      "spd": 67
+     },
+     "pac": 67,
+     "sho": 64,
+     "pas": 51,
+     "dri": 62,
+     "def": 30,
+     "phy": 58
+    }
+   ],
+   "competition_id": "CI",
+   "country": "ITA",
+   "stub": 1,
+   "tier": 3,
+   "region": "south"
+  },
+  {
+   "id": "ITA-POT1",
+   "name": "Potenza",
+   "short": "Potenza",
+   "abbr": "POT",
+   "nickname": "",
+   "manager": "",
+   "stadium": "Potenza Stadio",
+   "city": "Potenza",
+   "capacity": 3500,
+   "formation": "4-4-2",
+   "color": "#1d5c3a",
+   "color_dark": "#113923",
+   "color_light": "#277c4e",
+   "shorts": "#ffffff",
+   "gk_color": "#1a1a1a",
+   "text": "#ffffff",
+   "style": {
+    "possession": 0.55,
+    "tempo": 0.59,
+    "press": 0.54,
+    "line": 0.53,
+    "width": 0.57,
+    "directness": 0.55,
+    "crossing": 0.44,
+    "aggression": 0.59
+   },
+   "players": [
+    {
+     "id": "069867c6-caad-5112-841c-ccdc49002b84",
+     "name": "R. Ricci",
+     "number": 1,
+     "role": "GK",
+     "pos": "GK",
+     "height": 168,
+     "squad": "starter",
+     "age": 22,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 42,
+      "sprint_speed": 44,
+      "agility": 38,
+      "balance": 48,
+      "reactions": 62,
+      "ball_control": 38,
+      "dribbling": 32,
+      "composure": 58,
+      "crossing": 38,
+      "curve": 34,
+      "fk_accuracy": 28,
+      "finishing": 18,
+      "heading_accuracy": 34,
+      "long_shots": 24,
+      "long_passing": 48,
+      "short_passing": 44,
+      "shot_power": 38,
+      "volleys": 18,
+      "aggression": 38,
+      "interceptions": 24,
+      "positioning": 24,
+      "vision": 44,
+      "penalties": 28,
+      "jumping": 64,
+      "stamina": 48,
+      "strength": 58,
+      "marking_awareness": 18,
+      "standing_tackle": 18,
+      "sliding_tackle": 18,
+      "gk_diving": 62,
+      "gk_handling": 62,
+      "gk_kicking": 56,
+      "gk_positioning": 60,
+      "gk_reflexes": 62
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 62,
+     "gk": {
+      "div": 62,
+      "han": 62,
+      "kic": 56,
+      "ref": 62,
+      "pos": 60,
+      "spd": 43
+     },
+     "pac": 43,
+     "sho": 24,
+     "pas": 42,
+     "dri": 38,
+     "def": 21,
+     "phy": 52
+    },
+    {
+     "id": "42b3dfee-f97a-5a8f-8095-8674df5dba44",
+     "name": "V. Costa",
+     "number": 2,
+     "role": "RB",
+     "pos": "RB",
+     "height": 165,
+     "squad": "starter",
+     "age": 27,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 74,
+      "sprint_speed": 74,
+      "agility": 68,
+      "balance": 64,
+      "reactions": 64,
+      "ball_control": 62,
+      "dribbling": 60,
+      "composure": 58,
+      "crossing": 66,
+      "curve": 58,
+      "fk_accuracy": 46,
+      "finishing": 48,
+      "heading_accuracy": 56,
+      "long_shots": 50,
+      "long_passing": 60,
+      "short_passing": 64,
+      "shot_power": 54,
+      "volleys": 46,
+      "aggression": 62,
+      "interceptions": 62,
+      "positioning": 54,
+      "vision": 58,
+      "penalties": 46,
+      "jumping": 62,
+      "stamina": 70,
+      "strength": 64,
+      "marking_awareness": 60,
+      "standing_tackle": 62,
+      "sliding_tackle": 60,
+      "gk_diving": 10,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 10,
+      "han": 10,
+      "kic": 12,
+      "ref": 10,
+      "pos": 8,
+      "spd": 74
+     },
+     "pac": 74,
+     "sho": 50,
+     "pas": 61,
+     "dri": 62,
+     "def": 61,
+     "phy": 65
+    },
+    {
+     "id": "5a91ce40-c282-5002-bd0f-5f7f0f4eb609",
+     "name": "M. Fontana",
+     "number": 3,
+     "role": "RCB",
+     "pos": "CB",
+     "height": 167,
+     "squad": "starter",
+     "age": 28,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 58,
+      "sprint_speed": 60,
+      "agility": 52,
+      "balance": 60,
+      "reactions": 62,
+      "ball_control": 56,
+      "dribbling": 50,
+      "composure": 62,
+      "crossing": 48,
+      "curve": 42,
+      "fk_accuracy": 38,
+      "finishing": 38,
+      "heading_accuracy": 66,
+      "long_shots": 38,
+      "long_passing": 56,
+      "short_passing": 60,
+      "shot_power": 52,
+      "volleys": 40,
+      "aggression": 66,
+      "interceptions": 68,
+      "positioning": 56,
+      "vision": 52,
+      "penalties": 42,
+      "jumping": 70,
+      "stamina": 64,
+      "strength": 72,
+      "marking_awareness": 70,
+      "standing_tackle": 70,
+      "sliding_tackle": 66,
+      "gk_diving": 10,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 67,
+     "gk": {
+      "div": 10,
+      "han": 8,
+      "kic": 10,
+      "ref": 10,
+      "pos": 8,
+      "spd": 59
+     },
+     "pac": 59,
+     "sho": 42,
+     "pas": 53,
+     "dri": 54,
+     "def": 69,
+     "phy": 69
+    },
+    {
+     "id": "ca161970-eae9-51b6-b200-22b9652a22ff",
+     "name": "S. Bianchi",
+     "number": 4,
+     "role": "LCB",
+     "pos": "CB",
+     "height": 164,
+     "squad": "starter",
+     "age": 25,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 56,
+      "sprint_speed": 58,
+      "agility": 50,
+      "balance": 58,
+      "reactions": 60,
+      "ball_control": 54,
+      "dribbling": 48,
+      "composure": 60,
+      "crossing": 46,
+      "curve": 40,
+      "fk_accuracy": 36,
+      "finishing": 36,
+      "heading_accuracy": 64,
+      "long_shots": 36,
+      "long_passing": 54,
+      "short_passing": 58,
+      "shot_power": 50,
+      "volleys": 38,
+      "aggression": 64,
+      "interceptions": 66,
+      "positioning": 54,
+      "vision": 50,
+      "penalties": 40,
+      "jumping": 68,
+      "stamina": 62,
+      "strength": 70,
+      "marking_awareness": 68,
+      "standing_tackle": 68,
+      "sliding_tackle": 64,
+      "gk_diving": 8,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 6,
+      "gk_reflexes": 8
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 65,
+     "gk": {
+      "div": 8,
+      "han": 6,
+      "kic": 8,
+      "ref": 8,
+      "pos": 6,
+      "spd": 57
+     },
+     "pac": 57,
+     "sho": 40,
+     "pas": 51,
+     "dri": 52,
+     "def": 67,
+     "phy": 67
+    },
+    {
+     "id": "e436d479-c2cd-5db0-959c-824fc4ebc246",
+     "name": "C. Gallo",
+     "number": 5,
+     "role": "LB",
+     "pos": "LB",
+     "height": 168,
+     "squad": "starter",
+     "age": 27,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 72,
+      "sprint_speed": 72,
+      "agility": 66,
+      "balance": 62,
+      "reactions": 62,
+      "ball_control": 60,
+      "dribbling": 58,
+      "composure": 56,
+      "crossing": 64,
+      "curve": 56,
+      "fk_accuracy": 44,
+      "finishing": 46,
+      "heading_accuracy": 54,
+      "long_shots": 48,
+      "long_passing": 58,
+      "short_passing": 62,
+      "shot_power": 52,
+      "volleys": 44,
+      "aggression": 60,
+      "interceptions": 60,
+      "positioning": 52,
+      "vision": 56,
+      "penalties": 44,
+      "jumping": 60,
+      "stamina": 68,
+      "strength": 62,
+      "marking_awareness": 58,
+      "standing_tackle": 60,
+      "sliding_tackle": 58,
+      "gk_diving": 8,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 6,
+      "gk_reflexes": 8
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 64,
+     "gk": {
+      "div": 8,
+      "han": 8,
+      "kic": 10,
+      "ref": 8,
+      "pos": 6,
+      "spd": 72
+     },
+     "pac": 72,
+     "sho": 48,
+     "pas": 59,
+     "dri": 60,
+     "def": 59,
+     "phy": 63
+    },
+    {
+     "id": "d0070e5d-be6e-5ea7-a779-986f02b9968e",
+     "name": "A. Lombardi",
+     "number": 6,
+     "role": "RDM",
+     "pos": "CDM",
+     "height": 166,
+     "squad": "starter",
+     "age": 26,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 58,
+      "sprint_speed": 58,
+      "agility": 58,
+      "balance": 60,
+      "reactions": 62,
+      "ball_control": 64,
+      "dribbling": 60,
+      "composure": 64,
+      "crossing": 56,
+      "curve": 54,
+      "fk_accuracy": 44,
+      "finishing": 48,
+      "heading_accuracy": 50,
+      "long_shots": 56,
+      "long_passing": 68,
+      "short_passing": 70,
+      "shot_power": 56,
+      "volleys": 44,
+      "aggression": 60,
+      "interceptions": 66,
+      "positioning": 54,
+      "vision": 64,
+      "penalties": 46,
+      "jumping": 56,
+      "stamina": 66,
+      "strength": 62,
+      "marking_awareness": 62,
+      "standing_tackle": 64,
+      "sliding_tackle": 60,
+      "gk_diving": 6,
+      "gk_handling": 4,
+      "gk_kicking": 6,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 6,
+      "han": 4,
+      "kic": 6,
+      "ref": 6,
+      "pos": 4,
+      "spd": 58
+     },
+     "pac": 58,
+     "sho": 51,
+     "pas": 64,
+     "dri": 61,
+     "def": 62,
+     "phy": 62
+    },
+    {
+     "id": "8618cc73-94d6-52e7-a9ae-d0cca37781cd",
+     "name": "D. Russo",
+     "number": 7,
+     "role": "LDM",
+     "pos": "CDM",
+     "height": 167,
+     "squad": "starter",
+     "age": 34,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 58,
+      "sprint_speed": 58,
+      "agility": 58,
+      "balance": 60,
+      "reactions": 62,
+      "ball_control": 64,
+      "dribbling": 60,
+      "composure": 64,
+      "crossing": 56,
+      "curve": 54,
+      "fk_accuracy": 44,
+      "finishing": 50,
+      "heading_accuracy": 50,
+      "long_shots": 56,
+      "long_passing": 68,
+      "short_passing": 70,
+      "shot_power": 56,
+      "volleys": 44,
+      "aggression": 60,
+      "interceptions": 66,
+      "positioning": 54,
+      "vision": 64,
+      "penalties": 46,
+      "jumping": 56,
+      "stamina": 66,
+      "strength": 62,
+      "marking_awareness": 62,
+      "standing_tackle": 64,
+      "sliding_tackle": 60,
+      "gk_diving": 6,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 6,
+      "han": 6,
+      "kic": 8,
+      "ref": 6,
+      "pos": 4,
+      "spd": 58
+     },
+     "pac": 58,
+     "sho": 52,
+     "pas": 64,
+     "dri": 61,
+     "def": 62,
+     "phy": 62
+    },
+    {
+     "id": "1f052517-5e6a-5245-ab2a-7fe4ea645695",
+     "name": "N. Marino",
+     "number": 8,
+     "role": "RW",
+     "pos": "RW",
+     "height": 175,
+     "squad": "starter",
+     "age": 22,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 80,
+      "sprint_speed": 78,
+      "agility": 78,
+      "balance": 70,
+      "reactions": 70,
+      "ball_control": 74,
+      "dribbling": 78,
+      "composure": 68,
+      "crossing": 70,
+      "curve": 68,
+      "fk_accuracy": 56,
+      "finishing": 70,
+      "heading_accuracy": 48,
+      "long_shots": 64,
+      "long_passing": 62,
+      "short_passing": 70,
+      "shot_power": 64,
+      "volleys": 52,
+      "aggression": 48,
+      "interceptions": 44,
+      "positioning": 70,
+      "vision": 70,
+      "penalties": 56,
+      "jumping": 56,
+      "stamina": 66,
+      "strength": 54,
+      "marking_awareness": 36,
+      "standing_tackle": 38,
+      "sliding_tackle": 36,
+      "gk_diving": 12,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 10,
+      "gk_reflexes": 12
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 73,
+     "gk": {
+      "div": 12,
+      "han": 10,
+      "kic": 12,
+      "ref": 12,
+      "pos": 10,
+      "spd": 79
+     },
+     "pac": 79,
+     "sho": 66,
+     "pas": 68,
+     "dri": 76,
+     "def": 39,
+     "phy": 56
+    },
+    {
+     "id": "a671db52-06d4-524b-a00e-295974970071",
+     "name": "A. Giordano",
+     "number": 9,
+     "role": "CAM",
+     "pos": "CAM",
+     "height": 171,
+     "squad": "starter",
+     "age": 19,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 68,
+      "sprint_speed": 64,
+      "agility": 72,
+      "balance": 68,
+      "reactions": 68,
+      "ball_control": 74,
+      "dribbling": 74,
+      "composure": 70,
+      "crossing": 66,
+      "curve": 66,
+      "fk_accuracy": 56,
+      "finishing": 64,
+      "heading_accuracy": 46,
+      "long_shots": 66,
+      "long_passing": 66,
+      "short_passing": 74,
+      "shot_power": 62,
+      "volleys": 52,
+      "aggression": 48,
+      "interceptions": 46,
+      "positioning": 68,
+      "vision": 74,
+      "penalties": 58,
+      "jumping": 52,
+      "stamina": 62,
+      "strength": 52,
+      "marking_awareness": 38,
+      "standing_tackle": 40,
+      "sliding_tackle": 38,
+      "gk_diving": 8,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 6,
+      "gk_reflexes": 8
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 71,
+     "gk": {
+      "div": 8,
+      "han": 8,
+      "kic": 10,
+      "ref": 8,
+      "pos": 6,
+      "spd": 66
+     },
+     "pac": 66,
+     "sho": 63,
+     "pas": 70,
+     "dri": 73,
+     "def": 41,
+     "phy": 54
+    },
+    {
+     "id": "87d5ecbf-7777-539c-86df-2c86bf0a8bd0",
+     "name": "F. Santoro",
+     "number": 10,
+     "role": "LW",
+     "pos": "LW",
+     "height": 175,
+     "squad": "starter",
+     "age": 33,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 78,
+      "sprint_speed": 76,
+      "agility": 76,
+      "balance": 68,
+      "reactions": 68,
+      "ball_control": 72,
+      "dribbling": 76,
+      "composure": 66,
+      "crossing": 68,
+      "curve": 66,
+      "fk_accuracy": 54,
+      "finishing": 68,
+      "heading_accuracy": 46,
+      "long_shots": 62,
+      "long_passing": 60,
+      "short_passing": 68,
+      "shot_power": 62,
+      "volleys": 50,
+      "aggression": 46,
+      "interceptions": 42,
+      "positioning": 68,
+      "vision": 68,
+      "penalties": 54,
+      "jumping": 54,
+      "stamina": 64,
+      "strength": 54,
+      "marking_awareness": 34,
+      "standing_tackle": 36,
+      "sliding_tackle": 34,
+      "gk_diving": 10,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 71,
+     "gk": {
+      "div": 10,
+      "han": 10,
+      "kic": 12,
+      "ref": 10,
+      "pos": 8,
+      "spd": 77
+     },
+     "pac": 77,
+     "sho": 64,
+     "pas": 66,
+     "dri": 74,
+     "def": 37,
+     "phy": 55
+    },
+    {
+     "id": "df4b2579-c814-510a-a911-2dcac337bf65",
+     "name": "E. Romano",
+     "number": 11,
+     "role": "ST",
+     "pos": "ST",
+     "height": 167,
+     "squad": "starter",
+     "age": 19,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 68,
+      "sprint_speed": 70,
+      "agility": 62,
+      "balance": 60,
+      "reactions": 66,
+      "ball_control": 64,
+      "dribbling": 64,
+      "composure": 66,
+      "crossing": 52,
+      "curve": 50,
+      "fk_accuracy": 42,
+      "finishing": 70,
+      "heading_accuracy": 64,
+      "long_shots": 60,
+      "long_passing": 50,
+      "short_passing": 58,
+      "shot_power": 68,
+      "volleys": 52,
+      "aggression": 50,
+      "interceptions": 34,
+      "positioning": 68,
+      "vision": 54,
+      "penalties": 58,
+      "jumping": 64,
+      "stamina": 58,
+      "strength": 64,
+      "marking_awareness": 26,
+      "standing_tackle": 28,
+      "sliding_tackle": 26,
+      "gk_diving": 6,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 6,
+      "han": 6,
+      "kic": 8,
+      "ref": 6,
+      "pos": 4,
+      "spd": 69
+     },
+     "pac": 69,
+     "sho": 66,
+     "pas": 54,
+     "dri": 64,
+     "def": 32,
+     "phy": 60
+    },
+    {
+     "id": "049a768b-a010-5e9d-b63e-d8660486ab0b",
+     "name": "M. Conti",
+     "number": 12,
+     "role": "GK",
+     "pos": "GK",
+     "height": 169,
+     "squad": "bench",
+     "age": 32,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 38,
+      "sprint_speed": 40,
+      "agility": 35,
+      "balance": 45,
+      "reactions": 58,
+      "ball_control": 35,
+      "dribbling": 28,
+      "composure": 55,
+      "crossing": 35,
+      "curve": 30,
+      "fk_accuracy": 25,
+      "finishing": 15,
+      "heading_accuracy": 30,
+      "long_shots": 20,
+      "long_passing": 45,
+      "short_passing": 40,
+      "shot_power": 35,
+      "volleys": 15,
+      "aggression": 35,
+      "interceptions": 20,
+      "positioning": 20,
+      "vision": 40,
+      "penalties": 25,
+      "jumping": 60,
+      "stamina": 45,
+      "strength": 55,
+      "marking_awareness": 15,
+      "standing_tackle": 15,
+      "sliding_tackle": 15,
+      "gk_diving": 58,
+      "gk_handling": 58,
+      "gk_kicking": 52,
+      "gk_positioning": 56,
+      "gk_reflexes": 58
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 58,
+     "gk": {
+      "div": 58,
+      "han": 58,
+      "kic": 52,
+      "ref": 58,
+      "pos": 56,
+      "spd": 39
+     },
+     "pac": 39,
+     "sho": 21,
+     "pas": 39,
+     "dri": 35,
+     "def": 18,
+     "phy": 49
+    },
+    {
+     "id": "133a7087-5332-528d-b1af-db6fc3f7d048",
+     "name": "L. Moretti",
+     "number": 13,
+     "role": "RCB",
+     "pos": "CB",
+     "height": 168,
+     "squad": "bench",
+     "age": 31,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 51,
+      "sprint_speed": 53,
+      "agility": 46,
+      "balance": 53,
+      "reactions": 56,
+      "ball_control": 49,
+      "dribbling": 43,
+      "composure": 55,
+      "crossing": 41,
+      "curve": 36,
+      "fk_accuracy": 31,
+      "finishing": 31,
+      "heading_accuracy": 59,
+      "long_shots": 31,
+      "long_passing": 49,
+      "short_passing": 53,
+      "shot_power": 46,
+      "volleys": 33,
+      "aggression": 59,
+      "interceptions": 61,
+      "positioning": 49,
+      "vision": 46,
+      "penalties": 36,
+      "jumping": 63,
+      "stamina": 57,
+      "strength": 65,
+      "marking_awareness": 63,
+      "standing_tackle": 64,
+      "sliding_tackle": 59,
+      "gk_diving": 3,
+      "gk_handling": 2,
+      "gk_kicking": 4,
+      "gk_positioning": 1,
+      "gk_reflexes": 3
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 60,
+     "gk": {
+      "div": 3,
+      "han": 2,
+      "kic": 4,
+      "ref": 3,
+      "pos": 1,
+      "spd": 52
+     },
+     "pac": 52,
+     "sho": 35,
+     "pas": 47,
+     "dri": 47,
+     "def": 62,
+     "phy": 62
+    },
+    {
+     "id": "5b768637-1a16-5839-b0ca-f218b50105d3",
+     "name": "P. Ferrari",
+     "number": 14,
+     "role": "LB",
+     "pos": "LB",
+     "height": 178,
+     "squad": "bench",
+     "age": 23,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 71,
+      "sprint_speed": 71,
+      "agility": 65,
+      "balance": 61,
+      "reactions": 61,
+      "ball_control": 59,
+      "dribbling": 57,
+      "composure": 55,
+      "crossing": 63,
+      "curve": 55,
+      "fk_accuracy": 43,
+      "finishing": 45,
+      "heading_accuracy": 53,
+      "long_shots": 47,
+      "long_passing": 57,
+      "short_passing": 61,
+      "shot_power": 50,
+      "volleys": 43,
+      "aggression": 59,
+      "interceptions": 59,
+      "positioning": 51,
+      "vision": 55,
+      "penalties": 43,
+      "jumping": 59,
+      "stamina": 67,
+      "strength": 60,
+      "marking_awareness": 57,
+      "standing_tackle": 58,
+      "sliding_tackle": 57,
+      "gk_diving": 7,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 5,
+      "gk_reflexes": 7
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 63,
+     "gk": {
+      "div": 7,
+      "han": 6,
+      "kic": 8,
+      "ref": 7,
+      "pos": 5,
+      "spd": 71
+     },
+     "pac": 71,
+     "sho": 47,
+     "pas": 58,
+     "dri": 59,
+     "def": 57,
+     "phy": 62
+    },
+    {
+     "id": "80519a27-36a2-5770-9ac2-0b7b0f51d04f",
+     "name": "T. Greco",
+     "number": 15,
+     "role": "RDM",
+     "pos": "CDM",
+     "height": 178,
+     "squad": "bench",
+     "age": 26,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 54,
+      "sprint_speed": 54,
+      "agility": 54,
+      "balance": 56,
+      "reactions": 58,
+      "ball_control": 60,
+      "dribbling": 56,
+      "composure": 60,
+      "crossing": 52,
+      "curve": 50,
+      "fk_accuracy": 40,
+      "finishing": 45,
+      "heading_accuracy": 46,
+      "long_shots": 52,
+      "long_passing": 64,
+      "short_passing": 66,
+      "shot_power": 52,
+      "volleys": 40,
+      "aggression": 56,
+      "interceptions": 62,
+      "positioning": 50,
+      "vision": 60,
+      "penalties": 42,
+      "jumping": 52,
+      "stamina": 62,
+      "strength": 58,
+      "marking_awareness": 58,
+      "standing_tackle": 60,
+      "sliding_tackle": 56,
+      "gk_diving": 2,
+      "gk_handling": 1,
+      "gk_kicking": 3,
+      "gk_positioning": 1,
+      "gk_reflexes": 2
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 62,
+     "gk": {
+      "div": 2,
+      "han": 1,
+      "kic": 3,
+      "ref": 2,
+      "pos": 1,
+      "spd": 54
+     },
+     "pac": 54,
+     "sho": 48,
+     "pas": 60,
+     "dri": 57,
+     "def": 58,
+     "phy": 58
+    },
+    {
+     "id": "b60c22ee-5668-5e06-b8d4-37ae469f99a5",
+     "name": "G. Mancini",
+     "number": 16,
+     "role": "RW",
+     "pos": "RW",
+     "height": 165,
+     "squad": "bench",
+     "age": 25,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 71,
+      "sprint_speed": 69,
+      "agility": 69,
+      "balance": 61,
+      "reactions": 61,
+      "ball_control": 65,
+      "dribbling": 69,
+      "composure": 59,
+      "crossing": 61,
+      "curve": 59,
+      "fk_accuracy": 47,
+      "finishing": 61,
+      "heading_accuracy": 39,
+      "long_shots": 55,
+      "long_passing": 53,
+      "short_passing": 61,
+      "shot_power": 55,
+      "volleys": 43,
+      "aggression": 39,
+      "interceptions": 35,
+      "positioning": 61,
+      "vision": 61,
+      "penalties": 47,
+      "jumping": 47,
+      "stamina": 57,
+      "strength": 46,
+      "marking_awareness": 27,
+      "standing_tackle": 29,
+      "sliding_tackle": 27,
+      "gk_diving": 3,
+      "gk_handling": 2,
+      "gk_kicking": 4,
+      "gk_positioning": 1,
+      "gk_reflexes": 3
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 64,
+     "gk": {
+      "div": 3,
+      "han": 2,
+      "kic": 4,
+      "ref": 3,
+      "pos": 1,
+      "spd": 70
+     },
+     "pac": 70,
+     "sho": 57,
+     "pas": 59,
+     "dri": 67,
+     "def": 30,
+     "phy": 47
+    },
+    {
+     "id": "4cedbfa6-6651-5a15-9b13-aaa23fe66f8d",
+     "name": "R. Mariani",
+     "number": 17,
+     "role": "LW",
+     "pos": "LW",
+     "height": 169,
+     "squad": "bench",
+     "age": 19,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 70,
+      "sprint_speed": 68,
+      "agility": 68,
+      "balance": 60,
+      "reactions": 60,
+      "ball_control": 64,
+      "dribbling": 68,
+      "composure": 58,
+      "crossing": 60,
+      "curve": 58,
+      "fk_accuracy": 46,
+      "finishing": 60,
+      "heading_accuracy": 38,
+      "long_shots": 54,
+      "long_passing": 52,
+      "short_passing": 60,
+      "shot_power": 54,
+      "volleys": 42,
+      "aggression": 38,
+      "interceptions": 34,
+      "positioning": 60,
+      "vision": 60,
+      "penalties": 46,
+      "jumping": 46,
+      "stamina": 56,
+      "strength": 45,
+      "marking_awareness": 26,
+      "standing_tackle": 28,
+      "sliding_tackle": 26,
+      "gk_diving": 2,
+      "gk_handling": 1,
+      "gk_kicking": 3,
+      "gk_positioning": 1,
+      "gk_reflexes": 2
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 63,
+     "gk": {
+      "div": 2,
+      "han": 1,
+      "kic": 3,
+      "ref": 2,
+      "pos": 1,
+      "spd": 69
+     },
+     "pac": 69,
+     "sho": 56,
+     "pas": 58,
+     "dri": 66,
+     "def": 29,
+     "phy": 46
+    },
+    {
+     "id": "032e8a2d-07af-5404-bdf2-1be7b34d0612",
+     "name": "V. Colombo",
+     "number": 18,
+     "role": "ST",
+     "pos": "ST",
+     "height": 171,
+     "squad": "bench",
+     "age": 28,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 64,
+      "sprint_speed": 66,
+      "agility": 58,
+      "balance": 56,
+      "reactions": 62,
+      "ball_control": 60,
+      "dribbling": 60,
+      "composure": 62,
+      "crossing": 48,
+      "curve": 46,
+      "fk_accuracy": 38,
+      "finishing": 66,
+      "heading_accuracy": 60,
+      "long_shots": 56,
+      "long_passing": 45,
+      "short_passing": 54,
+      "shot_power": 64,
+      "volleys": 48,
+      "aggression": 46,
+      "interceptions": 30,
+      "positioning": 64,
+      "vision": 50,
+      "penalties": 54,
+      "jumping": 60,
+      "stamina": 54,
+      "strength": 60,
+      "marking_awareness": 22,
+      "standing_tackle": 24,
+      "sliding_tackle": 22,
+      "gk_diving": 2,
+      "gk_handling": 1,
+      "gk_kicking": 3,
+      "gk_positioning": 1,
+      "gk_reflexes": 2
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 62,
+     "gk": {
+      "div": 2,
+      "han": 1,
+      "kic": 3,
+      "ref": 2,
+      "pos": 1,
+      "spd": 65
+     },
+     "pac": 65,
+     "sho": 62,
+     "pas": 49,
+     "dri": 60,
+     "def": 28,
+     "phy": 56
+    }
+   ],
+   "competition_id": "CI",
+   "country": "ITA",
+   "stub": 1,
+   "tier": 3,
+   "region": "south"
+  },
+  {
+   "id": "ITA-RAV1",
+   "name": "Ravenna",
+   "short": "Ravenna",
+   "abbr": "RAV",
+   "nickname": "",
+   "manager": "",
+   "stadium": "Ravenna Stadio",
+   "city": "Ravenna",
+   "capacity": 6500,
+   "formation": "4-4-2",
+   "color": "#2f5d1f",
+   "color_dark": "#1d3913",
+   "color_light": "#3f7d29",
+   "shorts": "#ffffff",
+   "gk_color": "#1a1a1a",
+   "text": "#ffffff",
+   "style": {
+    "possession": 0.4,
+    "tempo": 0.41,
+    "press": 0.47,
+    "line": 0.57,
+    "width": 0.43,
+    "directness": 0.59,
+    "crossing": 0.57,
+    "aggression": 0.44
+   },
+   "players": [
+    {
+     "id": "f84d146d-8a49-52f7-8b7c-62c04fe04b84",
+     "name": "R. Ricci",
+     "number": 1,
+     "role": "GK",
+     "pos": "GK",
+     "height": 176,
+     "squad": "starter",
+     "age": 26,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 42,
+      "sprint_speed": 44,
+      "agility": 38,
+      "balance": 48,
+      "reactions": 62,
+      "ball_control": 38,
+      "dribbling": 32,
+      "composure": 58,
+      "crossing": 38,
+      "curve": 34,
+      "fk_accuracy": 28,
+      "finishing": 18,
+      "heading_accuracy": 34,
+      "long_shots": 24,
+      "long_passing": 48,
+      "short_passing": 44,
+      "shot_power": 38,
+      "volleys": 18,
+      "aggression": 38,
+      "interceptions": 24,
+      "positioning": 24,
+      "vision": 44,
+      "penalties": 28,
+      "jumping": 64,
+      "stamina": 48,
+      "strength": 58,
+      "marking_awareness": 18,
+      "standing_tackle": 18,
+      "sliding_tackle": 18,
+      "gk_diving": 62,
+      "gk_handling": 62,
+      "gk_kicking": 56,
+      "gk_positioning": 60,
+      "gk_reflexes": 62
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 62,
+     "gk": {
+      "div": 62,
+      "han": 62,
+      "kic": 56,
+      "ref": 62,
+      "pos": 60,
+      "spd": 43
+     },
+     "pac": 43,
+     "sho": 24,
+     "pas": 42,
+     "dri": 38,
+     "def": 21,
+     "phy": 52
+    },
+    {
+     "id": "41f18136-1840-5818-a2d8-71ca127a4a16",
+     "name": "V. Costa",
+     "number": 2,
+     "role": "RB",
+     "pos": "RB",
+     "height": 180,
+     "squad": "starter",
+     "age": 24,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 70,
+      "sprint_speed": 70,
+      "agility": 64,
+      "balance": 60,
+      "reactions": 60,
+      "ball_control": 58,
+      "dribbling": 56,
+      "composure": 54,
+      "crossing": 62,
+      "curve": 54,
+      "fk_accuracy": 42,
+      "finishing": 44,
+      "heading_accuracy": 52,
+      "long_shots": 46,
+      "long_passing": 56,
+      "short_passing": 60,
+      "shot_power": 50,
+      "volleys": 42,
+      "aggression": 58,
+      "interceptions": 58,
+      "positioning": 50,
+      "vision": 54,
+      "penalties": 42,
+      "jumping": 58,
+      "stamina": 66,
+      "strength": 60,
+      "marking_awareness": 56,
+      "standing_tackle": 58,
+      "sliding_tackle": 56,
+      "gk_diving": 6,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 62,
+     "gk": {
+      "div": 6,
+      "han": 6,
+      "kic": 8,
+      "ref": 6,
+      "pos": 4,
+      "spd": 70
+     },
+     "pac": 70,
+     "sho": 46,
+     "pas": 57,
+     "dri": 58,
+     "def": 57,
+     "phy": 61
+    },
+    {
+     "id": "06dee866-b288-5233-94e0-714e6cdb51be",
+     "name": "M. Fontana",
+     "number": 3,
+     "role": "RCB",
+     "pos": "CB",
+     "height": 168,
+     "squad": "starter",
+     "age": 21,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 58,
+      "sprint_speed": 60,
+      "agility": 54,
+      "balance": 60,
+      "reactions": 64,
+      "ball_control": 56,
+      "dribbling": 50,
+      "composure": 62,
+      "crossing": 48,
+      "curve": 44,
+      "fk_accuracy": 38,
+      "finishing": 38,
+      "heading_accuracy": 66,
+      "long_shots": 38,
+      "long_passing": 56,
+      "short_passing": 60,
+      "shot_power": 54,
+      "volleys": 40,
+      "aggression": 66,
+      "interceptions": 68,
+      "positioning": 56,
+      "vision": 54,
+      "penalties": 44,
+      "jumping": 70,
+      "stamina": 64,
+      "strength": 72,
+      "marking_awareness": 70,
+      "standing_tackle": 72,
+      "sliding_tackle": 66,
+      "gk_diving": 10,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 68,
+     "gk": {
+      "div": 10,
+      "han": 10,
+      "kic": 12,
+      "ref": 10,
+      "pos": 8,
+      "spd": 59
+     },
+     "pac": 59,
+     "sho": 43,
+     "pas": 54,
+     "dri": 54,
+     "def": 69,
+     "phy": 69
+    },
+    {
+     "id": "9149d03b-6f65-5e3c-b5d6-29075cac8490",
+     "name": "S. Bianchi",
+     "number": 4,
+     "role": "LCB",
+     "pos": "CB",
+     "height": 175,
+     "squad": "starter",
+     "age": 24,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 56,
+      "sprint_speed": 58,
+      "agility": 50,
+      "balance": 58,
+      "reactions": 60,
+      "ball_control": 54,
+      "dribbling": 48,
+      "composure": 60,
+      "crossing": 46,
+      "curve": 40,
+      "fk_accuracy": 36,
+      "finishing": 36,
+      "heading_accuracy": 64,
+      "long_shots": 36,
+      "long_passing": 54,
+      "short_passing": 58,
+      "shot_power": 50,
+      "volleys": 38,
+      "aggression": 64,
+      "interceptions": 66,
+      "positioning": 54,
+      "vision": 50,
+      "penalties": 40,
+      "jumping": 68,
+      "stamina": 62,
+      "strength": 70,
+      "marking_awareness": 68,
+      "standing_tackle": 68,
+      "sliding_tackle": 64,
+      "gk_diving": 8,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 6,
+      "gk_reflexes": 8
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 65,
+     "gk": {
+      "div": 8,
+      "han": 6,
+      "kic": 8,
+      "ref": 8,
+      "pos": 6,
+      "spd": 57
+     },
+     "pac": 57,
+     "sho": 40,
+     "pas": 51,
+     "dri": 52,
+     "def": 67,
+     "phy": 67
+    },
+    {
+     "id": "265f1bf9-ce80-5d0d-a098-b83238373662",
+     "name": "C. Gallo",
+     "number": 5,
+     "role": "LB",
+     "pos": "LB",
+     "height": 178,
+     "squad": "starter",
+     "age": 29,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 72,
+      "sprint_speed": 72,
+      "agility": 66,
+      "balance": 62,
+      "reactions": 62,
+      "ball_control": 60,
+      "dribbling": 58,
+      "composure": 56,
+      "crossing": 64,
+      "curve": 56,
+      "fk_accuracy": 44,
+      "finishing": 46,
+      "heading_accuracy": 54,
+      "long_shots": 48,
+      "long_passing": 58,
+      "short_passing": 62,
+      "shot_power": 52,
+      "volleys": 44,
+      "aggression": 60,
+      "interceptions": 60,
+      "positioning": 52,
+      "vision": 56,
+      "penalties": 44,
+      "jumping": 60,
+      "stamina": 68,
+      "strength": 62,
+      "marking_awareness": 58,
+      "standing_tackle": 60,
+      "sliding_tackle": 58,
+      "gk_diving": 8,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 6,
+      "gk_reflexes": 8
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 64,
+     "gk": {
+      "div": 8,
+      "han": 8,
+      "kic": 10,
+      "ref": 8,
+      "pos": 6,
+      "spd": 72
+     },
+     "pac": 72,
+     "sho": 48,
+     "pas": 59,
+     "dri": 60,
+     "def": 59,
+     "phy": 63
+    },
+    {
+     "id": "490cd24a-b345-52ac-a4e2-4433ee14fba3",
+     "name": "A. Lombardi",
+     "number": 6,
+     "role": "RDM",
+     "pos": "CDM",
+     "height": 176,
+     "squad": "starter",
+     "age": 24,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 62,
+      "sprint_speed": 62,
+      "agility": 62,
+      "balance": 64,
+      "reactions": 66,
+      "ball_control": 68,
+      "dribbling": 64,
+      "composure": 68,
+      "crossing": 60,
+      "curve": 58,
+      "fk_accuracy": 48,
+      "finishing": 52,
+      "heading_accuracy": 54,
+      "long_shots": 60,
+      "long_passing": 72,
+      "short_passing": 74,
+      "shot_power": 60,
+      "volleys": 48,
+      "aggression": 64,
+      "interceptions": 70,
+      "positioning": 58,
+      "vision": 68,
+      "penalties": 50,
+      "jumping": 60,
+      "stamina": 70,
+      "strength": 66,
+      "marking_awareness": 66,
+      "standing_tackle": 68,
+      "sliding_tackle": 64,
+      "gk_diving": 10,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 70,
+     "gk": {
+      "div": 10,
+      "han": 8,
+      "kic": 10,
+      "ref": 10,
+      "pos": 8,
+      "spd": 62
+     },
+     "pac": 62,
+     "sho": 55,
+     "pas": 68,
+     "dri": 65,
+     "def": 66,
+     "phy": 66
+    },
+    {
+     "id": "ab6be381-f3fc-5db8-acc1-31ac4367ced6",
+     "name": "D. Russo",
+     "number": 7,
+     "role": "LDM",
+     "pos": "CDM",
+     "height": 164,
+     "squad": "starter",
+     "age": 27,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 58,
+      "sprint_speed": 58,
+      "agility": 58,
+      "balance": 60,
+      "reactions": 62,
+      "ball_control": 64,
+      "dribbling": 60,
+      "composure": 64,
+      "crossing": 56,
+      "curve": 54,
+      "fk_accuracy": 44,
+      "finishing": 50,
+      "heading_accuracy": 50,
+      "long_shots": 56,
+      "long_passing": 68,
+      "short_passing": 70,
+      "shot_power": 56,
+      "volleys": 44,
+      "aggression": 60,
+      "interceptions": 66,
+      "positioning": 54,
+      "vision": 64,
+      "penalties": 46,
+      "jumping": 56,
+      "stamina": 66,
+      "strength": 62,
+      "marking_awareness": 62,
+      "standing_tackle": 64,
+      "sliding_tackle": 60,
+      "gk_diving": 6,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 6,
+      "han": 6,
+      "kic": 8,
+      "ref": 6,
+      "pos": 4,
+      "spd": 58
+     },
+     "pac": 58,
+     "sho": 52,
+     "pas": 64,
+     "dri": 61,
+     "def": 62,
+     "phy": 62
+    },
+    {
+     "id": "b29625fc-df71-550d-9dde-832b0581654f",
+     "name": "N. Marino",
+     "number": 8,
+     "role": "RW",
+     "pos": "RW",
+     "height": 175,
+     "squad": "starter",
+     "age": 19,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 74,
+      "sprint_speed": 72,
+      "agility": 72,
+      "balance": 64,
+      "reactions": 64,
+      "ball_control": 68,
+      "dribbling": 72,
+      "composure": 62,
+      "crossing": 64,
+      "curve": 62,
+      "fk_accuracy": 50,
+      "finishing": 64,
+      "heading_accuracy": 42,
+      "long_shots": 58,
+      "long_passing": 56,
+      "short_passing": 64,
+      "shot_power": 58,
+      "volleys": 46,
+      "aggression": 42,
+      "interceptions": 38,
+      "positioning": 64,
+      "vision": 64,
+      "penalties": 50,
+      "jumping": 50,
+      "stamina": 60,
+      "strength": 50,
+      "marking_awareness": 30,
+      "standing_tackle": 32,
+      "sliding_tackle": 30,
+      "gk_diving": 6,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 67,
+     "gk": {
+      "div": 6,
+      "han": 6,
+      "kic": 8,
+      "ref": 6,
+      "pos": 4,
+      "spd": 73
+     },
+     "pac": 73,
+     "sho": 60,
+     "pas": 62,
+     "dri": 70,
+     "def": 33,
+     "phy": 51
+    },
+    {
+     "id": "89b482ef-1a8c-5290-ab41-d1cd8245b2a2",
+     "name": "A. Giordano",
+     "number": 9,
+     "role": "CAM",
+     "pos": "CAM",
+     "height": 170,
+     "squad": "starter",
+     "age": 34,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 66,
+      "sprint_speed": 62,
+      "agility": 70,
+      "balance": 66,
+      "reactions": 66,
+      "ball_control": 72,
+      "dribbling": 72,
+      "composure": 68,
+      "crossing": 64,
+      "curve": 64,
+      "fk_accuracy": 54,
+      "finishing": 62,
+      "heading_accuracy": 44,
+      "long_shots": 64,
+      "long_passing": 64,
+      "short_passing": 72,
+      "shot_power": 60,
+      "volleys": 50,
+      "aggression": 46,
+      "interceptions": 44,
+      "positioning": 66,
+      "vision": 72,
+      "penalties": 56,
+      "jumping": 50,
+      "stamina": 60,
+      "strength": 50,
+      "marking_awareness": 36,
+      "standing_tackle": 38,
+      "sliding_tackle": 36,
+      "gk_diving": 6,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 69,
+     "gk": {
+      "div": 6,
+      "han": 6,
+      "kic": 8,
+      "ref": 6,
+      "pos": 4,
+      "spd": 64
+     },
+     "pac": 64,
+     "sho": 61,
+     "pas": 68,
+     "dri": 71,
+     "def": 39,
+     "phy": 52
+    },
+    {
+     "id": "09f1c53a-e332-591d-b07e-31860c0cdad8",
+     "name": "F. Santoro",
+     "number": 10,
+     "role": "LW",
+     "pos": "LW",
+     "height": 172,
+     "squad": "starter",
+     "age": 20,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 74,
+      "sprint_speed": 72,
+      "agility": 72,
+      "balance": 64,
+      "reactions": 64,
+      "ball_control": 68,
+      "dribbling": 72,
+      "composure": 62,
+      "crossing": 64,
+      "curve": 62,
+      "fk_accuracy": 50,
+      "finishing": 64,
+      "heading_accuracy": 42,
+      "long_shots": 58,
+      "long_passing": 56,
+      "short_passing": 64,
+      "shot_power": 58,
+      "volleys": 46,
+      "aggression": 42,
+      "interceptions": 38,
+      "positioning": 64,
+      "vision": 64,
+      "penalties": 50,
+      "jumping": 50,
+      "stamina": 60,
+      "strength": 50,
+      "marking_awareness": 30,
+      "standing_tackle": 32,
+      "sliding_tackle": 30,
+      "gk_diving": 6,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 67,
+     "gk": {
+      "div": 6,
+      "han": 6,
+      "kic": 8,
+      "ref": 6,
+      "pos": 4,
+      "spd": 73
+     },
+     "pac": 73,
+     "sho": 60,
+     "pas": 62,
+     "dri": 70,
+     "def": 33,
+     "phy": 51
+    },
+    {
+     "id": "a072ebd4-8ff4-5577-8f7c-857cf1f2fd47",
+     "name": "E. Romano",
+     "number": 11,
+     "role": "ST",
+     "pos": "ST",
+     "height": 178,
+     "squad": "starter",
+     "age": 22,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 72,
+      "sprint_speed": 74,
+      "agility": 66,
+      "balance": 64,
+      "reactions": 70,
+      "ball_control": 68,
+      "dribbling": 68,
+      "composure": 70,
+      "crossing": 56,
+      "curve": 54,
+      "fk_accuracy": 46,
+      "finishing": 74,
+      "heading_accuracy": 68,
+      "long_shots": 64,
+      "long_passing": 54,
+      "short_passing": 62,
+      "shot_power": 72,
+      "volleys": 56,
+      "aggression": 54,
+      "interceptions": 38,
+      "positioning": 72,
+      "vision": 58,
+      "penalties": 62,
+      "jumping": 68,
+      "stamina": 62,
+      "strength": 68,
+      "marking_awareness": 30,
+      "standing_tackle": 32,
+      "sliding_tackle": 30,
+      "gk_diving": 10,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 70,
+     "gk": {
+      "div": 10,
+      "han": 10,
+      "kic": 12,
+      "ref": 10,
+      "pos": 8,
+      "spd": 73
+     },
+     "pac": 73,
+     "sho": 70,
+     "pas": 58,
+     "dri": 68,
+     "def": 36,
+     "phy": 64
+    },
+    {
+     "id": "21e1306b-d8be-5dc6-85f6-23921c918f04",
+     "name": "M. Conti",
+     "number": 12,
+     "role": "GK",
+     "pos": "GK",
+     "height": 168,
+     "squad": "bench",
+     "age": 26,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 42,
+      "sprint_speed": 44,
+      "agility": 39,
+      "balance": 49,
+      "reactions": 62,
+      "ball_control": 39,
+      "dribbling": 32,
+      "composure": 59,
+      "crossing": 39,
+      "curve": 34,
+      "fk_accuracy": 29,
+      "finishing": 19,
+      "heading_accuracy": 34,
+      "long_shots": 24,
+      "long_passing": 49,
+      "short_passing": 44,
+      "shot_power": 39,
+      "volleys": 19,
+      "aggression": 39,
+      "interceptions": 24,
+      "positioning": 24,
+      "vision": 44,
+      "penalties": 29,
+      "jumping": 64,
+      "stamina": 49,
+      "strength": 59,
+      "marking_awareness": 19,
+      "standing_tackle": 19,
+      "sliding_tackle": 19,
+      "gk_diving": 62,
+      "gk_handling": 62,
+      "gk_kicking": 56,
+      "gk_positioning": 60,
+      "gk_reflexes": 62
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 62,
+     "gk": {
+      "div": 62,
+      "han": 62,
+      "kic": 56,
+      "ref": 62,
+      "pos": 60,
+      "spd": 43
+     },
+     "pac": 43,
+     "sho": 25,
+     "pas": 43,
+     "dri": 39,
+     "def": 22,
+     "phy": 53
+    },
+    {
+     "id": "66c130d6-05e0-56cd-9255-1b38912344c2",
+     "name": "L. Moretti",
+     "number": 13,
+     "role": "RCB",
+     "pos": "CB",
+     "height": 166,
+     "squad": "bench",
+     "age": 20,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 55,
+      "sprint_speed": 57,
+      "agility": 50,
+      "balance": 57,
+      "reactions": 60,
+      "ball_control": 53,
+      "dribbling": 47,
+      "composure": 59,
+      "crossing": 45,
+      "curve": 40,
+      "fk_accuracy": 35,
+      "finishing": 35,
+      "heading_accuracy": 63,
+      "long_shots": 35,
+      "long_passing": 53,
+      "short_passing": 57,
+      "shot_power": 50,
+      "volleys": 37,
+      "aggression": 63,
+      "interceptions": 65,
+      "positioning": 53,
+      "vision": 50,
+      "penalties": 40,
+      "jumping": 67,
+      "stamina": 61,
+      "strength": 69,
+      "marking_awareness": 67,
+      "standing_tackle": 68,
+      "sliding_tackle": 63,
+      "gk_diving": 7,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 5,
+      "gk_reflexes": 7
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 64,
+     "gk": {
+      "div": 7,
+      "han": 6,
+      "kic": 8,
+      "ref": 7,
+      "pos": 5,
+      "spd": 56
+     },
+     "pac": 56,
+     "sho": 39,
+     "pas": 51,
+     "dri": 51,
+     "def": 66,
+     "phy": 66
+    },
+    {
+     "id": "c7802362-962f-5993-8118-26b705eb0dc4",
+     "name": "P. Ferrari",
+     "number": 14,
+     "role": "LB",
+     "pos": "LB",
+     "height": 172,
+     "squad": "bench",
+     "age": 28,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 66,
+      "sprint_speed": 66,
+      "agility": 60,
+      "balance": 56,
+      "reactions": 56,
+      "ball_control": 54,
+      "dribbling": 52,
+      "composure": 50,
+      "crossing": 58,
+      "curve": 50,
+      "fk_accuracy": 38,
+      "finishing": 40,
+      "heading_accuracy": 48,
+      "long_shots": 42,
+      "long_passing": 52,
+      "short_passing": 56,
+      "shot_power": 45,
+      "volleys": 38,
+      "aggression": 54,
+      "interceptions": 54,
+      "positioning": 46,
+      "vision": 50,
+      "penalties": 38,
+      "jumping": 54,
+      "stamina": 62,
+      "strength": 55,
+      "marking_awareness": 52,
+      "standing_tackle": 53,
+      "sliding_tackle": 52,
+      "gk_diving": 2,
+      "gk_handling": 1,
+      "gk_kicking": 3,
+      "gk_positioning": 1,
+      "gk_reflexes": 2
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 58,
+     "gk": {
+      "div": 2,
+      "han": 1,
+      "kic": 3,
+      "ref": 2,
+      "pos": 1,
+      "spd": 66
+     },
+     "pac": 66,
+     "sho": 42,
+     "pas": 53,
+     "dri": 54,
+     "def": 52,
+     "phy": 57
+    },
+    {
+     "id": "fb921a9a-476b-5217-8f66-f7d25b181457",
+     "name": "T. Greco",
+     "number": 15,
+     "role": "RDM",
+     "pos": "CDM",
+     "height": 170,
+     "squad": "bench",
+     "age": 22,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 58,
+      "sprint_speed": 58,
+      "agility": 58,
+      "balance": 60,
+      "reactions": 62,
+      "ball_control": 64,
+      "dribbling": 60,
+      "composure": 64,
+      "crossing": 56,
+      "curve": 54,
+      "fk_accuracy": 44,
+      "finishing": 49,
+      "heading_accuracy": 50,
+      "long_shots": 56,
+      "long_passing": 68,
+      "short_passing": 70,
+      "shot_power": 56,
+      "volleys": 44,
+      "aggression": 60,
+      "interceptions": 66,
+      "positioning": 54,
+      "vision": 64,
+      "penalties": 46,
+      "jumping": 56,
+      "stamina": 66,
+      "strength": 62,
+      "marking_awareness": 62,
+      "standing_tackle": 64,
+      "sliding_tackle": 60,
+      "gk_diving": 6,
+      "gk_handling": 5,
+      "gk_kicking": 7,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 6,
+      "han": 5,
+      "kic": 7,
+      "ref": 6,
+      "pos": 4,
+      "spd": 58
+     },
+     "pac": 58,
+     "sho": 52,
+     "pas": 64,
+     "dri": 61,
+     "def": 62,
+     "phy": 62
+    },
+    {
+     "id": "cdb7d3f7-d1f2-5cac-873a-590bb436e127",
+     "name": "G. Mancini",
+     "number": 16,
+     "role": "RW",
+     "pos": "RW",
+     "height": 165,
+     "squad": "bench",
+     "age": 34,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 73,
+      "sprint_speed": 71,
+      "agility": 71,
+      "balance": 63,
+      "reactions": 63,
+      "ball_control": 67,
+      "dribbling": 71,
+      "composure": 61,
+      "crossing": 63,
+      "curve": 61,
+      "fk_accuracy": 49,
+      "finishing": 63,
+      "heading_accuracy": 41,
+      "long_shots": 57,
+      "long_passing": 55,
+      "short_passing": 63,
+      "shot_power": 57,
+      "volleys": 45,
+      "aggression": 41,
+      "interceptions": 37,
+      "positioning": 63,
+      "vision": 63,
+      "penalties": 49,
+      "jumping": 49,
+      "stamina": 59,
+      "strength": 48,
+      "marking_awareness": 29,
+      "standing_tackle": 31,
+      "sliding_tackle": 29,
+      "gk_diving": 5,
+      "gk_handling": 4,
+      "gk_kicking": 6,
+      "gk_positioning": 3,
+      "gk_reflexes": 5
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 5,
+      "han": 4,
+      "kic": 6,
+      "ref": 5,
+      "pos": 3,
+      "spd": 72
+     },
+     "pac": 72,
+     "sho": 59,
+     "pas": 61,
+     "dri": 69,
+     "def": 32,
+     "phy": 49
+    },
+    {
+     "id": "3f7e472f-c149-5dab-8c06-1b77f1e2e65c",
+     "name": "R. Mariani",
+     "number": 17,
+     "role": "LW",
+     "pos": "LW",
+     "height": 178,
+     "squad": "bench",
+     "age": 24,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 69,
+      "sprint_speed": 67,
+      "agility": 67,
+      "balance": 59,
+      "reactions": 59,
+      "ball_control": 63,
+      "dribbling": 67,
+      "composure": 57,
+      "crossing": 59,
+      "curve": 57,
+      "fk_accuracy": 45,
+      "finishing": 59,
+      "heading_accuracy": 37,
+      "long_shots": 53,
+      "long_passing": 51,
+      "short_passing": 59,
+      "shot_power": 53,
+      "volleys": 41,
+      "aggression": 37,
+      "interceptions": 33,
+      "positioning": 59,
+      "vision": 59,
+      "penalties": 45,
+      "jumping": 45,
+      "stamina": 55,
+      "strength": 44,
+      "marking_awareness": 25,
+      "standing_tackle": 27,
+      "sliding_tackle": 25,
+      "gk_diving": 1,
+      "gk_handling": 1,
+      "gk_kicking": 2,
+      "gk_positioning": 1,
+      "gk_reflexes": 1
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 62,
+     "gk": {
+      "div": 1,
+      "han": 1,
+      "kic": 2,
+      "ref": 1,
+      "pos": 1,
+      "spd": 68
+     },
+     "pac": 68,
+     "sho": 55,
+     "pas": 57,
+     "dri": 65,
+     "def": 28,
+     "phy": 45
+    },
+    {
+     "id": "ef979699-86c4-5360-9604-437c0902e19b",
+     "name": "V. Colombo",
+     "number": 18,
+     "role": "ST",
+     "pos": "ST",
+     "height": 168,
+     "squad": "bench",
+     "age": 21,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 67,
+      "sprint_speed": 69,
+      "agility": 61,
+      "balance": 59,
+      "reactions": 65,
+      "ball_control": 63,
+      "dribbling": 63,
+      "composure": 65,
+      "crossing": 51,
+      "curve": 49,
+      "fk_accuracy": 41,
+      "finishing": 69,
+      "heading_accuracy": 63,
+      "long_shots": 59,
+      "long_passing": 48,
+      "short_passing": 57,
+      "shot_power": 67,
+      "volleys": 51,
+      "aggression": 49,
+      "interceptions": 33,
+      "positioning": 67,
+      "vision": 53,
+      "penalties": 57,
+      "jumping": 63,
+      "stamina": 57,
+      "strength": 63,
+      "marking_awareness": 25,
+      "standing_tackle": 27,
+      "sliding_tackle": 25,
+      "gk_diving": 5,
+      "gk_handling": 4,
+      "gk_kicking": 6,
+      "gk_positioning": 3,
+      "gk_reflexes": 5
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 65,
+     "gk": {
+      "div": 5,
+      "han": 4,
+      "kic": 6,
+      "ref": 5,
+      "pos": 3,
+      "spd": 68
+     },
+     "pac": 68,
+     "sho": 65,
+     "pas": 52,
+     "dri": 63,
+     "def": 31,
+     "phy": 59
+    }
+   ],
+   "competition_id": "CI",
+   "country": "ITA",
+   "stub": 1,
+   "tier": 3,
+   "region": "north"
+  },
+  {
+   "id": "ITA-BRE1",
+   "name": "Union Brescia",
+   "short": "Brescia",
+   "abbr": "BRE",
+   "nickname": "",
+   "manager": "",
+   "stadium": "Brescia Stadio",
+   "city": "Brescia",
+   "capacity": 7500,
+   "formation": "4-4-2",
+   "color": "#1f3f7a",
+   "color_dark": "#13274b",
+   "color_light": "#2955a4",
+   "shorts": "#ffffff",
+   "gk_color": "#1a1a1a",
+   "text": "#ffffff",
+   "style": {
+    "possession": 0.56,
+    "tempo": 0.44,
+    "press": 0.58,
+    "line": 0.61,
+    "width": 0.54,
+    "directness": 0.47,
+    "crossing": 0.5,
+    "aggression": 0.47
+   },
+   "players": [
+    {
+     "id": "537a0b50-ab0b-5b81-ae43-d7bdf2c884d4",
+     "name": "T. De Luca",
+     "number": 1,
+     "role": "GK",
+     "pos": "GK",
+     "height": 166,
+     "squad": "starter",
+     "age": 19,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 46,
+      "sprint_speed": 48,
+      "agility": 44,
+      "balance": 54,
+      "reactions": 66,
+      "ball_control": 44,
+      "dribbling": 36,
+      "composure": 64,
+      "crossing": 44,
+      "curve": 38,
+      "fk_accuracy": 34,
+      "finishing": 24,
+      "heading_accuracy": 38,
+      "long_shots": 28,
+      "long_passing": 54,
+      "short_passing": 48,
+      "shot_power": 44,
+      "volleys": 24,
+      "aggression": 44,
+      "interceptions": 28,
+      "positioning": 28,
+      "vision": 48,
+      "penalties": 34,
+      "jumping": 68,
+      "stamina": 54,
+      "strength": 64,
+      "marking_awareness": 24,
+      "standing_tackle": 24,
+      "sliding_tackle": 24,
+      "gk_diving": 66,
+      "gk_handling": 66,
+      "gk_kicking": 60,
+      "gk_positioning": 64,
+      "gk_reflexes": 66
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 66,
+      "han": 66,
+      "kic": 60,
+      "ref": 66,
+      "pos": 64,
+      "spd": 47
+     },
+     "pac": 47,
+     "sho": 30,
+     "pas": 47,
+     "dri": 43,
+     "def": 26,
+     "phy": 58
+    },
+    {
+     "id": "0191e21a-5c9c-5c66-9474-2424994e5ddf",
+     "name": "G. Barbieri",
+     "number": 2,
+     "role": "RB",
+     "pos": "RB",
+     "height": 175,
+     "squad": "starter",
+     "age": 28,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 74,
+      "sprint_speed": 74,
+      "agility": 68,
+      "balance": 64,
+      "reactions": 64,
+      "ball_control": 62,
+      "dribbling": 60,
+      "composure": 58,
+      "crossing": 66,
+      "curve": 58,
+      "fk_accuracy": 46,
+      "finishing": 48,
+      "heading_accuracy": 56,
+      "long_shots": 50,
+      "long_passing": 60,
+      "short_passing": 64,
+      "shot_power": 52,
+      "volleys": 46,
+      "aggression": 62,
+      "interceptions": 62,
+      "positioning": 54,
+      "vision": 58,
+      "penalties": 46,
+      "jumping": 62,
+      "stamina": 70,
+      "strength": 62,
+      "marking_awareness": 60,
+      "standing_tackle": 60,
+      "sliding_tackle": 60,
+      "gk_diving": 10,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 10,
+      "han": 8,
+      "kic": 10,
+      "ref": 10,
+      "pos": 8,
+      "spd": 74
+     },
+     "pac": 74,
+     "sho": 49,
+     "pas": 61,
+     "dri": 62,
+     "def": 60,
+     "phy": 64
+    },
+    {
+     "id": "e7358447-8bc7-5ca9-9d5a-527ca12ecf1c",
+     "name": "R. Esposito",
+     "number": 3,
+     "role": "RCB",
+     "pos": "CB",
+     "height": 178,
+     "squad": "starter",
+     "age": 19,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 58,
+      "sprint_speed": 60,
+      "agility": 54,
+      "balance": 60,
+      "reactions": 64,
+      "ball_control": 56,
+      "dribbling": 50,
+      "composure": 62,
+      "crossing": 48,
+      "curve": 44,
+      "fk_accuracy": 38,
+      "finishing": 38,
+      "heading_accuracy": 66,
+      "long_shots": 38,
+      "long_passing": 56,
+      "short_passing": 60,
+      "shot_power": 54,
+      "volleys": 40,
+      "aggression": 66,
+      "interceptions": 68,
+      "positioning": 56,
+      "vision": 54,
+      "penalties": 44,
+      "jumping": 70,
+      "stamina": 64,
+      "strength": 72,
+      "marking_awareness": 70,
+      "standing_tackle": 72,
+      "sliding_tackle": 66,
+      "gk_diving": 10,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 68,
+     "gk": {
+      "div": 10,
+      "han": 10,
+      "kic": 12,
+      "ref": 10,
+      "pos": 8,
+      "spd": 59
+     },
+     "pac": 59,
+     "sho": 43,
+     "pas": 54,
+     "dri": 54,
+     "def": 69,
+     "phy": 69
+    },
+    {
+     "id": "13f3a79e-8496-53d3-bee6-6388ad62b261",
+     "name": "V. Bruno",
+     "number": 4,
+     "role": "LCB",
+     "pos": "CB",
+     "height": 178,
+     "squad": "starter",
+     "age": 27,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 58,
+      "sprint_speed": 60,
+      "agility": 52,
+      "balance": 60,
+      "reactions": 62,
+      "ball_control": 56,
+      "dribbling": 50,
+      "composure": 62,
+      "crossing": 48,
+      "curve": 42,
+      "fk_accuracy": 38,
+      "finishing": 38,
+      "heading_accuracy": 66,
+      "long_shots": 38,
+      "long_passing": 56,
+      "short_passing": 60,
+      "shot_power": 52,
+      "volleys": 40,
+      "aggression": 66,
+      "interceptions": 68,
+      "positioning": 56,
+      "vision": 52,
+      "penalties": 42,
+      "jumping": 70,
+      "stamina": 64,
+      "strength": 72,
+      "marking_awareness": 70,
+      "standing_tackle": 70,
+      "sliding_tackle": 66,
+      "gk_diving": 10,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 67,
+     "gk": {
+      "div": 10,
+      "han": 8,
+      "kic": 10,
+      "ref": 10,
+      "pos": 8,
+      "spd": 59
+     },
+     "pac": 59,
+     "sho": 42,
+     "pas": 53,
+     "dri": 54,
+     "def": 69,
+     "phy": 69
+    },
+    {
+     "id": "adb5b470-2361-548e-8d08-33f135a2d2f8",
+     "name": "M. Rizzo",
+     "number": 5,
+     "role": "LB",
+     "pos": "LB",
+     "height": 169,
+     "squad": "starter",
+     "age": 28,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 76,
+      "sprint_speed": 76,
+      "agility": 70,
+      "balance": 66,
+      "reactions": 66,
+      "ball_control": 64,
+      "dribbling": 62,
+      "composure": 60,
+      "crossing": 68,
+      "curve": 60,
+      "fk_accuracy": 48,
+      "finishing": 50,
+      "heading_accuracy": 58,
+      "long_shots": 52,
+      "long_passing": 62,
+      "short_passing": 66,
+      "shot_power": 54,
+      "volleys": 48,
+      "aggression": 64,
+      "interceptions": 64,
+      "positioning": 56,
+      "vision": 60,
+      "penalties": 48,
+      "jumping": 64,
+      "stamina": 72,
+      "strength": 64,
+      "marking_awareness": 62,
+      "standing_tackle": 62,
+      "sliding_tackle": 62,
+      "gk_diving": 12,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 10,
+      "gk_reflexes": 12
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 68,
+     "gk": {
+      "div": 12,
+      "han": 10,
+      "kic": 12,
+      "ref": 12,
+      "pos": 10,
+      "spd": 76
+     },
+     "pac": 76,
+     "sho": 51,
+     "pas": 63,
+     "dri": 64,
+     "def": 62,
+     "phy": 66
+    },
+    {
+     "id": "97c08a5a-08ea-59f8-99d7-92a497749d33",
+     "name": "S. Rossi",
+     "number": 6,
+     "role": "RDM",
+     "pos": "CDM",
+     "height": 177,
+     "squad": "starter",
+     "age": 33,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 58,
+      "sprint_speed": 58,
+      "agility": 58,
+      "balance": 60,
+      "reactions": 62,
+      "ball_control": 64,
+      "dribbling": 60,
+      "composure": 64,
+      "crossing": 56,
+      "curve": 54,
+      "fk_accuracy": 44,
+      "finishing": 50,
+      "heading_accuracy": 50,
+      "long_shots": 56,
+      "long_passing": 68,
+      "short_passing": 70,
+      "shot_power": 56,
+      "volleys": 44,
+      "aggression": 60,
+      "interceptions": 66,
+      "positioning": 54,
+      "vision": 64,
+      "penalties": 46,
+      "jumping": 56,
+      "stamina": 66,
+      "strength": 62,
+      "marking_awareness": 62,
+      "standing_tackle": 64,
+      "sliding_tackle": 60,
+      "gk_diving": 6,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 6,
+      "han": 6,
+      "kic": 8,
+      "ref": 6,
+      "pos": 4,
+      "spd": 58
+     },
+     "pac": 58,
+     "sho": 52,
+     "pas": 64,
+     "dri": 61,
+     "def": 62,
+     "phy": 62
+    },
+    {
+     "id": "29626036-a557-5764-8c55-d640b27db8e4",
+     "name": "C. Ricci",
+     "number": 7,
+     "role": "LDM",
+     "pos": "CDM",
+     "height": 177,
+     "squad": "starter",
+     "age": 24,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 64,
+      "sprint_speed": 64,
+      "agility": 64,
+      "balance": 66,
+      "reactions": 68,
+      "ball_control": 70,
+      "dribbling": 66,
+      "composure": 70,
+      "crossing": 62,
+      "curve": 60,
+      "fk_accuracy": 50,
+      "finishing": 54,
+      "heading_accuracy": 56,
+      "long_shots": 62,
+      "long_passing": 74,
+      "short_passing": 76,
+      "shot_power": 62,
+      "volleys": 50,
+      "aggression": 66,
+      "interceptions": 72,
+      "positioning": 60,
+      "vision": 70,
+      "penalties": 52,
+      "jumping": 62,
+      "stamina": 72,
+      "strength": 68,
+      "marking_awareness": 68,
+      "standing_tackle": 70,
+      "sliding_tackle": 66,
+      "gk_diving": 12,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 10,
+      "gk_reflexes": 12
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 72,
+     "gk": {
+      "div": 12,
+      "han": 10,
+      "kic": 12,
+      "ref": 12,
+      "pos": 10,
+      "spd": 64
+     },
+     "pac": 64,
+     "sho": 57,
+     "pas": 70,
+     "dri": 67,
+     "def": 68,
+     "phy": 68
+    },
+    {
+     "id": "dcd2d700-85fa-589c-9fa2-988216bc14bd",
+     "name": "A. Costa",
+     "number": 8,
+     "role": "RW",
+     "pos": "RW",
+     "height": 174,
+     "squad": "starter",
+     "age": 26,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 80,
+      "sprint_speed": 78,
+      "agility": 78,
+      "balance": 70,
+      "reactions": 70,
+      "ball_control": 74,
+      "dribbling": 78,
+      "composure": 68,
+      "crossing": 70,
+      "curve": 68,
+      "fk_accuracy": 56,
+      "finishing": 70,
+      "heading_accuracy": 48,
+      "long_shots": 64,
+      "long_passing": 62,
+      "short_passing": 70,
+      "shot_power": 64,
+      "volleys": 52,
+      "aggression": 48,
+      "interceptions": 44,
+      "positioning": 70,
+      "vision": 70,
+      "penalties": 56,
+      "jumping": 56,
+      "stamina": 66,
+      "strength": 54,
+      "marking_awareness": 36,
+      "standing_tackle": 38,
+      "sliding_tackle": 36,
+      "gk_diving": 12,
+      "gk_handling": 10,
+      "gk_kicking": 12,
+      "gk_positioning": 10,
+      "gk_reflexes": 12
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 73,
+     "gk": {
+      "div": 12,
+      "han": 10,
+      "kic": 12,
+      "ref": 12,
+      "pos": 10,
+      "spd": 79
+     },
+     "pac": 79,
+     "sho": 66,
+     "pas": 68,
+     "dri": 76,
+     "def": 39,
+     "phy": 56
+    },
+    {
+     "id": "84f323f6-10a0-554c-986e-3405eafe25f1",
+     "name": "D. Fontana",
+     "number": 9,
+     "role": "CAM",
+     "pos": "CAM",
+     "height": 170,
+     "squad": "starter",
+     "age": 21,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 70,
+      "sprint_speed": 66,
+      "agility": 74,
+      "balance": 70,
+      "reactions": 70,
+      "ball_control": 76,
+      "dribbling": 76,
+      "composure": 72,
+      "crossing": 68,
+      "curve": 68,
+      "fk_accuracy": 58,
+      "finishing": 66,
+      "heading_accuracy": 48,
+      "long_shots": 68,
+      "long_passing": 68,
+      "short_passing": 76,
+      "shot_power": 64,
+      "volleys": 52,
+      "aggression": 50,
+      "interceptions": 48,
+      "positioning": 70,
+      "vision": 76,
+      "penalties": 60,
+      "jumping": 52,
+      "stamina": 64,
+      "strength": 54,
+      "marking_awareness": 40,
+      "standing_tackle": 42,
+      "sliding_tackle": 40,
+      "gk_diving": 10,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 8,
+      "gk_reflexes": 10
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 73,
+     "gk": {
+      "div": 10,
+      "han": 8,
+      "kic": 10,
+      "ref": 10,
+      "pos": 8,
+      "spd": 68
+     },
+     "pac": 68,
+     "sho": 65,
+     "pas": 72,
+     "dri": 75,
+     "def": 43,
+     "phy": 56
+    },
+    {
+     "id": "3c1341b4-cc0b-567e-8d1d-7c013dc4c17e",
+     "name": "N. Bianchi",
+     "number": 10,
+     "role": "LW",
+     "pos": "LW",
+     "height": 165,
+     "squad": "starter",
+     "age": 30,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 76,
+      "sprint_speed": 74,
+      "agility": 74,
+      "balance": 66,
+      "reactions": 66,
+      "ball_control": 70,
+      "dribbling": 74,
+      "composure": 64,
+      "crossing": 66,
+      "curve": 64,
+      "fk_accuracy": 52,
+      "finishing": 66,
+      "heading_accuracy": 44,
+      "long_shots": 60,
+      "long_passing": 58,
+      "short_passing": 66,
+      "shot_power": 60,
+      "volleys": 48,
+      "aggression": 44,
+      "interceptions": 40,
+      "positioning": 66,
+      "vision": 66,
+      "penalties": 52,
+      "jumping": 52,
+      "stamina": 62,
+      "strength": 52,
+      "marking_awareness": 32,
+      "standing_tackle": 34,
+      "sliding_tackle": 32,
+      "gk_diving": 8,
+      "gk_handling": 8,
+      "gk_kicking": 10,
+      "gk_positioning": 6,
+      "gk_reflexes": 8
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 69,
+     "gk": {
+      "div": 8,
+      "han": 8,
+      "kic": 10,
+      "ref": 8,
+      "pos": 6,
+      "spd": 75
+     },
+     "pac": 75,
+     "sho": 62,
+     "pas": 64,
+     "dri": 72,
+     "def": 35,
+     "phy": 53
+    },
+    {
+     "id": "a29214b2-4a42-5c9e-83c5-8452a17afd6b",
+     "name": "A. Gallo",
+     "number": 11,
+     "role": "ST",
+     "pos": "ST",
+     "height": 167,
+     "squad": "starter",
+     "age": 24,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 68,
+      "sprint_speed": 70,
+      "agility": 62,
+      "balance": 60,
+      "reactions": 66,
+      "ball_control": 64,
+      "dribbling": 64,
+      "composure": 66,
+      "crossing": 52,
+      "curve": 50,
+      "fk_accuracy": 42,
+      "finishing": 70,
+      "heading_accuracy": 64,
+      "long_shots": 60,
+      "long_passing": 50,
+      "short_passing": 58,
+      "shot_power": 68,
+      "volleys": 52,
+      "aggression": 50,
+      "interceptions": 34,
+      "positioning": 68,
+      "vision": 54,
+      "penalties": 58,
+      "jumping": 64,
+      "stamina": 58,
+      "strength": 64,
+      "marking_awareness": 26,
+      "standing_tackle": 28,
+      "sliding_tackle": 26,
+      "gk_diving": 6,
+      "gk_handling": 6,
+      "gk_kicking": 8,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 6,
+      "han": 6,
+      "kic": 8,
+      "ref": 6,
+      "pos": 4,
+      "spd": 69
+     },
+     "pac": 69,
+     "sho": 66,
+     "pas": 54,
+     "dri": 64,
+     "def": 32,
+     "phy": 60
+    },
+    {
+     "id": "e7fc0d3a-9a67-5bb2-9b16-64126d27079a",
+     "name": "F. Lombardi",
+     "number": 12,
+     "role": "GK",
+     "pos": "GK",
+     "height": 166,
+     "squad": "bench",
+     "age": 25,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 37,
+      "sprint_speed": 39,
+      "agility": 34,
+      "balance": 44,
+      "reactions": 57,
+      "ball_control": 34,
+      "dribbling": 27,
+      "composure": 54,
+      "crossing": 34,
+      "curve": 29,
+      "fk_accuracy": 24,
+      "finishing": 14,
+      "heading_accuracy": 29,
+      "long_shots": 19,
+      "long_passing": 44,
+      "short_passing": 39,
+      "shot_power": 34,
+      "volleys": 14,
+      "aggression": 34,
+      "interceptions": 19,
+      "positioning": 19,
+      "vision": 39,
+      "penalties": 24,
+      "jumping": 59,
+      "stamina": 44,
+      "strength": 54,
+      "marking_awareness": 14,
+      "standing_tackle": 14,
+      "sliding_tackle": 14,
+      "gk_diving": 57,
+      "gk_handling": 57,
+      "gk_kicking": 51,
+      "gk_positioning": 55,
+      "gk_reflexes": 57
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 57,
+     "gk": {
+      "div": 57,
+      "han": 57,
+      "kic": 51,
+      "ref": 57,
+      "pos": 55,
+      "spd": 38
+     },
+     "pac": 38,
+     "sho": 20,
+     "pas": 38,
+     "dri": 34,
+     "def": 17,
+     "phy": 48
+    },
+    {
+     "id": "faa85e4b-6683-53dc-a315-587c4341c17e",
+     "name": "E. Russo",
+     "number": 13,
+     "role": "RCB",
+     "pos": "CB",
+     "height": 177,
+     "squad": "bench",
+     "age": 21,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 54,
+      "sprint_speed": 56,
+      "agility": 49,
+      "balance": 56,
+      "reactions": 59,
+      "ball_control": 52,
+      "dribbling": 46,
+      "composure": 58,
+      "crossing": 44,
+      "curve": 39,
+      "fk_accuracy": 34,
+      "finishing": 34,
+      "heading_accuracy": 62,
+      "long_shots": 34,
+      "long_passing": 52,
+      "short_passing": 56,
+      "shot_power": 49,
+      "volleys": 36,
+      "aggression": 62,
+      "interceptions": 64,
+      "positioning": 52,
+      "vision": 49,
+      "penalties": 39,
+      "jumping": 66,
+      "stamina": 60,
+      "strength": 68,
+      "marking_awareness": 66,
+      "standing_tackle": 67,
+      "sliding_tackle": 62,
+      "gk_diving": 6,
+      "gk_handling": 5,
+      "gk_kicking": 7,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 63,
+     "gk": {
+      "div": 6,
+      "han": 5,
+      "kic": 7,
+      "ref": 6,
+      "pos": 4,
+      "spd": 55
+     },
+     "pac": 55,
+     "sho": 38,
+     "pas": 50,
+     "dri": 50,
+     "def": 65,
+     "phy": 65
+    },
+    {
+     "id": "517effde-d6ff-51ca-b795-60b8811c2525",
+     "name": "M. Marino",
+     "number": 14,
+     "role": "LB",
+     "pos": "LB",
+     "height": 167,
+     "squad": "bench",
+     "age": 20,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 70,
+      "sprint_speed": 70,
+      "agility": 64,
+      "balance": 60,
+      "reactions": 60,
+      "ball_control": 58,
+      "dribbling": 56,
+      "composure": 54,
+      "crossing": 62,
+      "curve": 54,
+      "fk_accuracy": 42,
+      "finishing": 44,
+      "heading_accuracy": 52,
+      "long_shots": 46,
+      "long_passing": 56,
+      "short_passing": 60,
+      "shot_power": 49,
+      "volleys": 42,
+      "aggression": 58,
+      "interceptions": 58,
+      "positioning": 50,
+      "vision": 54,
+      "penalties": 42,
+      "jumping": 58,
+      "stamina": 66,
+      "strength": 59,
+      "marking_awareness": 56,
+      "standing_tackle": 57,
+      "sliding_tackle": 56,
+      "gk_diving": 6,
+      "gk_handling": 5,
+      "gk_kicking": 7,
+      "gk_positioning": 4,
+      "gk_reflexes": 6
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 62,
+     "gk": {
+      "div": 6,
+      "han": 5,
+      "kic": 7,
+      "ref": 6,
+      "pos": 4,
+      "spd": 70
+     },
+     "pac": 70,
+     "sho": 46,
+     "pas": 57,
+     "dri": 58,
+     "def": 56,
+     "phy": 61
+    },
+    {
+     "id": "49b3c958-c0dc-5af2-a106-c57d426ab1ae",
+     "name": "L. Giordano",
+     "number": 15,
+     "role": "RDM",
+     "pos": "CDM",
+     "height": 169,
+     "squad": "bench",
+     "age": 19,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 55,
+      "sprint_speed": 55,
+      "agility": 55,
+      "balance": 57,
+      "reactions": 59,
+      "ball_control": 61,
+      "dribbling": 57,
+      "composure": 61,
+      "crossing": 53,
+      "curve": 51,
+      "fk_accuracy": 41,
+      "finishing": 46,
+      "heading_accuracy": 47,
+      "long_shots": 53,
+      "long_passing": 65,
+      "short_passing": 67,
+      "shot_power": 53,
+      "volleys": 41,
+      "aggression": 57,
+      "interceptions": 63,
+      "positioning": 51,
+      "vision": 61,
+      "penalties": 43,
+      "jumping": 53,
+      "stamina": 63,
+      "strength": 59,
+      "marking_awareness": 59,
+      "standing_tackle": 61,
+      "sliding_tackle": 57,
+      "gk_diving": 3,
+      "gk_handling": 2,
+      "gk_kicking": 4,
+      "gk_positioning": 1,
+      "gk_reflexes": 3
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 63,
+     "gk": {
+      "div": 3,
+      "han": 2,
+      "kic": 4,
+      "ref": 3,
+      "pos": 1,
+      "spd": 55
+     },
+     "pac": 55,
+     "sho": 49,
+     "pas": 61,
+     "dri": 58,
+     "def": 59,
+     "phy": 59
+    },
+    {
+     "id": "c291f8c0-ffb3-56b5-bcaf-d85abecb5453",
+     "name": "P. Santoro",
+     "number": 16,
+     "role": "RW",
+     "pos": "RW",
+     "height": 180,
+     "squad": "bench",
+     "age": 23,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 73,
+      "sprint_speed": 71,
+      "agility": 71,
+      "balance": 63,
+      "reactions": 63,
+      "ball_control": 67,
+      "dribbling": 71,
+      "composure": 61,
+      "crossing": 63,
+      "curve": 61,
+      "fk_accuracy": 49,
+      "finishing": 63,
+      "heading_accuracy": 41,
+      "long_shots": 57,
+      "long_passing": 55,
+      "short_passing": 63,
+      "shot_power": 57,
+      "volleys": 45,
+      "aggression": 41,
+      "interceptions": 37,
+      "positioning": 63,
+      "vision": 63,
+      "penalties": 49,
+      "jumping": 49,
+      "stamina": 59,
+      "strength": 48,
+      "marking_awareness": 29,
+      "standing_tackle": 31,
+      "sliding_tackle": 29,
+      "gk_diving": 5,
+      "gk_handling": 4,
+      "gk_kicking": 6,
+      "gk_positioning": 3,
+      "gk_reflexes": 5
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 66,
+     "gk": {
+      "div": 5,
+      "han": 4,
+      "kic": 6,
+      "ref": 5,
+      "pos": 3,
+      "spd": 72
+     },
+     "pac": 72,
+     "sho": 59,
+     "pas": 61,
+     "dri": 69,
+     "def": 32,
+     "phy": 49
+    },
+    {
+     "id": "5e569e95-7979-53c3-b6c3-3e06d46b7ed4",
+     "name": "T. Romano",
+     "number": 17,
+     "role": "LW",
+     "pos": "LW",
+     "height": 164,
+     "squad": "bench",
+     "age": 23,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 70,
+      "sprint_speed": 68,
+      "agility": 68,
+      "balance": 60,
+      "reactions": 60,
+      "ball_control": 64,
+      "dribbling": 68,
+      "composure": 58,
+      "crossing": 60,
+      "curve": 58,
+      "fk_accuracy": 46,
+      "finishing": 60,
+      "heading_accuracy": 38,
+      "long_shots": 54,
+      "long_passing": 52,
+      "short_passing": 60,
+      "shot_power": 54,
+      "volleys": 42,
+      "aggression": 38,
+      "interceptions": 34,
+      "positioning": 60,
+      "vision": 60,
+      "penalties": 46,
+      "jumping": 46,
+      "stamina": 56,
+      "strength": 45,
+      "marking_awareness": 26,
+      "standing_tackle": 28,
+      "sliding_tackle": 26,
+      "gk_diving": 2,
+      "gk_handling": 1,
+      "gk_kicking": 3,
+      "gk_positioning": 1,
+      "gk_reflexes": 2
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 63,
+     "gk": {
+      "div": 2,
+      "han": 1,
+      "kic": 3,
+      "ref": 2,
+      "pos": 1,
+      "spd": 69
+     },
+     "pac": 69,
+     "sho": 56,
+     "pas": 58,
+     "dri": 66,
+     "def": 29,
+     "phy": 46
+    },
+    {
+     "id": "8cb5f5bf-fa8c-5dc3-b64c-82535e967d29",
+     "name": "G. Conti",
+     "number": 18,
+     "role": "ST",
+     "pos": "ST",
+     "height": 180,
+     "squad": "bench",
+     "age": 28,
+     "nationality": "Italy",
+     "date_of_birth": "",
+     "subs": {
+      "acceleration": 64,
+      "sprint_speed": 66,
+      "agility": 58,
+      "balance": 56,
+      "reactions": 62,
+      "ball_control": 60,
+      "dribbling": 60,
+      "composure": 62,
+      "crossing": 48,
+      "curve": 46,
+      "fk_accuracy": 38,
+      "finishing": 66,
+      "heading_accuracy": 60,
+      "long_shots": 56,
+      "long_passing": 45,
+      "short_passing": 54,
+      "shot_power": 64,
+      "volleys": 48,
+      "aggression": 46,
+      "interceptions": 30,
+      "positioning": 64,
+      "vision": 50,
+      "penalties": 54,
+      "jumping": 60,
+      "stamina": 54,
+      "strength": 60,
+      "marking_awareness": 22,
+      "standing_tackle": 24,
+      "sliding_tackle": 22,
+      "gk_diving": 2,
+      "gk_handling": 1,
+      "gk_kicking": 3,
+      "gk_positioning": 1,
+      "gk_reflexes": 2
+     },
+     "extras": {
+      "potential": 0,
+      "weak_foot": 0,
+      "skill_moves": 0,
+      "work_rate": "",
+      "play_styles": "",
+      "traits": "",
+      "international_reputation": 1
+     },
+     "ratings_matched": 0,
+     "ovr": 62,
+     "gk": {
+      "div": 2,
+      "han": 1,
+      "kic": 3,
+      "ref": 2,
+      "pos": 1,
+      "spd": 65
+     },
+     "pac": 65,
+     "sho": 62,
+     "pas": 49,
+     "dri": 60,
+     "def": 28,
+     "phy": 56
+    }
+   ],
+   "competition_id": "CI",
+   "country": "ITA",
+   "stub": 1,
+   "tier": 3,
+   "region": "north"
   }
  ],
  "table": [
@@ -998275,9 +1003671,1316 @@
     "drops": {},
     "kind": "continental"
    }
+  },
+  {
+   "id": "CI",
+   "name": "Coppa Italia",
+   "short_name": "COPPA ITALIA",
+   "country": "Italy",
+   "espn": "",
+   "rules": {
+    "season_start": "2026-08-08",
+    "season_end": "2027-05-15",
+    "entrants": {
+     "PR": 8,
+     "R1": 28,
+     "R16": 8
+    },
+    "rounds": [
+     {
+      "id": "PR",
+      "name": "Preliminary round",
+      "date": "2026-08-08",
+      "ties": 4,
+      "legs": 1,
+      "extra_time": true,
+      "host": "lower",
+      "regional": false
+     },
+     {
+      "id": "R1",
+      "name": "First round",
+      "date": "2026-08-14",
+      "ties": 16,
+      "legs": 1,
+      "extra_time": true,
+      "host": "lower",
+      "regional": false
+     },
+     {
+      "id": "R2",
+      "name": "Second round",
+      "date": "2026-09-01",
+      "ties": 8,
+      "legs": 1,
+      "extra_time": true,
+      "host": "lower",
+      "regional": false
+     },
+     {
+      "id": "R16",
+      "name": "Round of 16",
+      "date": "2026-12-02",
+      "ties": 8,
+      "legs": 1,
+      "extra_time": true,
+      "host": "lower",
+      "regional": false
+     },
+     {
+      "id": "QF",
+      "name": "Quarter-finals",
+      "date": "2027-02-03",
+      "ties": 4,
+      "legs": 1,
+      "extra_time": true,
+      "host": "lower",
+      "regional": false
+     },
+     {
+      "id": "SF",
+      "name": "Semi-finals",
+      "date": "2027-03-02",
+      "second_leg": "2027-04-20",
+      "ties": 2,
+      "legs": 2,
+      "extra_time": true,
+      "host": "draw",
+      "regional": false
+     },
+     {
+      "id": "F",
+      "name": "Final",
+      "date": "2027-05-15",
+      "ties": 1,
+      "legs": 1,
+      "extra_time": true,
+      "host": "neutral",
+      "regional": false
+     }
+    ],
+    "europe": {
+     "competition": "UEL",
+     "round": "LP"
+    },
+    "kind": "cup"
+   }
+  },
+  {
+   "id": "SCI",
+   "name": "Supercoppa Italiana",
+   "short_name": "SUPERCOPPA",
+   "country": "Italy",
+   "espn": "",
+   "rules": {
+    "season_start": "2027-01-06",
+    "season_end": "2027-01-06",
+    "entrants": {
+     "F": 2
+    },
+    "rounds": [
+     {
+      "id": "F",
+      "name": "Final",
+      "date": "2027-01-06",
+      "ties": 1,
+      "legs": 1,
+      "extra_time": true,
+      "host": "neutral",
+      "regional": false
+     }
+    ],
+    "europe": {},
+    "kind": "supercup"
+   }
   }
  ],
  "members": [
+  {
+   "competition_id": "UCL",
+   "member_id": "HUN-EGR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ROU-UC1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "BUL-LS1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "AZE-SAB1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "IRL-SR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "MDA-PHT1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ISL-VR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "BIH-BBL1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ARM-AA1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "LVA-RIG1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "KOS-DRI1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "FIN-KUP1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "KAZ-KAI1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "FRO-KI1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "MLT-FLO1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "NIR-LAR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "LTU-KA1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "EST-FLO1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ALB-EGN1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "MNE-SUT1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "LUX-AB1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "WAL-TNS1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "GEO-I11",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "MKD-VAR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "BLR-MV1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "AND-ICD1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "GIB-LRI1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "SMR-TF1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "POL-LP1",
+   "role": "Q2CH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "DEN-AGF1",
+   "role": "Q2CH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "SUI-THU1",
+   "role": "Q2CH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ISR-HBE1",
+   "role": "Q2CH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "CYP-OMO1",
+   "role": "Q2CH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "SWE-MA1",
+   "role": "Q2CH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "CRO-DZ1",
+   "role": "Q2CH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "SRB-RSB1",
+   "role": "Q2CH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "SVK-SB1",
+   "role": "Q2CH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "SVN-CEL1",
+   "role": "Q2CH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "TUR-FEN1",
+   "role": "Q2LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "AUT-SG1",
+   "role": "Q2LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "SCO-HOM1",
+   "role": "Q2LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "POL-GZ1",
+   "role": "Q2LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "FRA-LYO1",
+   "role": "Q3LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "NED-NEC1",
+   "role": "Q3LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "BEL-USG1",
+   "role": "Q3LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "CZE-SP21",
+   "role": "Q3LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "NOR-BG1",
+   "role": "Q3LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "GRE-OLY1",
+   "role": "Q3LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "NOR-VIK1",
+   "role": "POCH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "GRE-AA1",
+   "role": "POCH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "AUT-LAS1",
+   "role": "POCH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "SCO-CEL1",
+   "role": "POCH"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "FRA-PSG1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ENG-AVL1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ENG-ARS1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ENG-MCI1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ENG-MUN1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ENG-LIV1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ITA-INT1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ITA-NAP1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ITA-ROMA1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ITA-COMO1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ESP-BAR1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ESP-RMA1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ESP-VIL1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ESP-ATM1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "ESP-BET1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "GER-FCB1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "GER-DOR1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "GER-RBL1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "GER-VFB1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "FRA-LEN1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "FRA-LIL1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "NED-PE1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "NED-FEY1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "POR-POR1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "POR-SC1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "BEL-CB1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "CZE-SP1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "TUR-GAL1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UCL",
+   "member_id": "UKR-SD1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "CRO-HS1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "SRB-VOJ1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "UKR-DK1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "HUN-FER1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "ROU-UC21",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "SVK-ILI1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "SVN-ALU1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "BUL-CS1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "AZE-QAR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "IRL-DC1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "MDA-ST1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "ISL-VES1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "NED-TWE1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "POR-BEN1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "BEL-AND1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "CZE-HK1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "TUR-BI1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "NOR-TRO1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "GRE-PAO1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "DEN-MID1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "SUI-SG1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "ISR-MTA1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "CYP-PAF1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "SWE-HI1",
+   "role": "Q2"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "AUT-RBS1",
+   "role": "Q3MP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "SCO-RAN1",
+   "role": "Q3MP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "POL-JBY1",
+   "role": "Q3MP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "BEL-ST1",
+   "role": "PO"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "CZE-VP1",
+   "role": "PO"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "TUR-TRA1",
+   "role": "PO"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "NOR-LIL1",
+   "role": "PO"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "GRE-OFI1",
+   "role": "PO"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "ENG-CRY1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "ENG-BOU1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "ENG-SUN1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "ITA-MIL1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "ITA-JUV1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "ESP-RSO1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "ESP-CEL1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "GER-TSG1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "GER-B041",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "FRA-MAR1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "FRA-REN1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "NED-AZ1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UEL",
+   "member_id": "POR-TOR1",
+   "role": "LP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "AZE-ZIR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "IRL-BOH1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "MDA-MO1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ISL-STJ1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "BIH-SAR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "BIH-VM1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ARM-PYU1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ARM-ALA1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "LVA-RFS1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "LVA-LJ1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "KOS-MAL1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "KOS-BAL1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "FIN-IT1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "FIN-ILV1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "KAZ-AST1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "KAZ-YEL1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "FRO-NSI1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "FRO-VG1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "MLT-MAR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "MLT-HS1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "NIR-GLE1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "NIR-LIN1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "LTU-HEG1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "LTU-ALG1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "EST-FL1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "EST-NK1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "EST-PL1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ALB-DC1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ALB-ELB1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ALB-VLL1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "MNE-MOR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "MNE-PET1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "MNE-DI1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "LUX-D01",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "LUX-MLB1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "LUX-US1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "WAL-CT1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "WAL-CSQ1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "WAL-PEN1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "GEO-DG1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "GEO-TK1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "GEO-DT1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "MKD-SIL1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "MKD-SHK1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "BLR-BB1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "BLR-DM1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "AND-ACD1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "AND-FSC1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "GIB-SJS1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "GIB-EUR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SMR-LF1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SMR-VIR1",
+   "role": "Q1"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "NED-AJA1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "POR-BRA1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "BEL-GEN1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "CZE-JAB1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "TUR-SBA1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "NOR-BRA1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "GRE-PAN1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "AUT-AW1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "AUT-RW1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SCO-MOT1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SCO-HIB1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "POL-RCS1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "POL-GK1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "DEN-NOR1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "DEN-COP1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SUI-LUG1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SUI-SIO1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ISR-BJ1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ISR-HTA1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "CYP-AL1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "CYP-AL21",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SWE-GAI1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SWE-IG1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "CRO-VD1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "CRO-RIJ1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SRB-PAR1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SRB-EAP1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "UKR-LC1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "UKR-PZ1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "HUN-PAK1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "HUN-DEB1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ROU-CC1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ROU-FCS1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SVK-DDS1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SVK-ST1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SVN-KOP1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "SVN-BRA1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "BUL-C11",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "BUL-LR1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "AZE-NEF1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "IRL-SHE1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "MDA-ZCI1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ISL-VAL1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "BIH-ZM1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ARM-NOA1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "LVA-AUD1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "KOS-DUK1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "FIN-HJK1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "KAZ-TOB1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "FRO-HB1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "MLT-VAL1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "NIR-COL1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "LTU-PY1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "LIE-VAD1",
+   "role": "Q2MP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ENG-BHA1",
+   "role": "POMP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ITA-ATA1",
+   "role": "POMP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "ESP-GET1",
+   "role": "POMP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "GER-SCF1",
+   "role": "POMP"
+  },
+  {
+   "competition_id": "UECL",
+   "member_id": "FRA-MON1",
+   "role": "POMP"
+  },
   {
    "competition_id": "FAC",
    "member_id": "ENG-STO1",
@@ -1000309,1229 +1007012,274 @@
    "role": "R1"
   },
   {
-   "competition_id": "CS",
-   "member_id": "ENG-ARS1",
-   "role": "F"
+   "competition_id": "CI",
+   "member_id": "ITA-PAL1",
+   "role": "R1"
   },
   {
-   "competition_id": "CS",
-   "member_id": "ENG-MCI1",
-   "role": "F"
+   "competition_id": "CI",
+   "member_id": "ITA-MOD1",
+   "role": "R1"
   },
   {
-   "competition_id": "DFLS",
-   "member_id": "GER-DOR1",
-   "role": "F"
+   "competition_id": "CI",
+   "member_id": "ITA-AVE1",
+   "role": "R1"
   },
   {
-   "competition_id": "DFLS",
-   "member_id": "GER-FCB1",
-   "role": "F"
+   "competition_id": "CI",
+   "member_id": "ITA-MUN1",
+   "role": "R1"
   },
   {
-   "competition_id": "SCE",
-   "member_id": "ESP-BAR1",
-   "role": "SF"
+   "competition_id": "CI",
+   "member_id": "ITA-ASC1",
+   "role": "PR"
   },
   {
-   "competition_id": "SCE",
-   "member_id": "ESP-ATM1",
-   "role": "SF"
+   "competition_id": "CI",
+   "member_id": "ITA-CES1",
+   "role": "R1"
   },
   {
-   "competition_id": "SCE",
-   "member_id": "ESP-RSO1",
-   "role": "SF"
+   "competition_id": "CI",
+   "member_id": "ITA-PIS1",
+   "role": "R1"
   },
   {
-   "competition_id": "SCE",
-   "member_id": "ESP-RMA1",
-   "role": "SF"
+   "competition_id": "CI",
+   "member_id": "ITA-BEN1",
+   "role": "PR"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "HUN-EGR1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-SUD1",
+   "role": "R1"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "ROU-UC1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-SAM1",
+   "role": "R1"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "BUL-LS1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-VER1",
+   "role": "R1"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "AZE-SAB1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-PAD1",
+   "role": "R1"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "IRL-SR1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-CAR1",
+   "role": "R1"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "MDA-PHT1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-CRE1",
+   "role": "R1"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "ISL-VR1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-ENT1",
+   "role": "R1"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "BIH-BBL1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-JVS1",
+   "role": "R1"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "ARM-AA1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-CAT1",
+   "role": "R1"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "LVA-RIG1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-ARE1",
+   "role": "PR"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "KOS-DRI1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-VIC1",
+   "role": "PR"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "FIN-KUP1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-EMP1",
+   "role": "R1"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "KAZ-KAI1",
-   "role": "Q1"
+   "competition_id": "CI",
+   "member_id": "ITA-LAZ1",
+   "role": "R1"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "FRO-KI1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "MLT-FLO1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "NIR-LAR1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "LTU-KA1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "EST-FLO1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ALB-EGN1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "MNE-SUT1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "LUX-AB1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "WAL-TNS1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "GEO-I11",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "MKD-VAR1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "BLR-MV1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "AND-ICD1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "GIB-LRI1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "SMR-TF1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "POL-LP1",
-   "role": "Q2CH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "DEN-AGF1",
-   "role": "Q2CH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "SUI-THU1",
-   "role": "Q2CH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ISR-HBE1",
-   "role": "Q2CH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "CYP-OMO1",
-   "role": "Q2CH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "SWE-MA1",
-   "role": "Q2CH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "CRO-DZ1",
-   "role": "Q2CH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "SRB-RSB1",
-   "role": "Q2CH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "SVK-SB1",
-   "role": "Q2CH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "SVN-CEL1",
-   "role": "Q2CH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "TUR-FEN1",
-   "role": "Q2LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "AUT-SG1",
-   "role": "Q2LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "SCO-HOM1",
-   "role": "Q2LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "POL-GZ1",
-   "role": "Q2LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "FRA-LYO1",
-   "role": "Q3LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "NED-NEC1",
-   "role": "Q3LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "BEL-USG1",
-   "role": "Q3LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "CZE-SP21",
-   "role": "Q3LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "NOR-BG1",
-   "role": "Q3LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "GRE-OLY1",
-   "role": "Q3LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "NOR-VIK1",
-   "role": "POCH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "GRE-AA1",
-   "role": "POCH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "AUT-LAS1",
-   "role": "POCH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "SCO-CEL1",
-   "role": "POCH"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "FRA-PSG1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ENG-AVL1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ENG-ARS1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ENG-MCI1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ENG-MUN1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ENG-LIV1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ITA-INT1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ITA-NAP1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
+   "competition_id": "CI",
    "member_id": "ITA-ROMA1",
-   "role": "LP"
+   "role": "R16"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "ITA-COMO1",
-   "role": "LP"
+   "competition_id": "CI",
+   "member_id": "ITA-INT1",
+   "role": "R16"
   },
   {
-   "competition_id": "UCL",
-   "member_id": "ESP-BAR1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ESP-RMA1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ESP-VIL1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ESP-ATM1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "ESP-BET1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "GER-FCB1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "GER-DOR1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "GER-RBL1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "GER-VFB1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "FRA-LEN1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "FRA-LIL1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "NED-PE1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "NED-FEY1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "POR-POR1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "POR-SC1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "BEL-CB1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "CZE-SP1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "TUR-GAL1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UCL",
-   "member_id": "UKR-SD1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "CRO-HS1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "SRB-VOJ1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "UKR-DK1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "HUN-FER1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "ROU-UC21",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "SVK-ILI1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "SVN-ALU1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "BUL-CS1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "AZE-QAR1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "IRL-DC1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "MDA-ST1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "ISL-VES1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "NED-TWE1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "POR-BEN1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "BEL-AND1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "CZE-HK1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "TUR-BI1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "NOR-TRO1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "GRE-PAO1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "DEN-MID1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "SUI-SG1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "ISR-MTA1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "CYP-PAF1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "SWE-HI1",
-   "role": "Q2"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "AUT-RBS1",
-   "role": "Q3MP"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "SCO-RAN1",
-   "role": "Q3MP"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "POL-JBY1",
-   "role": "Q3MP"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "BEL-ST1",
-   "role": "PO"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "CZE-VP1",
-   "role": "PO"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "TUR-TRA1",
-   "role": "PO"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "NOR-LIL1",
-   "role": "PO"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "GRE-OFI1",
-   "role": "PO"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "ENG-CRY1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "ENG-BOU1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "ENG-SUN1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UEL",
+   "competition_id": "CI",
    "member_id": "ITA-MIL1",
-   "role": "LP"
+   "role": "R16"
   },
   {
-   "competition_id": "UEL",
+   "competition_id": "CI",
+   "member_id": "ITA-COMO1",
+   "role": "R16"
+  },
+  {
+   "competition_id": "CI",
    "member_id": "ITA-JUV1",
-   "role": "LP"
+   "role": "R16"
   },
   {
-   "competition_id": "UEL",
-   "member_id": "ESP-RSO1",
-   "role": "LP"
+   "competition_id": "CI",
+   "member_id": "ITA-FRO1",
+   "role": "R1"
   },
   {
-   "competition_id": "UEL",
-   "member_id": "ESP-CEL1",
-   "role": "LP"
+   "competition_id": "CI",
+   "member_id": "ITA-BOL1",
+   "role": "R16"
   },
   {
-   "competition_id": "UEL",
-   "member_id": "GER-TSG1",
-   "role": "LP"
+   "competition_id": "CI",
+   "member_id": "ITA-NAP1",
+   "role": "R16"
   },
   {
-   "competition_id": "UEL",
-   "member_id": "GER-B041",
-   "role": "LP"
+   "competition_id": "CI",
+   "member_id": "ITA-GEN1",
+   "role": "R1"
   },
   {
-   "competition_id": "UEL",
-   "member_id": "FRA-MAR1",
-   "role": "LP"
+   "competition_id": "CI",
+   "member_id": "ITA-CAG1",
+   "role": "R1"
   },
   {
-   "competition_id": "UEL",
-   "member_id": "FRA-REN1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "NED-AZ1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UEL",
-   "member_id": "POR-TOR1",
-   "role": "LP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "AZE-ZIR1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "IRL-BOH1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "MDA-MO1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ISL-STJ1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "BIH-SAR1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "BIH-VM1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ARM-PYU1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ARM-ALA1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "LVA-RFS1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "LVA-LJ1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "KOS-MAL1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "KOS-BAL1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "FIN-IT1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "FIN-ILV1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "KAZ-AST1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "KAZ-YEL1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "FRO-NSI1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "FRO-VG1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "MLT-MAR1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "MLT-HS1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "NIR-GLE1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "NIR-LIN1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "LTU-HEG1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "LTU-ALG1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "EST-FL1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "EST-NK1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "EST-PL1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ALB-DC1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ALB-ELB1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ALB-VLL1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "MNE-MOR1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "MNE-PET1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "MNE-DI1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "LUX-D01",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "LUX-MLB1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "LUX-US1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "WAL-CT1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "WAL-CSQ1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "WAL-PEN1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "GEO-DG1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "GEO-TK1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "GEO-DT1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "MKD-SIL1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "MKD-SHK1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "BLR-BB1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "BLR-DM1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "AND-ACD1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "AND-FSC1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "GIB-SJS1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "GIB-EUR1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SMR-LF1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SMR-VIR1",
-   "role": "Q1"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "NED-AJA1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "POR-BRA1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "BEL-GEN1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "CZE-JAB1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "TUR-SBA1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "NOR-BRA1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "GRE-PAN1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "AUT-AW1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "AUT-RW1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SCO-MOT1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SCO-HIB1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "POL-RCS1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "POL-GK1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "DEN-NOR1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "DEN-COP1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SUI-LUG1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SUI-SIO1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ISR-BJ1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ISR-HTA1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "CYP-AL1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "CYP-AL21",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SWE-GAI1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SWE-IG1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "CRO-VD1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "CRO-RIJ1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SRB-PAR1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SRB-EAP1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "UKR-LC1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "UKR-PZ1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "HUN-PAK1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "HUN-DEB1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ROU-CC1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ROU-FCS1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SVK-DDS1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SVK-ST1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SVN-KOP1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "SVN-BRA1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "BUL-C11",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "BUL-LR1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "AZE-NEF1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "IRL-SHE1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "MDA-ZCI1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ISL-VAL1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "BIH-ZM1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ARM-NOA1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "LVA-AUD1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "KOS-DUK1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "FIN-HJK1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "KAZ-TOB1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "FRO-HB1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "MLT-VAL1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "NIR-COL1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "LTU-PY1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "LIE-VAD1",
-   "role": "Q2MP"
-  },
-  {
-   "competition_id": "UECL",
-   "member_id": "ENG-BHA1",
-   "role": "POMP"
-  },
-  {
-   "competition_id": "UECL",
+   "competition_id": "CI",
    "member_id": "ITA-ATA1",
-   "role": "POMP"
+   "role": "R16"
   },
   {
-   "competition_id": "UECL",
-   "member_id": "ESP-GET1",
-   "role": "POMP"
+   "competition_id": "CI",
+   "member_id": "ITA-TOR1",
+   "role": "R1"
   },
   {
-   "competition_id": "UECL",
-   "member_id": "GER-SCF1",
-   "role": "POMP"
+   "competition_id": "CI",
+   "member_id": "ITA-MON1",
+   "role": "R1"
   },
   {
-   "competition_id": "UECL",
-   "member_id": "FRA-MON1",
-   "role": "POMP"
+   "competition_id": "CI",
+   "member_id": "ITA-LEC1",
+   "role": "R1"
+  },
+  {
+   "competition_id": "CI",
+   "member_id": "ITA-FIO1",
+   "role": "R1"
+  },
+  {
+   "competition_id": "CI",
+   "member_id": "ITA-PAR1",
+   "role": "R1"
+  },
+  {
+   "competition_id": "CI",
+   "member_id": "ITA-SAS1",
+   "role": "R1"
+  },
+  {
+   "competition_id": "CI",
+   "member_id": "ITA-VEN1",
+   "role": "R1"
+  },
+  {
+   "competition_id": "CI",
+   "member_id": "ITA-UDI1",
+   "role": "R1"
+  },
+  {
+   "competition_id": "CI",
+   "member_id": "ITA-CTA1",
+   "role": "PR"
+  },
+  {
+   "competition_id": "CI",
+   "member_id": "ITA-POT1",
+   "role": "PR"
+  },
+  {
+   "competition_id": "CI",
+   "member_id": "ITA-RAV1",
+   "role": "PR"
+  },
+  {
+   "competition_id": "CI",
+   "member_id": "ITA-BRE1",
+   "role": "PR"
+  },
+  {
+   "competition_id": "CS",
+   "member_id": "ENG-ARS1",
+   "role": "F"
+  },
+  {
+   "competition_id": "CS",
+   "member_id": "ENG-MCI1",
+   "role": "F"
+  },
+  {
+   "competition_id": "DFLS",
+   "member_id": "GER-DOR1",
+   "role": "F"
+  },
+  {
+   "competition_id": "DFLS",
+   "member_id": "GER-FCB1",
+   "role": "F"
+  },
+  {
+   "competition_id": "SCE",
+   "member_id": "ESP-BAR1",
+   "role": "SF"
+  },
+  {
+   "competition_id": "SCE",
+   "member_id": "ESP-ATM1",
+   "role": "SF"
+  },
+  {
+   "competition_id": "SCE",
+   "member_id": "ESP-RSO1",
+   "role": "SF"
+  },
+  {
+   "competition_id": "SCE",
+   "member_id": "ESP-RMA1",
+   "role": "SF"
+  },
+  {
+   "competition_id": "SCI",
+   "member_id": "ITA-INT1",
+   "role": "F"
+  },
+  {
+   "competition_id": "SCI",
+   "member_id": "ITA-NAP1",
+   "role": "F"
   }
  ]
 }
