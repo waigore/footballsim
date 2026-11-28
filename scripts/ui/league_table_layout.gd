@@ -83,7 +83,7 @@ static func rows(rows_in: Array, places: Dictionary, interest: Dictionary, view:
 	for i in range(rows_in.size()):
 		items.append({
 			"id": "club:" + str(rows_in[i]["club_id"]), "kind": "table_row", "row": rows_in[i],
-			"zone": LeagueRules.zone(int(rows_in[i]["position"]), view.get("rules", {})),
+			"zone": LeagueTableChrome.zone_for(rows_in[i], view.get("rules", {})),
 			"rect": Rect2(24.0, top + float(i) * row_h, row_w, row_h - 1.0), "places": places,
 			"interested": interest.has(str(rows_in[i]["club_id"])),
 			"form": (rows_in[i] as Dictionary).get("form", []),

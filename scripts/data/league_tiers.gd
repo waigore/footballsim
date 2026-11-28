@@ -4,7 +4,7 @@ extends RefCounted
 
 const TIERS := {
 	"England": ["PL", "CH", "L1", "L2", "NL"],
-	"Spain": ["LL"],
+	"Spain": ["LL", "LL2"],
 	"Germany": ["BL", "BL2"],
 	"Italy": ["SA", "SB"],
 }

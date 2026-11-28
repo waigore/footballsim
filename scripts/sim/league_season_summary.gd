@@ -80,7 +80,7 @@ static func _section(season: LeagueSeason, competition_id: String) -> Dictionary
 		relegated.append({"position": i + 1, "club": str(rows[i]["club_name"]),
 			"club_id": str(rows[i]["club_id"])})
 	var comp := PLRepository.shared().competition(competition_id)
-	return {
+	var out := {
 		"id": competition_id,
 		"name": str(comp.get("name", competition_id)),
 		"short": str(comp.get("short_name", competition_id)),
@@ -95,3 +95,6 @@ static func _section(season: LeagueSeason, competition_id: String) -> Dictionary
 		"table": rows,
 		"top_scorers": season.record.report.top_scorers(5, competition_id),
 	}
+	if LeagueSegunda.format(comp_rules):
+		out["promotion"] = LeagueSegunda.ladder(season, competition_id, comp_rules)
+	return out

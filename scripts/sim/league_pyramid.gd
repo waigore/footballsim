@@ -23,9 +23,9 @@ static func movers(season: LeagueSeason, brackets: Dictionary) -> Dictionary:
 		var bottom_table: Array = season.record.standings.table(bottom)
 		if top_table.size() < down or bottom_table.size() < up + 1:
 			continue
-		var to_top: Array = []
-		for i in range(up):
-			to_top.append(str((bottom_table[i] as Dictionary)["club_id"]))
+		var to_top: Array = _automatic(season, bottom, lower_rules, up)
+		if to_top.size() < up:
+			continue
 		var winner := str(bracket.get("winner_club_id", ""))
 		if winner != "":
 			to_top.append(winner)
@@ -43,6 +43,17 @@ static func movers(season: LeagueSeason, brackets: Dictionary) -> Dictionary:
 	if links.is_empty():
 		return {}
 	return {"links": links, "applied": false}
+
+
+static func _automatic(season: LeagueSeason, competition_id: String, rules: Dictionary,
+		up: int) -> Array:
+	if LeagueSegunda.format(rules):
+		return LeagueSegunda.automatic(season, competition_id, rules)
+	var table: Array = season.record.standings.table(competition_id)
+	var out: Array = []
+	for i in range(mini(up, table.size())):
+		out.append(str((table[i] as Dictionary)["club_id"]))
+	return out
 
 
 static func apply(season: LeagueSeason, movers: Dictionary) -> bool:

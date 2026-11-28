@@ -8,7 +8,7 @@ signal state_changed
 static var active: LeagueSeason = null
 
 
-const COMPETITION_ORDER: Array = ["PL", "CH", "L1", "L2", "NL", "LL", "BL", "BL2", "SA", "SB"]
+const COMPETITION_ORDER: Array = ["PL", "CH", "L1", "L2", "NL", "LL", "LL2", "BL", "BL2", "SA", "SB"]
 
 var save: LeagueSave = null
 var record: LeagueRecord = null

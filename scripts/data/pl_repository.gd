@@ -142,6 +142,7 @@ func club(club_id: String) -> Dictionary:
 		"text": Color(str(row["text_color"])),
 		"style": style,
 		"table": table,
+		"reserve_of": str(row.get("reserve_of", "")),
 	}
 	_clubs[club_id] = out
 	return out
