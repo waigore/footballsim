@@ -17,6 +17,7 @@ static func build(season: LeagueSeason) -> Dictionary:
 	var out: Dictionary = (sections[0] as Dictionary).duplicate(true)
 	out["competitions"] = sections
 	out["cups"] = _cups(season)
+	out["uefa"] = LeagueEurope.honours(season.save)
 	out["one_podium"] = true
 	_end_of_linked_season(season, out)
 	_mark_playouts(out)

@@ -129,9 +129,12 @@ func test_the_wizard_offers_europe_and_the_panel_fits_a_phone() -> void:
 			found = item
 	assert_false(found.is_empty(), "the wizard has no UEFA toggle")
 	assert_true(bool(found.get("selected", false)), "the UEFA toggle does not default on")
-	var row := LeaguePanel.row_h(Vector2(913, 411))
-	assert_lte(84.0 + float(LeaguePanel.ITEMS.size()) * (row + LeaguePanel.ROW_GAP), 411.0,
-		"the drawer's items do not fit a phone")
+	var phone := Vector2(913, 411)
+	var fit: Dictionary = LeaguePanel.metrics(phone, LeaguePanel.ITEMS.size())
+	var lines: int = int(ceil(float(LeaguePanel.ITEMS.size()) / float(fit["cols"])))
+	assert_lte(float(fit["head"]) + float(lines) * (float(fit["row"]) + float(fit["gap"])) - float(fit["gap"]),
+		phone.y - LeaguePanel.FOOT, "the drawer's items do not fit a phone")
+	assert_gte(float(fit["row"]), LeaguePanel.TAP_FLOOR, "a phone row fell under the tap floor")
 	var panel := LeaguePanel.new()
 	var total := LeaguePanel.ITEMS.size()
 	panel.cups = true
@@ -143,6 +146,25 @@ func test_the_wizard_offers_europe_and_the_panel_fits_a_phone() -> void:
 	panel.cups = false
 	assert_eq(panel.items().size(), total - 2,
 		"the drawer still offers CUPS or EUROPE on a save without them")
+
+
+func test_every_panel_row_fits_a_phone_and_keeps_its_tap() -> void:
+	var panel := LeaguePanel.new()
+	panel.touch = true
+	panel.cups = true
+	panel.europe_on = true
+	panel.open()
+	panel.settle()
+	var rows: Array = panel.items()
+	for vp in [Vector2(913, 411), Vector2(411, 914), Vector2(1024, 600)]:
+		for i in range(rows.size()):
+			var row: Dictionary = rows[i]
+			var rect: Rect2 = panel.item_rect(vp, i)
+			assert_gte(rect.size.y, LeaguePanel.TAP_FLOOR,
+				"%s is below the tap floor at %s" % [row["id"], vp])
+			assert_lte(rect.end.y, vp.y - 12.0, "%s falls off the panel at %s" % [row["id"], vp])
+			assert_eq(panel.hit(rect.get_center(), vp), str(row["id"]),
+				"%s is not hittable at %s" % [row["id"], vp])
 
 
 func test_the_stage_reads_its_table_qualifying_and_bracket() -> void:
