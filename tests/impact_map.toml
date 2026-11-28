@@ -433,35 +433,35 @@ suites = [
 # ----------------------------------------------------------------- sim ---
 
 [[rules]]
-match = "scripts/sim/commentary.gd*"
+match = "scripts/sim/commentary/commentary.gd*"
 domain = "commentary"
 
 [[rules]]
-match = "scripts/sim/commentary_live.gd*"
+match = "scripts/sim/commentary/commentary_live.gd*"
 domain = "commentary"
 
 [[rules]]
-match = "scripts/sim/commentary_restarts.gd*"
+match = "scripts/sim/commentary/commentary_restarts.gd*"
 domain = "commentary"
 
 [[rules]]
-match = "scripts/sim/commentary_bench.gd*"
+match = "scripts/sim/commentary/commentary_bench.gd*"
 domain = "commentary"
 
 [[rules]]
-match = "scripts/sim/kits.gd*"
+match = "scripts/sim/shared/kits.gd*"
 domain = "kits"
 
 [[rules]]
-match = "scripts/sim/poisson_model.gd*"
+match = "scripts/sim/shared/poisson_model.gd*"
 domain = "poisson"
 
 [[rules]]
-match = "scripts/sim/match_engine_actions.gd*"
+match = "scripts/sim/match_engine/match_engine_actions.gd*"
 domain = "finishing"
 
 [[rules]]
-match = "scripts/sim/match_contact.gd*"
+match = "scripts/sim/shared/match_contact.gd*"
 domain = "match_engine"
 
 [[rules]]
@@ -471,7 +471,7 @@ domain = "match_engine"
 # The keeper's own boot (KICKING): read into the long ball he strikes, so the
 # goal-kick lane and the on-ball keeper distribution both mount it.
 [[rules]]
-match = "scripts/sim/match_kicking.gd*"
+match = "scripts/sim/shared/match_kicking.gd*"
 domain = "match_engine"
 
 [[rules]]
@@ -479,103 +479,103 @@ match = "tests/test_kicking.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/match_engine_duels.gd*"
+match = "scripts/sim/match_engine/match_engine_duels.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/match_engine_rules.gd*"
+match = "scripts/sim/match_engine/match_engine_rules.gd*"
 domain = "match_laws"
 
 [[rules]]
-match = "scripts/sim/match_engine_bench.gd*"
+match = "scripts/sim/match_engine/match_engine_bench.gd*"
 domain = "match_laws"
 
 [[rules]]
-match = "scripts/sim/match_stats.gd*"
+match = "scripts/sim/shared/match_stats.gd*"
 domain = "match_stats"
 
 [[rules]]
-match = "scripts/sim/match_engine_clock.gd*"
+match = "scripts/sim/match_engine/match_engine_clock.gd*"
 domain = "match_laws"
 
 # Snapshot serialize peeled off the clock: same laws suites still cover it.
 [[rules]]
-match = "scripts/sim/match_engine_snapshot.gd*"
+match = "scripts/sim/match_engine/match_engine_snapshot.gd*"
 domain = "match_laws"
 
 # Extra time and shootouts: the decider lane rides the clock it extends, and
 # its own lines ride with it.
 [[rules]]
-match = "scripts/sim/match_engine_decider.gd*"
+match = "scripts/sim/match_engine/match_engine_decider.gd*"
 domain = "match_laws"
 
 [[rules]]
-match = "scripts/sim/commentary_extra_time.gd*"
+match = "scripts/sim/commentary/commentary_extra_time.gd*"
 domain = "match_laws"
 
 [[rules]]
-match = "scripts/sim/match_engine_play.gd*"
+match = "scripts/sim/match_engine/match_engine_play.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/match_engine.gd*"
+match = "scripts/sim/match_engine/match_engine.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/match_restarts.gd*"
+match = "scripts/sim/shared/match_restarts.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/match_engine_core.gd*"
+match = "scripts/sim/match_engine/match_engine_core.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/match_engine_squad.gd*"
+match = "scripts/sim/match_engine/match_engine_squad.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/match_engine_pitch.gd*"
+match = "scripts/sim/match_engine/match_engine_pitch.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/match_engine_presentation.gd*"
+match = "scripts/sim/match_engine/match_engine_presentation.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/match_ai.gd*"
+match = "scripts/sim/match/match_ai.gd*"
 domain = "match_engine"
 
 # Off-ball shape, press and marks: still the brain's suite (tactics + laws).
 [[rules]]
-match = "scripts/sim/match_ai_shapes.gd*"
+match = "scripts/sim/match/match_ai_shapes.gd*"
 domain = "match_engine"
 
 # The marking band is read by the shape (MatchAI) and pinned by the tactics
 # suite: same theme, one boot.
 [[rules]]
-match = "scripts/sim/match_marking.gd*"
+match = "scripts/sim/shared/match_marking.gd*"
 domain = "tactics"
 
 # The on-ball half of the brain shares MatchAI's suite: off it no carrier
 # decision has a test.
 [[rules]]
-match = "scripts/sim/match_ai_choices.gd*"
+match = "scripts/sim/match/match_ai_choices.gd*"
 domain = "match_ai_choices"
 
 [[rules]]
-match = "scripts/sim/tactics.gd*"
+match = "scripts/sim/shared/tactics.gd*"
 domain = "tactics"
 
 # Season clock, calendar, synthetic events and the strongest XI: one theme.
 [[rules]]
-match = "scripts/sim/league_season.gd*"
+match = "scripts/sim/league/league_season.gd*"
 domain = "league"
 
 # Europe is its own destination (#437): the hub read models, the two sheets and
 # their doors. Narrowed here so a continental surface does not drag the whole
 # season domain into tier 1.
 [[rules]]
-match = "scripts/sim/league_europe*.gd*"
+match = "scripts/sim/league/league_europe*.gd*"
 domain = "europe"
 
 [[rules]]
@@ -584,7 +584,7 @@ domain = "europe"
 
 # The planner's suggested watches read the table and flag fixtures.
 [[rules]]
-match = "scripts/sim/league_planner.gd*"
+match = "scripts/sim/league/league_planner.gd*"
 domain = "league"
 
 # Cup pool rebuild (#506): before the league_* and market/** catch-alls.
@@ -602,7 +602,15 @@ domain = "market_deals"
 
 # Season helpers split out of the season loop to keep its P3 size ratchet.
 [[rules]]
-match = "scripts/sim/league_*.gd*"
+match = "scripts/sim/league/league_*.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/league/season_*.gd*"
+domain = "league"
+
+[[rules]]
+match = "scripts/sim/season_bridge/**"
 domain = "league"
 
 # The deal engine (#444): before the broad market/** rule so deal files do not
@@ -688,7 +696,7 @@ domain = "league"
 # Season availability and the pre-match briefing (#155–#157): the absence model,
 # its copy pack, the model/screen/host and the pitch all ride one domain.
 [[rules]]
-match = "scripts/sim/season_availability.gd*"
+match = "scripts/sim/league/season_availability.gd*"
 domain = "pre_match"
 
 [[rules]]
@@ -707,46 +715,46 @@ match = "scripts/data/match_billing.gd*"
 domain = "pre_match"
 
 [[rules]]
-match = "scripts/sim/fixture_calendar.gd*"
+match = "scripts/sim/shared/fixture_calendar.gd*"
 domain = "league"
 
 [[rules]]
-match = "scripts/sim/match_events.gd*"
+match = "scripts/sim/league/match_events.gd*"
 domain = "league"
 
 [[rules]]
-match = "scripts/sim/strongest_xi.gd*"
+match = "scripts/sim/league/strongest_xi.gd*"
 domain = "league"
 
 # Per-goal report clips: the pack generator, the store and the viewer that
 # plays one back. They all belong to the season theme.
 [[rules]]
-match = "scripts/sim/goal_highlight.gd*"
+match = "scripts/sim/goal/goal_highlight.gd*"
 domain = "league"
 
 # The AUTO clip's physics vignette: the same season theme as the pack it feeds.
 [[rules]]
-match = "scripts/sim/goal_vignette.gd*"
+match = "scripts/sim/goal/goal_vignette.gd*"
 domain = "league"
 
 [[rules]]
-match = "scripts/sim/goal_vignette_ai.gd*"
+match = "scripts/sim/goal/goal_vignette_ai.gd*"
 domain = "league"
 
 [[rules]]
-match = "scripts/sim/goal_vignette_cast.gd*"
+match = "scripts/sim/goal/goal_vignette_cast.gd*"
 domain = "league"
 
 [[rules]]
-match = "scripts/sim/goal_vignette_flight.gd*"
+match = "scripts/sim/goal/goal_vignette_flight.gd*"
 domain = "league"
 
 [[rules]]
-match = "scripts/sim/goal_vignette_penalty.gd*"
+match = "scripts/sim/goal/goal_vignette_penalty.gd*"
 domain = "league"
 
 [[rules]]
-match = "scripts/sim/league_highlights.gd*"
+match = "scripts/sim/league/league_highlights.gd*"
 domain = "league"
 
 [[rules]]
@@ -758,40 +766,40 @@ match = "scripts/view/highlight_director.gd*"
 domain = "league"
 
 [[rules]]
-match = "scripts/sim/match_manager.gd*"
+match = "scripts/sim/match_engine/match_manager.gd*"
 domain = "managers"
 
 # Lever maps / apply and bench picks: same dugout as MatchManager, pinned by
 # the managers suite so a split cannot drift from the decision engine.
 [[rules]]
-match = "scripts/sim/match_manager_tactics.gd*"
+match = "scripts/sim/match_engine/match_manager_tactics.gd*"
 domain = "managers"
 
 [[rules]]
-match = "scripts/sim/match_manager_subs.gd*"
+match = "scripts/sim/match_engine/match_manager_subs.gd*"
 domain = "managers"
 
 # How long a dugout waits between tactical changes: the law's seven-minute floor
 # stretched by the manager's own `patience`. It is pinned by the managers suite
 # beside the decision engine it gates, so the domain is the same one.
 [[rules]]
-match = "scripts/sim/match_cadence.gd*"
+match = "scripts/sim/shared/match_cadence.gd*"
 domain = "managers"
 
 [[rules]]
-match = "scripts/sim/attributes.gd*"
+match = "scripts/sim/attrs/attributes.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/attr_roles.gd*"
+match = "scripts/sim/attrs/attr_roles.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/attr_keeper.gd*"
+match = "scripts/sim/attrs/attr_keeper.gd*"
 domain = "match_engine"
 
 [[rules]]
-match = "scripts/sim/pitch_queries.gd*"
+match = "scripts/sim/match/pitch_queries.gd*"
 domain = "pitch_queries"
 
 # ---------------------------------------------------------------- data ---

@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_pitch.gd"
+extends "res://scripts/sim/match_engine/match_engine_pitch.gd"
 
 
 func _start_restart(kind: String, team: int, pos: Vector2, delay: float = -1.0) -> void:

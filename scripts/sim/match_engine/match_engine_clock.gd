@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_bench.gd"
+extends "res://scripts/sim/match_engine/match_engine_bench.gd"
 
 
 func _init(seed_in: int = 4242, home_id: String = "ENG-MUN1", away_id: String = "ENG-MCI1") -> void:

@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_core.gd"
+extends "res://scripts/sim/match_engine/match_engine_core.gd"
 
 
 const XG_SCALE := 0.50

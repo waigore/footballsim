@@ -689,11 +689,43 @@ def _git_show_text(base_ref: str, rel: str) -> str | None:
         return None
 
 
+def _git_renames(base_ref: str) -> dict[str, str]:
+    """Map new path -> old path for files renamed vs base_ref (follow moves)."""
+    renames: dict[str, str] = {}
+    for cmd in (
+        ["git", "diff", "--name-status", "-M", "--diff-filter=R", f"{base_ref}...HEAD"],
+        ["git", "diff", "--name-status", "-M", "--diff-filter=R", base_ref],
+        ["git", "diff", "--name-status", "-M", "--diff-filter=R", "HEAD"],
+    ):
+        try:
+            out = subprocess.check_output(
+                cmd, cwd=ROOT, text=True, stderr=subprocess.DEVNULL
+            )
+        except subprocess.CalledProcessError:
+            continue
+        for line in out.splitlines():
+            parts = line.split("\t")
+            if len(parts) >= 3 and parts[0].startswith("R"):
+                renames[parts[2].strip()] = parts[1].strip()
+    return renames
+
+
+def _base_text_for(base_ref: str, rel: str, renames: dict[str, str]) -> str | None:
+    text = _git_show_text(base_ref, rel)
+    if text is not None:
+        return text
+    old = renames.get(rel)
+    if old is not None:
+        return _git_show_text(base_ref, old)
+    return None
+
+
 def check_typed_diff(failures: list[str], base_ref: str) -> None:
     """RUB-P3-01: no new untyped func params on changed scripts/** .gd files."""
     changed = _git_changed_paths(base_ref)
     if not changed:
         return
+    renames = _git_renames(base_ref)
     for rel in sorted(changed):
         if not rel.startswith("scripts/") or not rel.endswith(".gd"):
             continue
@@ -702,7 +734,7 @@ def check_typed_diff(failures: list[str], base_ref: str) -> None:
             continue
         head_text = path.read_text(encoding="utf-8")
         head_unt = _untyped_params(head_text)
-        base_text = _git_show_text(base_ref, rel)
+        base_text = _base_text_for(base_ref, rel, renames)
         base_unt = _untyped_params(base_text) if base_text is not None else set()
         new_unt = sorted(head_unt - base_unt)
         for func_name, pname in new_unt:

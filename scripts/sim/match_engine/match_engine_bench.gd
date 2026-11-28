@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_rules.gd"
+extends "res://scripts/sim/match_engine/match_engine_rules.gd"
 
 
 func _tick_substitutions() -> void:

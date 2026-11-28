@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_duels.gd"
+extends "res://scripts/sim/match_engine/match_engine_duels.gd"
 func _try_control(p, d: float) -> void:
 	var speed = ball.vel.length()
 	var q = Attrs.first_touch_quality(p)

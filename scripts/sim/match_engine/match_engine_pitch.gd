@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_squad.gd"
+extends "res://scripts/sim/match_engine/match_engine_squad.gd"
 
 
 func attacking_dir(t: int) -> int:

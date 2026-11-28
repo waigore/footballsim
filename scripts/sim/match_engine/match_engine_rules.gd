@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_play.gd"
+extends "res://scripts/sim/match_engine/match_engine_play.gd"
 
 
 const ASSIST_WINDOW := 16.0

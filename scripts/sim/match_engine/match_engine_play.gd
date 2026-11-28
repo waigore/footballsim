@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_actions.gd"
+extends "res://scripts/sim/match_engine/match_engine_actions.gd"
 
 
 const SMOTHER_RADIUS := 2.1
