@@ -44,7 +44,7 @@ Shipped (wiki domains playable; DRs accepted):
 |------|-----|
 | UEFA club competitions (UCL/UEL/UECL) | Rules accepted ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15); [#434](https://github.com/waigore/footballsim/issues/434)); Italy now ships ([#420](https://github.com/waigore/footballsim/issues/420)), so [#433](https://github.com/waigore/footballsim/issues/433) can start |
 | Club-manager career; player tactics | Product non-goal; Match playable-slice Out |
-| Transfers, finances, training, second season, mid-season refresh | Season Out of scope (v1); DR-20261124-01 |
+| Training, live data, mid-season seed refresh | Season Out of scope (v1) |
 | VAR; weather; referee outcome bias | Match playable-slice Out |
 | Concussion subs; extra injury stoppage beyond added-time | Substitutions Out; DR-20261122-05 |
 | Licensed data beyond English pyramid, La Liga, German and Italian pairs | requirements Non-goals; DR-20261123-01 / DR-20261128-18 |
