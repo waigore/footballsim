@@ -611,8 +611,10 @@ domain = "league"
 match = "scripts/sim/league/league_cup_pools.gd*"
 domain = "cup_rollover"
 
+# Rollover lives in season_bridge after the package move (#522); keep it on the
+# narrow deals domain so a settle/rollover edit does not drag the full league.
 [[rules]]
-match = "scripts/sim/market/season_rollover.gd*"
+match = "scripts/sim/season_bridge/season_rollover.gd*"
 domain = "market_deals"
 
 [[rules]]
@@ -624,6 +626,12 @@ domain = "market_deals"
 [[rules]]
 match = "scripts/sim/league/league_season_boot.gd*"
 domain = "squad_list"
+
+# Date advance between fixtures: market tick + availability only. Before the
+# league_* catch-all so a clock edit stays inside the tier-1 budget.
+[[rules]]
+match = "scripts/sim/league/league_clock.gd*"
+domain = "market_levels"
 
 # Season helpers split out of the season loop to keep its P3 size ratchet.
 [[rules]]
@@ -699,7 +707,7 @@ domain = "market_levels"
 # amortisation the FFP line reads and the per-day tick that reviews loans. They
 # stay on the narrow level domain instead of the broad league group.
 [[rules]]
-match = "scripts/sim/market/market_finance.gd*"
+match = "scripts/sim/market/market_finance*.gd*"
 domain = "market_levels"
 
 [[rules]]
@@ -1098,7 +1106,7 @@ match = "tests/test_back_request.gd*"
 domain = "match_input"
 
 # The scene's presentation face, input router, clock loop and arena build share
-# main.gd's suite.
+# main.gd's suite (driven headlessly through the real main.gd).
 [[rules]]
 match = "scripts/view/match_view.gd*"
 domain = "match_input"
@@ -1112,6 +1120,10 @@ match = "scripts/view/match_playback.gd*"
 domain = "match_input"
 
 [[rules]]
+match = "scripts/main.gd*"
+domain = "match_input"
+
+[[rules]]
 match = "scripts/match_scene.gd*"
 domain = "hud_chrome"
 
@@ -1122,10 +1134,6 @@ domain = "match_input"
 
 [[rules]]
 match = "scripts/platform/**"
-domain = "hud_chrome"
-
-[[rules]]
-match = "scripts/main.gd*"
 domain = "hud_chrome"
 
 [[rules]]
