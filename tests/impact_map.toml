@@ -196,6 +196,31 @@ suites = [
   "test_league_system.gd",
 ]
 
+# Deal engine (#444): validator, commit, clearance, god force and the player
+# TRANSFER block. Kept off the full league domain so tier 1 stays ≤5 min.
+[domains.market_deals]
+suites = [
+  "test_market_deals.gd",
+  "test_market_contracts.gd",
+  "test_market_finance.gd",
+  "test_market_windows.gd",
+  "test_league_save.gd",
+  "test_season_rollover.gd",
+]
+
+# Player encyclopedia page only: attributes, contracts, TRANSFER. Kept off the
+# full wiki domain so a player-page edit stays inside the tier-1 budget.
+[domains.wiki_player]
+suites = [
+  "test_wiki_player_log.gd",
+  "test_wiki_entry.gd",
+  "test_wiki_model.gd",
+  "test_wiki_render.gd",
+  "test_attr_view.gd",
+  "test_market_deals.gd",
+  "test_market_contracts.gd",
+]
+
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
 # chosen XI and the league surfaces. One group, because a change in any layer
 # can move the season loop. The sheet-geometry suite rides here too: the hub's
@@ -267,8 +292,8 @@ suites = [
   # Club money (#442): the opening envelope, the ledger's kinds, amortisation,
   # the prize curve, the currency setting and the club page's finances block.
   "test_market_finance.gd",
-  # The deal engine (#444): the state machine, the validator pipeline, the
-  # one-transaction commit and the player page's TRANSFER block.
+  # The deal engine (#444): the validator pipeline, the commit order, the
+  # clearance wait and god's force, block and rewrite through one state machine.
   "test_market_deals.gd",
 ]
 
@@ -502,6 +527,20 @@ domain = "league"
 match = "scripts/sim/league_*.gd*"
 domain = "league"
 
+# The deal engine (#444): before the broad market/** rule so deal files do not
+# pull the whole league domain past the tier-1 5 min budget.
+[[rules]]
+match = "scripts/sim/market/market_deal*.gd*"
+domain = "market_deals"
+
+[[rules]]
+match = "scripts/data/market_deal_copy.gd*"
+domain = "market_deals"
+
+[[rules]]
+match = "tests/test_market_deals.gd*"
+domain = "market_deals"
+
 # The market's season modules (#440): settle, rollover, ageing, the archives,
 # the date shifts and the tick that hangs off the clock. Contracts (#441) ride
 # here too: the bootstrap envelope, expiry and options run on the same clock.
@@ -535,11 +574,6 @@ domain = "league"
 
 [[rules]]
 match = "tests/test_market_windows.gd*"
-domain = "league"
-
-# The deal engine (#444): the state machine, the validators and the commit.
-[[rules]]
-match = "tests/test_market_deals.gd*"
 domain = "league"
 
 # Season availability and the pre-match briefing (#155–#157): the absence model,
@@ -778,6 +812,12 @@ domain = "league"
 [[rules]]
 match = "scripts/ui/hud_player_card.gd*"
 domain = "hud_chrome"
+
+# Player page before the broad wiki_*.gd* rule so it does not pull every
+# encyclopedia suite past the tier-1 5 min budget.
+[[rules]]
+match = "scripts/ui/wiki_player.gd*"
+domain = "wiki_player"
 
 [[rules]]
 match = "scripts/ui/wiki_*.gd*"

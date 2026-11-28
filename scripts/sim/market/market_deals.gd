@@ -2,285 +2,339 @@ class_name MarketDeals
 extends RefCounted
 
 
-static func propose(save: LeagueSave, offer: Dictionary) -> Dictionary:
-	if save == null or not save.ensure_open() or not MarketDealRecords.available():
-		return {"ok": false, "reason": "no_save"}
-	var date := str(offer.get("date", save.current_date()))
-	if date == "":
+const PERMANENT := "permanent"
+const LOAN := "loan"
+
+
+static func available() -> bool:
+	return MarketDealRecords.available()
+
+
+static func propose(season: LeagueSeason, from_club_id: String, to_club_id: String,
+		player_id: String, terms: Dictionary, date: String = "") -> Dictionary:
+	if player_id == "" or to_club_id == "" or not available():
+		return {"ok": false, "reason": "terms_incomplete"}
+	var day := date
+	var index := 0
+	if season != null and season.save != null:
+		index = season.save.season_index()
+		if day == "":
+			day = season.save.current_date()
+	if day == "":
 		return {"ok": false, "reason": "no_date"}
-	var to_club := str(offer.get("to_club_id", ""))
-	var window := MarketWindows.state(date, MarketWindows.country_of_club(
-		PLDatabase.row("SELECT * FROM club WHERE id = ?;", [to_club])))
-	var filled := offer.duplicate(true)
-	filled["window_id"] = str(window.get("window_id", ""))
-	var deal_id := MarketDealRecords.insert(filled, date, save.season_index())
-	if deal_id == "":
-		return {"ok": false, "reason": "insert_failed"}
-	return {"ok": true, "deal_id": deal_id, "state": MarketDealRecords.PROPOSED,
-		"date": date, "window_id": str(filled["window_id"])}
+	var row := {
+		"id": MarketDealRecords.next_id(player_id, day),
+		"kind": str(terms.get("kind", PERMANENT)),
+		"season_index": index,
+		"state": MarketDealRecords.PROPOSED,
+		"from_club_id": from_club_id,
+		"to_club_id": to_club_id,
+		"player_id": player_id,
+		"fee": int(terms.get("fee", 0)),
+		"wage": int(terms.get("wage", 0)),
+		"signing_bonus": int(terms.get("signing_bonus", 0)),
+		"agent_fee": int(terms.get("agent_fee", 0)),
+		"years": int(terms.get("years", 1)),
+		"sell_on": float(terms.get("sell_on", 0.0)),
+		"opened_on": day,
+		"deal_terms": JSON.stringify(terms),
+	}
+	if not MarketDealRecords.create(row):
+		return {"ok": false, "reason": "could_not_write"}
+	MarketDealRecords.event(str(row["id"]), day, MarketDealRecords.PROPOSED, "")
+	return answer(str(row["id"]))
 
 
-static func negotiate(save: LeagueSave, deal_id: String) -> Dictionary:
-	var date: String = save.current_date() if save != null else ""
-	return _step(deal_id, MarketDealRecords.NEGOTIATING, date)
+static func negotiate(deal_id: String, date: String) -> Dictionary:
+	var deal := MarketDealRecords.load(deal_id)
+	if deal.is_empty():
+		return {"ok": false, "reason": "no_deal"}
+	if str(deal.get("state", "")) != MarketDealRecords.PROPOSED:
+		return answer(deal_id)
+	MarketDealRecords.set_state(deal_id, MarketDealRecords.NEGOTIATING, date, "")
+	return answer(deal_id)
 
 
-static func agree(save: LeagueSave, deal_id: String) -> Dictionary:
-	var date: String = save.current_date() if save != null else ""
-	return _step(deal_id, MarketDealRecords.AGREED, date)
-
-
-static func sign(save: LeagueSave, deal_id: String, options: Dictionary = {}) -> Dictionary:
-	if save == null or not save.ensure_open():
-		return {"ok": false, "reason": "no_save"}
-	var deal := MarketDealRecords.one(deal_id)
+static func agree(deal_id: String, date: String, mode: Dictionary = {}) -> Dictionary:
+	var deal := MarketDealRecords.load(deal_id)
 	if deal.is_empty():
 		return {"ok": false, "reason": "no_deal"}
 	var state := str(deal.get("state", ""))
-	if MarketDealRecords.TERMINAL.has(state):
-		return {"ok": false, "state": state, "reason": str(deal.get("reason", "")),
-			"deal_id": deal_id}
-	if state != MarketDealRecords.AGREED and state != MarketDealRecords.CLEARANCE_PENDING:
-		return {"ok": false, "state": state, "reason": "not_agreed", "deal_id": deal_id}
-	var date := str(options.get("date", save.current_date()))
-	var rules := MarketDealRules.run(deal, options)
-	var cross := _cross(deal)
-	var clears_on := ""
-	if cross and state == MarketDealRecords.AGREED \
-			and (bool(rules.get("ok", false)) or str(rules.get("reason", "")) \
-			== MarketDealRecords.NO_CLEARANCE):
-		var seed_value := int(str(save.meta.get("seed", "0")))
-		var days := MarketSeed.mix(seed_value, deal_id, 7) % 5 + 1
-		clears_on = FixtureCalendar.add_days(date, days)
-		_transition(deal_id, MarketDealRecords.CLEARANCE_PENDING, "", date, clears_on)
-		MarketDealRecords.set_clearance(deal_id, clears_on)
-	if not bool(rules.get("ok", false)):
-		var failed := _fail(deal_id, str(rules.get("reason", "")), date)
-		failed["clears_on"] = clears_on
+	if not [MarketDealRecords.PROPOSED, MarketDealRecords.NEGOTIATING,
+			MarketDealRecords.AGREED].has(state):
+		return answer(deal_id)
+	var window_id := str(MarketDealRules.window(deal, date).get("detail", ""))
+	var fields := {"window_id": window_id}
+	if window_id != "":
+		deal["window_id"] = window_id
+		MarketDealRecords.update(deal_id, fields)
+	var verdict := MarketDealRules.validate(deal, date, mode)
+	if not bool(verdict.get("ok", false)):
+		var code := str(verdict.get("code", MarketDealRules.TERMS))
+		MarketDealRecords.set_state(deal_id, MarketDealRecords.FAILED, date, code)
+		var failed := answer(deal_id)
+		failed["detail"] = str(verdict.get("detail", ""))
 		return failed
-	var result := _commit(save, deal, date, str(rules.get(
-		"registration_state", MarketDealRecords.REGISTERED)), options)
-	result["clears_on"] = clears_on
-	return result
+	if needs_clearance(deal):
+		fields["clears_on"] = FixtureCalendar.add_days(date, clearance_days(deal_id))
+		MarketDealRecords.update(deal_id, fields)
+		MarketDealRecords.set_state(deal_id, MarketDealRecords.CLEARANCE_PENDING, date, "")
+		var pending := answer(deal_id)
+		pending["clears_on"] = str(fields["clears_on"])
+		return pending
+	MarketDealRecords.set_state(deal_id, MarketDealRecords.AGREED, date, "")
+	var agreed := answer(deal_id)
+	agreed["ok"] = true
+	return agreed
 
 
-static func force(save: LeagueSave, offer: Dictionary, options: Dictionary = {}) -> Dictionary:
-	var opts := options.duplicate(true)
-	opts["force"] = true
-	var made := propose(save, offer)
-	if not bool(made.get("ok", false)):
-		return made
-	var deal_id := str(made["deal_id"])
-	negotiate(save, deal_id)
-	agree(save, deal_id)
-	return MarketDeals.sign(save, deal_id, opts)
-
-
-static func block(save: LeagueSave, deal_id: String, options: Dictionary = {}) -> Dictionary:
-	var fallback: String = save.current_date() if save != null else ""
-	var date := str(options.get("date", fallback))
-	var deal := MarketDealRecords.one(deal_id)
+static func seal(deal_id: String, date: String, mode: Dictionary = {}) -> Dictionary:
+	var deal := MarketDealRecords.load(deal_id)
 	if deal.is_empty():
 		return {"ok": false, "reason": "no_deal"}
-	if not _transition(deal_id, MarketDealRecords.BLOCKED, MarketDealRecords.GOD_BLOCKED,
-			date, str(deal.get("window_id", ""))):
-		return {"ok": false, "state": str(deal.get("state", "")), "reason": "not_live"}
-	return {"ok": true, "state": MarketDealRecords.BLOCKED,
-		"reason": MarketDealRecords.GOD_BLOCKED, "deal_id": deal_id}
+	var state := str(deal.get("state", ""))
+	if state == MarketDealRecords.SIGNED:
+		var done := answer(deal_id)
+		done["duplicate"] = true
+		return done
+	if state == MarketDealRecords.CLEARANCE_PENDING:
+		return answer(deal_id)
+	if state != MarketDealRecords.AGREED:
+		return answer(deal_id)
+	var verdict := MarketDealRules.validate(deal, date, mode)
+	if not bool(verdict.get("ok", false)):
+		var code := str(verdict.get("code", MarketDealRules.TERMS))
+		MarketDealRecords.set_state(deal_id, MarketDealRecords.FAILED, date, code)
+		return answer(deal_id)
+	return commit(deal, date, mode)
 
 
-static func rewrite(save: LeagueSave, deal_id: String, changes: Dictionary,
-		options: Dictionary = {}) -> Dictionary:
-	var deal := MarketDealRecords.one(deal_id)
+static func resolve_clearance(deal_id: String, date: String, mode: Dictionary = {}) -> Dictionary:
+	var deal := MarketDealRecords.load(deal_id)
 	if deal.is_empty():
 		return {"ok": false, "reason": "no_deal"}
-	if MarketDealRecords.TERMINAL.has(str(deal.get("state", ""))):
-		return {"ok": false, "state": str(deal.get("state", "")), "reason": "terminal"}
-	var fallback: String = save.current_date() if save != null else ""
-	var date := str(options.get("date", fallback))
-	var filled := changes.duplicate(true)
-	filled["date"] = date
-	MarketDealRecords.update_terms(deal_id, filled)
-	_transition(deal_id, MarketDealRecords.AGREED, "", date, "rewrite")
-	return MarketDeals.sign(save, deal_id, options)
+	if str(deal.get("state", "")) != MarketDealRecords.CLEARANCE_PENDING:
+		return answer(deal_id)
+	var forced := str(mode.get("clearance", ""))
+	var passed := forced == "pass"
+	if forced == "":
+		if date < str(deal.get("clears_on", "")):
+			var waiting := answer(deal_id)
+			waiting["ok"] = false
+			return waiting
+		passed = MarketSeed.unit(_seed(), deal_id, 5) \
+			>= MarketRules.number("deal", "clearance_fail_share", 0.08)
+	if not passed:
+		MarketDealRecords.set_state(deal_id, MarketDealRecords.FAILED, date,
+			MarketDealRules.CLEARANCE)
+		return answer(deal_id)
+	MarketDealRecords.update(deal_id, {"clears_on": ""})
+	MarketDealRecords.set_state(deal_id, MarketDealRecords.AGREED, date, "cleared")
+	if bool(mode.get("defer", false)):
+		var cleared := answer(deal_id)
+		cleared["ok"] = true
+		return cleared
+	return seal(deal_id, date, {})
 
 
-static func withdraw(save: LeagueSave, deal_id: String, options: Dictionary = {}) -> Dictionary:
-	var fallback: String = save.current_date() if save != null else ""
-	var date := str(options.get("date", fallback))
-	if not _transition(deal_id, MarketDealRecords.WITHDRAWN, "withdrawn", date, ""):
-		return {"ok": false, "reason": "not_live"}
-	return {"ok": true, "state": MarketDealRecords.WITHDRAWN, "deal_id": deal_id}
-
-
-static func one(deal_id: String) -> Dictionary:
-	return MarketDealRecords.one(deal_id)
-
-
-static func timeline(deal_id: String) -> Array:
-	return MarketDealRecords.timeline(deal_id)
-
-
-static func live_for(player_id: String, exclude_id: String = "") -> Dictionary:
-	return MarketDealRecords.live_for(player_id, exclude_id)
-
-
-static func _step(deal_id: String, state: String, date: String) -> Dictionary:
-	if not _transition(deal_id, state, "", date, ""):
-		var deal := MarketDealRecords.one(deal_id)
-		return {"ok": false, "state": str(deal.get("state", "")), "reason": "not_live",
-			"deal_id": deal_id}
-	return {"ok": true, "state": state, "deal_id": deal_id}
-
-
-static func _transition(deal_id: String, state: String, reason: String, date: String,
-		detail: String = "") -> bool:
-	var deal := MarketDealRecords.one(deal_id)
+static func block(deal_id: String, date: String, note: String = "") -> Dictionary:
+	var deal := MarketDealRecords.load(deal_id)
 	if deal.is_empty():
-		return false
-	var from := str(deal.get("state", ""))
-	if from == state:
-		return true
-	var live := MarketDealRecords.LIVE.has(from)
-	var allowed := false
-	if state in [MarketDealRecords.FAILED, MarketDealRecords.BLOCKED,
-			MarketDealRecords.WITHDRAWN] and live:
-		allowed = true
-	elif from == MarketDealRecords.PROPOSED and state == MarketDealRecords.NEGOTIATING:
-		allowed = true
-	elif from in [MarketDealRecords.PROPOSED, MarketDealRecords.NEGOTIATING] \
-			and state == MarketDealRecords.AGREED:
-		allowed = true
-	elif from == MarketDealRecords.AGREED and state == MarketDealRecords.CLEARANCE_PENDING:
-		allowed = true
-	elif from in [MarketDealRecords.AGREED, MarketDealRecords.CLEARANCE_PENDING] \
-			and state == MarketDealRecords.SIGNED:
-		allowed = true
-	if not allowed:
-		return false
-	return MarketDealRecords.set_state(deal_id, state, reason, date, detail)
+		return {"ok": false, "reason": "no_deal"}
+	if str(deal.get("state", "")) == MarketDealRecords.SIGNED:
+		return answer(deal_id)
+	MarketDealRecords.update(deal_id, {"god": "block"})
+	MarketDealRecords.set_state(deal_id, MarketDealRecords.BLOCKED, date, MarketDealRules.BLOCKED)
+	var out := answer(deal_id)
+	out["note"] = note
+	return out
 
 
-static func _commit(save: LeagueSave, deal: Dictionary, date: String, registration_state: String,
-		options: Dictionary) -> Dictionary:
+static func force(deal_id: String, date: String) -> Dictionary:
+	var deal := MarketDealRecords.load(deal_id)
+	if deal.is_empty():
+		return {"ok": false, "reason": "no_deal"}
+	MarketDealRecords.update(deal_id, {"god": "force"})
+	var agreed := agree(deal_id, date, {"force": true})
+	if not bool(agreed.get("ok", false)):
+		return agreed
+	return seal(deal_id, date, {"force": true})
+
+
+static func rewrite(deal_id: String, terms: Dictionary, date: String) -> Dictionary:
+	var deal := MarketDealRecords.load(deal_id)
+	if deal.is_empty():
+		return {"ok": false, "reason": "no_deal"}
+	if str(deal.get("state", "")) == MarketDealRecords.SIGNED:
+		return answer(deal_id)
+	var fields := {"state": MarketDealRecords.PROPOSED, "reason": "", "god": "rewrite",
+		"deal_terms": JSON.stringify(terms)}
+	for key in ["fee", "wage", "signing_bonus", "agent_fee", "years"]:
+		if terms.has(key):
+			fields[key] = int(terms[key])
+	MarketDealRecords.update(deal_id, fields)
+	MarketDealRecords.event(deal_id, date, MarketDealRecords.PROPOSED, "rewrite")
+	return agree(deal_id, date, {})
+
+
+static func answer(deal_id: String) -> Dictionary:
+	var deal := MarketDealRecords.load(deal_id)
+	if deal.is_empty():
+		return {"ok": false, "reason": "no_deal"}
+	var state := str(deal.get("state", ""))
+	return {
+		"ok": state == MarketDealRecords.SIGNED,
+		"deal": deal_id, "state": state,
+		"reason": str(deal.get("reason", "")), "god": str(deal.get("god", "")),
+		"player": str(deal.get("player_id", "")), "from": str(deal.get("from_club_id", "")),
+		"to": str(deal.get("to_club_id", "")), "fee": int(deal.get("fee", 0)),
+		"window_id": str(deal.get("window_id", "")),
+		"clears_on": str(deal.get("clears_on", "")),
+	}
+
+
+static func needs_clearance(deal: Dictionary) -> bool:
+	var from_club := MarketDealRules.club_row(str(deal.get("from_club_id", "")))
+	var to_club := MarketDealRules.club_row(str(deal.get("to_club_id", "")))
+	if from_club.is_empty() or to_club.is_empty():
+		return false
+	return MarketWindows.country_of_club(from_club) != MarketWindows.country_of_club(to_club)
+
+
+static func clearance_days(deal_id: String) -> int:
+	var low := MarketRules.count("deal", "clearance_days_min", 1)
+	var high := maxi(MarketRules.count("deal", "clearance_days_max", 5), low)
+	var span := high - low + 1
+	return low + MarketSeed.mix(_seed(), deal_id, 7) % span
+
+
+static func commit(deal: Dictionary, date: String, mode: Dictionary = {}) -> Dictionary:
 	var deal_id := str(deal.get("id", ""))
-	var old_day := str(save.meta.get(MarketTick.DAY_KEY, ""))
-	if not PLDatabase.transaction("BEGIN TRANSACTION;"):
-		return _fail(deal_id, "commit_failed", date)
-	if not _money(deal, date):
-		return _rollback(save, old_day, deal_id, "commit_failed")
-	if str(options.get("inject", "")) == "fault":
-		return _rollback(save, old_day, deal_id, "injected")
-	if not _contract(save, deal, date):
-		return _rollback(save, old_day, deal_id, "commit_failed")
-	if not _registration(deal, date, registration_state, save.season_index()):
-		return _rollback(save, old_day, deal_id, "commit_failed")
-	if not _move(deal):
-		return _rollback(save, old_day, deal_id, "commit_failed")
-	if not _history(save, deal, date):
-		return _rollback(save, old_day, deal_id, "commit_failed")
-	var sink: Variant = options.get("news", null)
-	if sink is Callable:
-		sink.call(deal)
-	if not _stamp(save, date):
-		return _rollback(save, old_day, deal_id, "commit_failed")
-	if not _transition(deal_id, MarketDealRecords.SIGNED, "", date, ""):
-		return _rollback(save, old_day, deal_id, "commit_failed")
+	var buyer := str(deal.get("to_club_id", ""))
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	_move_money(deal, date)
+	if str(mode.get("fault", "")) == "contract":
+		PLDatabase.transaction("ROLLBACK;")
+		MarketDealRecords.event(deal_id, date, MarketDealRecords.AGREED, "injected")
+		return {"ok": false, "rolled_back": true, "reason": "injected",
+			"state": MarketDealRecords.AGREED}
+	if not _write_contract(deal, date):
+		PLDatabase.transaction("ROLLBACK;")
+		return {"ok": false, "rolled_back": true, "reason": "contract",
+			"state": MarketDealRecords.AGREED}
+	var registration := _write_registration(deal, date, mode)
+	_history(deal, date)
+	PLDatabase.execute(
+		"INSERT OR REPLACE INTO save_meta (key, value) VALUES ('market_day', ?);", [date])
 	PLDatabase.transaction("COMMIT;")
-	PLRepository.shared().invalidate()
-	return {"ok": true, "state": MarketDealRecords.SIGNED, "deal_id": deal_id,
-		"registration": registration_state, "cash": MarketFinance.cash(str(deal["to_club_id"])),
-		"headroom": MarketFinance.ffp_headroom(str(deal["to_club_id"]))}
+	var reason: String = "" if registration == "registered" else MarketDealRules.LIST
+	MarketDealRecords.set_state(deal_id, MarketDealRecords.SIGNED, date, reason)
+	var out := answer(deal_id)
+	out["registration"] = registration
+	out["cash"] = MarketFinance.cash(buyer)
+	out["headroom"] = MarketFinance.ffp_headroom(buyer)
+	return out
 
 
-static func _money(deal: Dictionary, date: String) -> bool:
-	var fee := int(deal.get("fee", 0))
-	if fee <= 0:
-		return true
+static func _move_money(deal: Dictionary, date: String) -> void:
 	var buyer := str(deal.get("to_club_id", ""))
 	var seller := str(deal.get("from_club_id", ""))
-	var player := str(deal.get("player_id", ""))
+	var player_id := str(deal.get("player_id", ""))
 	var deal_id := str(deal.get("id", ""))
-	if not MarketFinance.post(buyer, date, MarketFinance.KIND_FEE, -fee, seller, player, deal_id):
-		return false
-	if not MarketFinance.post(seller, date, MarketFinance.KIND_FEE, fee, buyer, player, deal_id):
-		return false
-	return true
+	var fee := int(deal.get("fee", 0))
+	var agent := int(deal.get("agent_fee", 0))
+	var bonus := int(deal.get("signing_bonus", 0))
+	if fee > 0:
+		MarketFinance.post(buyer, date, MarketFinance.KIND_FEE, -fee, seller, player_id, deal_id)
+		if seller != "":
+			MarketFinance.post(seller, date, MarketFinance.KIND_FEE, fee, buyer, player_id, deal_id)
+		MarketFinance.post_amortisation(buyer, date, fee, int(deal.get("years", 1)), player_id)
+	if agent > 0:
+		MarketFinance.post(buyer, date, MarketFinance.KIND_AGENT, -agent, "", player_id, deal_id)
+	if bonus > 0:
+		MarketFinance.post(buyer, date, MarketFinance.KIND_AGENT, -bonus, player_id, player_id,
+			deal_id)
 
 
-static func _contract(save: LeagueSave, deal: Dictionary, date: String) -> bool:
-	var player := str(deal.get("player_id", ""))
-	var from_club := str(deal.get("from_club_id", ""))
-	var to_club := str(deal.get("to_club_id", ""))
+static func _write_contract(deal: Dictionary, date: String) -> bool:
+	var player_id := str(deal.get("player_id", ""))
+	var club_id := str(deal.get("to_club_id", ""))
 	var years := maxi(int(deal.get("years", 1)), 1)
+	var player := PLDatabase.row("SELECT number FROM player WHERE id = ?;", [player_id])
+	var old := MarketDealRecords.active_contract(player_id)
+	if not old.is_empty():
+		PLDatabase.execute(
+			"UPDATE player_contract SET status = 'moved' WHERE player_id = ? AND start_date = ?;",
+			[player_id, str(old.get("start_date", ""))])
 	var end := FixtureCalendar.add_days(FixtureCalendar.add_years(date, years), -1)
-	if from_club != "" and not MarketDealRecords.close_contract(player, from_club):
+	if not PLDatabase.execute(
+			"INSERT OR REPLACE INTO player_contract (player_id, club_id, season_index, start_date, "
+			+ "end_date, wage, signing_bonus, agent_fee, release_clause, option_years, status, "
+			+ "deal_id, declined) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 'active', ?, 0);",
+			[player_id, club_id, int(deal.get("season_index", 0)), date, end,
+				int(deal.get("wage", 0)), int(deal.get("signing_bonus", 0)),
+				int(deal.get("agent_fee", 0)), str(deal.get("id", ""))]):
 		return false
-	return MarketDealRecords.open_contract(player, to_club, date, end,
-		int(deal.get("wage", 0)), str(deal.get("id", "")), save.season_index())
+	var number := _number_for(club_id, player_id, int(player.get("number", 0)))
+	return PLDatabase.execute("UPDATE player SET club_id = ?, number = ? WHERE id = ?;",
+		[club_id, number, player_id])
 
 
-static func _registration(deal: Dictionary, date: String, state: String,
-		season_index: int) -> bool:
-	var player := str(deal.get("player_id", ""))
-	var from_club := str(deal.get("from_club_id", ""))
-	var to_club := str(deal.get("to_club_id", ""))
-	if from_club != "" and not MarketDealRecords.close_registration(player, from_club, date):
-		return false
-	var competition_id := str(PLDatabase.row(
-		"SELECT competition_id FROM club WHERE id = ?;", [to_club]).get("competition_id", ""))
-	var reason: String = "" if state == MarketDealRecords.REGISTERED \
-		else MarketDealRecords.LIST_REFUSED
-	return MarketDealRecords.open_registration(player, competition_id, to_club,
-		str(deal.get("kind", MarketDealRecords.KIND_PERMANENT)), state, reason, date,
-		str(deal.get("id", "")), season_index)
+static func _write_registration(deal: Dictionary, date: String, mode: Dictionary = {}) -> String:
+	var player_id := str(deal.get("player_id", ""))
+	var buyer := str(deal.get("to_club_id", ""))
+	var seller := str(deal.get("from_club_id", ""))
+	var club := MarketDealRules.club_row(buyer)
+	var competition_id := str(club.get("competition_id", ""))
+	var state := "registered"
+	var reason := ""
+	if str(mode.get("registration", "")) == "refuse":
+		state = "ineligible"
+		reason = MarketDealRules.LIST
+	if seller != "":
+		PLDatabase.execute(
+			"UPDATE player_registration SET state = 'closed', reason = 'moved', deal_id = ? "
+			+ "WHERE club_id = ? AND player_id = ? AND state <> 'closed';",
+			[str(deal.get("id", "")), seller, player_id])
+	PLDatabase.execute(
+		"INSERT OR REPLACE INTO player_registration (player_id, competition_id, club_id, kind, "
+		+ "state, reason, deal_id, season_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+		[player_id, competition_id, buyer, str(deal.get("kind", PERMANENT)), state, reason,
+			str(deal.get("id", "")), int(deal.get("season_index", 0))])
+	return state
 
 
-static func _move(deal: Dictionary) -> bool:
-	var player := str(deal.get("player_id", ""))
-	var to_club := str(deal.get("to_club_id", ""))
-	var number := MarketDealRecords.move_player(player, to_club)
-	if number <= 0:
-		return false
-	MarketContracts.rehome(player, to_club)
-	return true
+static func _history(deal: Dictionary, date: String) -> void:
+	var player_id := str(deal.get("player_id", ""))
+	var seller := str(deal.get("from_club_id", ""))
+	MarketContracts.rehome(player_id, str(deal.get("to_club_id", "")))
+	if seller == "":
+		return
+	var old := PLDatabase.row(
+		"SELECT start_date FROM player_contract WHERE club_id = ? AND player_id = ? "
+		+ "AND status = 'moved' ORDER BY start_date DESC LIMIT 1;", [seller, player_id])
+	var club := MarketDealRules.club_row(seller)
+	PLDatabase.execute(
+		"INSERT OR REPLACE INTO player_history (player_id, season_index, club_id, competition_id, "
+		+ "kind, from_date, to_date) VALUES (?, ?, ?, ?, 'spell', ?, ?);",
+		[player_id, int(deal.get("season_index", 0)), seller,
+			str(club.get("competition_id", "")), str(old.get("start_date", "")), date])
 
 
-static func _history(save: LeagueSave, deal: Dictionary, date: String) -> bool:
-	var to_club := str(deal.get("to_club_id", ""))
-	var competition_id := str(PLDatabase.row(
-		"SELECT competition_id FROM club WHERE id = ?;", [to_club]).get("competition_id", ""))
-	return MarketDealRecords.history(str(deal.get("player_id", "")), to_club, competition_id,
-		date, save.season_index())
+static func _number_for(club_id: String, player_id: String, keep: int) -> int:
+	var taken := {}
+	for row in PLDatabase.rows("SELECT number FROM player WHERE club_id = ? AND id <> ?;",
+			[club_id, player_id]):
+		taken[int(row.get("number", 0))] = true
+	if keep > 0 and not taken.has(keep):
+		return keep
+	for number in range(1, 100):
+		if not taken.has(number):
+			return number
+	return maxi(taken.size() + 1, 1)
 
 
-static func _stamp(save: LeagueSave, date: String) -> bool:
-	return save.put_meta(MarketTick.DAY_KEY, date)
-
-
-static func _rollback(save: LeagueSave, old_day: String, deal_id: String,
-		reason: String) -> Dictionary:
-	PLDatabase.transaction("ROLLBACK;")
-	save.put_meta(MarketTick.DAY_KEY, old_day)
-	PLRepository.shared().invalidate()
-	var deal := MarketDealRecords.one(deal_id)
-	return {"ok": false, "state": str(deal.get("state", "")), "reason": reason,
-		"rolled_back": true, "deal_id": deal_id}
-
-
-static func _fail(deal_id: String, reason: String, date: String) -> Dictionary:
-	_transition(deal_id, MarketDealRecords.FAILED, reason, date, "")
-	return {"ok": false, "state": MarketDealRecords.FAILED, "reason": reason,
-		"deal_id": deal_id}
-
-
-static func _cross(deal: Dictionary) -> bool:
-	var from_club := str(deal.get("from_club_id", ""))
-	var to_club := str(deal.get("to_club_id", ""))
-	if from_club == "" or to_club == "":
-		return false
-	var from_country := MarketWindows.country_of_club(
-		PLDatabase.row("SELECT * FROM club WHERE id = ?;", [from_club]))
-	var to_country := MarketWindows.country_of_club(
-		PLDatabase.row("SELECT * FROM club WHERE id = ?;", [to_club]))
-	return from_country != "" and to_country != "" and from_country != to_country
+static func _seed() -> int:
+	if LeagueSave.current == null:
+		return 0
+	return int(str(LeagueSave.current.meta.get("seed", "0")))

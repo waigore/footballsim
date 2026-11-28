@@ -2,160 +2,153 @@ class_name MarketDealRules
 extends RefCounted
 
 
-const ORDER := ["window", "player", "terms", "consent", "cash", "ffp", "registration",
-	"clearance"]
+const OK := "ok"
+const WINDOW_CLOSED := "window_closed"
+const NOT_AT_CLUB := "not_at_club"
+const LIVE_DEAL := "live_deal"
+const TERMS := "terms_incomplete"
+const CONSENT := "refused_consent"
+const NO_CASH := "no_cash"
+const FFP := "ffp"
+const LIST := "list_refused"
+const CLEARANCE := "no_clearance"
+const BLOCKED := "god_blocked"
+const ORDER := ["window", "club", "terms", "consent", "cash", "ffp", "list"]
 
 
-static func run(deal: Dictionary, options: Dictionary = {}) -> Dictionary:
-	var results: Array = []
-	var registration_state := MarketDealRecords.REGISTERED
+static func validate(deal: Dictionary, date: String, mode: Dictionary = {}) -> Dictionary:
+	if deal.is_empty():
+		return fail(TERMS, "no deal")
+	if MarketDealRecords.vetoed(str(deal.get("player_id", "")), str(deal.get("to_club_id", "")),
+			str(deal.get("window_id", ""))):
+		return fail(BLOCKED, "god blocked this buyer this window")
 	for name in ORDER:
-		var check := _check(str(name), deal, options)
-		results.append({"name": str(name), "ok": bool(check.get("ok", false)),
-			"reason": str(check.get("reason", ""))})
-		if bool(check.get("ok", false)):
-			continue
-		if str(name) == "registration":
-			registration_state = MarketDealRecords.INELIGIBLE
-			continue
-		return {"ok": false, "reason": str(check.get("reason", "")), "results": results,
-			"registration_state": registration_state}
-	return {"ok": true, "reason": "", "results": results,
-		"registration_state": registration_state}
+		var verdict := check(str(name), deal, date, mode)
+		if not bool(verdict.get("ok", false)):
+			return verdict
+	return pass_with("")
 
 
-static func window(deal: Dictionary, options: Dictionary) -> Dictionary:
-	if str(options.get("inject", "")) == "window_closed":
-		return _result(false, MarketDealRecords.WINDOW_CLOSED)
-	var date := _date(deal, options)
-	var buyer := _country(str(deal.get("to_club_id", "")))
-	var seller := _country(str(deal.get("from_club_id", "")))
-	var kind: String = MarketWindows.FREE_AGENT if str(deal.get("from_club_id", "")) == "" \
-		else MarketWindows.FEE
-	var allow := MarketWindows.allows(kind, date, buyer, seller)
-	if not bool(allow.get("ok", false)):
-		return _result(false, str(allow.get("reason", MarketDealRecords.WINDOW_CLOSED)))
-	return _result(true, MarketDealRecords.OPEN if str(allow.get("reason", "")) == "open" \
-		else str(allow.get("reason", MarketDealRecords.OPEN)))
+static func check(name: String, deal: Dictionary, date: String, mode: Dictionary = {}) -> Dictionary:
+	match name:
+		"window":
+			return window(deal, date)
+		"club":
+			return club(deal)
+		"terms":
+			return terms(deal)
+		"consent":
+			return consent(deal, mode)
+		"cash":
+			return cash(deal, mode)
+		"ffp":
+			return ffp(deal, mode)
+		"list":
+			return list_check(deal, mode)
+	return pass_with("")
 
 
-static func player(deal: Dictionary, options: Dictionary) -> Dictionary:
-	var inject := str(options.get("inject", ""))
-	if inject == "not_at_club":
-		return _result(false, MarketDealRecords.NOT_AT_CLUB)
-	if inject == "live_deal":
-		return _result(false, MarketDealRecords.LIVE_DEAL)
-	var player_id := str(deal.get("player_id", ""))
-	var row := PLDatabase.row("SELECT id, club_id FROM player WHERE id = ?;", [player_id])
-	if row.is_empty():
-		return _result(false, MarketDealRecords.NOT_AT_CLUB)
-	var from_club := str(deal.get("from_club_id", ""))
-	if from_club == "":
-		if str(row.get("club_id", "")) != "":
-			return _result(false, MarketDealRecords.NOT_AT_CLUB)
-	elif str(row.get("club_id", "")) != from_club:
-		return _result(false, MarketDealRecords.NOT_AT_CLUB)
-	var live := MarketDealRecords.live_for(player_id, str(deal.get("id", "")))
+static func window(deal: Dictionary, date: String) -> Dictionary:
+	var free_agent := is_free_agent(deal)
+	var buyer := club_row(str(deal.get("to_club_id", "")))
+	if buyer.is_empty():
+		return fail(TERMS, "no buying club")
+	var seller := club_row(str(deal.get("from_club_id", "")))
+	var kind: String = MarketWindows.FREE_AGENT if free_agent else MarketWindows.FEE
+	var verdict := MarketWindows.allows(kind, date, MarketWindows.country_of_club(buyer),
+		MarketWindows.country_of_club(seller))
+	if not bool(verdict.get("ok", false)):
+		return fail(WINDOW_CLOSED, str(verdict.get("reason", "window_closed")))
+	return pass_with(str(verdict.get("window_id", "")))
+
+
+static func club(deal: Dictionary) -> Dictionary:
+	var player := PLDatabase.row("SELECT id, club_id FROM player WHERE id = ?;",
+		[str(deal.get("player_id", ""))])
+	if player.is_empty():
+		return fail(NOT_AT_CLUB, "no such player")
+	if str(player.get("club_id", "x")) != str(deal.get("from_club_id", "")):
+		return fail(NOT_AT_CLUB, "the player is not at the selling club")
+	var live := MarketDealRecords.live_for(str(deal.get("player_id", "")),
+		str(deal.get("id", "")))
 	if not live.is_empty():
-		return _result(false, MarketDealRecords.LIVE_DEAL)
-	var veto := MarketDealRecords.veto(player_id, str(deal.get("to_club_id", "")),
-		str(deal.get("window_id", "")))
-	if not veto.is_empty():
-		return _result(false, MarketDealRecords.GOD_BLOCKED)
-	return _result(true, "")
+		return fail(LIVE_DEAL, str(live.get("id", "")))
+	return pass_with("")
 
 
-static func terms(deal: Dictionary, options: Dictionary) -> Dictionary:
-	if str(options.get("inject", "")) == "terms":
-		return _result(false, MarketDealRecords.TERMS_INCOMPLETE)
+static func terms(deal: Dictionary) -> Dictionary:
 	var to_club := str(deal.get("to_club_id", ""))
-	var from_club := str(deal.get("from_club_id", ""))
+	if to_club == "" or to_club == str(deal.get("from_club_id", "")):
+		return fail(TERMS, "no move")
 	var fee := int(deal.get("fee", 0))
 	var wage := int(deal.get("wage", 0))
 	var years := int(deal.get("years", 0))
-	var complete := str(deal.get("player_id", "")) != "" and to_club != "" \
-		and to_club != from_club and MarketDealRecords.KINDS.has(str(deal.get("kind", ""))) \
-		and fee >= 0 and wage > 0 and years >= 1 and years <= 6
-	if from_club == "" and fee > 0:
-		complete = false
-	return _result(complete, MarketDealRecords.TERMS_INCOMPLETE)
+	if fee < MarketRules.count("deal", "fee_min", 0):
+		return fail(TERMS, "the fee is below the floor")
+	if wage < MarketRules.count("deal", "wage_min", 1):
+		return fail(TERMS, "the wage is missing")
+	if years < MarketRules.count("deal", "years_min", 1) \
+			or years > MarketRules.count("deal", "years_max", 5):
+		return fail(TERMS, "the term is off its band")
+	return pass_with("")
 
 
-static func consent(deal: Dictionary, options: Dictionary) -> Dictionary:
-	if bool(options.get("force", false)):
-		return _result(true, "")
-	if str(options.get("inject", "")) == "consent":
-		return _result(false, MarketDealRecords.REFUSED_CONSENT)
-	if int(deal.get("consent", 0)) != 1:
-		return _result(false, MarketDealRecords.REFUSED_CONSENT)
-	return _result(true, "")
+static func consent(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
+	if bool(mode.get("force", false)):
+		return pass_with("forced")
+	var current := int(MarketDealRecords.active_contract(str(deal.get("player_id", ""))).get(
+		"wage", 0))
+	if current > 0 and int(deal.get("wage", 0)) < current:
+		return fail(CONSENT, "the wage is below his contract")
+	return pass_with("")
 
 
-static func cash(deal: Dictionary, options: Dictionary) -> Dictionary:
-	if bool(options.get("force", false)):
-		return _result(true, "")
-	if str(options.get("inject", "")) == "cash":
-		return _result(false, MarketDealRecords.NO_CASH)
-	var fee := int(deal.get("fee", 0))
-	if MarketFinance.cash(str(deal.get("to_club_id", ""))) < fee:
-		return _result(false, MarketDealRecords.NO_CASH)
-	return _result(true, "")
+static func cash(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
+	if bool(mode.get("force", false)):
+		return pass_with("forced")
+	var buyer := str(deal.get("to_club_id", ""))
+	var needed := int(deal.get("fee", 0)) + int(deal.get("agent_fee", 0)) \
+		+ int(deal.get("signing_bonus", 0))
+	if not MarketFinance.can_afford(buyer, needed):
+		return fail(NO_CASH, "the buying club cannot afford the deal")
+	return pass_with("")
 
 
-static func ffp(_deal: Dictionary, options: Dictionary) -> Dictionary:
-	if bool(options.get("force", false)):
-		return _result(true, "")
-	if str(options.get("inject", "")) == "ffp":
-		return _result(false, MarketDealRecords.FFP)
-	return _result(true, "")
+static func ffp(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
+	if bool(mode.get("force", false)):
+		return pass_with("ffp_override")
+	var buyer := str(deal.get("to_club_id", ""))
+	var cost := MarketFinance.amortisation(int(deal.get("fee", 0)), int(deal.get("years", 1))) \
+		+ int(deal.get("wage", 0)) * 52 + int(deal.get("agent_fee", 0))
+	if MarketFinance.ffp_headroom(buyer) - cost < 0:
+		return fail(FFP, "the deal breaches the club's headroom")
+	return pass_with("")
 
 
-static func registration(_deal: Dictionary, options: Dictionary) -> Dictionary:
-	var inject := str(options.get("inject", ""))
-	if inject in ["registration", "list_full", "homegrown_min", "permit"]:
-		return _result(false, MarketDealRecords.LIST_REFUSED)
-	return _result(true, "")
+static func list_check(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
+	if str(mode.get("list", "")) == "refuse":
+		return fail(LIST, "the squad list refuses the registration")
+	return pass_with("")
 
 
-static func clearance(_deal: Dictionary, options: Dictionary) -> Dictionary:
-	if str(options.get("inject", "")) == "clearance":
-		return _result(false, MarketDealRecords.NO_CLEARANCE)
-	return _result(true, "")
+static func is_free_agent(deal: Dictionary) -> bool:
+	if str(deal.get("from_club_id", "")) == "":
+		return true
+	if int(deal.get("fee", 0)) > 0:
+		return false
+	return MarketDealRecords.active_contract(str(deal.get("player_id", ""))).is_empty()
 
 
-static func _check(name: String, deal: Dictionary, options: Dictionary) -> Dictionary:
-	match name:
-		"window":
-			return window(deal, options)
-		"player":
-			return player(deal, options)
-		"terms":
-			return terms(deal, options)
-		"consent":
-			return consent(deal, options)
-		"cash":
-			return cash(deal, options)
-		"ffp":
-			return ffp(deal, options)
-		"registration":
-			return registration(deal, options)
-		"clearance":
-			return clearance(deal, options)
-	return _result(false, MarketDealRecords.TERMS_INCOMPLETE)
-
-
-static func _date(deal: Dictionary, options: Dictionary) -> String:
-	var date := str(options.get("date", ""))
-	var fallback: String = date if date != "" else str(deal.get("created_on", ""))
-	return fallback
-
-
-static func _country(club_id: String) -> String:
+static func club_row(club_id: String) -> Dictionary:
 	if club_id == "":
-		return ""
-	return MarketWindows.country_of_club(PLDatabase.row("SELECT * FROM club WHERE id = ?;",
-		[club_id]))
+		return {}
+	return PLDatabase.row("SELECT id, competition_id, country, stub FROM club WHERE id = ?;",
+		[club_id])
 
 
-static func _result(ok: bool, reason: String) -> Dictionary:
-	return {"ok": ok, "reason": reason}
+static func pass_with(note: String) -> Dictionary:
+	return {"ok": true, "code": OK, "detail": note}
+
+
+static func fail(code: String, detail: String) -> Dictionary:
+	return {"ok": false, "code": code, "detail": detail}

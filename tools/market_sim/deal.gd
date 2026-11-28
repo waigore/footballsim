@@ -1,105 +1,71 @@
 extends RefCounted
 
-## The deal verb: propose, agree and sign one move through the L5 engine.
-## A window is open, registration allow-lists, clearance is instant and the
-## news feed is null. --inject forces a failure path.
+## The deal verb: one permanent move through the engine on the fixed clock.
+## No AI, no news feed and no UI is loaded; the money, contract, registration
+## and history modules are the whole world.
+##
+##   godot --headless --path . --script res://tools/market_sim.gd -- deal \
+##     --from ENG-ARS1 --to ESP-ALA1 --fee 5000000 --inject clearance
+##
+## --inject  none | list | clearance | fault | registration
 
 
 static func run(options: Dictionary) -> Dictionary:
-	var seed_value := int(options.get("seed", "7504"))
-	var clubs := maxi(int(options.get("clubs", "20")), 2)
-	var competitions := ["PL"]
-	if clubs > 20:
-		competitions.append("CH")
-	var season := LeagueSeason.create("Deal Sandbox", "generated", "fixture_days", seed_value,
-		competitions, false)
+	var season := LeagueSeason.create("Deal Sandbox", "generated", "fixture_days",
+		int(options.get("seed", "7043")), ["PL"], false)
 	if season == null:
 		return {"ok": false, "reason": "the save could not be created",
 			"detail": LeagueSave.last_error}
-	var from_row := _club(str(options.get("from", "ENG-ARS1")))
-	var to_row := _club(str(options.get("to", "ENG-AVL1")))
-	if from_row.is_empty() or to_row.is_empty():
-		season.close()
-		return {"ok": false, "reason": "the clubs could not be resolved"}
-	var date := str(options.get("date", season.save.current_date()))
-	if date == "":
-		date = season.save.current_date()
-	season.save.set_date(date)
-	var player_id := str(options.get("player", ""))
-	if player_id == "":
-		player_id = str(PLDatabase.row(
-			"SELECT id FROM player WHERE club_id = ? ORDER BY ovr DESC, id LIMIT 1;",
-			[str(from_row["id"])]).get("id", ""))
-	if player_id == "":
-		season.close()
-		return {"ok": false, "reason": "the from-club has no player"}
-	var fee := int(options.get("fee", "5000000"))
-	var wage := maxi(int(options.get("wage", "50000")), 1)
-	var years := maxi(int(options.get("years", "3")), 1)
+	var from := str(options.get("from", "ENG-ARS1"))
+	var to := str(options.get("to", "ENG-CHE1"))
+	var date := str(options.get("date", "2026-08-20"))
+	var player := str(options.get("player", ""))
+	if player == "":
+		player = str(PLDatabase.row(
+			"SELECT id FROM player WHERE club_id = ? ORDER BY ovr DESC LIMIT 1;",
+			[from]).get("id", ""))
+	var terms := terms_for(player, options)
+	var opened := MarketDeals.propose(season, from, to, player, terms, date)
+	var deal_id := str(opened.get("deal", ""))
+	print("proposed %s: %s -> %s for %s on %s" % [deal_id, from, to,
+		MarketCurrency.format(int(terms["fee"])), date])
 	var inject := str(options.get("inject", ""))
-	var offer := {
-		"player_id": player_id, "from_club_id": str(from_row["id"]),
-		"to_club_id": str(to_row["id"]), "kind": str(options.get("kind", "permanent")),
-		"fee": fee, "wage": wage, "years": years, "consent": 1, "date": date,
-	}
-	var reason := ""
-	var deal_id := ""
-	var state := ""
-	var signed: Dictionary = {}
-	var window_id := ""
-	if str(options.get("force", "0")) != "0":
-		signed = MarketDeals.force(season.save, offer, {"date": date, "inject": inject})
-		deal_id = str(signed.get("deal_id", ""))
-		state = str(signed.get("state", ""))
-	else:
-		var made := MarketDeals.propose(season.save, offer)
-		deal_id = str(made.get("deal_id", ""))
-		window_id = str(made.get("window_id", ""))
-		if deal_id == "":
-			season.close()
-			return {"ok": false, "reason": str(made.get("reason", "propose_failed"))}
-		print("proposed %s: %s -> %s for %s on %s" % [deal_id, str(from_row["id"]),
-			str(to_row["id"]), MarketCurrency.format(fee), date])
-		MarketDeals.negotiate(season.save, deal_id)
-		var agreed := MarketDeals.agree(season.save, deal_id)
-		print("agreed: %s (%s)" % [str(agreed.get("state", "")),
-			str(agreed.get("reason", ""))])
-		signed = MarketDeals.sign(season.save, deal_id,
-			{"date": date, "inject": inject})
-		state = str(signed.get("state", ""))
-	reason = str(signed.get("reason", ""))
-	var registration := _registration(deal_id)
-	var cash := MarketFinance.cash(str(to_row["id"]))
-	var headroom := MarketFinance.ffp_headroom(str(to_row["id"]))
-	print("signed: %s; cash %s; registration %s" % [state,
-		MarketCurrency.format(cash), registration])
-	var result := {
-		"ok": bool(signed.get("ok", false)), "state": state, "reason": reason,
-		"deal": deal_id, "from": str(from_row["id"]), "to": str(to_row["id"]),
-		"fee": fee, "registration": registration, "cash": cash, "headroom": headroom,
-		"window_id": window_id if window_id != "" else str(PLDatabase.row(
-			"SELECT window_id FROM deal WHERE id = ?;", [deal_id]).get("window_id", "")),
-		"clears_on": str(signed.get("clears_on", "")),
-		"rolled_back": bool(signed.get("rolled_back", false)),
-	}
+	var mode := {}
+	if inject == "list":
+		mode["list"] = "refuse"
+	var agreed := MarketDeals.agree(deal_id, date, mode)
+	print("agreed: %s (%s)" % [str(agreed.get("state", "")), str(agreed.get("reason", ""))])
+	if str(agreed.get("state", "")) == MarketDealRecords.CLEARANCE_PENDING and inject != "clearance":
+		agreed = MarketDeals.resolve_clearance(deal_id, str(agreed.get("clears_on", date)),
+			{"clearance": "pass", "defer": true})
+		print("cleared: %s" % str(agreed.get("state", "")))
+	var done := {}
+	match inject:
+		"clearance":
+			done = MarketDeals.resolve_clearance(deal_id, str(agreed.get("clears_on", date)),
+				{"clearance": "fail"})
+		"fault":
+			done = MarketDeals.seal(deal_id, date, {"fault": "contract"})
+		"registration":
+			done = MarketDeals.seal(deal_id, date, {"registration": "refuse"})
+		_:
+			done = MarketDeals.seal(deal_id, date, mode)
+	var buyer := MarketDealRules.club_row(to)
+	var registration := MarketDealRecords.registration(player, str(buyer.get("competition_id", "")))
+	print("signed: %s; cash %s; registration %s" % [str(done.get("state", "")),
+		MarketCurrency.format(int(done.get("cash", 0))), str(registration.get("state", "none"))])
+	print("market_sim deal: " + JSON.stringify(done))
 	season.close()
-	return result
+	return done
 
 
-static func _registration(deal_id: String) -> String:
-	if deal_id == "":
-		return "none"
-	var row := PLDatabase.row(
-		"SELECT state FROM player_registration WHERE deal_id = ? "
-		+ "ORDER BY rowid DESC LIMIT 1;", [deal_id])
-	return str(row.get("state", "none"))
-
-
-static func _club(token: String) -> Dictionary:
-	if token == "":
-		return {}
-	var by_id := PLDatabase.row("SELECT * FROM club WHERE id = ?;", [token])
-	if not by_id.is_empty():
-		return by_id
-	return PLDatabase.row(
-		"SELECT * FROM club WHERE abbr = ? COLLATE NOCASE ORDER BY stub, id LIMIT 1;", [token])
+static func terms_for(player_id: String, options: Dictionary) -> Dictionary:
+	var contract := MarketDealRecords.active_contract(player_id)
+	var wage := int(options.get("wage", str(contract.get("wage", 5000))))
+	var fee := int(options.get("fee", "5000000"))
+	return {
+		"fee": fee, "wage": wage, "years": int(options.get("years", "4")),
+		"agent_fee": int(options.get("agent", str(maxi(int(round(fee * 0.05)), 0)))),
+		"signing_bonus": int(options.get("bonus", "0")),
+		"sell_on": 0.0,
+	}

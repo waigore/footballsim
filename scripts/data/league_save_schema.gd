@@ -10,7 +10,6 @@ const SIDE_COLUMNS := [
 const SEASON_TABLES := [
 	"league_fixture", "league_table", "league_player_stat", "cup_round", "cup_tie",
 	"season_archive", "player_season_archive", "player_history", "player_contract",
-	"player_registration", "deal",
 ]
 
 const TABLES := [
@@ -117,25 +116,25 @@ const TABLES := [
 	+ "club_id TEXT NOT NULL, kind TEXT NOT NULL, amount INTEGER NOT NULL DEFAULT 0, "
 	+ "counterparty TEXT NOT NULL DEFAULT '', player_id TEXT NOT NULL DEFAULT '', "
 	+ "deal_id TEXT NOT NULL DEFAULT '', amortisation INTEGER NOT NULL DEFAULT 0);",
-	"CREATE TABLE IF NOT EXISTS deal (id TEXT PRIMARY KEY, player_id TEXT NOT NULL, "
-	+ "from_club_id TEXT NOT NULL DEFAULT '', to_club_id TEXT NOT NULL, "
-	+ "kind TEXT NOT NULL DEFAULT 'permanent', state TEXT NOT NULL DEFAULT 'proposed', "
-	+ "reason TEXT NOT NULL DEFAULT '', fee INTEGER NOT NULL DEFAULT 0, "
-	+ "wage INTEGER NOT NULL DEFAULT 0, years INTEGER NOT NULL DEFAULT 1, "
-	+ "consent INTEGER NOT NULL DEFAULT 1, window_id TEXT NOT NULL DEFAULT '', "
-	+ "clears_on TEXT NOT NULL DEFAULT '', created_on TEXT NOT NULL DEFAULT '', "
-	+ "updated_on TEXT NOT NULL DEFAULT '', signed_on TEXT NOT NULL DEFAULT '', "
-	+ "season_index INTEGER NOT NULL DEFAULT 0, market_day TEXT NOT NULL DEFAULT '');",
+	"CREATE TABLE IF NOT EXISTS deal (id TEXT PRIMARY KEY, "
+	+ "kind TEXT NOT NULL DEFAULT 'permanent', season_index INTEGER NOT NULL DEFAULT 0, "
+	+ "state TEXT NOT NULL DEFAULT 'proposed', from_club_id TEXT NOT NULL DEFAULT '', "
+	+ "to_club_id TEXT NOT NULL, player_id TEXT NOT NULL, fee INTEGER NOT NULL DEFAULT 0, "
+	+ "wage INTEGER NOT NULL DEFAULT 0, signing_bonus INTEGER NOT NULL DEFAULT 0, "
+	+ "agent_fee INTEGER NOT NULL DEFAULT 0, years INTEGER NOT NULL DEFAULT 1, "
+	+ "sell_on REAL NOT NULL DEFAULT 0, window_id TEXT NOT NULL DEFAULT '', "
+	+ "reason TEXT NOT NULL DEFAULT '', god TEXT NOT NULL DEFAULT '', "
+	+ "opened_on TEXT NOT NULL DEFAULT '', signed_on TEXT NOT NULL DEFAULT '', "
+	+ "clears_on TEXT NOT NULL DEFAULT '', deal_terms TEXT NOT NULL DEFAULT '{}');",
 	"CREATE TABLE IF NOT EXISTS deal_event (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-	+ "deal_id TEXT NOT NULL, state TEXT NOT NULL, reason TEXT NOT NULL DEFAULT '', "
-	+ "on_date TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '');",
+	+ "deal_id TEXT NOT NULL, date TEXT NOT NULL DEFAULT '', state TEXT NOT NULL, "
+	+ "reason TEXT NOT NULL DEFAULT '');",
 	"CREATE TABLE IF NOT EXISTS player_registration (player_id TEXT NOT NULL, "
-	+ "competition_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL, "
+	+ "competition_id TEXT NOT NULL, club_id TEXT NOT NULL DEFAULT '', "
 	+ "kind TEXT NOT NULL DEFAULT 'permanent', state TEXT NOT NULL DEFAULT 'registered', "
-	+ "reason TEXT NOT NULL DEFAULT '', from_date TEXT NOT NULL DEFAULT '', "
-	+ "to_date TEXT NOT NULL DEFAULT '', deal_id TEXT NOT NULL DEFAULT '', "
+	+ "reason TEXT NOT NULL DEFAULT '', deal_id TEXT NOT NULL DEFAULT '', "
 	+ "season_index INTEGER NOT NULL DEFAULT 0, "
-	+ "PRIMARY KEY (player_id, competition_id, club_id, from_date));",
+	+ "PRIMARY KEY (player_id, competition_id));",
 ]
 
 const INDEXES := [
@@ -147,11 +146,9 @@ const INDEXES := [
 	"CREATE INDEX IF NOT EXISTS player_contract_club_idx ON player_contract (club_id, status);",
 	"CREATE INDEX IF NOT EXISTS club_ledger_club_idx ON club_ledger (club_id, season_index);",
 	"CREATE INDEX IF NOT EXISTS club_ledger_season_idx ON club_ledger (season_index, date);",
-	"CREATE INDEX IF NOT EXISTS deal_player_idx ON deal (player_id, created_on);",
-	"CREATE INDEX IF NOT EXISTS deal_state_idx ON deal (state, player_id);",
-	"CREATE INDEX IF NOT EXISTS deal_event_deal_idx ON deal_event (deal_id, id);",
-	"CREATE INDEX IF NOT EXISTS player_registration_player_idx "
-	+ "ON player_registration (player_id, state);",
+	"CREATE INDEX IF NOT EXISTS deal_player_idx ON deal (player_id, state);",
+	"CREATE INDEX IF NOT EXISTS deal_event_deal_idx ON deal_event (deal_id);",
+	"CREATE INDEX IF NOT EXISTS player_registration_club_idx ON player_registration (club_id, state);",
 ]
 
 
