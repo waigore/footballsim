@@ -61,7 +61,7 @@ func _claim_ball(p) -> void:
 		p.mark_id = -1
 func _gk_claim(gk, d: float) -> void:
 	var speed = ball.vel.length()
-	var handle = Attrs.gk_handling(gk)
+	var handle = AttrKeeper.handling(gk)
 	var catch_chance = clampf(0.55 + handle * 0.5 - speed * 0.018, 0.25, 0.98)
 	var was_shot: bool = ball.shot_team == 1 - gk.team and clock - ball.shot_time < 4.0 and not ball.shot_saved
 	gk.cooldown = 0.4

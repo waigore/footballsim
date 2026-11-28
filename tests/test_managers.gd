@@ -185,7 +185,7 @@ func test_push_falls_back_without_a_manager() -> void:
 			p = q
 			break
 	eng.manager = null
-	assert_eq(eng.push_of(p), Attrs.role_push(p.role), "push_of did not fall back without a manager")
+	assert_eq(eng.push_of(p), AttrRoles.role_push(p.role), "push_of did not fall back without a manager")
 
 
 func test_patience_sets_the_wait_above_the_legal_floor() -> void:
