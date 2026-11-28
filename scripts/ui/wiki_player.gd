@@ -69,6 +69,7 @@ static func page(player_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 				bars.append([str(pair[1]), float(p[pair[0]]) / 100.0])
 		out["blocks"].append({"k": "bars", "items": bars})
 	out["blocks"].append_array(contract_blocks(player_id, club_name, str(p.get("club_id", ""))))
+	out["blocks"].append_array(transfer_blocks(player_id))
 	var season_label := str(season.get("season_label", ""))
 	var season_head := "SEASON"
 	if season_label != "":
@@ -137,3 +138,32 @@ static func contract_blocks(player_id: String, club_name: String, registered: St
 static func count(source: Dictionary, key: String) -> String:
 	var value := int(source.get(key, -1))
 	return "—" if value < 0 else str(value)
+
+
+static func transfer_blocks(player_id: String) -> Array:
+	if not MarketDeals.available():
+		return []
+	var deal := MarketDealRecords.last_for(player_id)
+	if deal.is_empty():
+		return []
+	var out: Array = [{"k": "section", "text": "TRANSFER"}]
+	var items: Array = [
+		["STATE", MarketDealCopy.state(str(deal.get("state", ""))), true],
+		["FROM", _club_name(str(deal.get("from_club_id", ""))), false],
+		["TO", _club_name(str(deal.get("to_club_id", ""))), false],
+		["FEE", MarketCurrency.format(int(deal.get("fee", 0))), false],
+	]
+	var reason := str(deal.get("reason", ""))
+	if reason != "":
+		items.append(["REASON", MarketDealCopy.reason(reason), false])
+	out.append({"k": "kv", "items": items})
+	return out
+
+
+static func _club_name(club_id: String) -> String:
+	if club_id == "":
+		return "FREE AGENT"
+	var club := WikiModel.repo().club(club_id)
+	if club.is_empty():
+		return club_id
+	return str(club.get("name", club_id)).to_upper()
