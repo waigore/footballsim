@@ -100,6 +100,45 @@ suites = [
   "test_league_season.gd",
 ]
 
+
+[domains.ui_state]
+suites = [
+  "test_ui_state.gd",
+  "test_league_ui.gd",
+  "test_league_nav_stack.gd",
+  "test_hud_layout.gd",
+]
+
+# Pure league screen wiring: the screen node, its pages/input, the host and the
+# view builder. These files move what a sheet shows, not what the season does,
+# so the UI suites that mount the hub cover them; the season loop, doors, cups
+# and Europe engines keep riding [domains.league].
+[domains.league_ui]
+suites = [
+  "test_league_ui.gd",
+  "test_league_sheets.gd",
+  "test_league_nav_stack.gd",
+  "test_league_doors.gd",
+  "test_league_panel_ui.gd",
+  "test_league_text_fields.gd",
+  "test_league_table_chrome.gd",
+  "test_league_table_order.gd",
+  "test_league_interest.gd",
+  "test_league_cup_ui.gd",
+  "test_league_europe_ui.gd",
+  "test_interest_long_press.gd",
+  "test_multi_ui.gd",
+  "test_ux_parity.gd",
+  "test_hud_layout.gd",
+]
+
+# The shared Theme (visual source of truth) and the chrome modules that read it.
+# A palette or font change moves every non-match surface and the broadcast ink.
+[domains.ui_theme]
+suites = [
+  "test_ui_theme.gd",
+]
+
 [domains.shell]
 suites = [
   "test_menu_nav.gd",
@@ -766,6 +805,16 @@ domain = "shell"
 match = "scripts/ui/type_density.gd*"
 domain = "hud_chrome"
 
+# The reactive bus and the league's UI state bag (DR-20261128-37): a change moves
+# the hub and the surfaces that subscribe to it.
+[[rules]]
+match = "scripts/ui/state/**"
+domain = "ui_state"
+
+[[rules]]
+match = "tests/test_ui_state.gd*"
+domain = "ui_state"
+
 [[rules]]
 match = "scripts/ui/app_shell.gd*"
 domain = "shell"
@@ -801,6 +850,24 @@ domain = "shell"
 [[rules]]
 match = "scripts/ui/ui_chrome.gd*"
 domain = "shell"
+
+# The one Theme and its adapter: the palette, fonts and styleboxes every chrome
+# module reads (DR-20261128-37).
+[[rules]]
+match = "scripts/ui/ui_theme.gd*"
+domain = "ui_theme"
+
+[[rules]]
+match = "ui/**"
+domain = "ui_theme"
+
+[[rules]]
+match = "tests/test_ui_theme.gd*"
+domain = "ui_theme"
+
+[[rules]]
+match = "tools/theme_shots.gd*"
+domain = "misc"
 
 [[rules]]
 match = "scripts/audio/**"
@@ -856,6 +923,19 @@ domain = "wiki"
 [[rules]]
 match = "scripts/ui/sheet_pointer.gd*"
 domain = "sheet_pointer"
+
+# Screen wiring only: the hub's node, host, pages and view builder.
+[[rules]]
+match = "scripts/ui/league_screen*.gd*"
+domain = "league_ui"
+
+[[rules]]
+match = "scripts/ui/league_host.gd*"
+domain = "league_ui"
+
+[[rules]]
+match = "scripts/ui/league_view.gd*"
+domain = "league_ui"
 
 [[rules]]
 match = "scripts/ui/league_*.gd*"

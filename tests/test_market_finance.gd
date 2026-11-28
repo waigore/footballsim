@@ -216,6 +216,125 @@ func test_the_club_page_reads_cash_wages_ffp_and_the_ledger_tail() -> void:
 	assert_gte(tables, 1, "the club page shows no ledger tail")
 
 
+func test_the_club_page_offers_the_currency_setting_as_a_door() -> void:
+	Prefs._currency_cache = ""
+	Prefs.save_currency("GBP")
+	var season := _fresh("Finance Currency Doors")
+	var club_id := _club()
+	var page := WikiModel.page(WikiModel.TEAM, club_id)
+	var doors: Array = []
+	for block in page.get("blocks", []):
+		if str((block as Dictionary).get("k", "")) != "door":
+			continue
+		for item in (block as Dictionary).get("items", []):
+			doors.append(item)
+	var ids: Array = []
+	var on: Array = []
+	for door in doors:
+		var id := str((door as Dictionary).get("id", ""))
+		if id.begins_with("currency:"):
+			ids.append(id)
+			if bool((door as Dictionary).get("on", false)):
+				on.append(id)
+	assert_eq(ids.size(), 3, "the club page does not offer three currencies")
+	for code in ["GBP", "EUR", "USD"]:
+		assert_true(ids.has("currency:" + code), "the club page has no %s door" % code)
+	assert_eq(on, ["currency:GBP"], "GBP is not the default door, or two doors are on")
+	assert_true(Prefs.save_currency("GBP"), "the real currency setting did not reset")
+
+
+func test_the_currency_switch_changes_only_the_symbol() -> void:
+	var season := _fresh("Finance Currency Switch")
+	var club_id := _club()
+	var cash := MarketFinance.cash(club_id)
+	var budget := MarketFinance.wage_budget(club_id)
+	Prefs._currency_cache = ""
+	Prefs.save_currency("GBP")
+	var wiki := Control.new()
+	wiki.set_script(load("res://scripts/ui/wiki_screen.gd"))
+	wiki.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(wiki)
+	await get_tree().process_frame
+	wiki.open(WikiModel.TEAM, club_id)
+	var door: Dictionary = {}
+	for row in wiki.body.rows():
+		if str(row.get("k", "")) == "door" and str(row.get("id", "")) == "currency:EUR":
+			door = row
+			break
+	assert_false(door.is_empty(), "the club page laid out no euro door")
+	var at: Vector2 = wiki.body.position + (door["rect"] as Rect2).get_center()
+	assert_eq(wiki.body.button_id(at), "currency:EUR", "the euro door does not answer its own press")
+	wiki.click("currency:EUR")
+	assert_eq(Prefs.load_currency(), "EUR", "the euro door did not save the setting")
+	var read := ""
+	for block in wiki.page_data.get("blocks", []):
+		if str((block as Dictionary).get("k", "")) != "kv":
+			continue
+		for item in (block as Dictionary).get("items", []):
+			if str((item as Array)[0]) == "CASH":
+				read = str((item as Array)[1])
+	assert_true(read.begins_with("€"), "the page did not re-display cash in euros: %s" % read)
+	assert_eq(MarketFinance.cash(club_id), cash, "the euro setting moved the stored cash")
+	assert_eq(MarketFinance.wage_budget(club_id), budget, "the euro setting moved the budget")
+	wiki.click("currency:GBP")
+	assert_eq(Prefs.load_currency(), "GBP", "the pound door did not reset the setting")
+	wiki.queue_free()
+	assert_true(Prefs.save_currency("GBP"), "the real currency setting did not reset")
+
+
+func test_a_deal_gets_the_same_ffp_verdict_in_every_currency() -> void:
+	var season := _fresh("Finance Currency Verdict")
+	var club_id := _club()
+	var fee := 10000000
+	Prefs._currency_cache = ""
+	var headroom: Array = []
+	var afford: Array = []
+	var converted: Array = []
+	for code in ["GBP", "EUR", "USD"]:
+		Prefs.save_currency(str(code))
+		headroom.append(MarketFinance.ffp_headroom(club_id))
+		afford.append(MarketFinance.can_afford(club_id, fee))
+		converted.append(MarketCurrency.to_base(
+			int(round(MarketCurrency.shown(fee, str(code)))), str(code)))
+	assert_eq(headroom[0], headroom[1], "the euro setting moved the FFP measure")
+	assert_eq(headroom[0], headroom[2], "the dollar setting moved the FFP measure")
+	assert_eq(afford[0], afford[1], "the euro setting changed the affordability verdict")
+	assert_eq(afford[0], afford[2], "the dollar setting changed the affordability verdict")
+	for base in converted:
+		assert_eq(int(base), fee, "an entered fee did not convert back to the same base amount")
+	assert_true(Prefs.save_currency("GBP"), "the real currency setting did not reset")
+
+
+func test_reputation_is_bounded_and_recomputed_at_rollover() -> void:
+	assert_eq(MarketPurse.reputation(0, 0, 0), 6, "an empty club reads no base reputation")
+	assert_eq(MarketPurse.reputation(0, 1, 20), MarketPurse.reputation(0, 21, 20) + 12,
+		"last place does not cost the twelve points a champion earns")
+	assert_lte(MarketPurse.reputation(2147483647, 1, 20), 99, "reputation ran past its ceiling")
+	assert_gte(MarketPurse.reputation(0, 20, 20), 1, "reputation ran below its floor")
+	var season := _fresh("Finance Reputation")
+	var club_id := _club()
+	var clubs := 20
+	var played := season.save.season_index()
+	season.save.set_season(played + 1, "next")
+	PLDatabase.execute("INSERT OR REPLACE INTO season_archive (season_index, competition_id, "
+		+ "club_id, club_name, position, played, won, drawn, lost, gf, ga, points) "
+		+ "VALUES (?, 'PL', ?, 'Club', 20, 0, 0, 0, 0, 0, 0, 0);", [played, club_id])
+	assert_eq(MarketFinanceFlows.roll(season, season.save.current_date()), 20,
+		"the rollover did not touch every funded club")
+	var revenue := MarketFinance.revenue_base(club_id)
+	assert_eq(MarketFinance.reputation(club_id),
+		MarketPurse.reputation(revenue, 20, clubs),
+		"the rollover recorded no last-place reputation")
+	PLDatabase.execute("UPDATE season_archive SET position = 1 WHERE season_index = ? "
+		+ "AND club_id = ?;", [played, club_id])
+	MarketFinanceFlows.roll(season, season.save.current_date())
+	assert_eq(MarketFinance.reputation(club_id),
+		MarketPurse.reputation(revenue, 1, clubs),
+		"the rollover did not recompute reputation from the archive")
+	assert_between(MarketFinance.reputation(club_id), 0, 100,
+		"reputation fell outside its 0-100 band")
+
+
 func test_money_reads_a_club_s_affordability_and_reputation() -> void:
 	var season := _shared()
 	var club_id := _club()
@@ -251,3 +370,24 @@ func test_an_unfunded_club_reads_no_finances_block() -> void:
 	for block in page.get("blocks", []):
 		assert_ne(str((block as Dictionary).get("text", "")), "FINANCES",
 			"an unfunded club reads a finances block")
+
+
+func test_the_isolated_ledger_run_posts_a_season_with_no_deal_engine() -> void:
+	var script: Script = load("res://tools/market_sim/ledger.gd")
+	assert_not_null(script, "the ledger verb is missing")
+	var pounds: Dictionary = script.run({"seed": "7311", "clubs": "20", "currency": "GBP"})
+	assert_true(bool(pounds.get("ok", false)), "the isolated ledger run failed")
+	assert_gt(int(pounds.get("rows", 0)), 0, "the isolated run posted no ledger line")
+	var kinds: Array = pounds.get("kinds", [])
+	for kind in [MarketFinance.KIND_GATE, MarketFinance.KIND_WAGE, MarketFinance.KIND_PRIZE,
+			MarketFinance.KIND_AMORTISATION]:
+		assert_true(kinds.has(kind), "the isolated run posted no %s line" % kind)
+	assert_gt(int(pounds.get("amortisation", 0)), 0, "the isolated run posted no amortisation")
+	assert_gt(int(pounds.get("prize_clubs", 0)), 0, "the isolated run paid no prize")
+	assert_false(kinds.has(MarketFinance.KIND_FEE), "the isolated run posted a deal's fee line")
+	var euros: Dictionary = script.run({"seed": "7311", "clubs": "20", "currency": "EUR"})
+	assert_eq(str(euros.get("currency", "")), "EUR", "the run did not read its currency flag")
+	assert_eq(int(euros.get("cash", -1)), int(pounds.get("cash", -2)),
+		"the currency flag moved the stored cash")
+	assert_eq(int(euros.get("rows", -1)), int(pounds.get("rows", -2)),
+		"the currency flag changed how many lines the run posted")

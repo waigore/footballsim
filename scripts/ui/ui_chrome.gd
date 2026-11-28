@@ -2,17 +2,15 @@ class_name UiChrome
 extends RefCounted
 
 
-const C_BG := Color(0.012, 0.020, 0.026)
-const C_PANEL := Color(0.035, 0.055, 0.070, 0.96)
+const C_BG := Color(0.012, 0.02, 0.026)
+const C_PANEL := Color(0.035, 0.055, 0.07, 0.96)
 const C_PANEL_LIGHT := Color(0.075, 0.105, 0.125, 0.96)
-const C_BORDER := Color(1, 1, 1, 0.085)
+const C_BORDER := Color(1.0, 1.0, 1.0, 0.085)
 const C_TEXT := Color(0.92, 0.95, 0.96)
 const C_DIM := Color(0.55, 0.64, 0.69)
-
 const C_SOFT := Color(0.66, 0.73, 0.77)
-const C_GOLD := Color(0.96, 0.78, 0.30)
+const C_GOLD := Color(0.96, 0.78, 0.3)
 const C_LIVE := Color(0.62, 0.88, 0.66)
-
 const C_DANGER := Color(0.78, 0.26, 0.22)
 
 
@@ -61,11 +59,19 @@ static func chip(c: CanvasItem, cache: Dictionary, r: Rect2, label: String, font
 	text_c(c, r.get_center().x, r.position.y + r.size.y * 0.5 + RISE, label, 13, C_TEXT, font)
 
 static func fonts() -> Dictionary:
+	var from_theme := UiTheme.fonts()
+	if from_theme.get("bold") != null and from_theme.get("med") != null \
+			and from_theme.get("body") != null:
+		return from_theme
 	return {
 		"bold": load("res://fonts/BarlowCondensed-SemiBold.ttf"),
 		"med": load("res://fonts/BarlowCondensed-Medium.ttf"),
 		"body": load("res://fonts/Inter-Regular.ttf"),
 	}
+
+
+static func theme() -> Theme:
+	return UiTheme.theme()
 
 static func style(cache: Dictionary, fill: Color, radius: int = 10, border: Color = C_BORDER, width: int = 1) -> StyleBoxFlat:
 	var key := "%s|%d|%s|%d" % [fill.to_html(true), radius, border.to_html(true), width]
