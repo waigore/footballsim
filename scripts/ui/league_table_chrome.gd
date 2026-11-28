@@ -8,11 +8,17 @@ const WIDE_LABELS := ["UCL", "UEL", "UECL", "RELEGATION"]
 
 
 static func bands_for(rules: Dictionary) -> Array:
-	if int(rules.get("promotion_places", 0)) <= 0:
-		return BANDS.duplicate()
-	if int(rules.get("promotion_playoff_places", 0)) > 0:
-		return ["promotion", "playoff", "relegation"]
-	return ["promotion", "relegation"]
+	var out: Array = []
+	if int(rules.get("promotion_places", 0)) > 0:
+		out.append("promotion")
+		if int(rules.get("promotion_playoff_places", 0)) > 0:
+			out.append("playoff")
+	else:
+		out.append_array(BANDS.slice(0, BANDS.size() - 1))
+	if int(rules.get("playout_places", 0)) > 0:
+		out.append("playout")
+	out.append("relegation")
+	return out
 
 
 static func labels_for(bands: Array, short: bool) -> Array:
@@ -23,6 +29,8 @@ static func labels_for(bands: Array, short: bool) -> Array:
 			label = "UP"
 		elif str(band) == "playoff":
 			label = "PLO"
+		elif str(band) == "playout":
+			label = "PLY" if short else "PLAY-OUT"
 		elif str(band) == "relegation":
 			label = "REL" if short else "RELEGATION"
 		out.append(label)

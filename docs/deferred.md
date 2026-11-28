@@ -15,7 +15,7 @@ Shipped (wiki domains playable; DRs accepted):
 | Live tactics + IFAB substitutions | DR-20261122-05; MatchAI |
 | Extra time + pens when a winner is required | DR-20261126-12 |
 | Poisson / Dixon–Coles; λ envelope; finishing | `poisson_model.gd`; DR-20261122-04 / 24-08 / 25-19 / 26-07/08 |
-| PL + English pyramid + LL + German pair | `data/`; DR-20261123-01 / 13 / 17 |
+| PL + English pyramid + LL + German + Italian pairs | `data/`; DR-20261123-01 / 13 / 17 / 18 |
 | Season saves, calendar, Continue/watch | `league_season.gd`; DR-20261124-01 / 06 |
 | Multi-league save; play-offs; German Relegation | DR-20261126-10 / 14 / 17; [#185](https://github.com/waigore/footballsim/issues/185) |
 | System sheet; report packs; non-match type scale | DR-20261124-07 / 04 / 03 |
@@ -31,23 +31,22 @@ Shipped (wiki domains playable; DRs accepted):
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Italian Serie A + Serie B pyramid | Rules [DR-20261128-18](https://github.com/waigore/footballsim/wiki/dr-20261128-18); seed has no `SA`/`SB`; [#420](https://github.com/waigore/footballsim/issues/420)–[#424](https://github.com/waigore/footballsim/issues/424). Unblocks UEFA |
-| 2 | Native match hot loop | DR-20261123-02 under the 120 s budget; tick still GDScript |
+| 1 | Native match hot loop | DR-20261123-02 under the 120 s budget; tick still GDScript |
 
 ## Next pick
 
-**Italian pyramid** ([#420](https://github.com/waigore/footballsim/issues/420)) — unblocks UEFA and Italian cups.
+**Native match hot loop** (DR-20261123-02).
 
 ## Out of scope / blocked
 
 | Item | Why |
 |------|-----|
-| UEFA club competitions (UCL/UEL/UECL) | Rules accepted ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15); [#434](https://github.com/waigore/footballsim/issues/434)); **blocked** on Italy ([#420](https://github.com/waigore/footballsim/issues/420) / [#433](https://github.com/waigore/footballsim/issues/433)) |
+| UEFA club competitions (UCL/UEL/UECL) | Rules accepted ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15); [#434](https://github.com/waigore/footballsim/issues/434)); Italy now ships ([#420](https://github.com/waigore/footballsim/issues/420)), so [#433](https://github.com/waigore/footballsim/issues/433) can start |
 | Club-manager career; player tactics | Product non-goal; Match playable-slice Out |
 | Transfers, finances, training, second season, mid-season refresh | Season Out of scope (v1); DR-20261124-01 |
 | VAR; weather; referee outcome bias | Match playable-slice Out |
 | Concussion subs; extra injury stoppage beyond added-time | Substitutions Out; DR-20261122-05 |
-| Licensed data beyond English pyramid, La Liga, German pair | requirements Non-goals; DR-20261123-01 (Italy widens with #420) |
+| Licensed data beyond English pyramid, La Liga, German and Italian pairs | requirements Non-goals; DR-20261123-01 / DR-20261128-18 |
 | Match HUD under the non-match type rule | DR-20261124-03 |
 | Photoreal / 3D primary | requirements Non-goals |
 | Serie C; German-style Relegation for Italy | Season Out of scope |

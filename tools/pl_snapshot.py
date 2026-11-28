@@ -59,7 +59,8 @@ ESPN_SITE = "https://site.api.espn.com/apis/site/v2/sports"
 ESPN_CORE = "https://sports.core.api.espn.com/v2"
 
 ## FIFA alpha-3 codes for the associations the seed ships.
-FIFA_COUNTRY = {"England": "ENG", "Wales": "WAL", "Spain": "ESP", "Germany": "GER"}
+FIFA_COUNTRY = {"England": "ENG", "Wales": "WAL", "Spain": "ESP", "Germany": "GER",
+                "Italy": "ITA"}
 ## Clubs that play in the English pyramid but belong to another association.
 ## The id carries the club's own country, never its competition's.
 COUNTRY_BY_CLUB = {
@@ -223,6 +224,44 @@ COMPETITIONS = {
             "weekend_bias": 0.85, "midweek_matchdays": 8,
         },
     },
+    # The Italian pair (#420): Serie A on top of Serie B, 20 clubs and 38
+    # matchdays each. Serie A's bands are 4 / 1 / 1 Europe with three direct
+    # relegation places. Serie B sends two up automatically and runs its own
+    # six-team bracket for a third (3rd-8th, skipped when 3rd is more than 14
+    # points clear of 4th), drops 18th-20th and plays 16th against 17th over two
+    # legs for one more RELEGATED label. Italian ids carry `SA-` / `SB-`.
+    "SA": {
+        "espn": "ita.1",
+        "name": "Serie A",
+        "short_name": "SERIE A",
+        "country": "Italy",
+        "strength": (84.0, 73.0),
+        "capacity": (76000, 11000),
+        "rules": {
+            "win_points": 3, "draw_points": 1, "clubs": 20, "matchdays": 38,
+            "relegation_places": 3,
+            "ucl_places": 4, "uel_places": 1, "uecl_places": 1,
+            "season_start": "2026-08-22", "season_end": "2027-05-23",
+            "weekend_bias": 0.88, "midweek_matchdays": 5,
+        },
+    },
+    "SB": {
+        "espn": "ita.2",
+        "name": "Serie B",
+        "short_name": "SERIE B",
+        "country": "Italy",
+        "strength": (74.0, 64.0),
+        "capacity": (36000, 5000),
+        "rules": {
+            "win_points": 3, "draw_points": 1, "clubs": 20, "matchdays": 38,
+            "promotion_places": 2, "promotion_playoff_places": 6,
+            "promotion_skip_gap": 14, "playoff_format": "serie_b_six",
+            "relegation_places": 3, "playout_places": 2,
+            "ucl_places": 0, "uel_places": 0, "uecl_places": 0,
+            "season_start": "2026-08-22", "season_end": "2027-05-09",
+            "weekend_bias": 0.85, "midweek_matchdays": 6,
+        },
+    },
 }
 
 ## The club count a competition ships, used by seed/fetch/verify instead of a
@@ -352,6 +391,57 @@ VENUES = {
     "OSN": ("Stadion an der Bremer Brücke", "Osnabrück", 15741),
     "STP": ("Millerntor-Stadion", "Hamburg", 29546),
     "WOB": ("Volkswagen Arena", "Wolfsburg", 30000),
+}
+
+## Grounds for a competition whose abbreviations are shared with another tier
+## (Serie B ships Carrarese as `CAR`, the English pyramid already ships Cardiff
+## and Carlisle under the same code). These win over `VENUES` for their own
+## competition and never leak into a re-seed of another league.
+VENUES_BY_COMP = {
+    "SA": {
+        "LAZ": ("Stadio Olimpico", "Rome", 70634),
+        "ROMA": ("Stadio Olimpico", "Rome", 70634),
+        "INT": ("San Siro", "Milan", 75923),
+        "MIL": ("San Siro", "Milan", 75923),
+        "COMO": ("Stadio Giuseppe Sinigaglia", "Como", 13602),
+        "JUV": ("Allianz Stadium", "Turin", 41507),
+        "FRO": ("Stadio Benito Stirpe", "Frosinone", 16227),
+        "BOL": ("Stadio Renato Dall'Ara", "Bologna", 36462),
+        "NAP": ("Stadio Diego Armando Maradona", "Naples", 54726),
+        "GEN": ("Stadio Luigi Ferraris", "Genoa", 36599),
+        "CAG": ("Unipol Domus", "Cagliari", 16416),
+        "ATA": ("Gewiss Stadium", "Bergamo", 24950),
+        "TOR": ("Stadio Olimpico Grande Torino", "Turin", 27958),
+        "MON": ("U-Power Stadium", "Monza", 17102),
+        "LEC": ("Stadio Via del Mare", "Lecce", 31533),
+        "FIO": ("Stadio Artemio Franchi", "Florence", 43147),
+        "PAR": ("Stadio Ennio Tardini", "Parma", 22359),
+        "SAS": ("Mapei Stadium", "Reggio Emilia", 21525),
+        "VEN": ("Stadio Pier Luigi Penzo", "Venice", 11150),
+        "UDI": ("Bluenergy Stadium", "Udine", 25144),
+    },
+    "SB": {
+        "PAL": ("Stadio Renzo Barbera", "Palermo", 36365),
+        "MOD": ("Stadio Alberto Braglia", "Modena", 21151),
+        "AVE": ("Stadio Partenio-Lombardi", "Avellino", 26000),
+        "MAN": ("Stadio Danilo Martelli", "Mantua", 12500),
+        "ASC": ("Stadio Cino e Lillo Del Duca", "Ascoli Piceno", 12461),
+        "CES": ("Orogel Stadium Dino Manuzzi", "Cesena", 23940),
+        "PIS": ("Arena Garibaldi", "Pisa", 25000),
+        "BEN": ("Stadio Ciro Vigorito", "Benevento", 16867),
+        "SUD": ("Stadio Druso", "Bolzano", 5500),
+        "SAM": ("Stadio Luigi Ferraris", "Genoa", 36599),
+        "VER": ("Stadio Marcantonio Bentegodi", "Verona", 39211),
+        "PAD": ("Stadio Euganeo", "Padua", 32420),
+        "CAR": ("Stadio dei Marmi", "Carrara", 10000),
+        "CRE": ("Stadio Giovanni Zini", "Cremona", 20641),
+        "ENT": ("Stadio Comunale", "Chiavari", 5500),
+        "JVS": ("Stadio Romeo Menti", "Castellammare di Stabia", 7642),
+        "CAT": ("Stadio Nicola Ceravolo", "Catanzaro", 14650),
+        "ARE": ("Stadio Città di Arezzo", "Arezzo", 13128),
+        "VIC": ("Stadio Romeo Menti", "Vicenza", 12000),
+        "EMP": ("Stadio Carlo Castellani", "Empoli", 16284),
+    },
 }
 
 SCHEMA = """
@@ -846,6 +936,8 @@ def _ground(competition_id: str, season: int, team: dict, abbr: str,
     knows no venue for keeps a synthetic name — the seed fills the gap rather
     than dropping the club.
     """
+    if abbr in VENUES_BY_COMP.get(competition_id, {}):
+        return VENUES_BY_COMP[competition_id][abbr]
     if abbr in VENUES:
         return VENUES[abbr]
     city = str(team.get("location", ""))

@@ -7,6 +7,7 @@ const TEMPLATES := {
 		"win_points": 3, "draw_points": 1, "relegation_places": 3,
 		"ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38, "clubs": 20,
 		"promotion_places": 0, "promotion_playoff_places": 0, "relegation_playoff_places": 0,
+		"promotion_skip_gap": 0, "playout_places": 0,
 		"season_start": "2026-08-15", "season_end": "2027-05-23",
 		"weekend_bias": 0.85, "midweek_matchdays": 5,
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
@@ -18,6 +19,7 @@ const TEMPLATES := {
 		"win_points": 3, "draw_points": 1, "relegation_places": 3,
 		"ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38, "clubs": 20,
 		"promotion_places": 0, "promotion_playoff_places": 0, "relegation_playoff_places": 0,
+		"promotion_skip_gap": 0, "playout_places": 0,
 		"season_start": "2026-08-15", "season_end": "2027-05-23",
 		"weekend_bias": 0.88, "midweek_matchdays": 4,
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
@@ -28,6 +30,7 @@ const TEMPLATES := {
 
 		"win_points": 3, "draw_points": 1, "clubs": 18,
 		"relegation_places": 2, "relegation_playoff_places": 1,
+		"promotion_skip_gap": 0, "playout_places": 0,
 		"ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 34,
 		"season_start": "2026-08-28", "season_end": "2027-05-22",
 		"weekend_bias": 0.88, "midweek_matchdays": 4,
@@ -40,11 +43,36 @@ const TEMPLATES := {
 		"win_points": 3, "draw_points": 1, "clubs": 18,
 		"promotion_places": 2, "promotion_playoff_places": 1,
 		"relegation_places": 2, "relegation_playoff_places": 1,
+		"promotion_skip_gap": 0, "playout_places": 0,
 		"ucl_places": 0, "uel_places": 0, "uecl_places": 0, "matchdays": 34,
 		"season_start": "2026-08-07", "season_end": "2027-05-23",
 		"weekend_bias": 0.88, "midweek_matchdays": 4,
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
 		"playoff_format": "",
+	},
+	"SA": {
+
+
+		"win_points": 3, "draw_points": 1, "clubs": 20,
+		"relegation_places": 3, "relegation_playoff_places": 0, "playout_places": 0,
+		"ucl_places": 4, "uel_places": 1, "uecl_places": 1, "matchdays": 38,
+		"promotion_places": 0, "promotion_playoff_places": 0, "promotion_skip_gap": 0,
+		"season_start": "2026-08-22", "season_end": "2027-05-23",
+		"weekend_bias": 0.88, "midweek_matchdays": 5,
+		"advance_mode": "fixture_days", "calendar_mode": "generated",
+		"playoff_format": "",
+	},
+	"SB": {
+
+
+		"win_points": 3, "draw_points": 1, "clubs": 20,
+		"promotion_places": 2, "promotion_playoff_places": 6, "promotion_skip_gap": 14,
+		"relegation_places": 3, "relegation_playoff_places": 0, "playout_places": 2,
+		"ucl_places": 0, "uel_places": 0, "uecl_places": 0, "matchdays": 38,
+		"season_start": "2026-08-22", "season_end": "2027-05-09",
+		"weekend_bias": 0.85, "midweek_matchdays": 6,
+		"advance_mode": "fixture_days", "calendar_mode": "generated",
+		"playoff_format": "serie_b_six",
 	},
 
 
@@ -53,6 +81,7 @@ const TEMPLATES := {
 		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
 		"promotion_places": 2, "promotion_playoff_places": 6,
 		"relegation_places": 3, "relegation_playoff_places": 0,
+		"promotion_skip_gap": 0, "playout_places": 0,
 		"ucl_places": 0, "uel_places": 0, "uecl_places": 0,
 		"season_start": "2026-08-07", "season_end": "2027-05-10",
 		"weekend_bias": 0.85, "midweek_matchdays": 8,
@@ -64,6 +93,7 @@ const TEMPLATES := {
 		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
 		"promotion_places": 2, "promotion_playoff_places": 4,
 		"relegation_places": 4, "relegation_playoff_places": 0,
+		"promotion_skip_gap": 0, "playout_places": 0,
 		"ucl_places": 0, "uel_places": 0, "uecl_places": 0,
 		"season_start": "2026-08-07", "season_end": "2027-05-10",
 		"weekend_bias": 0.85, "midweek_matchdays": 8,
@@ -75,6 +105,7 @@ const TEMPLATES := {
 		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
 		"promotion_places": 3, "promotion_playoff_places": 4,
 		"relegation_places": 2, "relegation_playoff_places": 0,
+		"promotion_skip_gap": 0, "playout_places": 0,
 		"ucl_places": 0, "uel_places": 0, "uecl_places": 0,
 		"season_start": "2026-08-07", "season_end": "2027-05-10",
 		"weekend_bias": 0.85, "midweek_matchdays": 8,
@@ -87,6 +118,7 @@ const TEMPLATES := {
 		"win_points": 3, "draw_points": 1, "clubs": 24, "matchdays": 46,
 		"promotion_places": 1, "promotion_playoff_places": 6,
 		"relegation_places": 4, "relegation_playoff_places": 0,
+		"promotion_skip_gap": 0, "playout_places": 0,
 		"ucl_places": 0, "uel_places": 0, "uecl_places": 0,
 		"season_start": "2026-08-08", "season_end": "2027-05-02",
 		"weekend_bias": 0.85, "midweek_matchdays": 8,
@@ -112,6 +144,8 @@ const CREATE_SQL := (
 	+ "clubs INTEGER NOT NULL DEFAULT 20, promotion_places INTEGER NOT NULL DEFAULT 0, "
 	+ "promotion_playoff_places INTEGER NOT NULL DEFAULT 0, "
 	+ "relegation_playoff_places INTEGER NOT NULL DEFAULT 0, "
+	+ "promotion_skip_gap INTEGER NOT NULL DEFAULT 0, "
+	+ "playout_places INTEGER NOT NULL DEFAULT 0, "
 	+ "playoff_format TEXT NOT NULL DEFAULT '');"
 )
 
@@ -119,8 +153,9 @@ const UPSERT_SQL := (
 	"INSERT INTO league_rules (competition_id, win_points, draw_points, relegation_places, "
 	+ "ucl_places, uel_places, uecl_places, matchdays, season_start, season_end, weekend_bias, "
 	+ "midweek_matchdays, advance_mode, calendar_mode, clubs, promotion_places, "
-	+ "promotion_playoff_places, relegation_playoff_places, playoff_format) "
-	+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+	+ "promotion_playoff_places, relegation_playoff_places, promotion_skip_gap, playout_places, "
+	+ "playoff_format) "
+	+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
 	+ "ON CONFLICT(competition_id) DO UPDATE SET win_points = excluded.win_points, "
 	+ "draw_points = excluded.draw_points, relegation_places = excluded.relegation_places, "
 	+ "ucl_places = excluded.ucl_places, uel_places = excluded.uel_places, "
@@ -131,12 +166,15 @@ const UPSERT_SQL := (
 	+ "clubs = excluded.clubs, promotion_places = excluded.promotion_places, "
 	+ "promotion_playoff_places = excluded.promotion_playoff_places, "
 	+ "relegation_playoff_places = excluded.relegation_playoff_places, "
+	+ "promotion_skip_gap = excluded.promotion_skip_gap, "
+	+ "playout_places = excluded.playout_places, "
 	+ "playoff_format = excluded.playoff_format;"
 )
 
 
 const LINK_COLUMNS := [
 	"clubs", "promotion_places", "promotion_playoff_places", "relegation_playoff_places",
+	"promotion_skip_gap", "playout_places",
 ]
 
 
@@ -146,7 +184,8 @@ const COLUMNS := [
 	"win_points", "draw_points", "relegation_places", "ucl_places", "uel_places",
 	"uecl_places", "matchdays", "season_start", "season_end", "weekend_bias",
 	"midweek_matchdays", "advance_mode", "calendar_mode", "clubs", "promotion_places",
-	"promotion_playoff_places", "relegation_playoff_places", "playoff_format",
+	"promotion_playoff_places", "relegation_playoff_places", "promotion_skip_gap",
+	"playout_places", "playoff_format",
 ]
 
 
@@ -193,9 +232,9 @@ static func normalize(raw: Dictionary) -> Dictionary:
 	var out: Dictionary = DEFAULTS.duplicate(true)
 	for key in ["win_points", "draw_points", "relegation_places", "ucl_places",
 			"uel_places", "uecl_places", "matchdays", "midweek_matchdays", "clubs",
-			"promotion_places", "promotion_playoff_places", "relegation_playoff_places"]:
-		if raw.has(key):
-			out[key] = int(raw[key])
+			"promotion_places", "promotion_playoff_places", "relegation_playoff_places",
+			"promotion_skip_gap", "playout_places"]:
+		out[key] = int(raw.get(key, out.get(key, 0)))
 	for key in ["season_start", "season_end", "advance_mode", "calendar_mode", "playoff_format"]:
 		if raw.has(key):
 			out[key] = str(raw[key])
@@ -266,6 +305,7 @@ static func zone(position: int, rules: Dictionary) -> String:
 	var up_playoff := int(rules.get("promotion_playoff_places", 0))
 	var down := int(rules.get("relegation_places", 3))
 	var playoff := int(rules.get("relegation_playoff_places", 0))
+	var playout := int(rules.get("playout_places", 0))
 	var size := int(rules.get("clubs", 20))
 	if up > 0 and position <= up:
 		return "promotion"
@@ -279,6 +319,8 @@ static func zone(position: int, rules: Dictionary) -> String:
 		return "uecl"
 	if position > size - down:
 		return "relegation"
+	if playout > 0 and position > size - down - playout:
+		return "playout"
 	if playoff > 0 and position > size - down - playoff:
 		return "playoff"
 	return ""
@@ -294,6 +336,8 @@ static func zone_label(band: String) -> String:
 		return "UP"
 	if band == "playoff":
 		return "PLO"
+	if band == "playout":
+		return "PLY"
 	if band == "relegation":
 		return "REL"
 	return ""
@@ -309,6 +353,7 @@ static func places(rules: Dictionary) -> Dictionary:
 		"uecl": uecl,
 		"promotion": int(rules.get("promotion_places", 0)),
 		"playoff": int(rules.get("relegation_playoff_places", 0)),
+		"playout": int(rules.get("playout_places", 0)),
 		"relegation": int(rules.get("relegation_places", 3)),
 		"europe": ucl + uel + uecl,
 	}

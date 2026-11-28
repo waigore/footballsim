@@ -112,7 +112,7 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			assert_eq(chosen, 3, "one choice per group should be selected")
 
 
-			assert_eq(items.size(), 19, "the wizard is missing a control")
+			assert_eq(items.size(), 22, "the wizard is missing a control")
 
 
 func test_the_wizard_cascades_a_country_chain() -> void:
@@ -128,8 +128,10 @@ func test_the_wizard_cascades_a_country_chain() -> void:
 		elif str(item["kind"]) == "country":
 			countries.append(str(item["label"]))
 	assert_eq(ids, ["wleague:PL", "wleague:CH", "wleague:L1", "wleague:L2", "wleague:NL",
-		"wleague:LL", "wleague:BL", "wleague:BL2"], "the wizard did not list every league")
-	assert_eq(countries, ["ENGLAND", "SPAIN", "GERMANY"], "the country headers are wrong")
+		"wleague:LL", "wleague:BL", "wleague:BL2", "wleague:SA", "wleague:SB"],
+		"the wizard did not list every league")
+	assert_eq(countries, ["ENGLAND", "SPAIN", "GERMANY", "ITALY"],
+		"the country headers are wrong")
 	var screen := FakeWizard.new()
 
 	screen.wizard = {"competitions": ["PL"]}
@@ -155,6 +157,15 @@ func test_the_wizard_cascades_a_country_chain() -> void:
 	screen.wizard = {"competitions": ["BL", "BL2"]}
 	LeagueWizardActions.toggle_league(screen, "BL")
 	assert_eq(screen.wizard["competitions"], ["BL", "BL2"], "the wizard emptied itself")
+	screen.wizard = {"competitions": ["PL"]}
+	LeagueWizardActions.toggle_league(screen, "SB")
+	assert_eq(screen.wizard["competitions"], ["PL", "SA", "SB"],
+		"Serie B did not bring Serie A")
+	LeagueWizardActions.toggle_league(screen, "SA")
+	assert_eq(screen.wizard["competitions"], ["PL"], "the Italian pair did not cascade off")
+	screen.wizard = {"competitions": ["SA", "SB"]}
+	LeagueWizardActions.toggle_league(screen, "SA")
+	assert_eq(screen.wizard["competitions"], ["SA", "SB"], "the wizard emptied itself")
 func test_the_save_keeps_the_leagues_in_the_published_order() -> void:
 	var season := LeagueSeason.create("Order", "real", "every_day", 240, ["BL2", "LL", "BL", "PL"])
 	assert_not_null(season, "the four-league save did not build")

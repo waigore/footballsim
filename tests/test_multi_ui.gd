@@ -30,7 +30,7 @@ func test_the_picker_filters_by_league_and_mixes_sides() -> void:
 		assert_eq(str(PLRepository.shared().club(str(id))["competition_id"]), "LL",
 			"%s is not a La Liga club" % id)
 	picker.set_league("")
-	assert_eq(picker.ids.size(), 172, "the ALL filter is not every competition")
+	assert_eq(picker.ids.size(), 212, "the ALL filter is not every competition")
 	picker.set_league("BL")
 	assert_eq(picker.ids.size(), 18, "the Bundesliga filter is not one league")
 	picker.set_league("BL2")
