@@ -68,6 +68,22 @@ func _count(sql: String, bindings: Array = []) -> int:
 	return int(PLDatabase.row(sql, bindings).get("n", 0))
 
 
+func _transfer_items(page: Dictionary) -> Dictionary:
+	var wanted := false
+	for block in page.get("blocks", []):
+		var row: Dictionary = block
+		if str(row.get("k", "")) == "section" and str(row.get("text", "")) == "TRANSFER":
+			wanted = true
+			continue
+		if wanted and str(row.get("k", "")) == "kv":
+			var out := {}
+			for item in row.get("items", []):
+				var pair: Array = item
+				out[str(pair[0])] = pair[1]
+			return out
+	return {}
+
+
 func _terms(player_id: String, overrides: Dictionary = {}) -> Dictionary:
 	var contract := MarketDealRecords.active_contract(player_id)
 	var terms := {
@@ -102,6 +118,22 @@ func test_a_cross_association_move_pends_for_clearance() -> void:
 	assert_between(days, 1, 5, "the clearance wait is off its band")
 	var registration := MarketDealRecords.registration(player, _competition(to))
 	assert_eq(str(registration.get("state", "")), "pending", "the pending registration is not pending")
+
+
+func test_the_player_page_shows_clearance_with_a_date() -> void:
+	var season := _fresh("Clear Page")
+	var from := _club_in("LL", 0)
+	var to := _club_in("PL", 0)
+	var player := _player_at(from)
+	var deal := _propose(season, from, to, player, _terms(player))
+	var agreed := MarketDeals.agree(deal, DATE)
+	assert_eq(str(agreed.get("state", "")), MarketDealRecords.CLEARANCE_PENDING,
+		"the deal did not wait for clearance")
+	var items := _transfer_items(WikiPlayer.page(player))
+	assert_eq(str(items.get("STATE", "")), MarketDealCopy.state(MarketDealRecords.CLEARANCE_PENDING),
+		"the player page does not show the clearance state")
+	assert_eq(str(items.get("CLEARS", "")), str(agreed.get("clears_on", "")),
+		"the player page does not show the clearance date")
 
 
 func test_a_domestic_move_never_enters_clearance() -> void:

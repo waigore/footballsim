@@ -358,6 +358,17 @@ suites = [
   "test_league_europe_ui.gd",
 ]
 
+# UEFA squad lists (#448): the 25-slot list, the U21 exemption, the
+# association-trained count, the force floor and the club page's list block.
+[domains.squad_list]
+suites = [
+  "test_squad_list.gd",
+  "test_market_deals.gd",
+  "test_strongest_xi.gd",
+  "test_wiki_model.gd",
+  "test_attr_view.gd",
+]
+
 # Domestic cup pools after NEW SEASON (#506): the rebuild beside the rollover
 # and the cups it redraws. Kept off the full league domain so the tier-1 gate
 # stays inside five minutes.
@@ -608,6 +619,12 @@ domain = "market_deals"
 match = "tests/test_season_rollover.gd*"
 domain = "market_deals"
 
+# UEFA list bootstrap (#448): before the league_* catch-all so boot stays on
+# the squad_list domain instead of the full league suite.
+[[rules]]
+match = "scripts/sim/league/league_season_boot.gd*"
+domain = "squad_list"
+
 # Season helpers split out of the season loop to keep its P3 size ratchet.
 [[rules]]
 match = "scripts/sim/league/league_*.gd*"
@@ -621,11 +638,31 @@ domain = "league"
 match = "scripts/sim/season_bridge/**"
 domain = "league"
 
+# UEFA list registration and list_check (#448): before the deal*.gd* rule so
+# commit/rules edits stay on squad_list and do not drag every market suite
+# past the tier-1 5 min budget.
+[[rules]]
+match = "scripts/sim/market/market_deal_commit.gd*"
+domain = "squad_list"
+
+[[rules]]
+match = "scripts/sim/market/market_deal_rules.gd*"
+domain = "squad_list"
+
 # The deal engine (#444): before the broad market/** rule so deal files do not
 # pull the whole league domain past the tier-1 5 min budget.
 [[rules]]
 match = "scripts/sim/market/market_deal*.gd*"
 domain = "market_deals"
+
+# UEFA squad lists (#448): their own read model, kept off the league domain.
+[[rules]]
+match = "scripts/sim/market/squad_list.gd*"
+domain = "squad_list"
+
+[[rules]]
+match = "tests/test_squad_list.gd*"
+domain = "squad_list"
 
 [[rules]]
 match = "scripts/data/market_deal_copy.gd*"
@@ -732,7 +769,7 @@ domain = "league"
 
 [[rules]]
 match = "scripts/sim/league/strongest_xi.gd*"
-domain = "league"
+domain = "squad_list"
 
 # Per-goal report clips: the pack generator, the store and the viewer that
 # plays one back. They all belong to the season theme.
@@ -971,6 +1008,12 @@ domain = "hud_chrome"
 [[rules]]
 match = "scripts/ui/wiki_player.gd*"
 domain = "market_levels"
+
+# Club page UEFA list block (#448): before wiki_* so the list stays on
+# squad_list instead of the full encyclopedia suite.
+[[rules]]
+match = "scripts/ui/wiki_team.gd*"
+domain = "squad_list"
 
 [[rules]]
 match = "scripts/ui/wiki_*.gd*"
