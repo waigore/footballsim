@@ -246,7 +246,10 @@ func test_a_report_row_carries_the_assist_beside_its_goal() -> void:
 	assert_eq(str(rows[0]["kind"]), "goal", "the goal is not the first row")
 	assert_eq(str(rows[1]["kind"]), "assist", "the assist is not filed as an assist")
 	assert_eq(str(rows[1]["player_id"]), str(pair[1].key), "the assist names the wrong man")
-	assert_eq(str(rows[1]["club_id"]), "MUN", "the assist was given to the wrong club")
+	assert_eq(str(rows[1]["club_id"]), str(eng.teams[0]["id"]),
+		"the assist was given to the wrong club")
+	assert_eq(str(rows[1]["club_id"]), str(rows[0]["club_id"]),
+		"the assist does not ride its goal's own club")
 	assert_eq(int(rows[1]["minute"]), int(rows[0]["minute"]),
 		"the assist is not on the goal's own minute")
 
