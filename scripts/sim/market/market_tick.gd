@@ -29,8 +29,8 @@ static func post_months(season: LeagueSeason, from_date: String, to_date: String
 			month = 1
 			year += 1
 		var stamp := "%04d-%02d-01" % [year, month]
-		posted += MarketFinance.month(stamp)
-		MarketFinance.tick_gates(season, stamp)
+		posted += MarketFinanceFlows.month(stamp)
+		MarketFinanceFlows.tick_gates(season, stamp)
 	return posted
 
 
