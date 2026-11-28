@@ -181,6 +181,18 @@ suites = [
   "test_italian_pyramid.gd",
 ]
 
+# Save file lifecycle only: create/open/close and the boot seam. Kept off the
+# full league domain so a save-handle refactor stays inside the tier-1 budget.
+[domains.save]
+suites = [
+  "test_league_save.gd",
+  "test_market_contracts.gd",
+  "test_league_season.gd",
+  "test_multi_league.gd",
+  "test_season_rollover.gd",
+  "test_league_system.gd",
+]
+
 # God-mode season: saves, rules, calendar, season clock, synthetic events, the
 # chosen XI and the league surfaces. One group, because a change in any layer
 # can move the season loop. The sheet-geometry suite rides here too: the hub's
@@ -629,6 +641,11 @@ domain = "pitch_queries"
 
 # League saves own their own schema and ledger; keep them on the season suites
 # even though they live beside the snapshot modules.
+# Save boot / handle / catalog: narrow domain so tier 1 stays ≤5 min.
+[[rules]]
+match = "scripts/data/league_save*.gd*"
+domain = "save"
+
 [[rules]]
 match = "scripts/data/league_*.gd*"
 domain = "league"
