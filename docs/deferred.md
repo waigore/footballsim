@@ -1,12 +1,12 @@
 # Deferred
 
-Gaps outside the playable slice. Refresh via
+Gaps outside the slice. Refresh via
 [`audit-deferred-agent`](../.agents/skills/audit-deferred-agent/SKILL.md).
 Rules SoT: [wiki](https://github.com/waigore/footballsim/wiki).
 
 ## Already live
 
-Shipped (wiki domains playable; DRs accepted):
+Shipped (wiki domains playable):
 
 | Area | Locus |
 |------|-------|
@@ -27,14 +27,14 @@ Shipped (wiki domains playable; DRs accepted):
 | Club country ids; player UUIDs; watched assists | DR-20261128-16 / 19 |
 | FC-derived cards; Simplified/Full attributes | DR-20261128-20; `fc_ratings.gd` |
 | Domestic cups (ENG/ESP/GER) hubs, watch, draws | DR-20261128-17 / 22; `league_cup_*.gd`; [#455](https://github.com/waigore/footballsim/issues/455)–[#459](https://github.com/waigore/footballsim/issues/459) |
-| UEFA data + sim path (UCL/UEL/UECL) | DR-20261128-15; `league_uefa_*.gd`; [#435](https://github.com/waigore/footballsim/issues/435)–[#436](https://github.com/waigore/footballsim/issues/436) |
+| UEFA data, sim path and Europe hub | DR-20261128-15; `league_uefa_*.gd`, `league_europe*.gd`; [#435](https://github.com/waigore/footballsim/issues/435)–[#437](https://github.com/waigore/footballsim/issues/437) |
 
 ## Remaining gaps (impact order)
 
 | Rank | Gap | Notes |
 |------|-----|-------|
 | 1 | Transfer market + multi-season | Rules landed ([#439](https://github.com/waigore/footballsim/issues/439)); no `scripts/sim/market/` — [#440](https://github.com/waigore/footballsim/issues/440)–[#454](https://github.com/waigore/footballsim/issues/454), [#473](https://github.com/waigore/footballsim/issues/473) |
-| 2 | Europe UX (hub, stages, draws, wizard) | Sim playable; surfaces missing — [#437](https://github.com/waigore/footballsim/issues/437) |
+| 2 | Europe UX: draws, watch, chips, encyclopedia | Hub and stages shipped; rest of [#437](https://github.com/waigore/footballsim/issues/437) |
 | 3 | Italian cups (Coppa Italia, Supercoppa) | Wiki names them; no `CI`/`SCI` seed — [#480](https://github.com/waigore/footballsim/issues/480) |
 | 4 | Native match hot loop | DR-20261123-02 under 120 s; tick still GDScript |
 | 5 | Cup-tied eligibility | Transfers deferred; needs market registration |
