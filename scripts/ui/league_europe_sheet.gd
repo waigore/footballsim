@@ -3,8 +3,8 @@ extends RefCounted
 
 
 const HEADER := LeagueChrome.HEADER
-const CARD_H := 64.0
-const CARD_TOUCH_H := 72.0
+const CARD_H := 78.0
+const CARD_TOUCH_H := 86.0
 const CARD_GAP := 8.0
 const CAPTION_H := 22.0
 const CHIP_H := 28.0
@@ -39,6 +39,15 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 			"label": "THIS SAVE DOES NOT RUN THE UEFA CLUB COMPETITIONS",
 			"rect": Rect2(24.0, y, width, 20.0)})
 		y += 28.0
+	var carried: Array = view.get("carried", [])
+	if not carried.is_empty():
+		var names: Array = []
+		for iso in carried:
+			names.append(str(iso))
+		items.append({"id": "", "kind": "note",
+			"label": "CARRIED OVER · " + " · ".join(PackedStringArray(names)),
+			"rect": Rect2(24.0, y, width, 18.0)})
+		y += 26.0
 	var draws: Array = view.get("draws", [])
 	if not draws.is_empty():
 		items.append({"id": "", "kind": "caption", "label": "DRAW CEREMONY",
@@ -140,6 +149,8 @@ func _card(c: CanvasItem, rect: Rect2, card: Dictionary, fonts: Dictionary) -> v
 		UiChrome.C_SOFT, bold)
 	UiChrome.text_r(c, rect.end.x - 12.0, rect.position.y + 46.0,
 		"%d CLUBS STILL IN" % int(card.get("alive", 0)), 10, UiChrome.C_DIM, med)
+	UiChrome.text(c, Vector2(rect.position.x + 16.0, rect.end.y - 10.0),
+		str(card.get("entry", "")), 9, UiChrome.C_SOFT, med)
 
 
 func _section(c: CanvasItem, rect: Rect2, label: String, fonts: Dictionary) -> void:

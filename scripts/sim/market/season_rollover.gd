@@ -11,6 +11,7 @@ static func apply(season: LeagueSeason) -> Dictionary:
 	var index := played_index + 1
 	var settled := SeasonSettle.apply(season)
 	var archived := SeasonArchive.write(season, played_index)
+	var cup_winners := _cup_winners()
 	SeasonCalendar.shift(season, 1)
 	var label := SeasonCalendar.next_label(season.save.season_label())
 	var start := _start_date(season)
@@ -24,6 +25,7 @@ static func apply(season: LeagueSeason) -> Dictionary:
 	season.record.report.memo.clear()
 	season.save.set_season(index, label)
 	_reset_cup_pools()
+	var entries := LeagueEuropeEntries.regenerate(season, played_index, cup_winners)
 	var installed := _install_fixtures(season, index)
 	season.record.standings.recompute()
 	StrongestXI.apply_all()
@@ -45,12 +47,23 @@ static func apply(season: LeagueSeason) -> Dictionary:
 	return {
 		"ok": true, "season_index": index, "season_label": label, "date": first,
 		"settled": not settled.is_empty(), "archived": archived, "aged": ageing,
-		"contracts": contracts, "fixtures": installed,
+		"contracts": contracts, "fixtures": installed, "entries": entries,
 	}
 
 
 static func _reset_cup_pools() -> void:
 	PLDatabase.execute("DELETE FROM competition_member WHERE role LIKE 'drop:%';")
+
+
+static func _cup_winners() -> Dictionary:
+	var out := {}
+	for row in PLDatabase.rows("SELECT DISTINCT competition_id FROM cup_tie;"):
+		var competition_id := str(row["competition_id"])
+		var tie := LeagueCupState.final(competition_id)
+		var winner := str(tie.get("winner_club_id", ""))
+		if winner != "":
+			out[competition_id] = winner
+	return out
 
 
 static func _start_date(season: LeagueSeason) -> String:

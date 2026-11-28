@@ -119,6 +119,7 @@ static func card(save: LeagueSave, competition_id: String) -> Dictionary:
 		"alive": alive(competition_id),
 		"next": next_night(save, competition_id),
 		"done": stage != "" and LeagueUefa.stage_complete(competition_id, stage),
+		"entry": LeagueEuropeEntries.summary(save, competition_id),
 	}
 
 
@@ -186,12 +187,12 @@ static func draw_data(save: LeagueSave, competition_id: String, round_id: String
 		"round": round_id,
 		"title": round_title(competition_id, round_id) + " DRAW",
 		"date": str(LeagueUefa.round_rule(competition_id, round_id).get("date", "")),
-		"pots": pots(competition_id, round_id),
+		"pots": pots(save, competition_id, round_id),
 		"fixtures": pairs(competition_id, round_id),
 	}
 
 
-static func pots(competition_id: String, round_id: String) -> Array:
+static func pots(save: LeagueSave, competition_id: String, round_id: String) -> Array:
 	if round_id != LeagueUefa.LEAGUE_STAGE:
 		var entrants: Array = []
 		for tie in LeagueEuropeTies.rows(competition_id, round_id, {}, {}):
@@ -199,7 +200,7 @@ static func pots(competition_id: String, round_id: String) -> Array:
 				if not entrants.has(str(tie[key])):
 					entrants.append(str(tie[key]))
 		return [pot(entrants)]
-	var ranked := ranked_clubs(competition_id)
+	var ranked := ranked_clubs(save, competition_id)
 	var out: Array = []
 	var each := int(ceil(float(ranked.size()) / float(maxi(LeagueUefa.pots(competition_id), 1))))
 	for i in range(LeagueUefa.pots(competition_id)):
@@ -220,20 +221,12 @@ static func pot(club_ids: Array) -> Array:
 	return out
 
 
-static func ranked_clubs(competition_id: String) -> Array:
-	var rows: Array = []
+static func ranked_clubs(save: LeagueSave, competition_id: String) -> Array:
+	var clubs: Array = []
 	for row in PLDatabase.rows(
 			"SELECT club_id FROM league_table WHERE competition_id = ?;", [competition_id]):
-		rows.append({"id": str(row["club_id"]), "rank": LeagueUefa.club_rank(str(row["club_id"]))})
-	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		if is_equal_approx(float(a["rank"]), float(b["rank"])):
-			return str(a["id"]) < str(b["id"])
-		return float(a["rank"]) > float(b["rank"])
-	)
-	var out: Array = []
-	for row in rows:
-		out.append(str(row["id"]))
-	return out
+		clubs.append(str(row["club_id"]))
+	return LeagueUefaBands.ranked(LeagueUefaBands.ensure_bands(save, competition_id, clubs), clubs)
 
 
 static func pairs(competition_id: String, round_id: String) -> Array:

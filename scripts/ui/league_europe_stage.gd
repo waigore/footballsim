@@ -10,6 +10,8 @@ const COL_MIN := 256.0
 const COL_GAP := 10.0
 const TIE_H := 62.0
 const TIE_TOUCH_H := 68.0
+const ROW_H := 18.0
+const ROW_TOUCH_H := 26.0
 
 var cache := {}
 var hints := DateHints.new()
@@ -36,6 +38,8 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		items.append_array(LeagueEuropeTable.layout(vp, view, y))
 	elif tab == "bracket":
 		items.append_array(_rounds(vp, view, view.get("bracket", []), "BRACKET", y, touch))
+	elif tab == "entrants":
+		items.append_array(_entrants(vp, view, y, touch))
 	else:
 		items.append_array(_rounds(vp, view, view.get("qualifying", []), "QUALIFYING", y, touch))
 	items.append(LeagueExtra.back_item(touch))
@@ -111,6 +115,38 @@ static func _has_round(rounds: Array, round_id: String) -> bool:
 		if str((row as Dictionary).get("id", "")) == round_id:
 			return true
 	return false
+
+
+func _entrants(vp: Vector2, view: Dictionary, y: float, touch: bool) -> Array:
+	var out: Array = []
+	var width := vp.x - 48.0
+	var rows: Array = view.get("entrants", [])
+	if rows.is_empty():
+		out.append({"id": "", "kind": "note", "label": "NO ENTRANTS YET",
+			"rect": Rect2(24.0, y, width, 20.0)})
+		return out
+	var row_h: float = ROW_TOUCH_H if touch else ROW_H
+	var round := ""
+	for row in rows:
+		var rid := str((row as Dictionary).get("round", ""))
+		if rid != round:
+			round = rid
+			out.append({"id": "", "kind": "eu_group",
+				"label": "%s · %d CLUBS" % [LeagueEurope.badge(rid), _in_round(rows, rid)],
+				"rect": Rect2(24.0, y, width, 18.0)})
+			y += 22.0
+		out.append({"id": "club:" + str((row as Dictionary).get("club", "")),
+			"kind": "eu_entrant", "row": row, "rect": Rect2(24.0, y, width, row_h)})
+		y += row_h
+	return out
+
+
+static func _in_round(rows: Array, round_id: String) -> int:
+	var count := 0
+	for row in rows:
+		if str((row as Dictionary).get("round", "")) == round_id:
+			count += 1
+	return count
 
 
 func _column(x: float, y: float, w: float, round: Dictionary, touch: bool) -> Array:
@@ -197,6 +233,11 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 				_tie(c, rect, item["tie"], fonts, view)
 			"eu_name":
 				pass
+			"eu_group":
+				UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
+					str(item.get("label", "")), 10, UiChrome.C_GOLD, bold)
+			"eu_entrant":
+				_entrant(c, rect, item["row"], fonts)
 			"note":
 				UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
 					str(item.get("label", "")), 12, UiChrome.C_SOFT, med)
@@ -218,6 +259,21 @@ func _col(c: CanvasItem, rect: Rect2, round: Dictionary, bold: Font, med: Font) 
 	if date != "":
 		UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 22.0), date, 8,
 			UiChrome.C_DIM, med)
+
+
+func _entrant(c: CanvasItem, rect: Rect2, row: Dictionary, fonts: Dictionary) -> void:
+	var bold: Font = fonts["bold"]
+	var med: Font = fonts["med"]
+	var line: float = rect.position.y + rect.size.y * 0.5 + 4.0
+	var tail := "P%d · %s" % [int(row.get("band", 3)), str(row.get("source", ""))]
+	var tail_w: float = UiChrome.text_width(med, tail, 9)
+	var room: float = maxf(rect.size.x - tail_w - 120.0, 120.0)
+	var name: String = LeagueColumns.fit_name(str(row.get("name", "")), bold, 11, room)
+	UiChrome.text(c, Vector2(rect.position.x, line), name, 11, UiChrome.C_TEXT, bold)
+	UiChrome.text(c, Vector2(rect.position.x + room + 8.0, line),
+		str(row.get("association", "")), 9, UiChrome.C_DIM, med)
+	var ink: Color = UiChrome.C_GOLD if str(row.get("kind", "")) == "cup" else UiChrome.C_SOFT
+	UiChrome.text_r(c, rect.end.x, line, tail, 9, ink, med)
 
 
 func _tie(c: CanvasItem, rect: Rect2, tie: Dictionary, fonts: Dictionary, view: Dictionary) -> void:

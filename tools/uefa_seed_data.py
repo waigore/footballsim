@@ -70,6 +70,40 @@ ASSOCIATIONS = {
     55: ("SMR", "San Marino"),
 }
 
+## The frozen access-list shape for the four associations the seed carries a
+## domestic league for. A slot is either a league place -- that season's final
+## position in the association's top division, spent in order across the three
+## competitions -- or a named cup, whose winner enters in that slot. A cup slot
+## passes down the league table when the winner is already in Europe or the cup
+## did not run; the entrants reading names the fallback. Every other association
+## keeps the same stub clubs in the same slots from season to season.
+ACCESS = {
+    "ENG": {
+        "UCL": {"LP": [("place", 1), ("place", 2), ("place", 3), ("place", 4), ("place", 5)]},
+        "UEL": {"LP": [("cup", "FAC"), ("place", 6), ("place", 7)]},
+        "UECL": {"POMP": [("cup", "EFLC")]},
+    },
+    "ESP": {
+        "UCL": {"LP": [("place", 1), ("place", 2), ("place", 3), ("place", 4), ("place", 5)]},
+        "UEL": {"LP": [("cup", "CDR"), ("place", 6)]},
+        "UECL": {"POMP": [("place", 7)]},
+    },
+    "GER": {
+        "UCL": {"LP": [("place", 1), ("place", 2), ("place", 3), ("place", 4)]},
+        "UEL": {"LP": [("cup", "DFBP"), ("place", 5)]},
+        "UECL": {"POMP": [("place", 6)]},
+    },
+    "ITA": {
+        "UCL": {"LP": [("place", 1), ("place", 2), ("place", 3), ("place", 4)]},
+        "UEL": {"LP": [("cup", "CI"), ("place", 5)]},
+        "UECL": {"POMP": [("place", 6)]},
+    },
+}
+
+## The top division each shipped association enters Europe from, keyed the way
+## the seed keys its leagues.
+ASSOCIATION_LEAGUE = {"ENG": "PL", "ESP": "LL", "GER": "BL", "ITA": "SA"}
+
 ## Clubs that already ship in a domestic tier, keyed by the name the UEFA entrant
 ## list uses where it differs from the seed.
 CLUB_ALIASES = {
