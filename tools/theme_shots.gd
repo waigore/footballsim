@@ -40,6 +40,8 @@ func _initialize() -> void:
 		scene.prematch.close()
 		await _frames(2)
 	# ---- league hub
+	if scene.arena != null:
+		scene.arena.visible = false
 	var league: LeagueHost = scene.menus.league
 	var season := LeagueSeason.create("UI 512 Theme Evidence", "generated", "fixture_days", 2026)
 	if season != null:
@@ -67,6 +69,8 @@ func _initialize() -> void:
 	scene.wiki_host.close()
 	await _frames(2)
 	# ---- broadcast HUD
+	if scene.arena != null:
+		scene.arena.visible = true
 	scene.hud_layer.visible = true
 	scene.paused = false
 	scene.engine.clock = 63.0 * 60.0
