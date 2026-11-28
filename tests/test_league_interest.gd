@@ -4,22 +4,25 @@ extends GdToolsTest
 var SAVE_DIR := TestScratch.dir("saves_test_interest")
 var CACHE_DIR := TestScratch.dir("cache_test_interest")
 const SEED := 2028
+const PRISTINE := "_pristine.sqlite"
 
 var season: LeagueSeason = null
+var slug := ""
 
 func before_all() -> void:
+	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
 	PLDatabase.cache_dir = CACHE_DIR
 	LeagueSave.dir = SAVE_DIR
 	_clean()
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
+	season = LeagueSeason.create("Follow Season", "generated", "fixture_days", SEED)
+	assert_not_null(season, "the shared interest season was not created")
+	slug = season.save.slug
+	_snapshot()
 
 func before_each() -> void:
-	_clean()
-	PLDatabase.reset()
-	PLRepository.shared().invalidate()
-	season = LeagueSeason.create("Follow Season", "generated", "fixture_days", SEED)
-	assert_not_null(season, "the season was not created")
+	season = _fresh()
 
 func after_each() -> void:
 	if season != null:
@@ -27,6 +30,9 @@ func after_each() -> void:
 	season = null
 
 func after_all() -> void:
+	if season != null:
+		season.close()
+		season = null
 	_clean()
 	LeagueSave.dir = LeagueSave.DEFAULT_DIR
 	PLDatabase.cache_dir = PLDatabase.CACHE_DIR
@@ -36,6 +42,35 @@ func after_all() -> void:
 func _clean() -> void:
 	for folder in [SAVE_DIR, CACHE_DIR]:
 		TestScratch.clear(folder)
+
+
+func _snapshot() -> void:
+	if season == null or season.save == null:
+		return
+	season.save.ensure_open()
+	PLDatabase.close()
+	var bytes := FileAccess.get_file_as_bytes(season.save.path)
+	var out := FileAccess.open(SAVE_DIR.path_join(PRISTINE), FileAccess.WRITE)
+	if out != null and not bytes.is_empty():
+		out.store_buffer(bytes)
+		out.close()
+	season.save.ensure_open()
+
+
+func _fresh() -> LeagueSeason:
+	if season != null:
+		season.close()
+		season = null
+	PLDatabase.close()
+	var bytes := FileAccess.get_file_as_bytes(SAVE_DIR.path_join(PRISTINE))
+	var dest := SAVE_DIR.path_join(slug + LeagueSave.EXT)
+	var out := FileAccess.open(dest, FileAccess.WRITE)
+	assert_true(out != null and not bytes.is_empty(), "the pristine interest save was missing")
+	out.store_buffer(bytes)
+	out.close()
+	season = LeagueSeason.open(slug)
+	assert_not_null(season, "the pristine interest save did not reopen")
+	return season
 
 
 func _open_fixtures(club_id: String) -> Array:
