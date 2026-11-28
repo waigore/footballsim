@@ -409,7 +409,7 @@ func test_a_league_watch_opens_the_briefing_first() -> void:
 	season.set_watch(held, true)
 	season.advance()
 	season.start_watch(held)
-	host._on_match_requested(str(fx["home_club_id"]), str(fx["away_club_id"]), held)
+	host.watch.on_match_requested(str(fx["home_club_id"]), str(fx["away_club_id"]), held)
 	assert_false(game.prematch.asked.is_empty(), "a league watch skipped the briefing")
 	assert_eq(str(game.prematch.asked["kick"]), "CONTINUE", "a league watch does not say CONTINUE")
 	assert_false(game.match_started, "the watched match started before the briefing")
@@ -417,7 +417,7 @@ func test_a_league_watch_opens_the_briefing_first() -> void:
 	assert_eq(season.watching_fixture, "", "BACK left the season waiting for the fixture")
 	assert_false(game.match_started, "BACK started the watched match")
 	season.start_watch(held)
-	host._on_match_requested(str(fx["home_club_id"]), str(fx["away_club_id"]), held)
+	host.watch.on_match_requested(str(fx["home_club_id"]), str(fx["away_club_id"]), held)
 	game.prematch.kick.call()
 	assert_true(game.match_started, "CONTINUE did not start the watched match")
 	game.free()
@@ -617,7 +617,7 @@ func test_a_league_watch_binds_the_competition_it_plays_in() -> void:
 	host.season = season
 	var held := str(fx["id"])
 	assert_eq(game.billing.chrome_name(), MatchBilling.FRIENDLY, "the scene started billed as a league")
-	host._on_match_requested(str(fx["home_club_id"]), str(fx["away_club_id"]), held)
+	host.watch.on_match_requested(str(fx["home_club_id"]), str(fx["away_club_id"]), held)
 	assert_false(game.billing.friendly, "a league watch left the match a friendly")
 	assert_eq(str(game.prematch.asked["caption"]), game.billing.caption(),
 		"the briefing and the scene disagree about the competition")
