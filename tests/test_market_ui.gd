@@ -113,7 +113,7 @@ func test_a_forced_signing_past_a_full_list_reads_ineligible() -> void:
 	var used := MarketLists.slots_used(buyer, competition)
 	var spare: Array = []
 	for row in PLDatabase.rows(
-			"SELECT id FROM player WHERE club_id <> ? AND id NOT IN "
+			"SELECT id FROM player WHERE club_id <> ? AND age >= 21 AND id NOT IN "
 			+ "(SELECT player_id FROM player_registration WHERE competition_id = ?) LIMIT ?;",
 			[buyer, competition, maxi(MarketLists.SLOTS - used, 0)]):
 		spare.append(str(row["id"]))

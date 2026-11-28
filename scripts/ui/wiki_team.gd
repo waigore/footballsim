@@ -242,13 +242,15 @@ static func squad_list_block(out: Dictionary, club_id: String) -> void:
 			+ "LEFT JOIN player_registration r ON r.player_id = p.id "
 			+ "AND r.competition_id = ? WHERE p.club_id = ? ORDER BY p.ord;",
 			[competition_id, club_id]):
-		var state := str(row.get("state", ""))
+		var state_value: Variant = row.get("state", "")
+		var state := "" if state_value == null else str(state_value)
 		if state == "":
 			state = "registered"
 		var exempt: Variant = row.get("u21_exempt", 0)
 		var flag := "U21" if exempt != null and int(exempt) == 1 else ""
-		if str(row.get("reason", "")) != "":
-			flag = str(row["reason"])
+		var reason_value: Variant = row.get("reason", "")
+		if reason_value != null and str(reason_value) != "":
+			flag = str(reason_value)
 		rows.append({"cells": [str(row.get("pos", "")), str(row.get("name", "")),
 			state.to_upper(), flag],
 			"target": {"page": WikiModel.PLAYER, "id": str(row.get("id", ""))}})

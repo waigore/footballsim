@@ -2,19 +2,19 @@ class_name LeagueMarketView
 extends RefCounted
 
 
-static func date(screen) -> String:
+static func date(screen: Object) -> String:
 	if screen == null or screen.season == null or screen.season.save == null:
 		return ""
 	return screen.season.save.current_date()
 
 
-static func season_index(screen) -> int:
+static func season_index(screen: Object) -> int:
 	if screen == null or screen.season == null or screen.season.save == null:
 		return 0
 	return screen.season.save.season_index()
 
 
-static func hub(screen) -> Dictionary:
+static func hub(screen: Object) -> Dictionary:
 	var day := date(screen)
 	var index := season_index(screen)
 	var windows := MarketWindows.board(day)
@@ -30,13 +30,13 @@ static func hub(screen) -> Dictionary:
 	}
 
 
-static func news(screen) -> Dictionary:
+static func news(screen: Object) -> Dictionary:
 	var index := season_index(screen)
 	return {"date": date(screen), "feed": MarketNews.feed(index, 100),
 		"count": MarketNews.count(index), "touch": bool(screen.touch)}
 
 
-static func deal(screen) -> Dictionary:
+static func deal(screen: Object) -> Dictionary:
 	var deal_id := str(screen.deal_id)
 	var deal := MarketDealRecords.load(deal_id)
 	if deal.is_empty():

@@ -171,7 +171,8 @@ static func bootstrap(season: LeagueSeason) -> Dictionary:
 		return out
 	var index := season.save.season_index()
 	if int(PLDatabase.row(
-			"SELECT COUNT(*) AS n FROM player_registration WHERE season_index = ?;",
+			"SELECT COUNT(*) AS n FROM player_registration WHERE season_index = ? "
+			+ "AND competition_id IN ('UCL', 'UEL', 'UECL');",
 			[index]).get("n", 0)) > 0:
 		out["ok"] = true
 		out["skipped"] = true
