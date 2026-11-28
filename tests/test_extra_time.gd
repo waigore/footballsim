@@ -188,7 +188,7 @@ func test_a_snapshot_keeps_the_decider() -> void:
 	eng.tick()
 	eng.tick()
 	var snap := eng.to_dict()
-	var other := MatchEngine.new(1, "IPS", "NEW")
+	var other := MatchEngine.new(1, "ENG-IPS1", "ENG-NEW1")
 	other.from_dict(snap)
 	assert_eq(other.phase, "shootout", "the snapshot lost the shootout phase")
 	assert_true(other.requires_winner, "the snapshot lost the winner rule")

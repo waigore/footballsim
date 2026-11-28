@@ -241,12 +241,12 @@ func test_the_interest_list_searches_adds_and_removes() -> void:
 		assert_true(screen().key(code), "the search field ignored a letter")
 	var results: Array = screen().current_view()["results"]
 	assert_false(results.is_empty(), "the search found no club")
-	press_id("interest:add:ARS")
-	assert_true((LeagueSeason.active.state()["interests"] as Array).has("ARS"),
+	press_id("interest:add:ENG-ARS1")
+	assert_true((LeagueSeason.active.state()["interests"] as Array).has("ENG-ARS1"),
 		"the search did not mark the club")
 	assert_eq(str(screen().interest_query), "", "adding a club kept the query")
-	press_id("interest:remove:ARS")
-	assert_false((LeagueSeason.active.state()["interests"] as Array).has("ARS"),
+	press_id("interest:remove:ENG-ARS1")
+	assert_false((LeagueSeason.active.state()["interests"] as Array).has("ENG-ARS1"),
 		"the remove chip did not unmark")
 	press_id("back")
 	assert_eq(screen().mode, "hub", "Back did not leave the list")

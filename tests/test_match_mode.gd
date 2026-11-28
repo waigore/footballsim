@@ -15,7 +15,7 @@ func before_all() -> void:
 	game.menus.restore_mode()
 	game.menus.close()
 	game.hud_layer.visible = true
-	game._on_fixture_confirmed("MUN", "MCI")
+	game._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 
 	TestBriefing.kick(game)
 	game.paused = true
@@ -275,7 +275,7 @@ func test_goals_only_replays_only_scored_goals() -> void:
 	game.view.set_mode("goals")
 
 
-	var engine = MatchEngine.new(4242, "MUN", "MCI")
+	var engine = MatchEngine.new(4242, "ENG-MUN1", "ENG-MCI1")
 	game.engine = engine
 	engine_dirty = true
 	var director: HighlightDirector = game.highlights

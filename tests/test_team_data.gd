@@ -76,16 +76,16 @@ func test_named_slot_wins_over_the_fallback() -> void:
 		"a formation's own slot was ignored in favour of the fallback")
 
 func test_other_club_is_the_fixture_opponent() -> void:
-	assert_eq(TeamData.other("MUN"), "MCI", "Manchester United's opponent is not City")
-	assert_eq(TeamData.other("MCI"), "MUN", "Manchester City's opponent is not United")
-	assert_true(TeamData.team_ids().has(TeamData.other("MUN")), "the opponent is not in the league")
+	assert_eq(TeamData.other("ENG-MUN1"), "ENG-MCI1", "Manchester United's opponent is not City")
+	assert_eq(TeamData.other("ENG-MCI1"), "ENG-MUN1", "Manchester City's opponent is not United")
+	assert_true(TeamData.team_ids().has(TeamData.other("ENG-MUN1")), "the opponent is not in the league")
 
 func test_incomplete_profile_is_rejected() -> void:
 	assert_false(ManagerData.has_full_profile({}), "an empty profile reads as complete")
 	var partial: Dictionary = ManagerData.DEFAULT.duplicate(true)
 	partial.erase("patience")
 	assert_false(ManagerData.has_full_profile(partial), "a profile missing a lever reads as complete")
-	assert_true(ManagerData.has_full_profile(ManagerData.profile("MUN")),
+	assert_true(ManagerData.has_full_profile(ManagerData.profile("ENG-MUN1")),
 		"a real club profile does not read as complete")
 
 func test_trait_line_reads_off_the_profile() -> void:

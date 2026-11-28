@@ -44,7 +44,7 @@ func test_mentality_moves_the_style() -> void:
 	assert_ne(str(eng.manager.tactics_for(0).mentality), "balanced", "mentality did not change")
 
 func test_change_labels_read_like_football() -> void:
-	var t := Tactics.from_team(TeamData.get_team("MUN"), ManagerData.profile("MUN"))
+	var t := Tactics.from_team(TeamData.get_team("ENG-MUN1"), ManagerData.profile("ENG-MUN1"))
 	var labels: Array = t.apply({"line_delta": 0.08, "press_delta": -0.06, "corner": "near_post"})
 	assert_true(labels.has("higher line"), "line label missing: %s" % str(labels))
 	assert_true(labels.has("less pressing"), "press label missing: %s" % str(labels))
@@ -74,7 +74,7 @@ func test_set_piece_routine_reaches_the_pitch() -> void:
 	assert_eq(eng.manager.tactics_for(0).free_kick_routine(), "direct", "free-kick routine not stored")
 
 func test_every_lever_and_description() -> void:
-	var t := Tactics.from_team(TeamData.get_team("MCI"), ManagerData.profile("MCI"))
+	var t := Tactics.from_team(TeamData.get_team("ENG-MCI1"), ManagerData.profile("ENG-MCI1"))
 	t.line = 0.10
 	t.press = 0.10
 	t.width = 0.10
@@ -96,7 +96,7 @@ func test_every_lever_and_description() -> void:
 	assert_eq(t.corner_routine(), "short", "corner routine not stored")
 	assert_eq(str(t.style()["press_trigger"]), "high", "opposition press not exposed")
 	assert_eq(str(t.style()["marking"]), "man", "marking not exposed")
-	var u := Tactics.from_team(TeamData.get_team("MUN"))
+	var u := Tactics.from_team(TeamData.get_team("ENG-MUN1"))
 	u.from_dict({"mentality": "defensive"})
 	assert_eq(u.mentality, "defensive", "partial from_dict lost mentality")
 	assert_eq(u.formation, "4-2-3-1", "partial from_dict clobbered formation")

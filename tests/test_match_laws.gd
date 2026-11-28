@@ -116,7 +116,7 @@ func test_a_report_keeps_a_goal_the_scorer_left_behind() -> void:
 	assert_eq(rows.size(), 1, "the goal left the report with its scorer")
 	assert_eq(str(rows[0]["kind"]), "goal", "the row is not a goal")
 	assert_eq(str(rows[0]["player_id"]), str(scorer.key), "the goal lost its scorer")
-	assert_eq(str(rows[0]["club_id"]), "MUN", "the goal lost its club")
+	assert_eq(str(rows[0]["club_id"]), "ENG-MUN1", "the goal lost its club")
 
 func test_the_live_ring_trimming_never_takes_a_goal_off_the_report() -> void:
 	var eng := MatchEngine.new(42)

@@ -417,7 +417,7 @@ func test_the_fixture_card_and_team_sheet_follow_the_scene_billing() -> void:
 	assert_eq(HudTopBand.billing_name(game, eng), "FRIENDLY", "a friendly's card claims a league")
 
 
-	MatchBilling.bind_scene(game, "MUN", {"matchday": 5})
+	MatchBilling.bind_scene(game, "ENG-MUN1", {"matchday": 5})
 	assert_eq(HudTopBand.billing_name(game, eng), game.billing.chrome_name(),
 		"the card disagrees with the briefing about the competition")
 	assert_eq(game.billing.caption(), "PREMIER LEAGUE · MATCHDAY 5",

@@ -22,7 +22,7 @@ func before_all() -> void:
 
 		g.menus.restore_hud()
 		g.menus.restore_mode()
-	game._on_fixture_confirmed("MUN", "MCI")
+	game._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 
 	TestBriefing.kick(game)
 	game.paused = true

@@ -24,7 +24,7 @@ func _initialize() -> void:
 	# ---- #265: the simming match bar.
 	scene.menus.close()
 	scene.hud_layer.visible = true
-	scene._on_fixture_confirmed("MUN", "MCI")
+	scene._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 	if scene.prematch != null and scene.prematch.is_open():
 		scene.prematch.screen.click("kick")
 		await _frames(2)
