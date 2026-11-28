@@ -131,12 +131,51 @@ DFL_SUPERCUP = {
     },
 }
 
-CUPS = {c["id"]: c for c in (FA_CUP, CARABAO_CUP, COMMUNITY_SHIELD, COPA_DEL_REY, SUPERCOPA, DFB_POKAL, DFL_SUPERCUP)}
+## The 44-club Coppa Italia of the real 2026/27 calendar: a preliminary round of
+## eight (four Serie B, four Serie C), a round of 32, a round of 16 joined by the
+## eight seeded Serie A clubs (the 2025/26 holders and the league's ranked 2-8),
+## then quarter-finals, two-leg semi-finals and a final in its own weekend slot.
+## The single-leg rounds play extra time and penalties; the lower-division club
+## hosts until the semis hand the first leg to the club drawn first.
+COPPA_ITALIA = {
+    "id": "CI", "name": "Coppa Italia", "short_name": "COPPA ITALIA", "country": "Italy",
+    "prefix": "CI-", "kind": "cup",
+    "rules": {
+        "season_start": "2026-08-08", "season_end": "2027-05-15",
+        "entrants": {"PR": 8, "R1": 28, "R16": 8},
+        "rounds": [
+            {"id": "PR", "name": "Preliminary round", "date": "2026-08-08", "ties": 4, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
+            {"id": "R1", "name": "First round", "date": "2026-08-14", "ties": 16, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
+            {"id": "R2", "name": "Second round", "date": "2026-09-01", "ties": 8, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
+            {"id": "R16", "name": "Round of 16", "date": "2026-12-02", "ties": 8, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
+            {"id": "QF", "name": "Quarter-finals", "date": "2027-02-03", "ties": 4, "legs": 1, "extra_time": True, "host": "lower", "regional": False},
+            {"id": "SF", "name": "Semi-finals", "date": "2027-03-02", "second_leg": "2027-04-20", "ties": 2, "legs": 2, "extra_time": True, "host": "draw", "regional": False},
+            {"id": "F", "name": "Final", "date": "2027-05-15", "ties": 1, "legs": 1, "extra_time": True, "host": "neutral", "regional": False},
+        ],
+        "europe": {"competition": "UEL", "round": "LP"},
+    },
+}
+
+## The Supercoppa reverted to the two-team match from 2026/27: the Serie A
+## champion against the Coppa winner, in January, extra time then penalties.
+SUPERCOPPA_ITALIANA = {
+    "id": "SCI", "name": "Supercoppa Italiana", "short_name": "SUPERCOPPA", "country": "Italy",
+    "prefix": "SCI-", "kind": "supercup",
+    "rules": {
+        "season_start": "2027-01-06", "season_end": "2027-01-06",
+        "entrants": {"F": 2},
+        "rounds": [{"id": "F", "name": "Final", "date": "2027-01-06", "ties": 1, "legs": 1, "extra_time": True, "host": "neutral", "regional": False}],
+        "europe": {},
+    },
+}
+
+CUPS = {c["id"]: c for c in (FA_CUP, CARABAO_CUP, COMMUNITY_SHIELD, COPA_DEL_REY, SUPERCOPA, DFB_POKAL, DFL_SUPERCUP, COPPA_ITALIA, SUPERCOPPA_ITALIANA)}
 
 ## Season one's results, by club name so a refresh can rename a club without
 ## moving its prior slot. The Community Shield pairs the 2025-26 champion with
 ## the FA Cup winner; the DFL-Supercup pairs the double winner with the league
-## runner-up; the Supercopa is the four-team field and its fixed semi-finals.
+## runner-up; the Supercopa is the four-team field and its fixed semi-finals;
+## the Supercoppa pairs the double winner with the Serie A runner-up.
 PRIORS = {
     "CS": {"entrants": ["Arsenal", "Manchester City"], "host": "Arsenal"},
     "DFLS": {"entrants": ["Borussia Dortmund", "Bayern Munich"], "host": "Borussia Dortmund"},
@@ -144,6 +183,7 @@ PRIORS = {
         "entrants": ["Barcelona", "Atlético Madrid", "Real Sociedad", "Real Madrid"],
         "semi_finals": [["Barcelona", "Atlético Madrid"], ["Real Sociedad", "Real Madrid"]],
     },
+    "SCI": {"entrants": ["Internazionale", "Napoli"], "host": "Napoli"},
 }
 
 ## Entry pools for the cups that draw on the shipped leagues. A role is the
@@ -152,6 +192,13 @@ PRIORS = {
 ## round.
 PL_EUROPE = ["Arsenal", "Manchester City", "Manchester United", "Aston Villa",
              "Liverpool", "AFC Bournemouth", "Sunderland", "Crystal Palace", "Brighton & Hove Albion"]
+
+## The Coppa Italia's frozen 2026/27 splits: the four Serie B clubs of the real
+## preliminary round, and the eight seeded Serie A clubs that wait for the round
+## of 16 (the 2025/26 holders Internazionale and the league's ranked 2-8).
+CI_PRELIMINARY = ["Vicenza", "Ascoli", "Arezzo", "Benevento"]
+CI_SEEDS = ["Internazionale", "Napoli", "AS Roma", "Como", "AC Milan", "Juventus",
+            "Atalanta", "Bologna"]
 
 ENGLISH_STUBS = [
     ('Macclesfield', 'MAC', 'Macclesfield', 6, 'north', 55),
@@ -304,6 +351,15 @@ SPANISH_STUBS = [
     ('UE Porreres', 'POR', 'Porreres', 4, 'south', 62),
 ]
 
+## The four Serie C clubs of the real 2026/27 preliminary round. The seed ships
+## no Italian third tier, so the Coppa's lower pool is an identity and a band.
+ITALIAN_STUBS = [
+    ('Catania', 'CTA', 'Catania', 3, 'south', 65),
+    ('Potenza', 'POT', 'Potenza', 3, 'south', 65),
+    ('Ravenna', 'RAV', 'Ravenna', 3, 'north', 65),
+    ('Union Brescia', 'BRE', 'Brescia', 3, 'north', 65),
+]
+
 
 ## Synthetic squad names for stubs. Real enough to read on a team sheet, and
 ## deliberately plain: a stub is an identity, not a licensed roster.
@@ -319,6 +375,10 @@ NAME_POOLS = {
     "Germany": {
         "first": ["L.", "M.", "J.", "T.", "S.", "N.", "F.", "D.", "P.", "K.", "A.", "B.", "C.", "E.", "H.", "R."],
         "last": ["Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Hoffmann", "Schulz", "Koch", "Richter", "Klein", "Wolf", "Neumann", "Schwarz", "Zimmermann", "Braun", "Krüger", "Hartmann", "Lange", "Werner", "Krause", "Lehmann"],
+    },
+    "Italy": {
+        "first": ["A.", "M.", "G.", "L.", "F.", "D.", "S.", "R.", "P.", "E.", "N.", "C.", "V.", "T.", "M.", "A."],
+        "last": ["Rossi", "Russo", "Ferrari", "Esposito", "Bianchi", "Romano", "Colombo", "Ricci", "Marino", "Greco", "Bruno", "Gallo", "Conti", "De Luca", "Costa", "Giordano", "Mancini", "Rizzo", "Lombardi", "Moretti", "Barbieri", "Fontana", "Santoro", "Mariani"],
     },
 }
 
