@@ -5,12 +5,12 @@ extends RefCounted
 const STEP := 0.24
 
 
-static func ids(screen) -> Array:
+static func ids(screen: Object) -> Array:
 	var save: LeagueSave = screen.season.save if screen.season != null else null
 	return LeagueEurope.active_ids(save)
 
 
-static func open(screen) -> void:
+static func open(screen: Object) -> void:
 	var active := ids(screen)
 	if active.is_empty():
 		return
@@ -18,7 +18,7 @@ static func open(screen) -> void:
 	LeagueDoors.go(screen, LeagueScreen.MODE_EUROPE)
 
 
-static func open_stage(screen, competition_id: String = "") -> void:
+static func open_stage(screen: Object, competition_id: String = "") -> void:
 	var active := ids(screen)
 	if active.is_empty():
 		return
@@ -37,13 +37,13 @@ static func open_stage(screen, competition_id: String = "") -> void:
 	LeagueDoors.go(screen, LeagueScreen.MODE_EUROPE_STAGE)
 
 
-static func open_draw(screen, competition_id: String, round_id: String) -> void:
+static func open_draw(screen: Object, competition_id: String, round_id: String) -> void:
 	screen.europe_draw = {"competition": competition_id, "round": round_id,
 		"revealed": 0, "done": false, "t": 0.0}
 	LeagueDoors.go(screen, LeagueScreen.MODE_EUROPE_DRAW)
 
 
-static func press(screen, id: String) -> bool:
+static func press(screen: Object, id: String) -> bool:
 	if id.begins_with("europe:comp:"):
 		open_stage(screen, id.substr(12))
 		return true
@@ -71,7 +71,7 @@ static func press(screen, id: String) -> bool:
 	return false
 
 
-static func finish(screen) -> void:
+static func finish(screen: Object) -> void:
 	var save: LeagueSave = screen.season.save if screen.season != null else null
 	var competition_id := str(screen.europe_draw.get("competition", ""))
 	var round_id := str(screen.europe_draw.get("round", ""))
@@ -81,7 +81,7 @@ static func finish(screen) -> void:
 	screen.refresh()
 
 
-static func tick(screen, delta: float) -> bool:
+static func tick(screen: Object, delta: float) -> bool:
 	if screen.mode != LeagueScreen.MODE_EUROPE_DRAW:
 		return false
 	if bool(screen.europe_draw.get("done", false)):

@@ -97,9 +97,8 @@ static func alive(competition_id: String) -> int:
 static func next_night(save: LeagueSave, competition_id: String = "") -> String:
 	if save == null:
 		return ""
-	var sql := ("SELECT MIN(kickoff) AS d FROM league_fixture WHERE status <> 'played' "
-		+ "AND kickoff >= ?")
-	var bindings: Array = [save.current_date()]
+	var sql := "SELECT MIN(kickoff) AS d FROM league_fixture WHERE status <> 'played'"
+	var bindings: Array = []
 	if competition_id != "":
 		sql += " AND competition_id = ?"
 		bindings.append(competition_id)

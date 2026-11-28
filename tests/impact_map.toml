@@ -203,6 +203,10 @@ suites = [
   "test_league_nav_stack.gd",
   "test_league_system.gd",
   "test_league_interest.gd",
+  "test_uefa_seed.gd",
+  "test_uefa_season.gd",
+  "test_league_europe.gd",
+  "test_league_europe_ui.gd",
   "test_league_sheets.gd",  "test_goal_highlights.gd",
   # Multi-league saves and their chrome (#185): both calendars, the shared
   # clock, the league-scoped tables/filters and the picker.

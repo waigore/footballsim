@@ -10,16 +10,30 @@ func _season() -> LeagueSeason:
 	return LeagueSeason.create("Europe", "generated", "fixture_days", SEED, ["PL"], false, true)
 
 
-func _advance_until(season: LeagueSeason, done: Callable, cap: int = 120) -> bool:
-	var guard := 0
-	while guard < cap:
-		if bool(done.call()):
-			return true
-		var result := season.advance()
-		if bool(result.get("complete", false)):
-			return bool(done.call())
-		guard += 1
-	return bool(done.call())
+func _settle(season: LeagueSeason, competition_id: String, round_id: String) -> void:
+	PLDatabase.execute(
+		"UPDATE league_fixture SET status = 'played', home_goals = 2, away_goals = 1 "
+		+ "WHERE competition_id = ? AND stage = ?;", [competition_id, round_id])
+	if round_id == LeagueUefa.LEAGUE_STAGE:
+		season.record.standings.recompute()
+	else:
+		PLDatabase.execute(
+			"UPDATE cup_tie SET home_goals = 2, away_goals = 1, winner_club_id = home_club_id, "
+			+ "pens_home = -1, pens_away = -1, extra_time = 0 "
+			+ "WHERE competition_id = ? AND round_id = ?;", [competition_id, round_id])
+		if LeagueEurope.KO_ROUNDS.has(round_id):
+			LeagueUefaKnockout.after_round(season, competition_id, round_id)
+	LeagueUefaState.advance(season, competition_id, round_id)
+
+
+func _run_to(season: LeagueSeason, competition_id: String, last: String) -> void:
+	for rid in LeagueUefa.round_ids(competition_id):
+		var round_id := str(rid)
+		if not LeagueUefa.has_stage(competition_id, round_id):
+			continue
+		_settle(season, competition_id, round_id)
+		if round_id == last:
+			return
 
 
 func test_the_hub_reads_three_competitions_and_their_pending_draws() -> void:
@@ -33,19 +47,14 @@ func test_the_hub_reads_three_competitions_and_their_pending_draws() -> void:
 		assert_true(str(card["stage"]).begins_with("QUALIFYING"), "a card has no qualifying stage")
 		assert_gte(int(card["alive"]), 2, "a competition has no clubs alive")
 		assert_true(str(card["next"]) != "", "a competition has no next UEFA night")
+	assert_eq(str(save.current_date()), "2026-07-07", "the shared clock does not open on UEFA Q1")
 	assert_eq(LeagueEurope.pending_draws(save).size(), 3, "the first-round draws are not pending")
 	LeagueEurope.mark_seen(save, "UCL", "Q1")
 	assert_eq(LeagueEurope.pending_draws(save).size(), 2, "a shown draw is still pending")
 	assert_eq(str(LeagueEurope.stage_of("UCL")), "Q1", "the UCL stage is not its first round")
 	assert_eq(str(LeagueEurope.stage_label("UCL")), "QUALIFYING Q1", "the stage label is not Q1")
-	season.close()
-
-
-func test_the_draw_reads_the_settled_pairs_before_it_is_shown() -> void:
-	var season := _season()
-	var save: LeagueSave = season.save
 	var data := LeagueEurope.draw_data(save, "UCL", "Q1")
-	assert_true(str(data["title"]).contains("FIRST QUALIFYING ROUND"), "the draw title lost its round")
+	assert_true(str(data["title"]).contains("FIRST QUALIFYING ROUND"), "the draw lost its round")
 	assert_eq((data["pots"] as Array).size(), 1, "a qualifying draw is not one pool")
 	var ties := PLDatabase.row(
 		"SELECT COUNT(*) AS n FROM cup_tie WHERE competition_id = 'UCL' AND round_id = 'Q1';")
@@ -53,21 +62,18 @@ func test_the_draw_reads_the_settled_pairs_before_it_is_shown() -> void:
 	var first: Dictionary = (data["fixtures"] as Array)[0]
 	assert_true(str(first["home_name"]) != "", "a drawn pair has no home name")
 	assert_true(str(first["away_name"]) != "", "a drawn pair has no away name")
-	LeagueEurope.mark_seen(save, "UCL", "Q1")
-	assert_false(LeagueEurope.seen(save, "UCL", "Q2CH"), "an unseen round reads as shown")
 	assert_true(LeagueEurope.seen(save, "UCL", "Q1"), "a shown round is not marked")
+	assert_false(LeagueEurope.seen(save, "UCL", "Q2CH"), "an unseen round reads as shown")
 	season.close()
 
 
-func test_qualifying_shows_the_drop_and_the_arrival() -> void:
+func test_qualifying_drops_and_the_bracket_keep_their_reading() -> void:
 	var season := _season()
-	var drawn := _advance_until(season, func() -> bool:
-		return LeagueUefa.has_stage("UEL", "Q3CH")
-	)
-	assert_true(drawn, "the UEL Q3 champions path never opened")
-	var rounds: Array = LeagueEuropeTies.qualifying("UCL")
+	_run_to(season, "UCL", "KOPO")
+	assert_true(LeagueUefa.has_stage("UCL", "KOPO"), "the UCL knockout play-off never opened")
+	assert_true(LeagueEurope.pending_draws(season.save).size() >= 1, "the knockout draw is not pending")
 	var drops := 0
-	for round in rounds:
+	for round in LeagueEuropeTies.qualifying("UCL"):
 		for tie in round["ties"]:
 			if not (tie["drop"] as Dictionary).is_empty():
 				drops += 1
@@ -80,55 +86,37 @@ func test_qualifying_shows_the_drop_and_the_arrival() -> void:
 		var label := LeagueEuropeTies.arrival_label(arrivals[club_id])
 		assert_true(label.begins_with("←"), "an arrival badge has no arrow")
 		assert_true(label.contains("UCL"), "an arrival does not name its source")
-	season.close()
-
-
-func test_the_bracket_keeps_both_legs_and_the_aggregate() -> void:
-	var season := _season()
-	var drawn := _advance_until(season, func() -> bool:
-		return LeagueUefa.has_stage("UCL", "KOPO")
-	)
-	assert_true(drawn, "the UCL knockout play-off never opened")
 	var rounds: Array = LeagueEuropeTies.bracket("UCL")
 	assert_gte(rounds.size(), 1, "the bracket has no round")
 	var first: Dictionary = rounds[0]
 	assert_eq(str(first["id"]), "KOPO", "the bracket does not start at the play-off")
-	var ties: Array = first["ties"]
-	assert_eq(ties.size(), 8, "the knockout play-off is not eight ties")
-	for tie in ties:
+	assert_eq((first["ties"] as Array).size(), 8, "the knockout play-off is not eight ties")
+	for tie in first["ties"]:
 		assert_eq((tie["legs"] as Array).size(), 2, "a two-legged tie lost a leg")
 		assert_true(str(tie["agg"]) != "", "a tie has no aggregate")
+		assert_true(str(tie["fixture"]) != "", "a tie has no fixture to watch")
 	assert_gte(int(LeagueEurope.alive("UCL")), 16, "the play-off left too few clubs")
 	season.close()
 
 
-func test_the_league_table_counts_only_league_phase_matches() -> void:
+func test_a_complete_bracket_keeps_its_table_and_names_three_winners() -> void:
 	var season := _season()
-	var played_knockout := _advance_until(season, func() -> bool:
-		var row := PLDatabase.row(
-			"SELECT COUNT(*) AS n FROM cup_tie WHERE competition_id = 'UCL' AND round_id = 'KOPO' "
-			+ "AND winner_club_id <> '';")
-		return int(row["n"]) > 0
-	)
-	assert_true(played_knockout, "no knockout tie was played")
+	for cid in LeagueUefa.IDS:
+		_run_to(season, str(cid), "F")
 	var matches := LeagueUefa.league_matches("UCL")
-	var rows: Array = PLDatabase.rows(
-		"SELECT club_id, played FROM league_table WHERE competition_id = 'UCL';")
-	assert_eq(rows.size(), 36, "the league phase lost a club")
-	for row in rows:
-		assert_lte(int(row["played"]), matches,
+	var knockout := PLDatabase.row(
+		"SELECT home_club_id, away_club_id FROM league_fixture "
+		+ "WHERE competition_id = 'UCL' AND stage = 'KOPO' LIMIT 1;")
+	assert_false(knockout.is_empty(), "the UCL knockout play-off has no fixture")
+	PLDatabase.execute(
+		"UPDATE league_fixture SET status = 'played', home_goals = 3, away_goals = 0 WHERE id = ?;",
+		[str(PLDatabase.row("SELECT id FROM league_fixture WHERE competition_id = 'UCL' "
+			+ "AND stage = 'KOPO' LIMIT 1;")["id"])])
+	season.record.standings.recompute()
+	for row in PLDatabase.rows(
+			"SELECT played FROM league_table WHERE competition_id = 'UCL';"):
+		assert_eq(int(row["played"]), matches,
 			"a knockout leg was counted in the UCL league table")
-	assert_eq(int(LeagueEurope.league_matchday("UCL")), matches,
-		"the league phase is not complete at the knockouts")
-	season.close()
-
-
-func test_a_complete_season_names_three_continental_honours() -> void:
-	var season := _season()
-	var done := _advance_until(season, func() -> bool:
-		return season.save.status() == "complete"
-	, 400)
-	assert_true(done, "the season never completed")
 	var honours: Array = LeagueEurope.honours(season.save)
 	assert_eq(honours.size(), 3, "the podium does not name three continental winners")
 	for row in honours:

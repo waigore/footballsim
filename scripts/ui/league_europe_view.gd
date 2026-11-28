@@ -2,7 +2,7 @@ class_name LeagueEuropeView
 extends RefCounted
 
 
-static func hub(screen) -> Dictionary:
+static func hub(screen: Object) -> Dictionary:
 	var season = screen.season
 	var save: LeagueSave = season.save if season != null else null
 	var ids := LeagueEurope.active_ids(save) if save != null else []
@@ -22,7 +22,7 @@ static func hub(screen) -> Dictionary:
 		"touch": bool(screen.touch)}
 
 
-static func stage(screen) -> Dictionary:
+static func stage(screen: Object) -> Dictionary:
 	var season = screen.season
 	var save: LeagueSave = season.save if season != null else null
 	var ids := LeagueEurope.active_ids(save) if save != null else []
@@ -53,7 +53,7 @@ static func stage(screen) -> Dictionary:
 		"interests": season.record.interest.interests() if season != null else []}
 
 
-static func draw(screen) -> Dictionary:
+static func draw(screen: Object) -> Dictionary:
 	var season = screen.season
 	var save: LeagueSave = season.save if season != null else null
 	var competition_id := str(screen.europe_draw.get("competition", ""))

@@ -159,7 +159,7 @@ static func _has_comp(comps: Array, competition_id: String) -> bool:
 	return false
 
 
-static func _calendar_filters(season, filter: String) -> Array:
+static func _calendar_filters(season: LeagueSeason, filter: String) -> Array:
 	var out: Array = [{"id": "", "label": "ALL", "selected": filter == ""}]
 	if season == null or season.save == null:
 		return out
