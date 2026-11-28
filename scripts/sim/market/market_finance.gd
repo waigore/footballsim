@@ -21,6 +21,8 @@ const CASH_KINDS := [KIND_GATE, KIND_COMMERCIAL, KIND_PRIZE, KIND_FEE, KIND_WAGE
 
 static var _ready_path := ""
 static var _ready := false
+static var _bills_key := ""
+static var _bills := {}
 
 
 static func available() -> bool:
@@ -227,11 +229,7 @@ static func form_factor(club_id: String) -> float:
 static func month(date: String) -> int:
 	if not available():
 		return 0
-	var bills := {}
-	for row in PLDatabase.rows(
-			"SELECT club_id, SUM(wage) AS w FROM player_contract WHERE status = 'active' "
-			+ "GROUP BY club_id;"):
-		bills[str(row["club_id"])] = int(row.get("w", 0)) * 52
+	var bills := wage_bills()
 	var share := float(MarketRules.section("finance").get("commercial_share", 0.4))
 	var posted := 0
 	PLDatabase.transaction("BEGIN TRANSACTION;")
@@ -246,6 +244,26 @@ static func month(date: String) -> int:
 			post(club_id, date, KIND_WAGE, -wages, "squad")
 	PLDatabase.transaction("COMMIT;")
 	return posted
+
+
+static func wage_bills() -> Dictionary:
+	var key := PLDatabase.current_path() + "#" + str(
+		LeagueSave.current.season_index() if LeagueSave.current != null else 0)
+	if key == _bills_key and not _bills.is_empty():
+		return _bills
+	_bills = {}
+	for row in PLDatabase.rows(
+			"SELECT club_id, SUM(wage) AS w FROM player_contract WHERE status = 'active' "
+			+ "GROUP BY club_id;"):
+		_bills[str(row["club_id"])] = int(row.get("w", 0)) * 52
+	_bills_key = key
+	return _bills
+
+
+static func invalidate() -> void:
+	_bills_key = ""
+	_bills = {}
+	_ready_path = ""
 
 
 static func season_end(season: LeagueSeason, played_index: int) -> int:
