@@ -406,8 +406,10 @@ func test_the_ui_names_the_second_tier() -> void:
 	var ll2 := PLRepository.shared().competition("LL2")
 	assert_eq(LeagueChrome.competition_chip_label(ll2, 40.0), "LL2",
 		"the phone chip does not name La Liga 2")
-	assert_eq(str(WikiCompetitions.SHORT.get("LL2", "")), "LA LIGA 2",
+	assert_eq(str(ll2.get("short_name", "")).to_upper(), "LA LIGA 2",
 		"the encyclopedia chip does not name La Liga 2")
+	var hub := WikiModel.page(WikiModel.LEAGUE, "LL2")
+	assert_eq(str(hub.get("title", "")), "LA LIGA 2", "the Segunda hub lost its name")
 	var sheet := LeaguePodiumSheet.new()
 	var section := {"id": "LL2", "rules": LeagueRules.template("LL2"), "europe": [],
 		"relegated": [], "table": [], "champion": {"club": "a", "points": 1},
