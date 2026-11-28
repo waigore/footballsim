@@ -1,6 +1,6 @@
 {
  "schema_version": 3,
- "db_version": 15,
+ "db_version": 16,
  "season_label": "2026-27",
  "snapshot_date": "2026-11-28",
  "source": "ESPN",
@@ -380933,103 +380933,116 @@
       "id": "Q1",
       "name": "First qualifying round",
       "date": "2026-07-07",
-      "second_leg": "2026-07-14",
       "legs": 2,
-      "path": "CH",
-      "ties": 14
+      "second_leg": "2026-07-14",
+      "path": "CH"
      },
      {
       "id": "Q2CH",
       "name": "Second qualifying round",
       "date": "2026-07-21",
-      "second_leg": "2026-07-28",
       "legs": 2,
+      "second_leg": "2026-07-28",
       "path": "CH",
-      "ties": 12
+      "feeds": [
+       "Q1"
+      ]
      },
      {
       "id": "Q2LP",
       "name": "Second qualifying round",
       "date": "2026-07-21",
-      "second_leg": "2026-07-28",
       "legs": 2,
-      "path": "LP",
-      "ties": 2
+      "second_leg": "2026-07-28",
+      "path": "LP"
      },
      {
       "id": "Q3CH",
       "name": "Third qualifying round",
       "date": "2026-08-04",
-      "second_leg": "2026-08-11",
       "legs": 2,
+      "second_leg": "2026-08-11",
       "path": "CH",
-      "ties": 6
+      "feeds": [
+       "Q2CH"
+      ]
      },
      {
       "id": "Q3LP",
       "name": "Third qualifying round",
       "date": "2026-08-04",
-      "second_leg": "2026-08-11",
       "legs": 2,
+      "second_leg": "2026-08-11",
       "path": "LP",
-      "ties": 4
+      "feeds": [
+       "Q2LP"
+      ]
      },
      {
       "id": "POCH",
       "name": "Play-off round",
       "date": "2026-08-18",
-      "second_leg": "2026-08-25",
       "legs": 2,
+      "second_leg": "2026-08-25",
       "path": "CH",
-      "ties": 5
+      "feeds": [
+       "Q3CH"
+      ]
      },
      {
       "id": "POLP",
       "name": "Play-off round",
       "date": "2026-08-18",
-      "second_leg": "2026-08-25",
       "legs": 2,
+      "second_leg": "2026-08-25",
       "path": "LP",
-      "ties": 2
+      "feeds": [
+       "Q3LP"
+      ]
+     },
+     {
+      "id": "LP",
+      "name": "League phase",
+      "date": "2026-09-15",
+      "legs": 0,
+      "feeds": [
+       "POCH",
+       "POLP"
+      ]
      },
      {
       "id": "KOPO",
       "name": "Knockout play-off",
       "date": "2027-02-16",
-      "second_leg": "2027-02-23",
       "legs": 2,
-      "ties": 8
+      "second_leg": "2027-02-23"
      },
      {
       "id": "R16",
       "name": "Round of 16",
       "date": "2027-03-09",
-      "second_leg": "2027-03-16",
       "legs": 2,
-      "ties": 8
+      "second_leg": "2027-03-16"
      },
      {
       "id": "QF",
       "name": "Quarter-finals",
       "date": "2027-04-13",
-      "second_leg": "2027-04-20",
       "legs": 2,
-      "ties": 4
+      "second_leg": "2027-04-20"
      },
      {
       "id": "SF",
       "name": "Semi-finals",
       "date": "2027-04-27",
-      "second_leg": "2027-05-04",
       "legs": 2,
-      "ties": 2
+      "second_leg": "2027-05-04"
      },
      {
       "id": "F",
       "name": "Final",
       "date": "2027-06-05",
-      "legs": 1,
-      "ties": 1
+      "legs": 1
      }
     ],
     "drops": {
@@ -381110,82 +381123,91 @@
       "id": "Q1",
       "name": "First qualifying round",
       "date": "2026-07-09",
-      "second_leg": "2026-07-16",
       "legs": 2,
-      "ties": 6
+      "second_leg": "2026-07-16"
      },
      {
       "id": "Q2",
       "name": "Second qualifying round",
       "date": "2026-07-23",
-      "second_leg": "2026-07-30",
       "legs": 2,
-      "ties": 9
+      "second_leg": "2026-07-30",
+      "feeds": [
+       "Q1"
+      ]
      },
      {
       "id": "Q3CH",
       "name": "Third qualifying round",
       "date": "2026-08-06",
-      "second_leg": "2026-08-13",
       "legs": 2,
-      "path": "CH",
-      "ties": 6
+      "second_leg": "2026-08-13",
+      "path": "CH"
      },
      {
       "id": "Q3MP",
       "name": "Third qualifying round",
       "date": "2026-08-06",
-      "second_leg": "2026-08-13",
       "legs": 2,
+      "second_leg": "2026-08-13",
       "path": "MP",
-      "ties": 7
+      "feeds": [
+       "Q2"
+      ]
      },
      {
       "id": "PO",
       "name": "Play-off round",
       "date": "2026-08-20",
-      "second_leg": "2026-08-27",
       "legs": 2,
-      "ties": 12
+      "second_leg": "2026-08-27",
+      "feeds": [
+       "Q3CH",
+       "Q3MP"
+      ]
+     },
+     {
+      "id": "LP",
+      "name": "League phase",
+      "date": "2026-09-17",
+      "legs": 0,
+      "feeds": [
+       "PO"
+      ]
      },
      {
       "id": "KOPO",
       "name": "Knockout play-off",
       "date": "2027-02-18",
-      "second_leg": "2027-02-25",
       "legs": 2,
-      "ties": 8
+      "second_leg": "2027-02-25"
      },
      {
       "id": "R16",
       "name": "Round of 16",
       "date": "2027-03-11",
-      "second_leg": "2027-03-18",
       "legs": 2,
-      "ties": 8
+      "second_leg": "2027-03-18"
      },
      {
       "id": "QF",
       "name": "Quarter-finals",
       "date": "2027-04-15",
-      "second_leg": "2027-04-22",
       "legs": 2,
-      "ties": 4
+      "second_leg": "2027-04-22"
      },
      {
       "id": "SF",
       "name": "Semi-finals",
       "date": "2027-04-29",
-      "second_leg": "2027-05-06",
       "legs": 2,
-      "ties": 2
+      "second_leg": "2027-05-06"
      },
      {
       "id": "F",
       "name": "Final",
       "date": "2027-05-26",
-      "legs": 1,
-      "ties": 1
+      "legs": 1
      }
     ],
     "drops": {
@@ -381247,102 +381269,115 @@
       "id": "Q1",
       "name": "First qualifying round",
       "date": "2026-07-07",
-      "second_leg": "2026-07-14",
       "legs": 2,
-      "ties": 26
+      "second_leg": "2026-07-14"
      },
      {
       "id": "Q2CH",
       "name": "Second qualifying round",
       "date": "2026-07-21",
-      "second_leg": "2026-07-28",
       "legs": 2,
-      "path": "CH",
-      "ties": 6
+      "second_leg": "2026-07-28",
+      "path": "CH"
      },
      {
       "id": "Q2MP",
       "name": "Second qualifying round",
       "date": "2026-07-21",
-      "second_leg": "2026-07-28",
       "legs": 2,
+      "second_leg": "2026-07-28",
       "path": "MP",
-      "ties": 43
+      "feeds": [
+       "Q1"
+      ]
      },
      {
       "id": "Q3CH",
       "name": "Third qualifying round",
       "date": "2026-08-04",
-      "second_leg": "2026-08-11",
       "legs": 2,
+      "second_leg": "2026-08-11",
       "path": "CH",
-      "ties": 4
+      "feeds": [
+       "Q2CH"
+      ]
      },
      {
       "id": "Q3MP",
       "name": "Third qualifying round",
       "date": "2026-08-04",
-      "second_leg": "2026-08-11",
       "legs": 2,
+      "second_leg": "2026-08-11",
       "path": "MP",
-      "ties": 26
+      "feeds": [
+       "Q2MP"
+      ]
      },
      {
       "id": "POCH",
       "name": "Play-off round",
       "date": "2026-08-18",
-      "second_leg": "2026-08-25",
       "legs": 2,
+      "second_leg": "2026-08-25",
       "path": "CH",
-      "ties": 5
+      "feeds": [
+       "Q3CH"
+      ]
      },
      {
       "id": "POMP",
       "name": "Play-off round",
       "date": "2026-08-18",
-      "second_leg": "2026-08-25",
       "legs": 2,
+      "second_leg": "2026-08-25",
       "path": "MP",
-      "ties": 19
+      "feeds": [
+       "Q3MP"
+      ]
+     },
+     {
+      "id": "LP",
+      "name": "League phase",
+      "date": "2026-10-01",
+      "legs": 0,
+      "feeds": [
+       "POCH",
+       "POMP"
+      ]
      },
      {
       "id": "KOPO",
       "name": "Knockout play-off",
       "date": "2027-02-18",
-      "second_leg": "2027-02-25",
       "legs": 2,
-      "ties": 8
+      "second_leg": "2027-02-25"
      },
      {
       "id": "R16",
       "name": "Round of 16",
       "date": "2027-03-11",
-      "second_leg": "2027-03-18",
       "legs": 2,
-      "ties": 8
+      "second_leg": "2027-03-18"
      },
      {
       "id": "QF",
       "name": "Quarter-finals",
       "date": "2027-04-15",
-      "second_leg": "2027-04-22",
       "legs": 2,
-      "ties": 4
+      "second_leg": "2027-04-22"
      },
      {
       "id": "SF",
       "name": "Semi-finals",
       "date": "2027-04-29",
-      "second_leg": "2027-05-06",
       "legs": 2,
-      "ties": 2
+      "second_leg": "2027-05-06"
      },
      {
       "id": "F",
       "name": "Final",
       "date": "2027-06-02",
-      "legs": 1,
-      "ties": 1
+      "legs": 1
      }
     ],
     "drops": {},

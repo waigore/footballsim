@@ -38,8 +38,8 @@ func save_result(fixture_id: String, home_goals: int, away_goals: int,
 	if standings == null:
 		return true
 	var rules := save.rules_for(comp)
-	standings.apply(home, home_goals, away_goals, rules, "home")
-	standings.apply(away, away_goals, home_goals, rules, "away")
+	standings.apply(home, home_goals, away_goals, rules, "home", comp)
+	standings.apply(away, away_goals, home_goals, rules, "away", comp)
 	return true
 
 func add_events(rows: Array) -> void:

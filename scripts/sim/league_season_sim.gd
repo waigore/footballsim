@@ -5,6 +5,8 @@ extends RefCounted
 static func fixture(season: LeagueSeason, fx: Dictionary) -> Dictionary:
 	var fixture_id := str(fx["id"])
 	var seed := seed_for(season, fixture_id)
+	if LeagueUefa.is_continental(str(fx.get("competition_id", ""))):
+		return _uefa_fixture(season, fx, seed)
 	if LeagueCup.is_cup_fixture(fx):
 		return _cup_fixture(season, fx, seed)
 	var home := str(fx["home_club_id"])
@@ -25,6 +27,42 @@ static func _cup_fixture(season: LeagueSeason, fx: Dictionary, seed: int) -> Dic
 	LeagueCupState.after_played(season, fx)
 	PLRepository.shared().invalidate()
 	return season.report(fixture_id)
+
+
+static func _uefa_fixture(season: LeagueSeason, fx: Dictionary, seed: int) -> Dictionary:
+	var fixture_id := str(fx["id"])
+	var stage := str(fx.get("stage", ""))
+	var score := Vector2i.ZERO
+	if stage == LeagueUefa.LEAGUE_STAGE:
+		score = PoissonModel.new(seed, str(fx["home_club_id"]), str(fx["away_club_id"])).sample()
+		_record_league(season, fx, score, seed)
+	else:
+		var sim := LeagueCupTie.simulate(season, fx)
+		if sim.is_empty():
+			return {}
+		score = sim["score"]
+		_record_league(season, fx, score, seed)
+	LeagueUefaState.after_played(season, fx)
+	PLRepository.shared().invalidate()
+	return season.report(fixture_id)
+
+
+static func _record_league(season: LeagueSeason, fx: Dictionary, score: Vector2i,
+		seed: int) -> void:
+	var fixture_id := str(fx["id"])
+	var home := str(fx["home_club_id"])
+	var away := str(fx["away_club_id"])
+	var cid := str(fx.get("competition_id", ""))
+	var hxi := StrongestXI.pick(TeamData.get_team(home))
+	var axi := StrongestXI.pick(TeamData.get_team(away))
+	var events := _events(fx, score, seed)
+	season.record.report.save_result(fixture_id, score.x, score.y, home, away,
+		season.record.standings, cid)
+	season.record.report.add_events(events)
+	LeagueSettle.auto(season.record, fixture_id, home, away, hxi, axi, events, seed,
+		str(fx["kickoff"]), int(fx["matchday"]))
+	LeagueHighlights.store_auto(season.record, int(season.rng.seed), fixture_id, events,
+		home, away)
 
 
 static func _record(season: LeagueSeason, fx: Dictionary, score: Vector2i, seed: int) -> void:
