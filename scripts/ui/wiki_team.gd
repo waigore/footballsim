@@ -46,6 +46,15 @@ static func page(club_id: String) -> Dictionary:
 			["FORMATION", str(club["formation"]), false],
 		],
 	})
+	var race := PositionRace.series(club_id)
+	if not race.is_empty():
+		out["blocks"].append({"k": "section",
+			"text": "POSITION  ·  %d FIXTURE DAYS" % (race["days"] as Array).size()})
+		out["blocks"].append({
+			"k": "spark", "points": race["days"], "clubs": int(race["clubs"]),
+			"place": int(race["place"]), "best": int(race["best"]), "worst": int(race["worst"]),
+			"accent": WikiModel.hex(club.get("color", Color.WHITE)),
+		})
 	out["blocks"].append({"k": "section", "text": "TACTICAL PROFILE"})
 	var bars: Array = []
 	for pair in STYLE_LABELS:

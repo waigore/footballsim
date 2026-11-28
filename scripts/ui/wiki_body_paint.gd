@@ -13,6 +13,8 @@ static func row(body: WikiBody, row: Dictionary, rect: Rect2, hovered: bool) -> 
 		_kv(body, row, rect)
 	elif kind == "bar":
 		_bar(body, row, rect)
+	elif kind == "spark":
+		_spark(body, row, rect)
 	elif kind == "chip":
 		_chip(body, row, rect, hovered)
 	elif kind == "thead":
@@ -56,6 +58,44 @@ static func _bar(body: WikiBody, row: Dictionary, rect: Rect2) -> void:
 	body.draw_rect(Rect2(bar_x, rect.position.y + 8, bar_w * value, 6), Color(0.62, 0.82, 0.86))
 	_text(body, Vector2(bar_x + bar_w + 8, rect.position.y + 16),
 		str(int(round(value * 100.0))), 12, Color(0.92, 0.95, 0.96), true)
+
+
+static func _spark(body: WikiBody, row: Dictionary, rect: Rect2) -> void:
+	var points: Array = row.get("points", [])
+	var clubs: int = maxi(int(row.get("clubs", 0)), 2)
+	if points.size() < 2:
+		return
+	var dim := Color(0.55, 0.64, 0.69)
+	_text(body, Vector2(rect.position.x, rect.position.y + 12),
+		"BEST " + PreMatchCopy.place(int(row.get("best", 0))), 9, dim, true)
+	_text_right(body, rect.end.x, rect.position.y + 12.0,
+		"WORST " + PreMatchCopy.place(int(row.get("worst", 0))), 9, dim, true)
+	var plot := Rect2(rect.position.x + 22.0, rect.position.y + 24.0,
+		maxf(rect.size.x - 22.0 - 48.0, 20.0), maxf(rect.size.y - 36.0, 12.0))
+	_text(body, Vector2(rect.position.x, plot.position.y + 8.0), "1", 10, dim, true)
+	_text(body, Vector2(rect.position.x, plot.end.y), str(clubs), 10, dim, true)
+	body.draw_line(Vector2(plot.position.x, plot.position.y), Vector2(plot.end.x, plot.position.y),
+		Color(1, 1, 1, 0.05), 1)
+	body.draw_line(Vector2(plot.position.x, plot.end.y), Vector2(plot.end.x, plot.end.y),
+		Color(1, 1, 1, 0.05), 1)
+	var accent := Color(str(row.get("accent", ""))) if str(row.get("accent", "")) != "" \
+		else Color(0.62, 0.82, 0.86)
+	var laid: Array = []
+	for i in range(points.size()):
+		var position: int = clampi(int((points[i] as Dictionary).get("position", 1)), 1, clubs)
+		var x: float = plot.position.x + plot.size.x * float(i) / float(points.size() - 1)
+		var y: float = plot.position.y + plot.size.y * float(position - 1) / float(clubs - 1)
+		laid.append(Vector2(x, y))
+	for i in range(1, laid.size()):
+		body.draw_line(laid[i - 1], laid[i], accent, 2.0)
+	for i in range(laid.size() - 1):
+		body.draw_circle(laid[i], 2.0, accent)
+	var end: Vector2 = laid[laid.size() - 1]
+	body.draw_circle(end, 4.0, UiChrome.C_GOLD)
+	body.draw_circle(end, 1.8, Color(0.02, 0.03, 0.04))
+	_text(body, Vector2(plot.end.x + 10.0,
+		clampf(end.y + 4.0, plot.position.y + 10.0, plot.end.y)),
+		PreMatchCopy.place(int(row.get("place", 0))), 12, UiChrome.C_GOLD, true)
 
 
 static func _chip(body: WikiBody, row: Dictionary, rect: Rect2, hovered: bool) -> void:

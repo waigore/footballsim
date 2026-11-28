@@ -269,6 +269,14 @@ suites = [
   "test_coverage_branch_headers.gd",
 ]
 
+# The club page's season race: the position recomputed after every fixture day
+# the ledger has played. One suite pins the reading against the save's own table
+# and the shipped snapshot; the page that draws it rides the wiki domain.
+[domains.position_race]
+suites = [
+  "test_position_race.gd",
+]
+
 # ----------------------------------------------------------------- sim ---
 
 [[rules]]
@@ -535,6 +543,16 @@ domain = "league"
 [[rules]]
 match = "scripts/data/pl_competitions.gd*"
 domain = "pl_data"
+
+# The club page's position race: positions recomputed from the days the ledger
+# has played. Its own suite pins the reading.
+[[rules]]
+match = "scripts/data/position_race.gd*"
+domain = "position_race"
+
+[[rules]]
+match = "tests/test_position_race.gd*"
+domain = "position_race"
 
 # Every other data module (clubs, squads, snapshot storage, in-sim ledger)
 # shares the same suites; the old per-shard rules are gone because the shards
