@@ -151,3 +151,33 @@ func test_the_market_roll_is_keyed_by_the_save_and_the_date() -> void:
 	assert_ne(MarketTick.roll(season, "2026-08-21", "deal"), first, "another date rolled the same")
 	assert_ne(MarketTick.roll(season, "2026-08-20", "news"), first, "another key rolled the same")
 	assert_true(first >= 0.0 and first < 1.0, "the market roll is not a unit draw")
+
+
+func test_association_names_and_club_countries_map() -> void:
+	MarketWindows.reset()
+	assert_eq(MarketWindows.name("ENG"), "England", "England lost its association name")
+	assert_eq(MarketWindows.name("ESP"), "Spain", "Spain lost its association name")
+	assert_eq(MarketWindows.country_of_club({"competition_id": "LL"}), "ESP",
+		"La Liga does not map to Spain")
+	assert_eq(MarketWindows.country_of_club({"competition_id": "BL"}), "GER",
+		"the Bundesliga does not map to Germany")
+	assert_eq(MarketWindows.country_of_club({"competition_id": "SA"}), "ITA",
+		"Serie A does not map to Italy")
+	assert_eq(MarketWindows.country_of_club({"competition_id": "XX", "country": "ESP"}), "ESP",
+		"a known country field is ignored")
+	assert_eq(MarketWindows.country_of_club({"competition_id": "XX", "country": "ZZ"}), "",
+		"an unknown country still maps")
+	assert_false(MarketWindows.is_participant({}), "an empty club is a participant")
+
+
+func test_edge_dates_and_tick_guards() -> void:
+	assert_eq(MarketWindows.season_label("2026"), "", "a short date still labels a season")
+	assert_eq(MarketWindows.windows("", "ENG").size(), 0, "a blank label still yields windows")
+	assert_eq(MarketWindows.windows("2026-27", "ZZ").size(), 0, "an unknown country still yields windows")
+	var shut := MarketWindows.state("", "ENG")
+	assert_false(bool(shut.get("open", false)), "a blank date opens a window")
+	assert_eq(MarketWindows.board("2026-08-01").size(), 4, "the board does not list every association")
+	assert_false(MarketTick.advance(null, "2026-08-01", "2026-08-02"), "a null season still ticks")
+	assert_eq(MarketTick.walk(null, "2026-08-01", "2026-08-02"), 0, "a null walk still advances")
+	assert_eq(MarketTick.window_days("", "2026-08-02", "ENG"), 0, "a blank from-date still counts")
+	assert_true(MarketTick.roll(null, "2026-08-20", "deal") >= 0.0, "a null season cannot roll")
