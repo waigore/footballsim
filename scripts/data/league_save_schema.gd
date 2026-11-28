@@ -9,7 +9,7 @@ const SIDE_COLUMNS := [
 
 const SEASON_TABLES := [
 	"league_fixture", "league_table", "league_player_stat", "cup_round", "cup_tie",
-	"season_archive", "player_season_archive", "player_history",
+	"season_archive", "player_season_archive", "player_history", "player_contract",
 ]
 
 const TABLES := [
@@ -96,6 +96,14 @@ const TABLES := [
 	+ "kind TEXT NOT NULL DEFAULT 'spell', from_date TEXT NOT NULL DEFAULT '', "
 	+ "to_date TEXT NOT NULL DEFAULT '', "
 	+ "UNIQUE (player_id, season_index, club_id, kind));",
+	"CREATE TABLE IF NOT EXISTS player_contract (player_id TEXT NOT NULL, "
+	+ "club_id TEXT NOT NULL, season_index INTEGER NOT NULL DEFAULT 0, "
+	+ "start_date TEXT NOT NULL, end_date TEXT NOT NULL, "
+	+ "wage INTEGER NOT NULL DEFAULT 0, signing_bonus INTEGER NOT NULL DEFAULT 0, "
+	+ "agent_fee INTEGER NOT NULL DEFAULT 0, release_clause INTEGER NOT NULL DEFAULT 0, "
+	+ "option_years INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'active', "
+	+ "deal_id TEXT NOT NULL DEFAULT '', declined INTEGER NOT NULL DEFAULT 0, "
+	+ "PRIMARY KEY (player_id, start_date));",
 ]
 
 const INDEXES := [
@@ -104,6 +112,7 @@ const INDEXES := [
 	"CREATE INDEX IF NOT EXISTS match_event_fixture_idx ON match_event (fixture_id);",
 	"CREATE INDEX IF NOT EXISTS goal_highlight_fixture_idx ON goal_highlight (fixture_id);",
 	"CREATE INDEX IF NOT EXISTS cup_tie_round_idx ON cup_tie (competition_id, round_id);",
+	"CREATE INDEX IF NOT EXISTS player_contract_club_idx ON player_contract (club_id, status);",
 ]
 
 

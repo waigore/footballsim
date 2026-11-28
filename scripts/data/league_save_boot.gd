@@ -49,6 +49,11 @@ static func create(name: String, rules: Dictionary, seed: int = 0,
 	var season := PLDatabase.row("SELECT value FROM metadata WHERE key = 'season_label';")
 	save.put_meta("season_label", str(season.get("value", "")))
 	PLRepository.shared().invalidate()
+	var contracts := MarketContracts.bootstrap(save, str(primary_rules.get("season_start", "")))
+	if not bool(contracts.get("ok", false)):
+		LeagueSave.last_error = "the contracts could not be written"
+		PLDatabase.reset()
+		return null
 	LeagueSave.current = save
 	return save
 
@@ -80,6 +85,10 @@ static func open(slug_or_path: String) -> LeagueSave:
 		PLDatabase.reset()
 		return null
 	if not save.theme_ready():
+		LeagueSave.last_error = LeagueSave.NEW_SAVE_MESSAGE
+		PLDatabase.reset()
+		return null
+	if int(str(save.meta.get("db_version", "0"))) < LeagueSave.SCHEMA_VERSION:
 		LeagueSave.last_error = LeagueSave.NEW_SAVE_MESSAGE
 		PLDatabase.reset()
 		return null

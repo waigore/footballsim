@@ -4,7 +4,7 @@ extends RefCounted
 
 const DEFAULT_DIR := "user://saves"
 const EXT := ".sqlite"
-const SCHEMA_VERSION := 18
+const SCHEMA_VERSION := 19
 const NEW_SAVE_MESSAGE := "This save predates the transfer market. Start a new league."
 
 
