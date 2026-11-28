@@ -40,8 +40,8 @@ func style_of(t: int) -> Dictionary:
 
 func push_of(p) -> float:
 	if manager == null:
-		return Attrs.role_push(p.role)
-	return Attrs.role_push(p.role) + manager.tactics_for(p.team).duty_offset(p.role)
+		return AttrRoles.role_push(p.role)
+	return AttrRoles.role_push(p.role) + manager.tactics_for(p.team).duty_offset(p.role)
 
 
 func _calibrate_finishing() -> void:
