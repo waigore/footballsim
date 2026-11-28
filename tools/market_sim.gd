@@ -9,6 +9,7 @@ const VERBS := {
 	"ledger": "res://tools/market_sim/ledger.gd",
 	"season": "res://tools/market_sim/season.gd",
 	"windows": "res://tools/market_sim/windows.gd",
+	"youth": "res://tools/market_sim/youth.gd",
 }
 
 

@@ -23,6 +23,7 @@ invariant.
 | `windows` | the association calendar | open and closed by date alone |
 | `ledger` | revenue, wages, amortisation, prize | ledger kinds, currency display |
 | `deal` | one permanent move end to end | the validators, the commit, clearance |
+| `youth` | ageing, retirement and intake for N seasons | the intake shape, the exit, names |
 
 Each verb owns a file under `tools/market_sim/`; `tools/market_sim.gd` only
 parses flags, loads the verb and prints its dictionary.
@@ -62,3 +63,14 @@ deal's own reading: state, reason, cash and headroom after the move.
 
 The sandbox is development tooling. A player reaches the same code through the
 season, the club page's finances block and the player page's contract block.
+
+## The youth verb
+
+```bash
+godot --headless --path . --script res://tools/market_sim.gd -- youth \
+  --seasons 3 --clubs 20
+```
+
+It ages and retires the oldest players, then runs each club's intake, printing
+the intake count, the retired count and a name sample per season. A fixed seed
+repeats the names. No deal engine, AI or UI is loaded.
