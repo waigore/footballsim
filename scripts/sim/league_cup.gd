@@ -37,12 +37,28 @@ static func active_ids(save: LeagueSave) -> Array:
 	var out: Array = []
 	if save == null or str(save.meta.get("cups", "off")) != "on":
 		return out
+	var off := str(save.meta.get("cups_off", ""))
 	for row in PLRepository.shared().cups():
 		var cid := str(row.get("id", ""))
-		for league_id in COUNTRY_LEAGUES.get(str(row.get("country", "")), []):
+		var country := str(row.get("country", ""))
+		if off != "" and ("," + off + ",").find("," + country + ",") >= 0:
+			continue
+		for league_id in COUNTRY_LEAGUES.get(country, []):
 			if save.actives.has(league_id):
 				out.append(cid)
 				break
+	return out
+
+
+static func countries() -> Array:
+	var out: Array = []
+	for row in PLRepository.shared().cups():
+		var country := str(row.get("country", ""))
+		if country == "" or out.has(country):
+			continue
+		if not LeagueTiers.countries().has(country):
+			continue
+		out.append(country)
 	return out
 
 

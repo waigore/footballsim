@@ -25,6 +25,11 @@ const MODE_SYSTEM := "system"
 const MODE_STATS := "stats"
 const MODE_INTEREST := "interest"
 
+const MODE_CUPS := "cups"
+const MODE_CUP := "cup"
+const MODE_BRACKET := "bracket"
+const MODE_CUP_DRAW := "cup_draw"
+
 
 var ui_scale := 1.0
 var touch := false
@@ -63,6 +68,15 @@ var system := LeagueSystemSheet.new()
 
 var sheet_stats := LeagueStatsSheet.new()
 var sheet_interest := LeagueInterestSheet.new()
+var sheet_cups := LeagueCupsSheet.new()
+var sheet_cup := LeagueCupSheet.new()
+var sheet_bracket := LeagueCupBracket.new()
+var sheet_cup_draw := LeagueCupDrawSheet.new()
+
+var cups_round := ""
+var cup_focus := ""
+
+var draw_state := {"shown": 0, "clock": 0.0}
 
 var interest_query := ""
 
@@ -143,6 +157,8 @@ func _process(delta: float) -> void:
 		overlay.queue_redraw()
 	if visible and panel.update(delta):
 		overlay.queue_redraw()
+	if visible and pages != null:
+		LeagueCupDoors.tick(self, delta)
 
 func design_vp() -> Vector2:
 	var vp: Vector2 = size / maxf(ui_scale, 0.001)

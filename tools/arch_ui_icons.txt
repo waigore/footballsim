@@ -7,3 +7,4 @@ assets/ui/league/calendar.png
 assets/ui/league/interest.png
 assets/ui/league/stats.png
 assets/ui/league/system.png
+assets/ui/league/cups.png

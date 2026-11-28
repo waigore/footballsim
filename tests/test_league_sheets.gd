@@ -112,7 +112,12 @@ func test_the_wizard_lays_out_both_choices_and_the_doors() -> void:
 			assert_eq(chosen, 3, "one choice per group should be selected")
 
 
-			assert_eq(items.size(), 22, "the wizard is missing a control")
+			var cups := 0
+			for item in items:
+				if str(item["id"]).begins_with("wcups:"):
+					cups += 1
+			assert_eq(items.size(), 22 + cups, "the wizard is missing a control")
+			assert_eq(cups, 1, "a Premier League form did not offer England's domestic cups")
 
 
 func test_the_wizard_cascades_a_country_chain() -> void:

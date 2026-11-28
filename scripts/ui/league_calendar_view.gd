@@ -94,9 +94,10 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		var comp := str(fx.get("competition_id", ""))
 		if comp != last_comp and int((view.get("day_fixtures", []) as Array).size()) > 0:
 			last_comp = comp
-			if _has_many_comps(view):
+			var stage := str(fx.get("stage", ""))
+			if _has_many_comps(view) or stage != "":
 				items.append({"id": "", "kind": "league_head", "competition": comp,
-					"matchday": int(fx.get("matchday", 1)),
+					"matchday": int(fx.get("matchday", 1)), "stage": stage,
 					"rect": Rect2(24.0, y, vp.x - 48.0, 16.0)})
 				y += 18.0
 		var h: float = maxf(22.0, LeagueBlock.height(fx, true))
@@ -115,6 +116,15 @@ static func _has_many_comps(view: Dictionary) -> bool:
 	for fx in view.get("day_fixtures", []):
 		seen[str(fx.get("competition_id", ""))] = true
 	return seen.size() > 1
+
+
+static func _cup_only(by_league: Dictionary) -> bool:
+	if by_league.is_empty():
+		return false
+	for cid in by_league:
+		if not LeagueCup.is_cup(str(cid)):
+			return false
+	return true
 
 
 func _paint_band(c: CanvasItem, body: Callable) -> void:
@@ -155,9 +165,14 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		if kind == "cell":
 			_draw_cell(c, rect, item, fonts)
 		elif kind == "league_head":
-			var name: String = PLRepository.shared().competition_name(str(item.get("competition", "")))
+			var head_comp := str(item.get("competition", ""))
+			var stage := str(item.get("stage", ""))
+			var name: String = PLRepository.shared().competition_name(head_comp)
+			var head_line := "%s  ·  GW %d" % [name, int(item.get("matchday", 1))]
+			if LeagueCup.is_cup(head_comp):
+				head_line = "%s  ·  %s" % [name, LeagueCupView.stage_name(head_comp, stage)]
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
-				"%s  ·  GW %d" % [name, int(item.get("matchday", 1))], 9, UiChrome.C_GOLD, bold)
+				head_line, 9, UiChrome.C_GOLD, bold)
 		elif kind == "fixture":
 
 
@@ -211,13 +226,22 @@ func _draw_cell(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary)
 
 
 		var by_league: Dictionary = info.get("by_league", {})
-		if by_league.size() > 1:
+		if by_league.size() > 1 or _cup_only(by_league):
+			if _cup_only(by_league):
+				var count := 0
+				for cid in by_league:
+					count += int((by_league[cid] as Dictionary).get("n", 0))
+				UiChrome.text(c, Vector2(rect.position.x + 4.0, rect.end.y - 4.0),
+					"CUP %d" % count, 7, ink if selected else UiChrome.C_GOLD, fonts["med"])
 			var mx := rect.position.x + 4.0
 			for cid in by_league:
+				if _cup_only(by_league):
+					continue
 				var short: String = PLRepository.shared().competition_name(str(cid)).substr(0, 1)
 				UiChrome.text(c, Vector2(mx, rect.end.y - 4.0),
 					"%s%d" % [short, int((by_league[cid] as Dictionary).get("n", 0))], 7,
 					ink if selected else UiChrome.C_SOFT, fonts["med"])
 				mx += 12.0
+
 
 # gd-tools: no cover end
