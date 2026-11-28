@@ -54,7 +54,7 @@ static func window(deal: Dictionary, date: String) -> Dictionary:
 	if buyer.is_empty():
 		return fail(TERMS, "no buying club")
 	var seller := club_row(str(deal.get("from_club_id", "")))
-	var kind := MarketWindows.FREE_AGENT if free_agent else MarketWindows.FEE
+	var kind: String = MarketWindows.FREE_AGENT if free_agent else MarketWindows.FEE
 	var verdict := MarketWindows.allows(kind, date, MarketWindows.country_of_club(buyer),
 		MarketWindows.country_of_club(seller))
 	if not bool(verdict.get("ok", false)):

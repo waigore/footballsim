@@ -227,7 +227,8 @@ static func commit(deal: Dictionary, date: String, mode: Dictionary = {}) -> Dic
 	PLDatabase.execute(
 		"INSERT OR REPLACE INTO save_meta (key, value) VALUES ('market_day', ?);", [date])
 	PLDatabase.transaction("COMMIT;")
-	MarketDealRecords.set_state(deal_id, MarketDealRecords.SIGNED, date, registration)
+	var reason: String = "" if registration == "registered" else MarketDealRules.LIST
+	MarketDealRecords.set_state(deal_id, MarketDealRecords.SIGNED, date, reason)
 	var out := answer(deal_id)
 	out["registration"] = registration
 	out["cash"] = MarketFinance.cash(buyer)
@@ -293,8 +294,8 @@ static func _write_registration(deal: Dictionary, date: String, mode: Dictionary
 	if seller != "":
 		PLDatabase.execute(
 			"UPDATE player_registration SET state = 'closed', reason = 'moved', deal_id = ? "
-			+ "WHERE player_id = ? AND club_id = ? AND state <> 'closed';",
-			[str(deal.get("id", "")), player_id, seller])
+			+ "WHERE club_id = ? AND player_id = ? AND state <> 'closed';",
+			[str(deal.get("id", "")), seller, player_id])
 	PLDatabase.execute(
 		"INSERT OR REPLACE INTO player_registration (player_id, competition_id, club_id, kind, "
 		+ "state, reason, deal_id, season_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
@@ -310,8 +311,8 @@ static func _history(deal: Dictionary, date: String) -> void:
 	if seller == "":
 		return
 	var old := PLDatabase.row(
-		"SELECT start_date FROM player_contract WHERE player_id = ? AND club_id = ? "
-		+ "AND status = 'moved' ORDER BY start_date DESC LIMIT 1;", [player_id, seller])
+		"SELECT start_date FROM player_contract WHERE club_id = ? AND player_id = ? "
+		+ "AND status = 'moved' ORDER BY start_date DESC LIMIT 1;", [seller, player_id])
 	var club := MarketDealRules.club_row(seller)
 	PLDatabase.execute(
 		"INSERT OR REPLACE INTO player_history (player_id, season_index, club_id, competition_id, "

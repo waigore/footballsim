@@ -440,6 +440,83 @@ func test_the_player_page_reads_the_transfer_block() -> void:
 		"the page does not name the reason the deal failed")
 
 
+func test_the_engine_refuses_a_deal_it_does_not_have() -> void:
+	var season := _fresh("Deal Empty")
+	assert_eq(str(MarketDeals.negotiate("", DATE).get("reason", "")), "no_deal",
+		"an empty deal negotiated")
+	assert_eq(str(MarketDeals.agree("", DATE).get("reason", "")), "no_deal", "an empty deal agreed")
+	assert_eq(str(MarketDeals.seal("", DATE).get("reason", "")), "no_deal", "an empty deal sealed")
+	assert_eq(str(MarketDeals.block("", DATE).get("reason", "")), "no_deal", "an empty deal blocked")
+	assert_eq(str(MarketDeals.force("", DATE).get("reason", "")), "no_deal", "an empty deal forced")
+	assert_eq(str(MarketDeals.rewrite("", {}, DATE).get("reason", "")), "no_deal",
+		"an empty deal was rewritten")
+	assert_eq(str(MarketDeals.resolve_clearance("", DATE).get("reason", "")), "no_deal",
+		"an empty deal cleared")
+	assert_eq(str(MarketDeals.propose(season, "", "", "", {}, DATE).get("reason", "")),
+		"terms_incomplete", "an empty proposal was written")
+	assert_true(MarketDealRecords.load("").is_empty(), "an empty deal loaded a row")
+	assert_false(MarketDealRecords.update("", {"fee": 1}), "an empty deal updated")
+	assert_false(MarketDealRecords.set_state("", MarketDealRecords.AGREED, DATE),
+		"an empty deal changed state")
+	assert_false(MarketDealRecords.event("", DATE, MarketDealRecords.AGREED), "an empty event")
+	assert_true(MarketDealRecords.events("").is_empty(), "an empty deal listed events")
+	assert_true(MarketDealRecords.live_for("").is_empty(), "an empty player had a live deal")
+	assert_true(MarketDealRecords.last_for("").is_empty(), "an empty player had a deal")
+	assert_false(MarketDealRecords.vetoed("", "", ""), "an empty veto fired")
+	assert_true(MarketDealRecords.active_contract("").is_empty(), "an empty player held a contract")
+	assert_true(MarketDealRecords.registration("", "").is_empty(), "an empty registration read")
+
+
+func test_negotiate_rewrite_and_the_timeline() -> void:
+	var season := _fresh("Deal Timeline")
+	var from := _club_in("PL", 0)
+	var to := _club_in("PL", 1)
+	var player := _player_at(from)
+	var deal := _propose(season, from, to, player, _terms(player))
+	assert_eq(str(MarketDeals.negotiate(deal, DATE).get("state", "")), MarketDealRecords.NEGOTIATING,
+		"the deal did not move into talks")
+	var rewritten := MarketDeals.rewrite(deal, _terms(player, {"fee": 7_000_000}), DATE)
+	assert_eq(str(rewritten.get("state", "")), MarketDealRecords.AGREED,
+		"a rewritten deal did not re-run the pipeline")
+	assert_eq(int(MarketDealRecords.load(deal).get("fee", 0)), 7_000_000, "the new fee was not kept")
+	assert_eq(str(MarketDeals.seal(deal, DATE).get("state", "")), MarketDealRecords.SIGNED,
+		"the rewritten deal did not seal")
+	assert_eq(str(MarketDeals.seal(deal, DATE).get("state", "")), MarketDealRecords.SIGNED,
+		"a repeat seal lost the deal")
+	assert_true(bool(MarketDeals.seal(deal, DATE).get("duplicate", false)),
+		"a repeat seal was not read as a duplicate")
+	var states: Array = []
+	for step in MarketDealRecords.events(deal):
+		states.append(str(step.get("state", "")))
+	assert_in(MarketDealRecords.NEGOTIATING, states, "the timeline lost the talks")
+	assert_in(MarketDealRecords.SIGNED, states, "the timeline lost the signing")
+	assert_eq(str(MarketDeals.rewrite(deal, _terms(player), DATE).get("state", "")),
+		MarketDealRecords.SIGNED, "a signed deal was rewritten")
+
+
+func test_a_free_agent_signs_outside_the_window() -> void:
+	var season := _fresh("Deal Free Agent")
+	var to := _club_in("PL", 1)
+	var seller := _club_in("PL", 0)
+	var player := str(PLDatabase.row(
+		"SELECT id FROM player WHERE club_id = ? ORDER BY ovr LIMIT 1;", [seller]).get("id", ""))
+	var wage := int(MarketDealRecords.active_contract(player).get("wage", 5000))
+	PLDatabase.execute("UPDATE player_contract SET status = 'expired' WHERE player_id = ?;",
+		[player])
+	PLDatabase.execute("UPDATE player SET club_id = '' WHERE id = ?;", [player])
+	var terms := {"fee": 0, "wage": wage, "years": 2, "agent_fee": 0, "signing_bonus": 0}
+	var deal := _propose(season, "", to, player, terms, CLOSED)
+	assert_eq(str(MarketDeals.agree(deal, CLOSED).get("state", "")), MarketDealRecords.AGREED,
+		"the free-agent exception did not open the closed window")
+	var done := MarketDeals.seal(deal, CLOSED)
+	assert_eq(str(done.get("state", "")), MarketDealRecords.SIGNED,
+		"the free agent did not sign: %s" % str(done.get("reason", "")))
+	assert_eq(_player_club(player), to, "the free agent did not move")
+	var registration := MarketDealRecords.registration(player, _competition(to))
+	assert_eq(str(registration.get("state", "")), "registered", "the free agent is not registered")
+	assert_eq(_ledger_lines(), 0, "a free signing wrote a fee line")
+
+
 func _transfer_items(page: Dictionary) -> Dictionary:
 	var wanted := false
 	for block in page.get("blocks", []):
