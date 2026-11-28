@@ -69,6 +69,7 @@ static func page(player_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 				bars.append([str(pair[1]), float(p[pair[0]]) / 100.0])
 		out["blocks"].append({"k": "bars", "items": bars})
 	out["blocks"].append_array(contract_blocks(player_id, club_name, str(p.get("club_id", ""))))
+	out["blocks"].append_array(loan_blocks(player_id))
 	out["blocks"].append_array(transfer_blocks(player_id))
 	var season_label := str(season.get("season_label", ""))
 	var season_head := "SEASON"
@@ -158,6 +159,42 @@ static func transfer_blocks(player_id: String) -> Array:
 		items.append(["REASON", MarketDealCopy.reason(reason), false])
 	out.append({"k": "kv", "items": items})
 	return out
+
+
+static func loan_blocks(player_id: String) -> Array:
+	if not MarketLoans.available():
+		return []
+	var loan := MarketLoanRecords.active_for(player_id)
+	if loan.is_empty():
+		return []
+	return [{"k": "section", "text": "LOAN"}, {"k": "kv", "items": [
+		["PARENT", _club_name(str(loan.get("parent_club_id", ""))), false],
+		["LOANEE", _club_name(str(loan.get("loanee_club_id", ""))), true],
+		["WAGE SPLIT", "%s / %s" % [
+			MarketWages.money(int(loan.get("wage_parent", 0))),
+			MarketWages.money(int(loan.get("wage_loanee", 0)))], false],
+		["ENDS", str(loan.get("end_date", "")), false],
+		["BUY", _buy_label(str(loan.get("option_kind", "none")),
+			int(loan.get("buy_fee", 0))), false],
+		["TRIGGER", _trigger_label(str(loan.get("trigger_kind", "")),
+			str(loan.get("trigger_value", ""))), false],
+	]}]
+
+
+static func _buy_label(kind: String, fee: int) -> String:
+	if kind == "obligation":
+		return "OBLIGATION %s" % MarketWages.money(fee)
+	if kind == "option":
+		return "OPTION %s" % MarketWages.money(fee)
+	return "NONE"
+
+
+static func _trigger_label(kind: String, value: String) -> String:
+	if kind == "":
+		return "—"
+	if value == "":
+		return kind.to_upper()
+	return "%s %s" % [kind.to_upper(), value]
 
 
 static func _club_name(club_id: String) -> String:

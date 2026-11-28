@@ -79,6 +79,7 @@ static func agree(deal_id: String, date: String, mode: Dictionary = {}) -> Dicti
 		fields["clears_on"] = FixtureCalendar.add_days(date, clearance_days(deal_id))
 		MarketDealRecords.update(deal_id, fields)
 		MarketDealRecords.set_state(deal_id, MarketDealRecords.CLEARANCE_PENDING, date, "")
+		_write_pending_registration(deal)
 		var pending := answer(deal_id)
 		pending["clears_on"] = str(fields["clears_on"])
 		return pending
@@ -122,11 +123,17 @@ static func resolve_clearance(deal_id: String, date: String, mode: Dictionary = 
 			var waiting := answer(deal_id)
 			waiting["ok"] = false
 			return waiting
+		if not _window_open_for(deal, date):
+			MarketDealRecords.set_state(deal_id, MarketDealRecords.FAILED, date,
+				MarketDealRules.WINDOW_CLOSED)
+			_close_pending_registration(deal)
+			return answer(deal_id)
 		passed = MarketSeed.unit(_seed(), deal_id, 5) \
 			>= MarketRules.number("deal", "clearance_fail_share", 0.08)
 	if not passed:
 		MarketDealRecords.set_state(deal_id, MarketDealRecords.FAILED, date,
 			MarketDealRules.CLEARANCE)
+		_close_pending_registration(deal)
 		return answer(deal_id)
 	MarketDealRecords.update(deal_id, {"clears_on": ""})
 	MarketDealRecords.set_state(deal_id, MarketDealRecords.AGREED, date, "cleared")
@@ -209,137 +216,42 @@ static func clearance_days(deal_id: String) -> int:
 
 
 static func commit(deal: Dictionary, date: String, mode: Dictionary = {}) -> Dictionary:
-	var deal_id := str(deal.get("id", ""))
-	var buyer := str(deal.get("to_club_id", ""))
-	PLDatabase.transaction("BEGIN TRANSACTION;")
-	_move_money(deal, date)
-	if str(mode.get("fault", "")) == "contract":
-		PLDatabase.transaction("ROLLBACK;")
-		MarketDealRecords.event(deal_id, date, MarketDealRecords.AGREED, "injected")
-		return {"ok": false, "rolled_back": true, "reason": "injected",
-			"state": MarketDealRecords.AGREED}
-	if not _write_contract(deal, date):
-		PLDatabase.transaction("ROLLBACK;")
-		return {"ok": false, "rolled_back": true, "reason": "contract",
-			"state": MarketDealRecords.AGREED}
-	var registration := _write_registration(deal, date, mode)
-	_history(deal, date)
-	PLDatabase.execute(
-		"INSERT OR REPLACE INTO save_meta (key, value) VALUES ('market_day', ?);", [date])
-	PLDatabase.transaction("COMMIT;")
-	var reason: String = "" if registration == "registered" else MarketDealRules.LIST
-	MarketDealRecords.set_state(deal_id, MarketDealRecords.SIGNED, date, reason)
-	var out := answer(deal_id)
-	out["registration"] = registration
-	out["cash"] = MarketFinance.cash(buyer)
-	out["headroom"] = MarketFinance.ffp_headroom(buyer)
-	return out
+	return MarketDealCommit.run(deal, date, mode)
 
 
-static func _move_money(deal: Dictionary, date: String) -> void:
-	var buyer := str(deal.get("to_club_id", ""))
-	var seller := str(deal.get("from_club_id", ""))
-	var player_id := str(deal.get("player_id", ""))
-	var deal_id := str(deal.get("id", ""))
-	var fee := int(deal.get("fee", 0))
-	var agent := int(deal.get("agent_fee", 0))
-	var bonus := int(deal.get("signing_bonus", 0))
-	if fee > 0:
-		MarketFinance.post(buyer, date, MarketFinance.KIND_FEE, -fee, seller, player_id, deal_id)
-		if seller != "":
-			MarketFinance.post(seller, date, MarketFinance.KIND_FEE, fee, buyer, player_id, deal_id)
-		MarketFinance.post_amortisation(buyer, date, fee, int(deal.get("years", 1)), player_id)
-	if agent > 0:
-		MarketFinance.post(buyer, date, MarketFinance.KIND_AGENT, -agent, "", player_id, deal_id)
-	if bonus > 0:
-		MarketFinance.post(buyer, date, MarketFinance.KIND_AGENT, -bonus, player_id, player_id,
-			deal_id)
-
-
-static func _write_contract(deal: Dictionary, date: String) -> bool:
-	var player_id := str(deal.get("player_id", ""))
-	var club_id := str(deal.get("to_club_id", ""))
-	var years := maxi(int(deal.get("years", 1)), 1)
-	var player := PLDatabase.row("SELECT number FROM player WHERE id = ?;", [player_id])
-	var old := MarketDealRecords.active_contract(player_id)
-	if not old.is_empty():
-		PLDatabase.execute(
-			"UPDATE player_contract SET status = 'moved' WHERE player_id = ? AND start_date = ?;",
-			[player_id, str(old.get("start_date", ""))])
-	var end := FixtureCalendar.add_days(FixtureCalendar.add_years(date, years), -1)
-	if not PLDatabase.execute(
-			"INSERT OR REPLACE INTO player_contract (player_id, club_id, season_index, start_date, "
-			+ "end_date, wage, signing_bonus, agent_fee, release_clause, option_years, status, "
-			+ "deal_id, declined) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 'active', ?, 0);",
-			[player_id, club_id, int(deal.get("season_index", 0)), date, end,
-				int(deal.get("wage", 0)), int(deal.get("signing_bonus", 0)),
-				int(deal.get("agent_fee", 0)), str(deal.get("id", ""))]):
-		return false
-	var number := _number_for(club_id, player_id, int(player.get("number", 0)))
-	return PLDatabase.execute("UPDATE player SET club_id = ?, number = ? WHERE id = ?;",
-		[club_id, number, player_id])
-
-
-static func _write_registration(deal: Dictionary, date: String, mode: Dictionary = {}) -> String:
+static func _write_pending_registration(deal: Dictionary) -> void:
 	var player_id := str(deal.get("player_id", ""))
 	var buyer := str(deal.get("to_club_id", ""))
-	var seller := str(deal.get("from_club_id", ""))
 	var club := MarketDealRules.club_row(buyer)
 	var competition_id := str(club.get("competition_id", ""))
-	var state := "registered"
-	var reason := ""
-	if str(mode.get("registration", "")) == "refuse":
-		state = "ineligible"
-		reason = MarketDealRules.LIST
-	if seller != "":
-		PLDatabase.execute(
-			"UPDATE player_registration SET state = 'closed', reason = 'moved', deal_id = ? "
-			+ "WHERE club_id = ? AND player_id = ? AND state <> 'closed';",
-			[str(deal.get("id", "")), seller, player_id])
-	SquadList.register(buyer, competition_id, player_id, state, reason,
-		str(deal.get("id", "")), int(deal.get("season_index", 0)),
-		str(deal.get("kind", PERMANENT)))
-	var refused := state == SquadList.INELIGIBLE
-	for listed in SquadList.entries(buyer):
-		if str(listed) == competition_id:
-			continue
-		var ok := bool(SquadList.verdict(buyer, str(listed), player_id).get("ok", true))
-		SquadList.register(buyer, str(listed), player_id,
-			SquadList.REGISTERED if ok and not refused else SquadList.INELIGIBLE,
-			"" if ok and not refused else MarketDealRules.LIST,
-			str(deal.get("id", "")), int(deal.get("season_index", 0)),
-			str(deal.get("kind", PERMANENT)))
-	return state
-
-
-static func _history(deal: Dictionary, date: String) -> void:
-	var player_id := str(deal.get("player_id", ""))
-	var seller := str(deal.get("from_club_id", ""))
-	MarketContracts.rehome(player_id, str(deal.get("to_club_id", "")))
-	if seller == "":
+	if player_id == "" or competition_id == "":
 		return
-	var old := PLDatabase.row(
-		"SELECT start_date FROM player_contract WHERE club_id = ? AND player_id = ? "
-		+ "AND status = 'moved' ORDER BY start_date DESC LIMIT 1;", [seller, player_id])
-	var club := MarketDealRules.club_row(seller)
 	PLDatabase.execute(
-		"INSERT OR REPLACE INTO player_history (player_id, season_index, club_id, competition_id, "
-		+ "kind, from_date, to_date) VALUES (?, ?, ?, ?, 'spell', ?, ?);",
-		[player_id, int(deal.get("season_index", 0)), seller,
-			str(club.get("competition_id", "")), str(old.get("start_date", "")), date])
+		"INSERT OR REPLACE INTO player_registration (player_id, competition_id, club_id, kind, "
+		+ "state, reason, deal_id, season_index) VALUES (?, ?, ?, ?, 'pending', 'clearance', ?, ?);",
+		[player_id, competition_id, buyer, str(deal.get("kind", PERMANENT)),
+			str(deal.get("id", "")), int(deal.get("season_index", 0))])
 
 
-static func _number_for(club_id: String, player_id: String, keep: int) -> int:
-	var taken := {}
-	for row in PLDatabase.rows("SELECT number FROM player WHERE club_id = ? AND id <> ?;",
-			[club_id, player_id]):
-		taken[int(row.get("number", 0))] = true
-	if keep > 0 and not taken.has(keep):
-		return keep
-	for number in range(1, 100):
-		if not taken.has(number):
-			return number
-	return maxi(taken.size() + 1, 1)
+static func _close_pending_registration(deal: Dictionary) -> void:
+	var player_id := str(deal.get("player_id", ""))
+	var buyer := str(deal.get("to_club_id", ""))
+	if player_id == "" or buyer == "":
+		return
+	PLDatabase.execute(
+		"DELETE FROM player_registration WHERE club_id = ? AND state = 'pending' "
+		+ "AND player_id = ?;", [buyer, player_id])
+
+
+static func _window_open_for(deal: Dictionary, date: String) -> bool:
+	var buyer := MarketDealRules.club_row(str(deal.get("to_club_id", "")))
+	if buyer.is_empty():
+		return false
+	var kind: String = MarketWindows.FREE_AGENT if MarketDealRules.is_free_agent(deal) \
+		else MarketWindows.FEE
+	var seller := MarketDealRules.club_row(str(deal.get("from_club_id", "")))
+	return bool(MarketWindows.allows(kind, date, MarketWindows.country_of_club(buyer),
+		MarketWindows.country_of_club(seller)).get("ok", false))
 
 
 static func _seed() -> int:

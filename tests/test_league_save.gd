@@ -172,6 +172,51 @@ func test_the_league_table_keeps_home_and_away_aggregates() -> void:
 		assert_true(columns.has(column), "the table is missing %s" % column)
 
 
+func test_ensure_accepts_an_empty_active_list() -> void:
+	var save := LeagueSave.create("Migrate Guards", LeagueRules.defaults())
+	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
+	save.actives = []
+	LeagueSaveMigrate.ensure(save)
+	assert_true(_columns().has("home_played"), "ensure still writes the side columns")
+	assert_false(LeagueSaveMigrate._needs_competition_key("no_such_table"),
+		"a missing table does not need a competition key")
+	assert_true(str(LeagueSaveMigrate._club_competition("x")).contains("x.club_id"),
+		"the club competition fragment names its alias")
+
+
+func test_an_older_absence_and_discipline_gain_competition_keys() -> void:
+	var save := LeagueSave.create("Old Keys", LeagueRules.defaults())
+	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
+	PLDatabase.execute("DROP TABLE league_absence;")
+	PLDatabase.execute(
+		"CREATE TABLE league_absence (player_id TEXT PRIMARY KEY, club_id TEXT NOT NULL, "
+		+ "kind TEXT NOT NULL, grade TEXT NOT NULL DEFAULT '', "
+		+ "days_left INTEGER NOT NULL DEFAULT 0, matches_left INTEGER NOT NULL DEFAULT 0, "
+		+ "started_on TEXT NOT NULL DEFAULT '', due_on TEXT NOT NULL DEFAULT '', "
+		+ "rate REAL NOT NULL DEFAULT 1.0);")
+	PLDatabase.execute(
+		"INSERT INTO league_absence (player_id, club_id, kind) VALUES ('p-old', 'ENG-MCI1', 'injury');")
+	PLDatabase.execute("DROP TABLE league_discipline;")
+	PLDatabase.execute(
+		"CREATE TABLE league_discipline (player_id TEXT PRIMARY KEY, club_id TEXT NOT NULL, "
+		+ "yellows INTEGER NOT NULL DEFAULT 0, yellow_mark INTEGER NOT NULL DEFAULT 0);")
+	PLDatabase.execute(
+		"INSERT INTO league_discipline (player_id, club_id, yellows) VALUES ('p-old', 'ENG-MCI1', 1);")
+	LeagueSaveMigrate.run()
+	var absence := PLDatabase.row(
+		"SELECT competition_id FROM league_absence WHERE player_id = 'p-old';")
+	assert_false(absence.is_empty(), "the absence row was lost")
+	assert_eq(str(absence["competition_id"]), "", "an injury keeps a blank competition")
+	var disc := PLDatabase.row(
+		"SELECT competition_id FROM league_discipline WHERE player_id = 'p-old';")
+	assert_false(disc.is_empty(), "the discipline row was lost")
+	assert_eq(str(disc["competition_id"]), "PL", "discipline takes the club's competition")
+	assert_false(LeagueSaveMigrate._needs_competition_key("league_absence"),
+		"absence still needs a competition key after migrate")
+	assert_false(LeagueSaveMigrate._needs_competition_key("league_discipline"),
+		"discipline still needs a competition key after migrate")
+
+
 func test_an_older_save_gains_the_side_columns_when_it_opens() -> void:
 	var save := LeagueSave.create("Old Table", LeagueRules.defaults())
 	PLDatabase.execute("DROP TABLE league_table;")

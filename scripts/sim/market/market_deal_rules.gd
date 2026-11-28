@@ -49,6 +49,8 @@ static func check(name: String, deal: Dictionary, date: String, mode: Dictionary
 
 
 static func window(deal: Dictionary, date: String) -> Dictionary:
+	if bool(deal.get("obligation", false)) or str(deal.get("kind", "")) == "loan_converted":
+		return pass_with("obligation")
 	var free_agent := is_free_agent(deal)
 	var buyer := club_row(str(deal.get("to_club_id", "")))
 	if buyer.is_empty():
@@ -67,6 +69,10 @@ static func club(deal: Dictionary) -> Dictionary:
 		[str(deal.get("player_id", ""))])
 	if player.is_empty():
 		return fail(NOT_AT_CLUB, "no such player")
+	if is_obligation(deal):
+		if str(player.get("club_id", "x")) != str(deal.get("to_club_id", "")):
+			return fail(NOT_AT_CLUB, "the loanee does not hold the player")
+		return pass_with("obligation")
 	if str(player.get("club_id", "x")) != str(deal.get("from_club_id", "")):
 		return fail(NOT_AT_CLUB, "the player is not at the selling club")
 	var live := MarketDealRecords.live_for(str(deal.get("player_id", "")),
@@ -94,8 +100,10 @@ static func terms(deal: Dictionary) -> Dictionary:
 
 
 static func consent(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
-	if bool(mode.get("force", false)):
+	if bool(mode.get("force", false)) or is_obligation(deal):
 		return pass_with("forced")
+	if MarketAttribution.clause_met(str(deal.get("player_id", "")), int(deal.get("fee", 0))):
+		return pass_with("release_clause")
 	var current := int(MarketDealRecords.active_contract(str(deal.get("player_id", ""))).get(
 		"wage", 0))
 	if current > 0 and int(deal.get("wage", 0)) < current:
@@ -104,11 +112,10 @@ static func consent(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
 
 
 static func cash(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
-	if bool(mode.get("force", false)):
+	if bool(mode.get("force", false)) or is_obligation(deal):
 		return pass_with("forced")
 	var buyer := str(deal.get("to_club_id", ""))
-	var needed := int(deal.get("fee", 0)) + int(deal.get("agent_fee", 0)) \
-		+ int(deal.get("signing_bonus", 0))
+	var needed := MarketAttribution.buyer_cost(deal)
 	if not MarketFinance.can_afford(buyer, needed):
 		return fail(NO_CASH, "the buying club cannot afford the deal")
 	return pass_with("")
@@ -117,12 +124,19 @@ static func cash(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
 static func ffp(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:
 	if bool(mode.get("force", false)):
 		return pass_with("ffp_override")
+	if is_obligation(deal):
+		return pass_with("obligation_breach")
 	var buyer := str(deal.get("to_club_id", ""))
 	var cost := MarketFinance.amortisation(int(deal.get("fee", 0)), int(deal.get("years", 1))) \
 		+ int(deal.get("wage", 0)) * 52 + int(deal.get("agent_fee", 0))
 	if MarketFinance.ffp_headroom(buyer) - cost < 0:
 		return fail(FFP, "the deal breaches the club's headroom")
 	return pass_with("")
+
+
+static func is_obligation(deal: Dictionary) -> bool:
+	return bool(deal.get("obligation", false)) \
+		or str(deal.get("kind", "")) == "loan_converted"
 
 
 static func list_check(deal: Dictionary, mode: Dictionary = {}) -> Dictionary:

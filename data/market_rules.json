@@ -96,5 +96,26 @@
       "trained_min": 4,
       "u21_free": 1
     }
+  },
+  "loan": {
+    "cap_in": 6,
+    "cap_out": 6,
+    "cap_pair": 2,
+    "days_min": 28,
+    "days_max": 330
+  },
+  "clause": {
+    "ask_multiple": 1.5
+  },
+  "attribution": {
+    "solidarity_share": 0.05,
+    "solidarity_from_age": 12,
+    "solidarity_to_age": 23,
+    "training_bands": [
+      {"to_age": 11, "amount": 10000},
+      {"to_age": 15, "amount": 50000},
+      {"to_age": 21, "amount": 150000},
+      {"to_age": 30, "amount": 90000}
+    ]
   }
 }
