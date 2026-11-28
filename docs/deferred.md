@@ -19,6 +19,7 @@ Shipped (wiki domains playable; DRs accepted):
 | Poisson λ on the last-10 PL envelope | DR-20261125-19; [#172](https://github.com/waigore/footballsim/issues/172) |
 | Engine λ, keeper dive, openness | DR-20261126-07/08; [#192](https://github.com/waigore/footballsim/issues/192) closed |
 | PL + English pyramid + LL + German pair | `data/`; DR-20261123-01 / 13 / 17 |
+| Domestic cups rules, UX, data, sim | wiki DR-20261128-17; [#458](https://github.com/waigore/footballsim/issues/458), [#459](https://github.com/waigore/footballsim/issues/459) |
 | Season saves, calendar, Continue/watch | `league_season.gd`; DR-20261124-01 / 06 |
 | Multi-league save; play-offs; German Relegation | DR-20261126-10 / 14 / 17; [#185](https://github.com/waigore/footballsim/issues/185) |
 | System sheet (Quick Save / Save As / Load / Quit) | DR-20261124-07 |
@@ -50,9 +51,9 @@ Shipped (wiki domains playable; DRs accepted):
 
 | Item | Why |
 |------|-----|
-| Club-manager career; player tactics / XI | Product non-goal; Match playable-slice Out |
-| Domestic cups, supercups, transfers, finances, training, second season in one save, mid-season seed refresh of a save | Season Out of scope (v1); DR-20261124-01 |
-| UEFA club competitions (UCL / UEL / UECL) | Rules accepted ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15)); [code #433](https://github.com/waigore/footballsim/issues/433) |
+| Club-manager career; player tactics | Product non-goal; Match playable-slice Out |
+| Domestic cups, supercups, transfers, finances, training, second season, mid-season refresh | Season Out of scope (v1); DR-20261124-01 |
+| UEFA club competitions | Rules accepted ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15)) |
 | VAR; weather on the pitch; referee outcome bias | Match playable-slice Out |
 | Concussion subs; extra injury stoppage beyond the added-time formula | Substitutions Out of scope; DR-20261122-05 |
 | Licensed data beyond the shipped English pyramid (PL–National League), La Liga and German pair snapshots | requirements Non-goals; DR-20261123-01 |

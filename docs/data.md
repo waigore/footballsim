@@ -67,7 +67,7 @@ the league's goals, home share, champion goals, blowout rate and 1X2 drift.
 |-------|-------|
 | `metadata` | `db_version`, `schema_version`, `season_label`, `snapshot_date`, `source`, `ratings_source`, `competition_ids` |
 | `competition`, `club` | League identity and its rules JSON; club identity, kit colours, formation, style profile |
-| `competition_member` | club/player ↔ competition membership, ready for cups and internationals |
+| `competition_member` | club/player ↔ competition membership: cup entry pools and internationals |
 | `player` | Identity, shirt number, role, ratings, keeper stats, `squad` (`starter`/`bench`), `ord` |
 | `table_row`, `fixture` | The 2026-27 table at snapshot date and every fixture, each with `competition_id`; `played` marks the results already in |
 | `season_stat`, `career_stat` | Real-world season and career figures (`-1` = not in the snapshot) |
