@@ -128,7 +128,7 @@ func test_a_generated_player_can_be_signed_like_any_other() -> void:
 		"the probe date is outside the window")
 	var terms := {"fee": 100_000, "wage": wage, "years": 3, "agent_fee": 0,
 		"signing_bonus": 0, "sell_on": 0.0}
-	var deal := MarketDeals.propose(season, from, to, player_id, terms, DATE)
+	var deal := MarketDeals.propose(season.save, from, to, player_id, terms, DATE)
 	var agreed := MarketDeals.agree(str(deal.get("deal", "")), DATE)
 	assert_eq(str(agreed.get("state", "")), MarketDealRecords.AGREED,
 		"the generated player refused the move: %s" % str(agreed.get("reason", "")))
