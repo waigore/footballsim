@@ -133,6 +133,13 @@ func click(p: Vector2) -> void:
 		var tracked = game.engine.by_id.get(game.focus_id, null)
 		if tracked != null and str(tracked.key) != "":
 			game.wiki_host.open_page(WikiModel.PLAYER, str(tracked.key))
+	elif b == "attrs:sheet":
+		Prefs.save_attrs("FULL")
+		var focused = game.engine.by_id.get(game.focus_id, null)
+		if focused != null and str(focused.key) != "":
+			game.wiki_host.open_page(WikiModel.PLAYER, str(focused.key))
+	elif b.begins_with("attrs:"):
+		Prefs.save_attrs(b.substr(6))
 	elif b == "manager_card":
 		game.hud.manager_card.dismiss()
 	elif b == "restart":

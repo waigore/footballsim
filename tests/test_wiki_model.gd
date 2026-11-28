@@ -236,6 +236,8 @@ func _rows_in(page: Dictionary, section: String) -> int:
 			continue
 		if seen and str(block["k"]) == "table":
 			return block["rows"].size()
+		if seen and str(block["k"]) == "door":
+			continue
 		if seen and str(block["k"]) == "section":
 			return 0
 		if seen and str(block["k"]) != "table":

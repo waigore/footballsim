@@ -77,6 +77,35 @@ static func save_mode(mode: String, path: String = PATH) -> bool:
 	return cfg.save(path) == OK
 
 
+const KEY_ATTRS := "attribute_view"
+const ATTR_MODES := ["SIMPLIFIED", "FULL"]
+const DEFAULT_ATTRS := "SIMPLIFIED"
+
+static var _attrs_cache := ""
+
+static func normalize_attrs(mode: String) -> String:
+	return "FULL" if mode == "FULL" else DEFAULT_ATTRS
+
+static func load_attrs(path: String = PATH) -> String:
+	if path == PATH and _attrs_cache != "":
+		return _attrs_cache
+	var raw = _read(path).get_value(SECTION_UI, KEY_ATTRS, DEFAULT_ATTRS)
+	if typeof(raw) != TYPE_STRING:
+		return DEFAULT_ATTRS
+	var mode := normalize_attrs(str(raw))
+	if path == PATH:
+		_attrs_cache = mode
+	return mode
+
+static func save_attrs(mode: String, path: String = PATH) -> bool:
+	var cfg := _read(path)
+	var value := normalize_attrs(mode)
+	cfg.set_value(SECTION_UI, KEY_ATTRS, value)
+	if path == PATH:
+		_attrs_cache = value
+	return cfg.save(path) == OK
+
+
 static func _read(path: String) -> ConfigFile:
 	var cfg := ConfigFile.new()
 	cfg.load(path)

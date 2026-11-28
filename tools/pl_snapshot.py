@@ -29,6 +29,7 @@ are never overwritten by a league refresh.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import re
@@ -43,6 +44,8 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import sys as _sys
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cup_seed_data import (  # noqa: E402
     CUPS, NAME_POOLS, NORTH_CITIES, PL_EUROPE, PRIORS, SPANISH_NORTH,
@@ -50,11 +53,18 @@ from cup_seed_data import (  # noqa: E402
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT / "tools") not in _sys.path:
+    _sys.path.insert(0, str(ROOT / "tools"))
+
+import fc_ratings  # noqa: E402  — the shared derive module
+
 SNAPSHOT = ROOT / "data" / "pl_snapshot.json"
 SEED_DB = ROOT / "data" / "pl_seed.sqlite"
 
 SCHEMA_VERSION = 3
 SOURCE_ESPN = "espn"
+SOURCE_SOFIFA = "sofifa"
+RATINGS_SHEET = ROOT / "data" / "fc_sheet.csv"
 ESPN_SITE = "https://site.api.espn.com/apis/site/v2/sports"
 ESPN_CORE = "https://sports.core.api.espn.com/v2"
 
@@ -271,6 +281,146 @@ CLUB_COUNTS = {cid: int(spec["rules"].get("clubs", 20)) for cid, spec in COMPETI
 
 PLAYER_ATTRS = ("ovr", "pac", "sho", "pas", "dri", "def", "phy")
 GK_ATTRS = ("div", "han", "kic", "ref", "spd")
+## Every ability sub-stat a card is derived from, in the sheet's own names.
+SUB_STATS = (
+    "acceleration", "sprint_speed", "agility", "balance", "reactions",
+    "ball_control", "dribbling", "composure", "crossing", "curve",
+    "fk_accuracy", "finishing", "heading_accuracy", "long_shots",
+    "long_passing", "short_passing", "shot_power", "volleys", "aggression",
+    "interceptions", "positioning", "vision", "penalties", "jumping",
+    "stamina", "strength", "marking_awareness", "standing_tackle",
+    "sliding_tackle", "gk_diving", "gk_handling", "gk_kicking",
+    "gk_positioning", "gk_reflexes",
+)
+## The card extras the snapshot stores beside the sub-stats.
+CARD_EXTRAS = (
+    "potential", "weak_foot", "skill_moves", "work_rate", "play_styles",
+    "traits", "international_reputation",
+)
+## The sheet's column for each sub-stat; one sheet, every competition.
+SHEET_COLUMNS = {
+    "acceleration": "movement_acceleration",
+    "sprint_speed": "movement_sprint_speed",
+    "agility": "movement_agility",
+    "balance": "movement_balance",
+    "reactions": "movement_reactions",
+    "ball_control": "skill_ball_control",
+    "dribbling": "skill_dribbling",
+    "composure": "mentality_composure",
+    "crossing": "attacking_crossing",
+    "curve": "skill_curve",
+    "fk_accuracy": "skill_fk_accuracy",
+    "finishing": "attacking_finishing",
+    "heading_accuracy": "attacking_heading_accuracy",
+    "long_shots": "power_long_shots",
+    "long_passing": "skill_long_passing",
+    "short_passing": "attacking_short_passing",
+    "shot_power": "power_shot_power",
+    "volleys": "attacking_volleys",
+    "aggression": "mentality_aggression",
+    "interceptions": "mentality_interceptions",
+    "positioning": "mentality_positioning",
+    "vision": "mentality_vision",
+    "penalties": "mentality_penalties",
+    "jumping": "power_jumping",
+    "stamina": "power_stamina",
+    "strength": "power_strength",
+    "marking_awareness": "defending_marking_awareness",
+    "standing_tackle": "defending_standing_tackle",
+    "sliding_tackle": "defending_sliding_tackle",
+    "gk_diving": "goalkeeping_diving",
+    "gk_handling": "goalkeeping_handling",
+    "gk_kicking": "goalkeeping_kicking",
+    "gk_positioning": "goalkeeping_positioning",
+    "gk_reflexes": "goalkeeping_reflexes",
+}
+## A club name in the shipped seed against the name the ratings sheet carries.
+CLUB_ALIASES = {
+    "Fulham": "Fulham FC",
+    "Barcelona": "FC Barcelona",
+    "Real Betis": "Real Betis Balompié",
+    "Sevilla": "Sevilla FC",
+    "Alavés": "Deportivo Alavés",
+    "Espanyol": "RCD Espanyol",
+    "Deportivo": "RC Deportivo de La Coruña",
+    "Osasuna": "CA Osasuna",
+    "Celta Vigo": "RC Celta",
+    "Levante": "Levante UD",
+    "Valencia": "Valencia CF",
+    "Getafe": "Getafe CF",
+    "Elche": "Elche CF",
+    "Málaga": "Málaga CF",
+    "Villarreal": "Villarreal CF",
+    "Racing Santander": "Racing Santander",
+    "Bayern Munich": "FC Bayern München",
+    "Mainz": "1. FSV Mainz 05",
+    "FC Cologne": "1. FC Köln",
+    "Schalke 04": "FC Schalke 04",
+    "Hertha Berlin": "Hertha BSC",
+    "St. Pauli": "FC St. Pauli",
+    "Millwall": "Millwall FC",
+    "Reading": "Reading FC",
+    "Blackpool": "Blackpool FC",
+    "Bayer Leverkusen": "Bayer 04 Leverkusen",
+    "Werder Bremen": "SV Werder Bremen",
+    "TSG Hoffenheim": "TSG 1899 Hoffenheim",
+    "Hamburg SV": "Hamburger SV",
+    "Kaiserslautern": "1. FC Kaiserslautern",
+    "Arminia Bielefeld": "DSC Arminia Bielefeld",
+    "VfL Bochum": "VfL Bochum 1848",
+    "VfL Osnabruck": "VfL Osnabrück",
+    "Energie Cottbus": "FC Energie Cottbus",
+}
+## The line a role plays on. A keeper never matches an outfield sheet row, and
+## a defender never takes a striker's profile, however close the birthday.
+ROLE_LINES = {
+    "GK": "GK",
+    "RB": "DEF", "LB": "DEF", "RCB": "DEF", "LCB": "DEF", "CB": "DEF",
+    "RWB": "DEF", "LWB": "DEF",
+    "CDM": "MID", "RDM": "MID", "LDM": "MID", "CM": "MID", "RM": "MID",
+    "LM": "MID",
+    "CAM": "FWD", "RW": "FWD", "LW": "FWD", "ST": "FWD", "CF": "FWD",
+}
+POSITION_LINES = {
+    "GK": "GK",
+    "RB": "DEF", "LB": "DEF", "CB": "DEF", "RWB": "DEF", "LWB": "DEF",
+    "CDM": "MID", "CM": "MID", "RM": "MID", "LM": "MID", "CAM": "MID",
+    "RW": "FWD", "LW": "FWD", "ST": "FWD", "CF": "FWD",
+}
+## A defender is matched only against defenders, a keeper only against a
+## keeper; a midfielder and a forward may swap, because the sheet lists a
+## winger at LM and a 10 at CM.
+LINE_COMPATIBLE = {
+    "GK": {"GK"},
+    "DEF": {"DEF"},
+    "MID": {"MID", "FWD"},
+    "FWD": {"FWD", "MID"},
+}
+
+
+## The cover the ratings gate holds the top leagues to, measured on the XI:
+## a club's XI is what the sim fields and what most card surfaces open on. The
+## whole-squad cover is reported beside it, never gated: a September card sheet
+## trails a season's academy call-ups, and a synthesized kid is the honest answer
+## for a player the sheet has never carried.
+RATINGS_GATE = {"PL": 0.95, "LL": 0.90, "BL": 0.90}
+
+
+def line_of(role: str) -> str:
+    return ROLE_LINES.get(role, "MID")
+
+
+def compatible(role: str, positions: list[str]) -> bool:
+    """Whether a sheet row's positions can be read as this player's role."""
+    if not positions:
+        return False
+    allowed = LINE_COMPATIBLE.get(line_of(role), {"MID"})
+    for position in positions:
+        if POSITION_LINES.get(position, "MID") in allowed:
+            return True
+    return False
+
+
 ## ESPN abbreviates some clubs differently from the shipped seed. One map per
 ## competition, so Bayern's ESPN MUN never collides with Manchester United.
 ESPN_ALIASES = {"MAN": "MUN", "MNC": "MCI"}
@@ -479,7 +629,9 @@ CREATE TABLE player (
     phy INTEGER NOT NULL, height INTEGER NOT NULL,
     gk_div INTEGER, gk_han INTEGER, gk_kic INTEGER, gk_ref INTEGER, gk_spd INTEGER,
     squad TEXT NOT NULL, ord INTEGER NOT NULL, espn_id TEXT, age INTEGER,
-    nationality TEXT, date_of_birth TEXT
+    nationality TEXT, date_of_birth TEXT,
+    subs TEXT NOT NULL DEFAULT '{}', extras TEXT NOT NULL DEFAULT '{}',
+    ratings_matched INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE table_row (
     club_id TEXT PRIMARY KEY, competition_id TEXT NOT NULL,
@@ -890,33 +1042,35 @@ def _clamp(value: float, low: int = 35, high: int = 93) -> int:
     return max(low, min(high, int(round(value))))
 
 
+def _wobble(text: str) -> int:
+    return _jitter(text, 3)
+
+
+## The card bar a face name prints under: pace -> PAC, and so on.
+FACE_KEYS = {
+    "pace": "pac", "shooting": "sho", "passing": "pas",
+    "dribbling": "dri", "defending": "def", "physic": "phy",
+}
+
+
+def _card_from_subs(subs: dict[str, int], role: str, intl_rep: int = 1) -> dict:
+    """The card a sub-stat sheet prints: overall, face bars and keeper bars."""
+    card = fc_ratings.card_of(subs, role, intl_rep)
+    out = {"ovr": card["ovr"], "gk": card["gk"]}
+    for face, key in FACE_KEYS.items():
+        out[key] = card.get(face, 0)
+    return out
+
+
 def _attributes(club_base: float, role: str, name: str) -> dict:
-    wobble = _jitter(name, 3)
-    base = club_base + wobble
-    if role == "GK":
-        return {
-            "ovr": _clamp(base + 1), "pac": _clamp(base - 24), "sho": _clamp(base - 50),
-            "pas": _clamp(base - 20), "dri": _clamp(base - 24), "def": _clamp(base - 48),
-            "phy": _clamp(base - 4),
-            "gk": {
-                "div": _clamp(base + 2), "han": _clamp(base + 1), "kic": _clamp(base - 8),
-                "ref": _clamp(base + 2), "spd": _clamp(base - 22),
-            },
-        }
-    line = "D" if role in ("RB", "RCB", "LCB", "LB") else (
-        "F" if role in ("ST", "RW", "LW") else "M")
-    if line == "D":
-        attrs = {"pac": base - 2, "sho": base - 26, "pas": base - 7,
-                 "dri": base - 10, "def": base + 4, "phy": base + 3}
-    elif line == "F":
-        attrs = {"pac": base + 2, "sho": base + 5, "pas": base - 2,
-                 "dri": base + 4, "def": base - 21, "phy": base - 3}
-    else:
-        attrs = {"pac": base - 1, "sho": base - 8, "pas": base + 3,
-                 "dri": base + 2, "def": base - 4, "phy": base - 2}
-    attrs = {k: _clamp(v) for k, v in attrs.items()}
-    attrs["ovr"] = _clamp(club_base + wobble / 2.0)
-    return attrs
+    """A card for a player the sheet does not carry.
+
+    The sub-stat sheet is synthesized from the role profile and the club's
+    strength, then walked through the same derive path a scraped player takes,
+    so no surface can tell the two apart.
+    """
+    subs = fc_ratings.synthesize(club_base, role, _wobble(name))
+    return _card_from_subs(subs, role)
 
 
 def _role_for(group: str, counts: dict[str, int]) -> str:
@@ -1110,6 +1264,12 @@ STUB_COLORS = [
     "#1f4e79", "#7a1f1f", "#1d5c3a", "#5b3a86", "#8a5a00", "#0f5f6e",
     "#4a4a4a", "#7a2f5a", "#2f5d1f", "#63391f", "#1f3f7a", "#6e1f3f",
 ]
+
+
+## The band each cup stub's squad was authored at, keyed by the stub's own tier.
+## `cup_seed_data` carries the same ladder per club; this is the fallback a club
+## with no entry still needs.
+STUB_TIER_BASE = {3: 65.0, 4: 60.0, 5: 57.0, 6: 55.0}
 
 
 def _stub_club(cup_id: str, country: str, name: str, abbr: str, city: str,
@@ -1366,6 +1526,344 @@ def cmd_fetch(args: argparse.Namespace) -> int:
     return 0
 
 
+# ----------------------------------------------------------------- ratings --
+
+
+def slug_name(name: str) -> str:
+    return " ".join(slug(name).split("-"))
+
+
+def sheet_rows(path: Path = RATINGS_SHEET) -> list[dict]:
+    """Read the ratings sheet (the Sofifa-sourced FC card export)."""
+    if not path.exists():
+        raise SystemExit(
+            f"missing the ratings sheet at {path.relative_to(ROOT)}; "
+            "export it with the Sofifa scrape (see docs/data.md) and commit it"
+        )
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def _sheet_int(row: dict, column: str) -> int | None:
+    raw = (row.get(column) or "").strip()
+    if raw in ("", "nan"):
+        return None
+    try:
+        return int(float(raw.split("+")[0]))
+    except ValueError:
+        return None
+
+
+def sheet_player(row: dict) -> dict | None:
+    """One sheet row as sub-stats plus card extras, or None if it is short."""
+    subs: dict[str, int] = {}
+    for key, column in SHEET_COLUMNS.items():
+        value = _sheet_int(row, column)
+        if value is None:
+            return None
+        subs[key] = value
+    extras = {
+        "potential": _sheet_int(row, "potential") or 0,
+        "weak_foot": _sheet_int(row, "weak_foot") or 0,
+        "skill_moves": _sheet_int(row, "skill_moves") or 0,
+        "work_rate": str(row.get("work_rate") or "").strip(),
+        "play_styles": str(row.get("player_tags") or "").replace("\xa0", " ").strip(),
+        "traits": str(row.get("player_traits") or "").strip(),
+        "international_reputation": _sheet_int(row, "international_reputation") or 1,
+    }
+    positions = [
+        part.strip().upper()
+        for part in str(row.get("player_positions") or "").split(",")
+        if part.strip()
+    ]
+    return {
+        "player_id": str(row.get("player_id") or ""),
+        "subs": subs,
+        "extras": extras,
+        "positions": positions,
+        "overall": _sheet_int(row, "overall") or 0,
+        "club": str(row.get("club_name") or "").strip(),
+        "short_name": str(row.get("short_name") or "").strip(),
+        "long_name": str(row.get("long_name") or "").strip(),
+        "dob": str(row.get("dob") or "").strip(),
+    }
+
+
+def _name_key(text: str) -> str:
+    return slug_name(text).replace(" ", "")
+
+
+def _surname_initial(text: str) -> tuple[str, str]:
+    words = slug_name(text).split()
+    if not words:
+        return "", ""
+    return words[-1], (words[0][0] if len(words) > 1 else "")
+
+
+def match_club(club: dict, by_club: dict[str, list[dict]]) -> str:
+    """The sheet club name a shipped club's squad is read from."""
+    wanted = CLUB_ALIASES.get(str(club["name"]), str(club["name"]))
+    key = slug_name(wanted)
+    if key in by_club:
+        return key
+    return ""
+
+
+def remap_ratings(snapshot: dict, sheet: list[dict]) -> dict:
+    """Derive every player's card from a sub-stat sheet; synthesize the rest."""
+    by_club: dict[str, list[dict]] = {}
+    by_dob: dict[str, list[dict]] = {}
+    by_name: dict[str, list[dict]] = {}
+    parsed: list[dict] = []
+    for row in sheet:
+        entry = sheet_player(row)
+        if entry is None:
+            continue
+        parsed.append(entry)
+        if entry["club"]:
+            by_club.setdefault(slug_name(entry["club"]), []).append(entry)
+        if entry["dob"]:
+            by_dob.setdefault(entry["dob"], []).append(entry)
+        by_name.setdefault(_name_key(entry["short_name"]), []).append(entry)
+    if not parsed:
+        raise SystemExit("the ratings sheet carried no usable player row")
+
+    taken: set[str] = set()
+    assigned: dict[str, dict] = {}
+    matched: dict[str, int] = {}
+    totals: dict[str, int] = {}
+    xi_matched: dict[str, int] = {}
+    xi_totals: dict[str, int] = {}
+    squad_rows: list[tuple[dict, list[dict]]] = []
+    for club in snapshot["clubs"]:
+        competition_id = str(club.get("competition_id", "PL"))
+        key = match_club(club, by_club)
+        options = by_club.get(key, []) if key else []
+        if int(club.get("stub", 0)):
+            options = []
+        squad_rows.append((club, options))
+        for player in club["players"]:
+            starter = str(player.get("squad")) != "bench"
+            totals[competition_id] = totals.get(competition_id, 0) + 1
+            if starter:
+                xi_totals[competition_id] = xi_totals.get(competition_id, 0) + 1
+    for club, options in squad_rows:
+        for player in club["players"]:
+            row = _lookup_local(player, options, taken)
+            if row is not None:
+                taken.add(row["player_id"])
+                assigned[str(player["id"])] = row
+    for club, options in squad_rows:
+        if int(club.get("stub", 0)):
+            continue
+        for player in club["players"]:
+            if str(player["id"]) in assigned:
+                continue
+            row = _lookup_anywhere(player, by_dob, by_name, taken)
+            if row is not None:
+                taken.add(row["player_id"])
+                assigned[str(player["id"])] = row
+    for club, options in squad_rows:
+        competition_id = str(club.get("competition_id", "PL"))
+        for player in club["players"]:
+            starter = str(player.get("squad")) != "bench"
+            row = assigned.get(str(player["id"]))
+            role = str(player["role"])
+            if row is not None:
+                player["subs"] = row["subs"]
+                player["extras"] = row["extras"]
+                player["ratings_matched"] = 1
+                intl_rep = int(row["extras"]["international_reputation"])
+                matched[competition_id] = matched.get(competition_id, 0) + 1
+                if starter:
+                    xi_matched[competition_id] = xi_matched.get(competition_id, 0) + 1
+            else:
+                club_base = float(player.get("club_base", 0.0)) or _club_base(snapshot, club)
+                player["subs"] = fc_ratings.synthesize(club_base, role, _wobble(str(player["name"])))
+                player["extras"] = {
+                    "potential": 0, "weak_foot": 0, "skill_moves": 0, "work_rate": "",
+                    "play_styles": "", "traits": "", "international_reputation": 1,
+                }
+                player["ratings_matched"] = 0
+                intl_rep = 1
+            card = _card_from_subs(player["subs"], role, intl_rep)
+            for attr in PLAYER_ATTRS:
+                player[attr] = int(card[attr])
+            player["gk"] = card["gk"]
+    return {
+        "matched": matched,
+        "totals": totals,
+        "xi_matched": xi_matched,
+        "xi_totals": xi_totals,
+        "cover": {
+            cid: (matched.get(cid, 0) / totals[cid] if totals.get(cid) else 0.0)
+            for cid in totals
+        },
+        "xi_cover": {
+            cid: (xi_matched.get(cid, 0) / xi_totals[cid] if xi_totals.get(cid) else 0.0)
+            for cid in xi_totals
+        },
+    }
+
+
+def _same_person(player: dict, row: dict) -> bool:
+    """Two dates of birth that disagree are two different footballers."""
+    dob = str(player.get("date_of_birth", ""))
+    if dob and row["dob"] and dob != row["dob"]:
+        return False
+    return True
+
+
+def _card_fits(player: dict, row: dict) -> bool:
+    """Does this sheet person's card plausibly derive to the role this squad lists?
+
+    The identity check that survives a coincidental birthday: derive the card
+    from the row's sub-stats under this player's own role and compare it with the
+    overall the sheet printed. A defender handed a striker's sheet derives a
+    dozen points short, so the pair cannot be the same man.
+    """
+    printed = int(row.get("overall") or 0)
+    if printed <= 0:
+        return True
+    role = str(player.get("role", ""))
+    return abs(fc_ratings.overall(row["subs"], role, 1) - printed) <= 5
+
+
+def _same_line(player: dict, row: dict) -> bool:
+    return compatible(str(player.get("role", "")), row["positions"])
+
+
+def _surname_open(player: dict, row: dict) -> bool:
+    surname, initial = _surname_initial(str(player["name"]))
+    other_surname, other_initial = _surname_initial(row["short_name"])
+    if other_surname != surname:
+        return False
+    return initial == "" or other_initial == initial
+
+
+def _lookup_local(player: dict, options: list[dict], taken: set[str]) -> dict | None:
+    """The row in this club's own squad that is this player, if any.
+
+    A squad-level birthday is the strongest reading there is; then the printed
+    name; then a surname and initial that this club carries exactly once. Every
+    candidate has to read as this player's line of the pitch.
+    """
+    dob = str(player.get("date_of_birth", ""))
+    if dob:
+        found = _free(
+            [row for row in options if row["dob"] == dob and _same_line(player, row)], taken)
+        if found is not None:
+            return found
+    key = _name_key(str(player["name"]))
+    found = _free(
+        [row for row in options
+         if _name_key(row["short_name"]) == key and _same_line(player, row)], taken)
+    if found is not None:
+        return found
+    if _surname_initial(str(player["name"]))[0] == "":
+        return None
+    surnames = [row for row in options if _surname_open(player, row) and _same_line(player, row)]
+    return _free(surnames, taken) if len(surnames) == 1 else None
+
+
+def _lookup_anywhere(
+    player: dict,
+    by_dob: dict[str, list[dict]],
+    by_name: dict[str, list[dict]],
+    taken: set[str],
+) -> dict | None:
+    """A sheet row for a player this club does not carry — a transfer, usually.
+
+    Name first: a printed name is that man. Then the birthday, read only where a
+    surname or the card itself corroborates the role — a shared birthday alone has
+    already handed a centre-back a winger's sheet in this repo. Last, a surname
+    and initial the whole sheet carries exactly once.
+    """
+    key = _name_key(str(player["name"]))
+    dob = str(player.get("date_of_birth", ""))
+    named = [row for row in by_name.get(key, [])
+             if _same_line(player, row)]
+    if named:
+        same_dob = [row for row in named if dob and row["dob"] == dob]
+        return _free(same_dob, taken) if same_dob else _free(named, taken)
+    if dob:
+        born = [row for row in by_dob.get(dob, []) if _same_line(player, row)]
+        named_born = [row for row in born if _surname_open(player, row)]
+        found = _free(named_born, taken) if named_born else _free(
+            [row for row in born if _card_fits(player, row)], taken)
+        if found is not None:
+            return found
+    if _surname_initial(str(player["name"]))[0] == "":
+        return None
+    near = [
+        row for rows in by_name.values() for row in rows
+        if _surname_open(player, row) and _same_line(player, row)
+    ]
+    if len(near) == 1:
+        return _free(near, taken)
+    return None
+
+
+def _free(rows: list[dict], taken: set[str]) -> dict | None:
+    for row in rows:
+        if row["player_id"] not in taken:
+            return row
+    return None
+
+
+def _club_base(snapshot: dict, club: dict) -> float:
+    """The strength band a synthesized squad sits in, from its table place.
+
+    A cup stub never sits in a shipped table, so its place cannot answer; its
+    tier does. The bands are the ones the stub squads were authored at, read off
+    `cup_seed_data`'s own ladder, so a fifth-tier cup entry does not come out
+    stronger than the League One side it plays.
+    """
+    rows = [r for r in snapshot.get("table", [])
+            if str(r.get("club_id", "")) == str(club["id"])]
+    place = int(rows[0]["position"]) if rows else 0
+    if place <= 0:
+        if int(club.get("stub", 0)):
+            return float(STUB_TIER_BASE.get(int(club.get("tier", 5)), 57.0))
+        return 76.0
+    size = max(CLUB_COUNTS.get(str(club.get("competition_id", "PL")), 20), 2)
+    high, low = 80.0, 66.0
+    return high - float(place - 1) * ((high - low) / float(size - 1))
+
+
+def cmd_ratings(args: argparse.Namespace) -> int:
+    snapshot = load(args.snapshot)
+    sheet = sheet_rows(Path(args.sheet))
+    report = remap_ratings(snapshot, sheet)
+    snapshot["ratings_source"] = (
+        "Sofifa-sourced EA FC 26 player sheet "
+        f"({Path(args.sheet).name}), every card derived from sub-stats"
+    )
+    snapshot["db_version"] = int(snapshot.get("db_version", 1)) + (1 if args.bump_version else 0)
+    snapshot["schema_version"] = SCHEMA_VERSION
+    save(args.snapshot, snapshot)
+    for competition_id in sorted(report["totals"]):
+        cover = report["cover"][competition_id]
+        xi = report["xi_cover"].get(competition_id, 0.0)
+        print(
+            f"ratings {competition_id}: XI {report['xi_matched'].get(competition_id, 0)}"
+            f"/{report['xi_totals'].get(competition_id, 0)} ({xi:.1%}), "
+            f"squad {report['matched'].get(competition_id, 0)}"
+            f"/{report['totals'][competition_id]} ({cover:.1%})"
+        )
+    short = [
+        f"{cid} XI {report['xi_cover'].get(cid, 0.0):.1%} < {gate:.0%}"
+        for cid, gate in RATINGS_GATE.items()
+        if report["xi_cover"].get(cid, 0.0) < gate
+    ]
+    if short:
+        print("FAIL the top leagues' XIs did not reach the match gate: " + ", ".join(short),
+              file=sys.stderr)
+        return 1
+    print(f"ratings: {len(sheet)} sheet rows, db_version {snapshot['db_version']}")
+    return 0
+
+
 # -------------------------------------------------------------------- build --
 
 
@@ -1417,13 +1915,16 @@ def build_db(snapshot: dict) -> dict:
         for ord, p in enumerate(club["players"]):
             gk = p.get("gk") or {}
             con.execute(
-                "INSERT INTO player VALUES (" + ",".join("?" * 25) + ")",
+                "INSERT INTO player VALUES (" + ",".join("?" * 28) + ")",
                 (
                     p["id"], club["id"], p["name"], int(p["number"]), p["role"], p["pos"],
                     *[int(p[a]) for a in PLAYER_ATTRS], int(p.get("height", 180)),
                     *[int(gk.get(a, 30)) if gk else None for a in GK_ATTRS],
                     p["squad"], ord, p.get("espn_id"), int(p.get("age", 0) or 0),
                     p.get("nationality", ""), p.get("date_of_birth", ""),
+                    json.dumps(p.get("subs", {}), sort_keys=True),
+                    json.dumps(p.get("extras", {}), sort_keys=True),
+                    1 if p.get("ratings_matched") else 0,
                 ),
             )
             con.execute(
@@ -1611,6 +2112,33 @@ def _audit_ids(snapshot: dict) -> list[str]:
     return problems
 
 
+def _audit_card(club_id: str, player: dict) -> list[str]:
+    """A snapshot player must ship a full sub-stat sheet and a derived card."""
+    problems: list[str] = []
+    subs = player.get("subs") or {}
+    if not subs:
+        return [f"{club_id}/{player['id']}: no sub-stat sheet"]
+    missing = [key for key in fc_ratings.load_model()["sub_stats"] if key not in subs]
+    if missing:
+        problems.append(f"{club_id}/{player['id']}: missing sub-stats {', '.join(missing[:4])}")
+        return problems
+    extras = player.get("extras") or {}
+    if int(extras.get("international_reputation", 0)) < 1:
+        problems.append(f"{club_id}/{player['id']}: no international reputation")
+    card = _card_from_subs(subs, str(player["role"]), int(extras.get("international_reputation", 1)))
+    for attr in PLAYER_ATTRS:
+        if int(player.get(attr, -1)) != int(card[attr]):
+            problems.append(
+                f"{club_id}/{player['id']}: {attr} is {player.get(attr)}, "
+                f"derived {card[attr]}"
+            )
+    stored_gk = player.get("gk") or {}
+    for bar in GK_ATTRS:
+        if int(stored_gk.get(bar, -1)) != int(card["gk"].get(bar, -2)):
+            problems.append(f"{club_id}/{player['id']}: gk.{bar} is not derived")
+    return problems
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     snapshot = load(args.snapshot)
     problems: list[str] = []
@@ -1675,6 +2203,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
             problems.append(f"{club['id']}: duplicate player ids")
         if sum(1 for p in club["players"] if p["squad"] == "starter") != 11:
             problems.append(f"{club['id']}: needs eleven starters")
+        for p in club["players"]:
+            problems.extend(_audit_card(club["id"], p))
     problems.extend(_audit_ids(snapshot))
     if problems:
         print("\n".join(f"FAIL {p}" for p in problems), file=sys.stderr)
@@ -1710,6 +2240,13 @@ def main(argv: list[str] | None = None) -> int:
     build.set_defaults(func=cmd_build)
     verify = sub.add_parser("verify", help="check the shipped seed against the snapshot")
     verify.set_defaults(func=cmd_verify)
+    ratings = sub.add_parser(
+        "ratings",
+        help="rebuild every card from the Sofifa-sourced sub-stat sheet",
+    )
+    ratings.add_argument("--sheet", default=str(RATINGS_SHEET))
+    ratings.add_argument("--bump-version", action="store_true")
+    ratings.set_defaults(func=cmd_ratings)
     args = parser.parse_args(argv)
     return args.func(args)
 

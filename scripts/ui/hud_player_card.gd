@@ -11,8 +11,11 @@ var gold := Color.WHITE
 var ink := Color.WHITE
 var dim := Color.GRAY
 var touch := false
+var mode := "SIMPLIFIED"
 var _bg := StyleBoxFlat.new()
 var _btn := StyleBoxFlat.new()
+var _sheets := {}
+var _compact := false
 
 func _init(panel: Color, accent: Color, text_col: Color, muted: Color) -> void:
 	panel_col = panel
@@ -52,6 +55,43 @@ func profile_rect(vp: Vector2) -> Rect2:
 		return Rect2(box.position.x + box.size.x - 100.0, box.position.y + 47.0, 86.0, 16.0)
 	return Rect2(box.position.x + box.size.x - 118.0, box.position.y + box.size.y - 32.0, 104.0, 20.0)
 
+
+func attrs_rect(vp: Vector2) -> Rect2:
+	"""The full-sheet door on a phone / the SIMPLE–FULL pair on a desktop card."""
+	var box := rect_for(vp)
+	if HudLayout.is_compact(vp):
+		return Rect2(box.position.x + 22.0, box.position.y + 47.0, box.size.x - 128.0, 16.0)
+	return Rect2(box.position.x + 14.0, box.position.y + box.size.y - 56.0, box.size.x - 28.0, 18.0)
+
+
+func _half_rect(box: Rect2, half: int) -> Rect2:
+	var w: float = (box.size.x - 6.0) * 0.5
+	return Rect2(box.position.x + (w + 6.0) * float(half), box.position.y, w, box.size.y)
+
+
+func _draw_attrs_door(c: CanvasItem, r: Rect2, font: Font) -> void:
+	if _compact:
+		var size_px := 8 if r.size.y < 18.0 else 9
+		c.draw_rect(r, Color(1, 1, 1, 0.04), true)
+		c.draw_rect(r, Color(1, 1, 1, 0.10), false, 1.0)
+		var text := "FULL SHEET  ›"
+		var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
+		c.draw_string(font, Vector2(r.position.x + r.size.x - w - 4.0,
+			r.position.y + r.size.y * 0.5 + float(size_px) * 0.36), text,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, gold)
+		return
+	for half in range(2):
+		var cell := _half_rect(r, half)
+		var mine := (half == 1) == (mode == "FULL")
+		c.draw_rect(cell, Color(0.96, 0.78, 0.30, 0.16) if mine else Color(1, 1, 1, 0.04), true)
+		c.draw_rect(cell, gold if mine else Color(1, 1, 1, 0.10), false, 1.0)
+		var label := "FULL" if half == 1 else "SIMPLE"
+		var size_px := 8 if cell.size.y < 18.0 else 9
+		var w: float = font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
+		c.draw_string(font, Vector2(cell.position.x + (cell.size.x - w) * 0.5,
+			cell.position.y + cell.size.y * 0.5 + float(size_px) * 0.36), label,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, gold if mine else dim)
+
 func _draw_profile(c: CanvasItem, r: Rect2, font: Font) -> void:
 	c.draw_style_box(_btn, r)
 	var label := "PROFILE  ›"
@@ -63,10 +103,40 @@ func draw(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, engine, game) -
 	var p = player(engine, game)
 	if p == null:
 		return
-	if HudLayout.is_compact(vp):
+	_compact = HudLayout.is_compact(vp)
+	if _compact:
 		_draw_compact(c, vp, f_bold, f_med, p, engine)
 	else:
 		_draw_column(c, vp, f_bold, f_med, p, engine)
+
+
+func _subs(p: Object) -> Dictionary:
+	var key := str(p.key)
+	if key == "":
+		return {}
+	if not _sheets.has(key):
+		_sheets[key] = WikiModel.repo().player(key)
+	var row: Dictionary = _sheets[key]
+	return row.get("subs", {})
+
+
+func _draw_sheet(c: CanvasItem, box: Rect2, f_bold: Font, p: Object, cols: int, row_h: float,
+		label_size: int, value_size: int) -> void:
+	var cells := AttrView.flat(str(p.role), _subs(p))
+	if cells.is_empty():
+		return
+	var cell_w: float = box.size.x / float(cols)
+	var rows: int = int(ceil(float(cells.size()) / float(maxi(cols, 1))))
+	for i in range(cells.size()):
+		var col: int = i % cols
+		var row: int = i / cols
+		if float(row) >= ceil(float(box.size.y) / row_h):
+			return
+		var cell: Array = cells[i]
+		var x: float = box.position.x + cell_w * float(col)
+		var y: float = box.position.y + row_h * float(row) + row_h - 3.0
+		_label(c, Vector2(x, y), str(cell[0]), label_size, dim, f_bold)
+		_label_right(c, x + cell_w - 10.0, y, str(cell[1]), value_size, ink, f_bold)
 
 
 func _draw_compact(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, engine) -> void:
@@ -85,6 +155,8 @@ func _draw_compact(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, eng
 	_label_right(c, x + w - 14, y + 27, str(p.attr["ovr"]), 20, ink, f_bold)
 	_label_right(c, x + w - 14, y + 41, "OVR", 8, dim, f_bold)
 	_label(c, Vector2(x + 22, y + 57), "ATTRIBUTES", 8, dim, f_bold)
+	_draw_attrs_door(c, attrs_rect(vp), f_bold)
+	_draw_profile(c, profile_rect(vp), f_bold)
 	var attrs := _attrs(p)
 	var cw: float = (w - 34.0) / float(attrs.size())
 	for i in range(attrs.size()):
@@ -110,7 +182,6 @@ func _draw_compact(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, eng
 		_label(c, Vector2(nx, y + 101), str(cells[i][0]), 8, dim, f_bold)
 		_label(c, Vector2(nx, y + 116), str(cells[i][1]), 14, ink, f_bold)
 	_label(c, Vector2(x + 22, y + h - 6), "TAP THE PITCH TO CLEAR", 8, dim, f_med)
-	_draw_profile(c, profile_rect(vp), f_bold)
 
 
 func _draw_column(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, engine) -> void:
@@ -130,14 +201,19 @@ func _draw_column(c: CanvasItem, vp: Vector2, f_bold: Font, f_med: Font, p, engi
 	var ay: float = y + 68.0
 	_label(c, Vector2(x + 14, ay), "ATTRIBUTES", 9, dim, f_bold)
 	ay += 10.0
-	for a in attrs:
-		var val: float = _value(p, str(a[1]))
-		_label(c, Vector2(x + 14, ay + 10), str(a[0]), 9, dim, f_bold)
-		c.draw_rect(Rect2(x + 46, ay + 2, 168, 6), Color(1, 1, 1, 0.07))
-		c.draw_rect(Rect2(x + 46, ay + 2, 168 * val / 100.0, 6), team["color"].lerp(Color.WHITE, 0.10))
-		_label_right(c, x + w - 14, ay + 10, str(int(val)), 10, ink, f_bold)
-		ay += 15.0
-	ay += 8.0
+	if mode == "FULL":
+		_draw_sheet(c, Rect2(x + 14.0, ay, w - 28.0, 9.0 * 11.0), f_bold, p, 4, 11.0, 8, 10)
+		ay += 9.0 * 11.0 + 6.0
+	else:
+		for a in attrs:
+			var val: float = _value(p, str(a[1]))
+			_label(c, Vector2(x + 14, ay + 10), str(a[0]), 9, dim, f_bold)
+			c.draw_rect(Rect2(x + 46, ay + 2, 168, 6), Color(1, 1, 1, 0.07))
+			c.draw_rect(Rect2(x + 46, ay + 2, 168 * val / 100.0, 6), team["color"].lerp(Color.WHITE, 0.10))
+			_label_right(c, x + w - 14, ay + 10, str(int(val)), 10, ink, f_bold)
+			ay += 15.0
+		ay += 8.0
+	_draw_attrs_door(c, attrs_rect(vp), f_bold)
 	c.draw_line(Vector2(x + 16, ay), Vector2(x + w - 16, ay), Color(1, 1, 1, 0.07), 1)
 	ay += 14.0
 	var st: Dictionary = p.stats

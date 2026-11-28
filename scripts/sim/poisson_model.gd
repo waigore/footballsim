@@ -6,11 +6,11 @@ const HOME_XG := 1.35
 const AWAY_XG := 1.16
 
 
-const ATTACK_ELASTICITY := 0.98
-const DEFENCE_ELASTICITY := 0.98
+const ATTACK_ELASTICITY := 0.78
+const DEFENCE_ELASTICITY := 0.78
 
 
-const RHO := 0.08
+const RHO := 0.10
 
 
 const DEFAULT_CALIBRATION := {
