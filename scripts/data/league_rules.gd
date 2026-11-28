@@ -25,6 +25,19 @@ const TEMPLATES := {
 		"advance_mode": "fixture_days", "calendar_mode": "generated",
 		"playoff_format": "",
 	},
+	"LL2": {
+
+
+		"win_points": 3, "draw_points": 1, "clubs": 22,
+		"promotion_places": 2, "promotion_playoff_places": 4,
+		"relegation_places": 4, "relegation_playoff_places": 0, "playout_places": 0,
+		"promotion_skip_gap": 0,
+		"ucl_places": 0, "uel_places": 0, "uecl_places": 0, "matchdays": 42,
+		"season_start": "2026-08-14", "season_end": "2027-06-06",
+		"weekend_bias": 0.85, "midweek_matchdays": 6,
+		"advance_mode": "fixture_days", "calendar_mode": "generated",
+		"playoff_format": "segunda_four_two_leg",
+	},
 	"BL": {
 
 

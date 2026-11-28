@@ -21,6 +21,13 @@ static func bands_for(rules: Dictionary) -> Array:
 	return out
 
 
+static func zone_for(row: Dictionary, rules: Dictionary) -> String:
+	var band := LeagueRules.zone(int(row.get("position", 0)), rules)
+	if bool(row.get("filial", false)) and (band == "promotion" or band == "playoff"):
+		return ""
+	return band
+
+
 static func labels_for(bands: Array, short: bool) -> Array:
 	var out: Array = []
 	for band in bands:

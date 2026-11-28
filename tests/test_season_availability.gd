@@ -38,7 +38,7 @@ func _wipe() -> void:
 	PLDatabase.execute("DELETE FROM league_player_stat;")
 
 func _first_club() -> String:
-	return str(TeamData.team_ids()[0])
+	return str(TeamData.team_ids("PL")[0])
 
 func _first_player(club_id: String) -> Dictionary:
 	var team := TeamData.get_team(club_id)

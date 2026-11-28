@@ -10,7 +10,7 @@ const COUNTRY_LEAGUES := {
 }
 
 const LEAGUE_TIER := {
-	"PL": 1, "CH": 2, "L1": 3, "L2": 4, "NL": 5, "LL": 1, "BL": 1, "BL2": 2,
+	"PL": 1, "CH": 2, "L1": 3, "L2": 4, "NL": 5, "LL": 1, "LL2": 2, "BL": 1, "BL2": 2,
 	"SA": 1, "SB": 2,
 }
 

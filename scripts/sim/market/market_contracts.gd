@@ -40,6 +40,7 @@ static func bootstrap(save: LeagueSave, start_date: String = "") -> Dictionary:
 		count += _insert_squad(club_id, squad, wages, seed, start)
 		filled += 1
 	PLDatabase.transaction("COMMIT;")
+	MarketFinance.invalidate()
 	return {"ok": true, "skipped": false, "contracts": count, "clubs": filled, "start": start}
 
 
@@ -68,6 +69,7 @@ static func review(save: LeagueSave, season_index: int, date: String) -> Diction
 		for key in counts:
 			out[key] = int(out.get(key, 0)) + int(counts[key])
 	PLDatabase.transaction("COMMIT;")
+	MarketFinance.invalidate()
 	return out
 
 

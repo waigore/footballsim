@@ -1,0 +1,192 @@
+class_name MarketFinanceFlows
+extends RefCounted
+
+
+static var _bills_key := ""
+static var _bills := {}
+
+
+static func gate(club_id: String, form: float = 0.0) -> int:
+	var row := PLDatabase.row(
+		"SELECT capacity, competition_id FROM club WHERE id = ?;", [club_id])
+	if row.is_empty():
+		return 0
+	var spec := MarketRules.section("finance")
+	var factor := clampf(float(spec.get("attendance", 0.92))
+		+ float(spec.get("form_swing", 0.06)) * clampf(form, -1.0, 1.0), 0.0, 1.0)
+	var cid := str(row.get("competition_id", ""))
+	var price := float(MarketRules.ticket_price(cid)) * MarketRules.revenue_multiplier(cid)
+	return int(round(float(row.get("capacity", 0)) * factor * price))
+
+
+static func tick_gates(season: LeagueSeason, date: String) -> int:
+	if season == null or season.save == null or not MarketFinance.available() or date == "":
+		return 0
+	var upto := str(season.save.meta.get("gates_through", ""))
+	var comps: Array = season.save.actives
+	if comps.is_empty():
+		return 0
+	var marks := PackedStringArray()
+	var bindings: Array = [upto, date]
+	for cid in comps:
+		marks.append("?")
+		bindings.append(str(cid))
+	var spec := MarketRules.section("finance")
+	var attendance := float(spec.get("attendance", 0.92))
+	var swing := float(spec.get("form_swing", 0.06))
+	var values: Array = []
+	var rows: Array = []
+	var totals := {}
+	for row in PLDatabase.rows(
+			"SELECT f.home_club_id AS club_id, f.kickoff AS kickoff, c.capacity AS capacity, "
+			+ "c.competition_id AS cid, t.points AS points, t.played AS played "
+			+ "FROM league_fixture f JOIN club c ON c.id = f.home_club_id "
+			+ "LEFT JOIN league_table t ON t.club_id = f.home_club_id "
+			+ "AND t.competition_id = f.competition_id "
+			+ "WHERE f.status = 'played' AND f.kickoff > ? AND f.kickoff <= ? "
+			+ "AND f.competition_id IN (" + ",".join(marks) + ") "
+			+ "ORDER BY f.kickoff, f.home_club_id;", bindings):
+		var played := int(row.get("played", 0) or 0)
+		var form := 0.0
+		if played > 0:
+			form = clampf((float(row.get("points", 0)) / float(played) / 3.0) * 2.0 - 1.0,
+				-1.0, 1.0)
+		var cid := str(row.get("cid", ""))
+		var factor := clampf(attendance + swing * form, 0.0, 1.0)
+		var amount := int(round(float(row.get("capacity", 0)) * factor
+			* float(MarketRules.ticket_price(cid)) * MarketRules.revenue_multiplier(cid)))
+		if amount <= 0:
+			continue
+		var club_id := str(row["club_id"])
+		values.append("(?, ?, ?, 'gate', ?, 'gate', '', '')")
+		rows.append_array([season.save.season_index(), str(row["kickoff"]), club_id, amount])
+		totals[club_id] = int(totals.get(club_id, 0)) + amount
+	if values.is_empty():
+		season.save.put_meta("gates_through", date)
+		return 0
+	var cases := PackedStringArray()
+	var ids: Array = []
+	var binds: Array = []
+	for club_id in totals.keys():
+		cases.append("WHEN ? THEN ?")
+		binds.append_array([str(club_id), int(totals[club_id])])
+		ids.append(str(club_id))
+	binds.append(date)
+	binds.append_array(ids)
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	PLDatabase.execute("INSERT INTO club_ledger (season_index, date, club_id, kind, amount, "
+		+ "counterparty, player_id, deal_id) VALUES " + ", ".join(values) + ";", rows)
+	PLDatabase.execute("UPDATE club_finance SET cash = cash + CASE club_id "
+		+ " ".join(cases) + " ELSE 0 END, updated_on = ? WHERE club_id IN ("
+		+ ",".join(MarketPurse.marks(ids.size())) + ");", binds)
+	PLDatabase.transaction("COMMIT;")
+	season.save.put_meta("gates_through", date)
+	return values.size()
+
+
+static func form_factor(club_id: String) -> float:
+	var row := PLDatabase.row(
+		"SELECT played, points FROM league_table WHERE club_id = ? LIMIT 1;", [club_id])
+	var played := int(row.get("played", 0))
+	if played <= 0:
+		return 0.0
+	return clampf((float(row.get("points", 0)) / float(played) / 3.0) * 2.0 - 1.0, -1.0, 1.0)
+
+
+static func month(date: String) -> int:
+	if not MarketFinance.available():
+		return 0
+	var bills := wage_bills()
+	var share := float(MarketRules.section("finance").get("commercial_share", 0.4))
+	var posted := 0
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	for row in PLDatabase.rows("SELECT club_id, revenue_base FROM club_finance ORDER BY club_id;"):
+		var club_id := str(row["club_id"])
+		var commercial := int(round(float(row.get("revenue_base", 0)) * share / 12.0))
+		if commercial > 0:
+			MarketFinance.post(club_id, date, MarketFinance.KIND_COMMERCIAL, commercial, "commercial")
+			posted += 1
+		var wages := int(round(float(int(bills.get(club_id, 0))) / 12.0))
+		if wages > 0:
+			MarketFinance.post(club_id, date, MarketFinance.KIND_WAGE, -wages, "squad")
+	PLDatabase.transaction("COMMIT;")
+	return posted
+
+
+static func wage_bills() -> Dictionary:
+	var key := PLDatabase.current_path() + "#" + str(
+		LeagueSave.current.season_index() if LeagueSave.current != null else 0)
+	if key == _bills_key and not _bills.is_empty():
+		return _bills
+	_bills = {}
+	for row in PLDatabase.rows(
+			"SELECT club_id, SUM(wage) AS w FROM player_contract WHERE status = 'active' "
+			+ "GROUP BY club_id;"):
+		_bills[str(row["club_id"])] = int(row.get("w", 0)) * 52
+	_bills_key = key
+	return _bills
+
+
+static func invalidate() -> void:
+	_bills_key = ""
+	_bills = {}
+
+
+static func season_end(season: LeagueSeason, played_index: int) -> int:
+	if season == null or season.save == null or not MarketFinance.available():
+		return 0
+	var date := season.save.current_date()
+	var posted := 0
+	var tables := {}
+	for row in PLDatabase.rows(
+			"SELECT club_id, competition_id FROM league_table "
+			+ "ORDER BY competition_id, points DESC, (gf - ga) DESC, gf DESC, club_id;"):
+		var cid := str(row["competition_id"])
+		if not tables.has(cid):
+			tables[cid] = 0
+		tables[cid] = int(tables[cid]) + 1
+		var place := int(tables[cid])
+		var prize := MarketPurse.prize(cid, place, MarketPurse.size(cid))
+		if prize > 0:
+			_post_season(str(row["club_id"]), date, MarketFinance.KIND_PRIZE, prize, cid,
+				played_index)
+			posted += 1
+		var tv := int(round(float(prize) * float(MarketRules.section("prize").get("tv_share", 0.5))))
+		if tv > 0:
+			_post_season(str(row["club_id"]), date, MarketFinance.KIND_COMMERCIAL, tv,
+				"tv:" + cid, played_index)
+	return posted
+
+
+static func roll(season: LeagueSeason, start: String) -> int:
+	if season == null or season.save == null or not MarketFinance.available():
+		return 0
+	var updated := 0
+	for club in PLDatabase.rows("SELECT * FROM club ORDER BY id;"):
+		var club_id := str(club["id"])
+		var cid := str(club.get("competition_id", ""))
+		if not season.save.actives.has(cid):
+			continue
+		var archived := PLDatabase.row(
+			"SELECT position FROM season_archive WHERE season_index = ? AND club_id = ?;",
+			[season.save.season_index() - 1, club_id])
+		var clubs := int(season.save.rules_for(cid).get("clubs", 20))
+		var revenue := MarketWages.revenue_anchor(club)
+		updated += 1 if PLDatabase.execute(
+			"UPDATE club_finance SET revenue_base = ?, wage_budget = ?, reputation = ?, "
+			+ "updated_on = ?, season_index = ? WHERE club_id = ?;",
+			[revenue, MarketWages.wage_budget(club),
+			 MarketPurse.reputation(revenue, int(archived.get("position", 0)), clubs), start,
+			 season.save.season_index(), club_id]) else 0
+	return updated
+
+
+static func _post_season(club_id: String, date: String, kind: String, amount: int,
+		counterparty: String, season_index: int) -> void:
+	if not PLDatabase.execute(
+			"INSERT INTO club_ledger (season_index, date, club_id, kind, amount, counterparty) "
+			+ "VALUES (?, ?, ?, ?, ?, ?);", [season_index, date, club_id, kind, amount,
+				counterparty]):
+		return
+	PLDatabase.execute("UPDATE club_finance SET cash = cash + ? WHERE club_id = ?;",
+		[amount, club_id])
