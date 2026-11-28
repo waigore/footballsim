@@ -51,7 +51,8 @@ Shipped (wiki domains playable; DRs accepted):
 | Item | Why |
 |------|-----|
 | Club-manager career; player tactics / XI | Product non-goal; Match playable-slice Out |
-| Cups, transfers, finances, training, second season in one save, mid-season seed refresh of a save | Season Out of scope (v1); DR-20261124-01 |
+| Domestic cups, supercups, transfers, finances, training, second season in one save, mid-season seed refresh of a save | Season Out of scope (v1); DR-20261124-01 |
+| UEFA club competitions (UCL / UEL / UECL) | Rules accepted ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15)); [code #433](https://github.com/waigore/footballsim/issues/433) |
 | VAR; weather on the pitch; referee outcome bias | Match playable-slice Out |
 | Concussion subs; extra injury stoppage beyond the added-time formula | Substitutions Out of scope; DR-20261122-05 |
 | Licensed data beyond the shipped English pyramid (PL–National League), La Liga and German pair snapshots | requirements Non-goals; DR-20261123-01 |
