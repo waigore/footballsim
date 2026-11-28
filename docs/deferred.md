@@ -12,7 +12,7 @@ Rules: [wiki](https://github.com/waigore/footballsim/wiki).
 | Added time, injuries, handball, official; body-wide / competition bans | DR-20261122-03; DR-20261128-34; [#492](https://github.com/waigore/footballsim/issues/492) |
 | Live tactics + IFAB substitutions | DR-20261122-05; MatchAI |
 | Poisson / Dixon–Coles; λ envelope; finishing | `poisson_model.gd`; DR-20261122-04 / 24-08 / 25-19 / 26-07/08 / 28-21 |
-| PL + English pyramid + LL + German + Italian pairs | `data/`; DR-20261123-01 / 13 / 17 / 18 |
+| PL + English pyramid + Spanish / German / Italian pairs | `data/`; `league_segunda.gd`; DR-20261123-01 / 13 / 17 / 18 / 28-33; [#496](https://github.com/waigore/footballsim/issues/496) |
 | Season saves, calendar, Continue/watch; multi-league; play-offs; German Relegation | `league_season.gd`; DR-20261124-01 / 06 / 26-10 / 14 / 17 |
 | System sheet; report packs; non-match type scale | DR-20261124-07 / 04 / 03 |
 | Live `tempo`; woodwork; interceptions; momentum | DR-20261122-02 / 25-01 / 02 |
@@ -20,7 +20,7 @@ Rules: [wiki](https://github.com/waigore/footballsim/wiki).
 | Shape-pass; hubs; match billing; phone tap; `SKIP` | DR-20261125-11 / 26-01 / 26-06 / 28-02 / 03 / 05 |
 | Club ids; player UUIDs; assists; FC cards | DR-20261128-16 / 19 / 20; `fc_ratings.gd` |
 | Domestic cups (ENG/ESP/GER/ITA) + season-two pools | DR-20261128-17 / 22 / 36; `league_cup_*.gd`; [#455](https://github.com/waigore/footballsim/issues/455)–[#480](https://github.com/waigore/footballsim/issues/480), [#506](https://github.com/waigore/footballsim/issues/506) |
-| UEFA data, sim, hub, stages, draws, encyclopedia | DR-20261128-15; `league_uefa_*.gd`; [#435](https://github.com/waigore/footballsim/issues/435)–[#437](https://github.com/waigore/footballsim/issues/437) |
+| UEFA data, sim, hub, stages, draws; season-two entrants / pots | DR-20261128-15 / 35; `league_uefa_*.gd`; `league_europe_entries.gd`; [#435](https://github.com/waigore/footballsim/issues/435)–[#437](https://github.com/waigore/footballsim/issues/437), [#509](https://github.com/waigore/footballsim/pull/509) |
 | Multi-season settle, archive, age/retire, NEW SEASON | DR-20261128-30; `scripts/sim/market/`; [#440](https://github.com/waigore/footballsim/issues/440) |
 | Contracts, windows and club money | DR-20261128-23 / 24 / 32; `market_*.gd`; [#441](https://github.com/waigore/footballsim/issues/441)–[#443](https://github.com/waigore/footballsim/issues/443) |
 | Deal engine | DR-20261128-23 / 28; `market_deal*.gd`; [#444](https://github.com/waigore/footballsim/issues/444) |
@@ -29,11 +29,10 @@ Rules: [wiki](https://github.com/waigore/footballsim/wiki).
 
 | Rank | Gap | Notes |
 |------|-----|-------|
-| 1 | Transfer market (L6+) | loans, clauses, clearance, lists, FFP — [#438](https://github.com/waigore/footballsim/issues/438), [#444](https://github.com/waigore/footballsim/issues/444)–[#454](https://github.com/waigore/footballsim/issues/454), [#473](https://github.com/waigore/footballsim/issues/473) |
-| 2 | Spanish La Liga 2 pyramid | DR-20261128-33 designed; [#496](https://github.com/waigore/footballsim/issues/496)–[#500](https://github.com/waigore/footballsim/issues/500) |
-| 3 | Season-two UEFA fields | Cups done [#506](https://github.com/waigore/footballsim/issues/506); UEFA [#481](https://github.com/waigore/footballsim/issues/481); DR-35 |
-| 4 | Native match hot loop | DR-20261123-02 under 120 s; tick still GDScript |
-| 5 | Cup-tied eligibility | Wiki deferred; needs registration ([#448](https://github.com/waigore/footballsim/issues/448)) |
+| 1 | Transfer market (L6+) | loans, clauses, clearance, lists, FFP — [#438](https://github.com/waigore/footballsim/issues/438), [#445](https://github.com/waigore/footballsim/issues/445)–[#454](https://github.com/waigore/footballsim/issues/454), [#473](https://github.com/waigore/footballsim/issues/473) |
+| 2 | UEFA squad lists | Entrants/pots live; list force gate needs registration — [#481](https://github.com/waigore/footballsim/issues/481), [#448](https://github.com/waigore/footballsim/issues/448) |
+| 3 | Native match hot loop | DR-20261123-02 under 120 s; tick still GDScript |
+| 4 | Cup-tied eligibility | Wiki deferred; needs registration ([#448](https://github.com/waigore/footballsim/issues/448)) |
 
 ## Next pick
 
