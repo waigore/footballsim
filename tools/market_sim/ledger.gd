@@ -32,6 +32,7 @@ static func run(options: Dictionary) -> Dictionary:
 		MarketFinance.month(FixtureCalendar.add_days(start, 30 * (i + 1)))
 	var posted := MarketFinance.post_amortisation(club_id, start, 40000000, 4, "")
 	LeagueSeasonSim.fixture(season, season.record.fixtures.all(1)[0])
+	MarketFinance.tick_gates(season, start)
 	PLDatabase.transaction("BEGIN TRANSACTION;")
 	PLDatabase.execute("UPDATE league_fixture SET status = 'played', home_goals = 2, "
 		+ "away_goals = 1 WHERE status <> 'played';")

@@ -90,7 +90,6 @@ static func _record(season: LeagueSeason, fx: Dictionary, score: Vector2i, seed:
 	LeagueSettle.auto(season.record, fixture_id, home, away, hxi, axi, events, seed,
 		str(fx["kickoff"]), int(fx["matchday"]))
 	LeagueHighlights.store_auto(season.record, int(season.rng.seed), fixture_id, events, home, away)
-	MarketFinance.after_fixture(home, str(fx["kickoff"]), MarketFinance.form_factor(home))
 
 
 static func _events(fx: Dictionary, score: Vector2i, seed: int) -> Array:

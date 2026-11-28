@@ -103,16 +103,19 @@ func test_a_fee_amortises_over_its_contract_years() -> void:
 		"the season's amortisation sum is wrong")
 
 
-func test_a_home_fixture_posts_its_gate() -> void:
+func test_a_home_fixture_posts_its_gate_on_the_tick() -> void:
 	var season := _fresh("Finance Gate")
 	var fixture: Dictionary = season.record.fixtures.all(1)[0]
 	var home := str(fixture["home_club_id"])
 	LeagueSeasonSim.fixture(season, fixture)
+	assert_eq(MarketFinance.tick_gates(season, season.save.current_date()), 1,
+		"the tick did not post the one played home fixture")
 	var line := PLDatabase.row(
-		"SELECT amount FROM club_ledger WHERE club_id = ? AND kind = 'gate' "
-		+ "ORDER BY id DESC LIMIT 1;", [home])
+		"SELECT amount FROM club_ledger WHERE club_id = ? AND kind = 'gate' LIMIT 1;", [home])
 	assert_false(line.is_empty(), "a home fixture posted no gate")
 	assert_gt(int(line.get("amount", 0)), 0, "the gate line is worth nothing")
+	assert_eq(MarketFinance.tick_gates(season, season.save.current_date()), 0,
+		"the same fixture posted its gate twice")
 
 
 func test_a_month_posts_commercial_and_wage_lines_for_every_club() -> void:

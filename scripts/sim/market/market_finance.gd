@@ -150,11 +150,47 @@ static func gate(club_id: String, form: float = 0.0) -> int:
 	return int(round(float(row.get("capacity", 0)) * factor * price))
 
 
-static func after_fixture(club_id: String, date: String, form: float = 0.0) -> int:
-	var amount := gate(club_id, form)
-	if amount > 0:
-		post(club_id, date, KIND_GATE, amount, "gate")
-	return amount
+static func tick_gates(season: LeagueSeason, date: String) -> int:
+	if season == null or season.save == null or not available() or date == "":
+		return 0
+	var upto := str(season.save.meta.get("gates_through", ""))
+	var comps: Array = season.save.actives
+	if comps.is_empty():
+		return 0
+	var marks := PackedStringArray()
+	var bindings: Array = [upto, date]
+	for cid in comps:
+		marks.append("?")
+		bindings.append(str(cid))
+	var by_club := {}
+	for row in PLDatabase.rows(
+			"SELECT home_club_id, kickoff FROM league_fixture WHERE status = 'played' "
+			+ "AND kickoff > ? AND kickoff <= ? AND competition_id IN (" + ",".join(marks) + ") "
+			+ "ORDER BY home_club_id, kickoff;", bindings):
+		var club_id := str(row["home_club_id"])
+		if not by_club.has(club_id):
+			by_club[club_id] = []
+		(by_club[club_id] as Array).append(str(row["kickoff"]))
+	var posted := 0
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	for club_id in by_club.keys():
+		var amount := gate(str(club_id), form_factor(str(club_id)))
+		if amount <= 0:
+			continue
+		var values: Array = []
+		var rows_bindings: Array = []
+		for kickoff in by_club[club_id]:
+			values.append("(?, ?, ?, 'gate', ?, 'gate', '', '')")
+			rows_bindings.append_array([season.save.season_index(), str(kickoff), str(club_id),
+				amount])
+		PLDatabase.execute("INSERT INTO club_ledger (season_index, date, club_id, kind, amount, "
+			+ "counterparty, player_id, deal_id) VALUES " + ", ".join(values) + ";", rows_bindings)
+		PLDatabase.execute("UPDATE club_finance SET cash = cash + ?, updated_on = ? "
+			+ "WHERE club_id = ?;", [amount * (by_club[club_id] as Array).size(), date, str(club_id)])
+		posted += (by_club[club_id] as Array).size()
+	PLDatabase.transaction("COMMIT;")
+	season.save.put_meta("gates_through", date)
+	return posted
 
 
 static func form_factor(club_id: String) -> float:

@@ -67,9 +67,6 @@ static func record_engine(season: LeagueSeason, engine: MatchEngine) -> void:
 			str(fx["kickoff"]), int(fx["matchday"]))
 	if uefa:
 		LeagueUefaState.record_engine(season, fx, home, away)
-	if not cup and not uefa:
-		MarketFinance.after_fixture(str(fx["home_club_id"]), str(fx["kickoff"]),
-			MarketFinance.form_factor(str(fx["home_club_id"])))
 	LeagueHighlights.store_watch(season.record, int(season.rng.seed), fixture_id, season.captured,
 		str(fx["home_club_id"]), str(fx["away_club_id"]))
 	season.captured = []
