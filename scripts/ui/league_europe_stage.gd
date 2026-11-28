@@ -148,7 +148,7 @@ func _column(x: float, y: float, w: float, round: Dictionary, touch: bool) -> Ar
 
 func _names(rect: Rect2, tie: Dictionary, touch: bool) -> Array:
 	var out: Array = []
-	var line := rect.position.y + (18.0 if touch else 16.0)
+	var line: float = rect.position.y + (18.0 if touch else 16.0)
 	var step := 20.0 if touch else 16.0
 	for side in ["home", "away"]:
 		var club := str(tie.get(side, ""))
@@ -257,7 +257,7 @@ func _tie(c: CanvasItem, rect: Rect2, tie: Dictionary, fonts: Dictionary, view: 
 	var med: Font = fonts["med"]
 	var touch := bool(view.get("touch", false))
 	UiChrome.panel(c, cache, rect, UiChrome.C_PANEL, 6, UiChrome.C_BORDER, 1)
-	var line := rect.position.y + (18.0 if touch else 16.0)
+	var line: float = rect.position.y + (18.0 if touch else 16.0)
 	var step := 20.0 if touch else 16.0
 	for side in ["home", "away"]:
 		var club := str(tie.get(side, ""))
