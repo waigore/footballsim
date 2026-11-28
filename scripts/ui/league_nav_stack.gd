@@ -44,6 +44,7 @@ static func snapshot(screen) -> Dictionary:
 		"cup": str(screen.cup_focus),
 		"cup_round": str(screen.cups_round),
 		"draw": (screen.draw_state as Dictionary).duplicate(true),
+		"deal": str(screen.deal_id),
 		"scroll": float(body.scroll) if body != null else 0.0,
 		"hscroll": float(body.hscroll) if body != null else 0.0,
 	}
@@ -65,6 +66,7 @@ static func restore(screen, entry: Dictionary) -> void:
 	screen.cup_focus = str(entry.get("cup", screen.cup_focus))
 	screen.cups_round = str(entry.get("cup_round", screen.cups_round))
 	screen.draw_state = (entry.get("draw", screen.draw_state) as Dictionary).duplicate(true)
+	screen.deal_id = str(entry.get("deal", screen.deal_id))
 	screen.refresh()
 	if screen.body != null:
 		screen.body.scroll_to(float(entry.get("scroll", 0.0)))

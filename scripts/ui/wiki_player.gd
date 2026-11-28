@@ -133,6 +133,16 @@ static func contract_blocks(player_id: String, club_name: String, registered: St
 	var options := int(contract.get("option_years", 0))
 	if options > 0:
 		items.append(["OPTION", "+%d YR" % options, false])
+	var club := PLDatabase.row("SELECT competition_id FROM club WHERE id = ?;",
+		[str(contract.get("club_id", ""))])
+	if not club.is_empty():
+		var registration := MarketDealRecords.registration(player_id,
+			str(club.get("competition_id", "")))
+		if not registration.is_empty():
+			var state := str(registration.get("state", "")).to_upper()
+			if str(registration.get("reason", "")) != "":
+				state += " · " + MarketDealCopy.reason(str(registration.get("reason", "")))
+			items.append(["REGISTRATION", state, false])
 	out.append({"k": "kv", "items": items})
 	return out
 

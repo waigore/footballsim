@@ -102,6 +102,11 @@ static func _write_registration(deal: Dictionary, date: String, mode: Dictionary
 	if str(mode.get("registration", "")) == "refuse":
 		state = SquadList.INELIGIBLE
 		reason = MarketDealRules.LIST
+	if state == "registered":
+		var list := MarketLists.registrable(player_id, buyer, competition_id)
+		if not bool(list.get("ok", false)):
+			state = "ineligible"
+			reason = str(list.get("code", MarketDealRules.LIST))
 	if seller != "":
 		PLDatabase.execute(
 			"UPDATE player_registration SET state = 'closed', reason = 'moved', deal_id = ? "

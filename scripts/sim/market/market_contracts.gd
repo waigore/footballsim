@@ -43,6 +43,14 @@ static func bootstrap(save: LeagueSave, start_date: String = "") -> Dictionary:
 	PLDatabase.execute(
 		"UPDATE player SET homegrown_club_id = club_id WHERE homegrown_club_id = '' "
 		+ "AND club_id <> '';")
+	for cid in save.actives:
+		PLDatabase.execute(
+			"INSERT OR REPLACE INTO player_registration (player_id, competition_id, club_id, "
+			+ "kind, state, reason, deal_id, season_index, u21_exempt) "
+			+ "SELECT p.id, c.competition_id, p.club_id, 'permanent', 'registered', '', '', ?, "
+			+ "CASE WHEN p.age > 0 AND p.age < 21 THEN 1 ELSE 0 END "
+			+ "FROM player p JOIN club c ON c.id = p.club_id WHERE c.competition_id = ?;",
+			[save.season_index(), str(cid)])
 	MarketFinance.invalidate()
 	return {"ok": true, "skipped": false, "contracts": count, "clubs": filled, "start": start}
 

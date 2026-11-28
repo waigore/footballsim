@@ -12,6 +12,8 @@ static func pose_names() -> Dictionary:
 		LeagueScreen.MODE_EUROPE_DRAW: "europe",
 		LeagueScreen.MODE_CUPS: "cups", LeagueScreen.MODE_CUP: "cups",
 		LeagueScreen.MODE_BRACKET: "cups", LeagueScreen.MODE_CUP_DRAW: "cups",
+		LeagueScreen.MODE_TRANSFERS: "transfers", LeagueScreen.MODE_DEAL: "transfers",
+		LeagueScreen.MODE_NEWS: "transfers",
 	}
 
 
@@ -35,6 +37,9 @@ static func sheets() -> Dictionary:
 		LeagueScreen.MODE_CUP: ["cup", "cup_layout", "draw_cup_body", "draw_cup_chrome"],
 		LeagueScreen.MODE_BRACKET: ["bracket", "bracket_layout", "draw_body", "draw_chrome"],
 		LeagueScreen.MODE_CUP_DRAW: ["draw", "draw_layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_TRANSFERS: ["transfers", "layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_DEAL: ["deal", "layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_NEWS: ["news", "layout", "draw_body", "draw_chrome"],
 	}
 
 
@@ -73,6 +78,12 @@ static func build(screen) -> Dictionary:
 		return drawn
 	if mode == LeagueScreen.MODE_SYSTEM:
 		return LeagueSystemActions.view(screen)
+	if mode == LeagueScreen.MODE_TRANSFERS:
+		return LeagueMarketView.hub(screen)
+	if mode == LeagueScreen.MODE_DEAL:
+		return LeagueMarketView.deal(screen)
+	if mode == LeagueScreen.MODE_NEWS:
+		return LeagueMarketView.news(screen)
 	if mode == LeagueScreen.MODE_EUROPE:
 		return LeagueEuropeView.hub(screen)
 	if mode == LeagueScreen.MODE_EUROPE_STAGE:
@@ -141,9 +152,10 @@ static func build(screen) -> Dictionary:
 	if mode == LeagueScreen.MODE_REPORT:
 		if not (screen.roundup as Array).is_empty():
 			var first: Dictionary = screen.roundup[0]
+			var day := str(first["fixture"]["kickoff"]) if first.has("fixture") else ""
 			return {"roundup": screen.roundup, "interests": state.get("interests", []),
-				"filters": screen.report_filter,
-				"day": str(first["fixture"]["kickoff"]) if first.has("fixture") else "",
+				"filters": screen.report_filter, "market_news": MarketNews.digest(day),
+				"day": day,
 				"touch": bool(screen.touch)}
 		var card: Dictionary = screen.report
 		return {

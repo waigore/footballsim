@@ -11,7 +11,9 @@ const VERBS := {
 	"deal": "res://tools/market_sim/deal.gd",
 	"ledger": "res://tools/market_sim/ledger.gd",
 	"loan": "res://tools/market_sim/loan.gd",
+	"news": "res://tools/market_sim/news.gd",
 	"season": "res://tools/market_sim/season.gd",
+	"ui-fixture": "res://tools/market_sim/ui_fixture.gd",
 	"windows": "res://tools/market_sim/windows.gd",
 	"youth": "res://tools/market_sim/youth.gd",
 }
