@@ -4,6 +4,8 @@ extends RefCounted
 
 static func nav(screen, pose: String) -> void:
 	screen.panel.close()
+	if LeagueCupDoors.nav(screen, pose):
+		return
 	if pose == "system":
 		LeagueSystemActions.open(screen)
 		return

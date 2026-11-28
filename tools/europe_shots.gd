@@ -11,7 +11,7 @@ func _initialize() -> void:
 	await _frames(3)
 	scene.menus.close()
 	var season := LeagueSeason.create("Europe Evidence", "generated", "fixture_days", SEED,
-		["PL"], false, true)
+		["PL"], false, [], true)
 	if season == null:
 		print("EXIT no season")
 		quit()

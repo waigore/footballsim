@@ -10,7 +10,10 @@ const ITEMS := [
 	{"id": "nav:interest", "label": "TEAMS OF INTEREST", "icon": "interest", "pose": "interest"},
 	{"id": "nav:stats", "label": "STATS", "icon": "stats", "pose": "stats"},
 	{"id": "nav:system", "label": "SYSTEM", "icon": "system", "pose": "system"},
+	{"id": "nav:cups", "label": "CUPS", "icon": "cups", "pose": "cups"},
 ]
+
+const CUPS_ID := "nav:cups"
 
 const HEAD := 84.0
 const ROW_H := 46.0
@@ -39,6 +42,18 @@ var touch := false
 var cache := {}
 var icons := {}
 var europe_on := true
+
+var cups := false
+
+
+static func rows(has_cups: bool) -> Array:
+	if has_cups:
+		return ITEMS
+	var out: Array = []
+	for item in ITEMS:
+		if str(item["id"]) != CUPS_ID:
+			out.append(item)
+	return out
 
 func open() -> void:
 	target = 1.0
@@ -86,12 +101,11 @@ func tab_rect(vp: Vector2) -> Rect2:
 	return Rect2(-2.0, vp.y * 0.5 - TAB_H * 0.5, TAB_W, TAB_H)
 
 func items() -> Array:
-	if europe_on:
-		return ITEMS
 	var out: Array = []
-	for item in ITEMS:
-		if str(item["id"]) != "nav:europe":
-			out.append(item)
+	for item in rows(cups):
+		if not europe_on and str(item["id"]) == "nav:europe":
+			continue
+		out.append(item)
 	return out
 
 

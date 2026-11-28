@@ -7,7 +7,7 @@ const SEED := 424242
 func _season() -> LeagueSeason:
 	if LeagueSeason.active != null:
 		LeagueSeason.active.close()
-	return LeagueSeason.create("Europe", "generated", "fixture_days", SEED, ["PL"], false, true)
+	return LeagueSeason.create("Europe", "generated", "fixture_days", SEED, ["PL"], false, [], true)
 
 
 func _settle(season: LeagueSeason, competition_id: String, round_id: String) -> void:

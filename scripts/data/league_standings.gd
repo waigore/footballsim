@@ -72,13 +72,13 @@ func recompute() -> void:
 		+ "FROM league_fixture WHERE status = 'played';"
 	):
 		var comp := str(fx.get("competition_id", ""))
-		if LeagueUefa.is_continental(comp) \
-				and str(fx.get("stage", "")) != LeagueUefa.LEAGUE_STAGE:
+		if LeagueUefa.is_continental(comp) and str(fx.get("stage", "")) != LeagueUefa.LEAGUE_STAGE:
 			continue
-		var rules: Dictionary = rules_by.get(comp, save.rules)
-		_tally(acc, "%s|%s" % [str(fx["home_club_id"]), comp],
+		var cid_key := str(fx["competition_id"])
+		var rules: Dictionary = rules_by.get(cid_key, save.rules)
+		_tally(acc, "%s|%s" % [str(fx["home_club_id"]), cid_key],
 			int(fx["home_goals"]), int(fx["away_goals"]), rules, "home")
-		_tally(acc, "%s|%s" % [str(fx["away_club_id"]), comp],
+		_tally(acc, "%s|%s" % [str(fx["away_club_id"]), cid_key],
 			int(fx["away_goals"]), int(fx["home_goals"]), rules, "away")
 	PLDatabase.execute("DELETE FROM league_table;")
 	for cid in comps:

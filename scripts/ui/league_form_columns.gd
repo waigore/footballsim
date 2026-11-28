@@ -4,6 +4,15 @@ extends RefCounted
 
 const LAST := LeagueFormGuide.LAST
 
+const FORM_COLS := [
+	{"key": "position", "label": "#", "num": false},
+	{"key": "club", "label": "CLUB", "num": false},
+	{"key": "form", "label": "FORM", "num": false, "sort": false},
+	{"key": "points", "label": "PTS", "num": true},
+]
+
+const FORM_CAPTION := "LAST 5 · OLDEST FIRST"
+
 const PIP := 18.0
 const GAP := 4.0
 const PTS_W := 26.0

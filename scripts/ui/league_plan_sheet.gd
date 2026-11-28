@@ -38,7 +38,7 @@ static func layout(plan: Array, interest: Dictionary, left: float, right: float,
 			"away_ink": LeagueInterestMark.ink(interest, str(fx.get("away_club_id", "")))})
 
 
-		if str(fx.get("status", "")) != "played":
+		if str(fx.get("status", "")) != "played" and not LeagueCup.is_cup_fixture(fx):
 			var chip := Rect2(row.end.x - 72.0, y + 2.0, 68.0, h - 4.0)
 
 

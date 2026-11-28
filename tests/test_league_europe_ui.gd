@@ -17,7 +17,7 @@ func _screen(touch: bool = false) -> Fake:
 		LeagueSeason.active.close()
 	var fake := Fake.new()
 	fake.season = LeagueSeason.create("Europe UI", "generated", "fixture_days", SEED,
-		["PL"], false, true)
+		["PL"], false, [], true)
 	fake.touch = touch
 	return fake
 
@@ -119,12 +119,16 @@ func test_the_wizard_offers_europe_and_the_panel_fits_a_phone() -> void:
 	assert_lte(84.0 + float(LeaguePanel.ITEMS.size()) * (row + LeaguePanel.ROW_GAP), 411.0,
 		"the drawer's items do not fit a phone")
 	var panel := LeaguePanel.new()
-	panel.europe_on = false
-	assert_eq(panel.items().size(), LeaguePanel.ITEMS.size() - 1,
-		"the drawer still offers EUROPE on a domestic-only save")
+	var total := LeaguePanel.ITEMS.size()
+	panel.cups = true
 	panel.europe_on = true
-	assert_eq(panel.items().size(), LeaguePanel.ITEMS.size(),
-		"the drawer lost a door on a European save")
+	assert_eq(panel.items().size(), total, "the drawer lost a door")
+	panel.europe_on = false
+	assert_eq(panel.items().size(), total - 1,
+		"the drawer still offers EUROPE on a domestic-only save")
+	panel.cups = false
+	assert_eq(panel.items().size(), total - 2,
+		"the drawer still offers CUPS or EUROPE on a save without them")
 
 
 func test_the_stage_reads_its_table_qualifying_and_bracket() -> void:

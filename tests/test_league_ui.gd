@@ -127,6 +127,9 @@ func test_new_league_opens_the_wizard_and_takes_the_setup() -> void:
 	assert_eq(str(screen().wizard["calendar_mode"]), "real", "the fixture mode was not taken")
 	press_id("adv:every_day")
 	assert_eq(str(screen().wizard["advance_mode"]), "every_day", "the advance mode was not taken")
+	press_id("wcups:England")
+	assert_eq(screen().wizard["cups_off"], ["England"],
+		"the wizard's cups switch did not turn England off")
 
 
 	for i in range(str(screen().wizard["name"]).length() + 2):
@@ -160,6 +163,7 @@ func test_a_phone_new_league_presses_create_on_its_pinned_bar() -> void:
 	assert_true(screen().body.more_below(), "the clipped sheet drew no cue that it continues")
 	assert_eq(screen().button_at(create.get_center()), "create",
 		"a press on the pinned door reached nothing")
+	press_id("wcups:England")
 	press_id("create")
 	assert_eq(screen().mode, LeagueScreen.MODE_HUB, "the pinned CREATE SEASON started no season")
 	assert_not_null(LeagueSeason.active, "the pinned door created no save")
@@ -167,20 +171,36 @@ func test_a_phone_new_league_presses_create_on_its_pinned_bar() -> void:
 	screen().refresh()
 
 
+func _league_plan() -> Array:
+	var out: Array = []
+	for fx in screen().current_view().get("plan", []):
+		if str((fx as Dictionary).get("stage", "")) == "":
+			out.append(fx)
+	return out
+
+
 func test_the_hub_plans_and_toggles_a_fixture() -> void:
-	var plan: Array = screen().current_view()["plan"]
+	var plan: Array = _league_plan()
 	assert_gte(plan.size(), 1, "the hub does not list the matchday")
 	var fixture_id := str(plan[0]["id"])
+	var full: int = (screen().current_view()["plan"] as Array).size()
 	var toggle_id := "toggle:" + fixture_id
 	press_id(toggle_id)
-	assert_eq(screen().current_view()["plan"].size(), plan.size(), "the planner lost a row")
-	var after: Array = screen().current_view()["plan"]
-	assert_eq(int(after[0]["watched"]), 1, "the watch flag did not stick")
+	assert_eq(screen().current_view()["plan"].size(), full, "the planner lost a row")
+	assert_eq(_watched(fixture_id), 1, "the watch flag did not stick")
 	press_id(toggle_id)
-	assert_eq(int(screen().current_view()["plan"][0]["watched"]), 0, "the watch flag did not clear")
+	assert_eq(_watched(fixture_id), 0, "the watch flag did not clear")
+
+func _watched(fixture_id: String) -> int:
+	for fx in screen().current_view().get("plan", []):
+		if str((fx as Dictionary).get("id", "")) == fixture_id:
+			return int((fx as Dictionary).get("watched", 0))
+	return -1
+
 
 func test_watching_a_fixture_hands_it_to_the_viewer_and_back() -> void:
-	var plan: Array = screen().current_view()["plan"]
+	var plan: Array = _league_plan()
+	assert_gte(plan.size(), 1, "the hub does not list the matchday")
 	var fixture_id := str(plan[0]["id"])
 	var day := str(LeagueSeason.active.state()["date"])
 	press_id("toggle:" + fixture_id)
@@ -1000,13 +1020,13 @@ func _matchday_hub() -> Array:
 		_open_scroll_hub()
 	else:
 		_open_hub()
-	var plan: Array = screen().current_view().get("plan", [])
+	var plan: Array = _league_plan()
 	var guard := 0
 	while plan.is_empty() and guard < 30:
 		if screen().mode != LeagueScreen.MODE_HUB:
 			press_id("back")
 		press_id("continue")
-		plan = screen().current_view().get("plan", [])
+		plan = _league_plan()
 		guard += 1
 	assert_gte(plan.size(), 1, "the hub never reached a matchday")
 	return plan

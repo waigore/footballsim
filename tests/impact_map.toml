@@ -62,6 +62,7 @@ suites = [
   "test_match_mode.gd",
   "test_ux_parity.gd",
   "test_extra_time.gd",
+  "test_pitch_stadium.gd",
 ]
 
 [domains.tactics]
@@ -231,6 +232,11 @@ suites = [
   # The table's form reading (DR-20261128-12): the fold over the ledger's
   # played fixtures and the rows the season state decorates with it.
   "test_form_guide.gd",
+  # Domestic cups (#458/#459): the round engine, the wizard switches, the
+  # cups hub, the bracket, the draw ceremony and the podium honours.
+  "test_league_cups.gd",
+  "test_cup_season.gd",
+  "test_league_cup_ui.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -709,6 +715,14 @@ match = "scripts/view/pitch_view.gd*"
 domain = "hud_chrome"
 
 [[rules]]
+match = "scripts/view/pitch_stadium.gd*"
+domain = "hud_chrome"
+
+[[rules]]
+match = "scripts/view/pitch_paint.gd*"
+domain = "hud_chrome"
+
+[[rules]]
 match = "scripts/view/dev_capture.gd*"
 domain = "hud_chrome"
 
@@ -795,6 +809,10 @@ domain = "misc"
 [[rules]]
 match = "tests/test_pitch_queries.gd*"
 domain = "pitch_queries"
+
+[[rules]]
+match = "tests/test_pitch_stadium.gd*"
+domain = "hud_chrome"
 
 [[rules]]
 match = "tests/test_ux_parity.gd*"

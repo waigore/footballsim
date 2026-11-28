@@ -28,6 +28,11 @@ const MODE_EUROPE := "europe"
 const MODE_EUROPE_STAGE := "europe_stage"
 const MODE_EUROPE_DRAW := "europe_draw"
 
+const MODE_CUPS := "cups"
+const MODE_CUP := "cup"
+const MODE_BRACKET := "bracket"
+const MODE_CUP_DRAW := "cup_draw"
+
 
 var ui_scale := 1.0
 var touch := false
@@ -74,6 +79,16 @@ var europe := {"comp": "", "tab": "", "round": ""}
 var europe_draw := {"competition": "", "round": "", "revealed": 0, "done": false, "t": 0.0}
 
 var calendar_filter := ""
+
+var sheet_cups := LeagueCupsSheet.new()
+var sheet_cup := LeagueCupSheet.new()
+var sheet_bracket := LeagueCupBracket.new()
+var sheet_cup_draw := LeagueCupDrawSheet.new()
+
+var cups_round := ""
+var cup_focus := ""
+
+var draw_state := {"shown": 0, "clock": 0.0}
 
 var interest_query := ""
 
@@ -156,6 +171,8 @@ func _process(delta: float) -> void:
 		overlay.queue_redraw()
 	if visible and LeagueEuropeActions.tick(self, delta):
 		overlay.queue_redraw()
+	if visible and pages != null:
+		LeagueCupDoors.tick(self, delta)
 
 func design_vp() -> Vector2:
 	var vp: Vector2 = size / maxf(ui_scale, 0.001)

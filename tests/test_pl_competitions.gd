@@ -45,7 +45,7 @@ func test_the_shipped_hub_names_its_competition() -> void:
 	assert_eq(str(page["title"]), "PREMIER LEAGUE", "the hub title is not the competition's")
 	assert_true(str(page["subtitle"]).contains("20 CLUBS"), "the hub's club count is hard-coded")
 	var index := _chips(page)
-	assert_eq(index.size(), 10, "the competition index should hold every league")
+	assert_eq(index.size(), _index_size(), "the competition index should hold every league and cup")
 	assert_true(_chip_target(index, "LA LIGA", "LL"),
 		"the Premier League hub does not offer La Liga")
 	assert_true(_chip_target(index, "BUNDESLIGA", "BL"),
@@ -81,7 +81,7 @@ func test_every_competition_gets_its_own_hub() -> void:
 		"the second hub kept the first's club count")
 	assert_eq(_rows_in(theirs, "LEAGUE TABLE"), 20, "the second hub shows the wrong table")
 	var index := _chips(theirs)
-	assert_eq(index.size(), 10, "the index does not list every competition")
+	assert_eq(index.size(), _index_size(), "the index does not list every competition")
 	assert_true(_chip_target(index, "PREMIER LEAGUE", "PL"),
 		"the second hub does not offer the Premier League")
 
@@ -111,6 +111,36 @@ func test_an_unknown_competition_is_rejected() -> void:
 	assert_false(WikiModel.has_page(WikiModel.LEAGUE, "NOPE"), "a made-up competition resolved")
 	assert_eq(WikiModel.label(WikiModel.LEAGUE, ""), "PREMIER LEAGUE",
 		"the crumb numbers the wrong league")
+
+
+func test_a_cup_reads_a_hub_with_a_bracket_not_a_table() -> void:
+	assert_true(WikiModel.has_page(WikiModel.CUP, "FAC"), "the encyclopedia rejects a cup")
+	assert_false(WikiModel.has_page(WikiModel.CUP, "PL"), "a league resolved as a cup")
+	assert_eq(WikiModel.label(WikiModel.CUP, "FAC"), "FA CUP", "the cup crumb names nothing")
+	var page := WikiModel.page(WikiModel.CUP, "FAC")
+	assert_eq(str(page["title"]), "FA CUP", "the cup hub is not the cup's own page")
+	var sections: Array = []
+	for block in page.get("blocks", []):
+		if str((block as Dictionary).get("k", "")) == "section":
+			sections.append(str((block as Dictionary).get("text", "")))
+	assert_false(sections.has("LEAGUE TABLE"), "a cup hub carried a league table")
+	var cups := 0
+	var cup_targets := 0
+	for item in _chips(page):
+		if str((item as Dictionary).get("text", "")) == "FA CUP":
+			cups += 1
+			assert_true((item as Dictionary).get("target", {}).is_empty(),
+				"the cup you are reading should be a badge, not a door to itself")
+		var target: Dictionary = (item as Dictionary).get("target", {})
+		if str(target.get("page", "")) == WikiModel.CUP:
+			cup_targets += 1
+	assert_eq(cups, 1, "the index lost the cup being read")
+	assert_gt(cup_targets, 0, "the index offers no door into another cup")
+	assert_true(sections.has("THE DRAW"), "the cup hub does not read its draw")
+
+
+func _index_size() -> int:
+	return PLCompetitions.all().size() + PLRepository.shared().cups().size()
 
 
 func _chips(page: Dictionary) -> Array:
