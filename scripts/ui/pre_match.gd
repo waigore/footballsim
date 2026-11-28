@@ -87,10 +87,10 @@ func layout(vp: Vector2) -> Dictionary:
 		"rows": rows,
 		"buttons": [],
 	}
-	var kick := LeagueExtra.primary_rect(vp, kick_width(vp))
+	var kick := LeagueExtra.primary_rect(vp, kick_width(vp), touch)
 	var skip := Rect2(vp.x - 24.0 - 118.0, vp.y - 12.0 - BAR, 118.0, BAR)
 	out["buttons"] = [
-		{"id": "back", "rect": LeagueExtra.back_rect()},
+		{"id": "back", "rect": LeagueExtra.back_rect(touch)},
 		{"id": "skip", "rect": skip},
 		{"id": "kick", "rect": kick},
 	]
@@ -173,7 +173,7 @@ func _draw_header(vp: Vector2, fonts: Dictionary) -> void:
 	var line := ""
 	if room >= 60.0:
 		line = LeagueColumns.fit_name(kicker, bold, 10, room)
-	LeagueExtra.header(self, vp, fonts, "PRE-MATCH", line, right)
+	LeagueExtra.header(self, vp, fonts, "PRE-MATCH", line, right, true, touch, false)
 
 
 static func strip_line(team: Dictionary, position: int, form: String) -> String:

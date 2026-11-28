@@ -46,7 +46,6 @@ func _shot_at(eng, team: int, y: float, z: float, past: float = 0.10):
 	eng.ball.last_touch_id = shooter.id
 	eng.ball.last_touch_team = team
 	eng.ball.planned_goal = false
-	eng.ball.planned_save = false
 	return shooter
 
 

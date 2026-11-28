@@ -68,7 +68,7 @@ static func field_rect(screen, want: String) -> Rect2:
 	if want == SYSTEM and str(screen.mode) == LeagueScreen.MODE_SYSTEM:
 		return _find(screen.system.layout(vp, screen.current_view()), "sys:name")
 	if want == INTEREST and str(screen.mode) == LeagueScreen.MODE_INTEREST:
-		return _find(screen.sheet_extra.interest_layout(vp, screen.current_view()), "interest:search")
+		return _find(screen.sheet_interest.layout(vp, screen.current_view()), "interest:search")
 	return Rect2()
 
 static func _find(items: Array, id: String) -> Rect2:

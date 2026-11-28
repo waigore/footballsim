@@ -1,4 +1,4 @@
-extends "res://scripts/sim/match_engine_clock.gd"
+extends "res://scripts/sim/match_engine_snapshot.gd"
 
 
 const ET_FIRST_END := 6300.0

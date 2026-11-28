@@ -298,18 +298,45 @@ class FakeHost:
 	var highlight_until := 0.0
 	var replay_banner := 0.0
 	var accumulator := 0.0
+	var replay = null
+	var paused := false
+	var speed := 1.0
+
+	func open_live_replay(pack: Dictionary) -> bool:
+		replay = GoalReplay.open_live(self, pack)
+		if replay == null:
+			return false
+		in_highlight = true
+		fast_mode = false
+		highlight_until = -1.0
+		return true
+
+func _fill_ring(engine, director: HighlightDirector) -> void:
+	director.restart()
+	while director.history.size() < HighlightDirector.MIN_CAPTURE_FRAMES:
+		engine.tick()
+		director.snapshot()
+		if director.history.size() < HighlightDirector.MIN_CAPTURE_FRAMES:
+			engine.clock += HighlightDirector.SNAPSHOT_EVERY
+
+
+func _open_pending_clip(engine, director: HighlightDirector) -> bool:
+	if not director.waiting():
+		return director.host.replay != null
+	for i in range(3):
+		engine.tick()
+		director.snapshot()
+		engine.clock += HighlightDirector.SNAPSHOT_EVERY * 0.5
+	director.open_pending(true)
+	return director.host.replay != null
+
 
 func _ring_host(seed: int) -> Array:
-
-
 	var engine = MatchEngine.new(seed, "MUN", "MCI")
 	var host := FakeHost.new()
 	host.engine = engine
 	var director := HighlightDirector.new(host)
-	director.restart()
-	for i in range(90):
-		engine.tick()
-		director.sample()
+	_fill_ring(engine, director)
 	return [host, director, engine]
 
 func test_a_live_goal_is_cut_from_the_ring() -> void:
@@ -358,24 +385,141 @@ func test_a_capture_needs_a_watch_and_a_ring() -> void:
 	director.capture({"clock": 12.0, "minute": 1, "player_id": -1, "team": 0, "text": "GOAL!"})
 	assert_eq(season.captured.size(), held, "a clip was cut from an empty ring")
 
-func test_a_shot_rewinds_the_live_picture_once() -> void:
+func _live_host(seed: int, mode: String) -> Array:
+	var engine = MatchEngine.new(seed, "MUN", "MCI")
+	var host := FakeHost.new()
+	host.engine = engine
+	host.mode = mode
+	var director := HighlightDirector.new(host)
+	engine.event_fired.connect(director.on_event)
+	_fill_ring(engine, director)
+	return [host, director, engine]
+
+
+func _play_until_clip(engine, director: HighlightDirector, _ticks: int = 180) -> bool:
+	return _open_pending_clip(engine, director)
+
+
+func _stage_goal(engine, team: int) -> void:
+	for p in engine.players:
+		if p.is_gk:
+			p.pos = Vector2(52.5, 34.0)
+			p.cooldown = 0.0
+	engine.phase = "play"
+	engine.restart = {}
+	var scorer = null
+	for p in engine.players:
+		if p.team == team and not p.is_gk:
+			scorer = p
+			break
+	var goal: Vector2 = engine.target_goal_pos(team)
+	engine.ball.pos = Vector2(goal.x, 34.0)
+	engine.ball.vel = Vector2.ZERO
+	engine.ball.z = 0.4
+	engine.ball.vz = 0.0
+	engine.ball.owner_id = -1
+	engine.ball.shot_team = team
+	engine.ball.shot_time = engine.clock
+	engine.ball.last_touch_id = scorer.id
+	engine.ball.last_touch_team = team
+	engine.ball.planned_goal = true
+	engine._check_rules()
+
+
+func test_a_live_shot_opens_one_clip_and_holds_the_engine() -> void:
 	var ring := _ring_host(404)
 	var host: FakeHost = ring[0]
 	var director: HighlightDirector = ring[1]
 	var engine = ring[2]
 	host.mode = "highlights"
 	var trigger := float(engine.clock)
+	var sim_before: int = int(engine.sim_tick)
 	director.on_event({"type": "shot", "clock": trigger, "player_id": -1})
-	assert_true(host.in_highlight, "the shot did not open a replay")
-	assert_true(host.batch_abort, "the rewound batch was not abandoned")
-	assert_false(host.fast_mode, "the replay did not hold the fast-forward")
-	assert_gt(host.highlight_until, float(engine.clock), "the replay window is empty")
-	host.in_highlight = false
-	director.on_event({"type": "shot", "clock": trigger, "player_id": -1})
-	assert_false(host.in_highlight, "the same shot was replayed twice")
+	assert_true(director.waiting(), "the shot did not queue a live clip")
+	assert_null(host.replay, "the clip opened before the action had finished")
+	assert_true(_play_until_clip(engine, director), "the live clip never opened")
+	var replay: GoalReplay = host.replay
+	assert_not_null(replay, "the live clip is missing")
+	assert_true(host.in_highlight, "the clip did not take the view")
+	assert_false(host.fast_mode, "the clip did not hold the fast-forward")
+	assert_true(replay.live, "the live clip is not marked live")
+	var sim_open: int = int(engine.sim_tick)
+	replay.step(0.5)
+	assert_eq(int(engine.sim_tick), sim_open, "the live engine ticked through the clip")
+	assert_gte(int(engine.sim_tick), sim_before + 1, "the tail never ran")
+	host.replay = null
+	var again := float(engine.clock)
+	director.on_event({"type": "shot", "clock": again, "player_id": -1})
+	assert_false(director.waiting(), "the same shot queued a second clip")
 
 
-func test_goals_only_rewinds_on_a_goal_and_not_on_a_chance() -> void:
+func test_a_live_goal_clip_keeps_the_goal_on_the_board() -> void:
+	var ring := _live_host(909, "goals")
+	var host: FakeHost = ring[0]
+	var director: HighlightDirector = ring[1]
+	var engine = ring[2]
+	_stage_goal(engine, 0)
+	assert_eq(engine.score[0], 1, "the staged goal did not count")
+	assert_true(director.waiting(), "the goal did not queue a live clip")
+	assert_true(_play_until_clip(engine, director), "the live goal clip never opened")
+	var replay: GoalReplay = host.replay
+	assert_not_null(replay, "the live goal clip is missing")
+	var score_open: Array = replay.held["score"]
+	var clock_open := float(replay.held["clock"])
+	var phase_open: String = replay.held["phase"]
+	var sim_open: int = int(engine.sim_tick)
+	assert_eq(int(score_open[0]), 1, "the clip opened without the goal")
+	var goal_frames := 0
+	for frame in replay.frames:
+		if int(frame.get("g", 0)) == 1:
+			goal_frames += 1
+	assert_gt(goal_frames, 0, "the live clip never shows the goal")
+	engine.rng.state = 4711
+	var mid_ok := true
+	while true:
+		if replay.step(1.0 / 30.0):
+			host.replay = null
+			break
+		if engine.score != score_open:
+			mid_ok = false
+	assert_true(mid_ok, "the board dropped the goal while the clip played")
+	assert_eq(engine.score, score_open, "the clip rewound the live score")
+	assert_almost_eq(float(engine.clock), clock_open, 0.001, "the clip resumed on a different clock")
+	assert_eq(engine.phase, phase_open, "the clip resumed in a different phase")
+	assert_eq(int(engine.sim_tick), sim_open, "the live engine ticked through the clip")
+	assert_false(host.in_highlight, "the clip left the view in a replay")
+	assert_true(host.fast_mode, "Goals only did not resume the fast-forward")
+
+
+func test_a_live_clip_plays_the_ring_poses_not_a_new_roll() -> void:
+	var ring := _live_host(1010, "goals")
+	var host: FakeHost = ring[0]
+	var director: HighlightDirector = ring[1]
+	var engine = ring[2]
+	_stage_goal(engine, 0)
+	assert_true(_play_until_clip(engine, director), "the live goal clip never opened")
+	var replay: GoalReplay = host.replay
+	engine.rng.state = 31337
+	var frames: Array = replay.frames
+	replay.t = 0.0
+	replay.apply(false)
+	var first := GoalHighlight.ball_at(frames[0])
+	assert_almost_eq(engine.ball.pos.x, first.x, 0.02, "the clip opened on a fresh roll")
+	assert_almost_eq(engine.ball.pos.y, first.y, 0.02, "the clip opened on a fresh roll")
+	var last := float(frames[frames.size() - 1].get("t", 0.0))
+	replay.t = last
+	replay.apply(false)
+	var end := GoalHighlight.ball_at(frames[frames.size() - 1])
+	assert_almost_eq(engine.ball.pos.x, end.x, 0.02, "the clip's last pose is not the recorded one")
+	assert_almost_eq(engine.ball.pos.y, end.y, 0.02, "the clip's last pose is not the recorded one")
+	var key := str(replay.keys[0])
+	var bound = replay.bound.get(key, null)
+	assert_not_null(bound, "the live clip bound no bodies")
+	assert_lt(bound.pos.distance_to(GoalHighlight.player_at(frames[frames.size() - 1], 0)), 0.05,
+		"a live body left the recorded pose")
+
+
+func test_goals_only_queues_a_clip_on_a_goal_and_not_on_a_chance() -> void:
 	var ring := _ring_host(606)
 	var host: FakeHost = ring[0]
 	var director: HighlightDirector = ring[1]
@@ -383,17 +527,18 @@ func test_goals_only_rewinds_on_a_goal_and_not_on_a_chance() -> void:
 	host.mode = "goals"
 	var trigger := float(engine.clock)
 	director.on_event({"type": "shot", "clock": trigger, "player_id": -1})
-	assert_false(host.in_highlight, "Goals only replayed a shot")
+	assert_false(director.waiting(), "Goals only queued a shot")
 	director.on_event({"type": "corner", "clock": trigger, "player_id": -1})
-	assert_false(host.in_highlight, "Goals only replayed a corner")
+	assert_false(director.waiting(), "Goals only queued a corner")
 	director.on_event({"type": "card", "clock": trigger, "player_id": -1})
-	assert_false(host.in_highlight, "Goals only replayed a card")
+	assert_false(director.waiting(), "Goals only queued a card")
 	director.on_event({"type": "penalty_taken", "clock": trigger, "player_id": -1})
-	assert_false(host.in_highlight, "Goals only replayed a penalty that never scored")
+	assert_false(director.waiting(), "Goals only queued a penalty that never scored")
 	director.on_event({"type": "goal", "clock": trigger, "player_id": -1, "team": 0, "text": "GOAL!"})
-	assert_true(host.in_highlight, "Goals only did not replay the goal")
+	assert_true(director.waiting(), "Goals only did not queue the goal")
+	assert_true(_play_until_clip(engine, director), "Goals only never opened the goal clip")
+	assert_not_null(host.replay, "Goals only opened no clip")
 	assert_false(host.fast_mode, "the goal replay did not hold the fast-forward")
-	assert_gt(host.highlight_until, float(engine.clock), "the replay window is empty")
 
 func test_goals_only_still_cuts_the_report_clip() -> void:
 	var ring := _ring_host(707)

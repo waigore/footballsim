@@ -91,6 +91,10 @@ static func profile(club_id: String) -> Dictionary:
 	out["levers"] = (out["levers"] as Array).duplicate()
 	return out
 
+static func has_persona(club_id: String) -> bool:
+	return PROFILES.has(club_id)
+
+
 static func has_full_profile(p: Dictionary) -> bool:
 	for key in REQUIRED:
 		if not p.has(key):

@@ -53,6 +53,10 @@ def _ssl_context() -> ssl.SSLContext:
 DEFAULT_BASE_URL = "https://api.cheaperinference.com/v1"
 DEFAULT_MODEL = "qwen3.5-flash"
 MAX_PR_IMAGES = 11
+# Six rubric rows with short reasons fit under 400; busy screens (match-hud)
+# still truncate there and fall through to "unparseable verdict".
+DEFAULT_MAX_TOKENS = 1024
+GRADE_RETRIES = 2
 
 
 def _api_key() -> str:
@@ -102,12 +106,17 @@ def re_strip_fence(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-def _chat(messages: list[dict[str, Any]], timeout: float = 45.0) -> str:
+def _chat(
+    messages: list[dict[str, Any]],
+    timeout: float = 45.0,
+    *,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+) -> str:
     payload: dict[str, Any] = {
         "model": _model(),
         "messages": messages,
         "temperature": 0,
-        "max_tokens": 400,
+        "max_tokens": max_tokens,
         # Thinking / reasoning off for Flash-class graders.
         "reasoning": {"effort": "none"},
         "enable_thinking": False,
@@ -199,6 +208,7 @@ def build_prompt(
         "Reply with ONE JSON object only, no markdown, shape:",
         '{"results":[{"rubric_id":"...","pass":true,"reason":"..."}, ...]}',
         "Include every rubric id below. Be conservative: fail on clear defects.",
+        "Keep each reason under 20 words so the JSON stays complete.",
     ]
     if screen is not None:
         parts.append(f"Screen requirement:\n{cta_requirement(screen)}")
@@ -283,60 +293,70 @@ def grade_image(
         }.get(suffix, "image/png")
         vision_url = _data_url(data, ctype)
     prompt = build_prompt(rubrics, screen)
-    content = _chat(
-        [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": vision_url}},
-                ],
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": vision_url}},
+            ],
+        }
+    ]
+    last_content = ""
+    for attempt in range(GRADE_RETRIES):
+        content = _chat(messages)
+        last_content = content
+        cleaned = content.strip()
+        if cleaned.startswith("```"):
+            cleaned = re_strip_fence(cleaned)
+        try:
+            start = cleaned.find("{")
+            end = cleaned.rfind("}")
+            obj = json.loads(cleaned[start : end + 1])
+            rows = obj.get("results") or []
+            by_id = {
+                str(r.get("rubric_id")): r for r in rows if isinstance(r, dict)
             }
-        ]
-    )
-    cleaned = content.strip()
-    if cleaned.startswith("```"):
-        cleaned = re_strip_fence(cleaned)
-    try:
-        start = cleaned.find("{")
-        end = cleaned.rfind("}")
-        obj = json.loads(cleaned[start : end + 1])
-        rows = obj.get("results") or []
-        by_id = {str(r.get("rubric_id")): r for r in rows if isinstance(r, dict)}
-        for rubric in rubrics:
-            rid = str(rubric["id"])
-            row = by_id.get(rid)
-            if not row:
+            results = []
+            for rubric in rubrics:
+                rid = str(rubric["id"])
+                row = by_id.get(rid)
+                if not row:
+                    results.append(
+                        {
+                            "rubric_id": rid,
+                            "pass": False,
+                            "reason": "missing rubric result from model",
+                        }
+                    )
+                    continue
                 results.append(
                     {
                         "rubric_id": rid,
-                        "pass": False,
-                        "reason": "missing rubric result from model",
+                        "pass": bool(row.get("pass", row.get("passed", False))),
+                        "reason": str(row.get("reason") or "").strip() or "n/a",
                     }
                 )
+                if rid == "cta":
+                    label = row.get("cta_label")
+                    if label is None:
+                        label = obj.get("cta_label")
+                    side = row.get("cta_side") or obj.get("cta_side")
+                    if label is not None:
+                        results[-1]["cta_label"] = str(label).strip()
+                    if side is not None:
+                        results[-1]["cta_side"] = str(side).strip().lower()
+            return enforce_cta(screen, results)
+        except (json.JSONDecodeError, ValueError, TypeError, IndexError):
+            # Truncated JSON (token cap) — retry once before FAIL-closed.
+            if attempt + 1 < GRADE_RETRIES:
                 continue
-            results.append(
-                {
-                    "rubric_id": rid,
-                    "pass": bool(row.get("pass", row.get("passed", False))),
-                    "reason": str(row.get("reason") or "").strip() or "n/a",
-                }
-            )
-            if rid == "cta":
-                label = row.get("cta_label")
-                if label is None:
-                    label = obj.get("cta_label")
-                side = row.get("cta_side") or obj.get("cta_side")
-                if label is not None:
-                    results[-1]["cta_label"] = str(label).strip()
-                if side is not None:
-                    results[-1]["cta_side"] = str(side).strip().lower()
-    except (json.JSONDecodeError, ValueError, TypeError):
-        passed, reason = _parse_verdict(content)
-        for rubric in rubrics:
-            results.append(
-                {"rubric_id": rubric["id"], "pass": passed, "reason": reason}
-            )
+    results = []
+    passed, reason = _parse_verdict(last_content)
+    for rubric in rubrics:
+        results.append(
+            {"rubric_id": rubric["id"], "pass": passed, "reason": reason}
+        )
     return enforce_cta(screen, results)
 
 

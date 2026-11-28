@@ -113,7 +113,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 			"interested": interest.has(str(rows[i]["club_id"])),
 		})
 	items.append({"id": "back", "kind": "button", "label": "BACK", "pinned": true,
-		"rect": LeagueExtra.back_rect()})
+		"rect": LeagueExtra.back_rect(touch)})
 
 
 	items.append({"id": "tbl:mode:" + COMPACT, "kind": "button", "label": "COMPACT",

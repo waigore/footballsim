@@ -77,8 +77,12 @@ func open_save(slug: String) -> void:
 	LeagueDoors.open_save(screen, slug)
 
 
-func bottom_bar() -> float:
-	return LeagueChrome.BAR_H if screen.mode == LeagueScreen.MODE_TABLE else 0.0
+func bottom_bar(items: Array) -> float:
+	if screen.mode == LeagueScreen.MODE_TABLE:
+		return LeagueChrome.BAR_H
+	if screen.mode == LeagueScreen.MODE_WIZARD:
+		return LeagueStartSheet.bar_of(items)
+	return 0.0
 
 
 func sheet(pose: Array) -> RefCounted:
@@ -89,8 +93,10 @@ func sheet(pose: Array) -> RefCounted:
 			return screen.book
 		"system":
 			return screen.system
-		"extra":
-			return screen.sheet_extra
+		"stats":
+			return screen.sheet_stats
+		"interest":
+			return screen.sheet_interest
 	return screen.hub
 
 
@@ -116,7 +122,8 @@ func refresh() -> void:
 	for item in items:
 		if str(item.get("id", "")) == "back":
 			item["disabled"] = not can_back
-	var content: Array = screen.body.set_sheet(items, vp, screen.mode != screen._last_mode, bottom_bar())
+	var content: Array = screen.body.set_sheet(items, vp, screen.mode != screen._last_mode, bottom_bar(items))
+	screen.body.cue = screen.mode == LeagueScreen.MODE_WIZARD
 	var fonts: Dictionary = UiChrome.fonts()
 	screen.body.painter = Callable(owned, str(pose[2])).bind(vp, fonts, content, view)
 

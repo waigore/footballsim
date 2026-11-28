@@ -83,6 +83,10 @@ var billing: MatchBilling = MatchBilling.new()
 
 var result_hold := false
 
+var skip_armed := false
+
+var back_stamp := -100000
+
 func _ready() -> void:
 	MatchScene.build(self)
 	audio = MatchAudio.new(self)
@@ -129,6 +133,7 @@ func new_match(seed: int) -> void:
 	half_time_timer = -1.0
 	replay_banner = 0.0
 	last_event_notice = 0.0
+	skip_armed = false
 	match_time = 0.0
 	cam.position = Vector2(L * 0.5, W * 0.5 + pitch_shift)
 	cam.zoom = Vector2(base_zoom, base_zoom)
@@ -148,6 +153,16 @@ func _on_fixture_confirmed(h: String, a: String) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		_sync_overlay_scale()
+	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		back_press()
+
+
+func back_press() -> void:
+	var now := Time.get_ticks_msec()
+	if not BackPress.allowed(back_stamp, now):
+		return
+	back_stamp = now
+	BackPress.press(self)
 
 
 func _input(event: InputEvent) -> void:
@@ -187,6 +202,19 @@ func play_goal_clip(pack: Dictionary, on_done := Callable()) -> void:
 	replay = GoalReplay.open(self, pack, on_done)
 	if replay == null and on_done.is_valid():
 		on_done.call()
+
+
+func open_live_replay(pack: Dictionary) -> bool:
+	if pack.is_empty() or replay != null:
+		return false
+	replay = GoalReplay.open_live(self, pack)
+	if replay == null:
+		return false
+	in_highlight = true
+	fast_mode = false
+	highlight_until = -1.0
+	accumulator = 0.0
+	return true
 
 func _on_engine_event(e: Dictionary) -> void:
 	playback.on_engine_event(e)

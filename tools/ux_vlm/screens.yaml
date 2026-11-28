@@ -119,6 +119,9 @@ screens:
       # plus the club long-press menu they raise (#310).
       - scripts/ui/league_start_sheet.gd
       - scripts/ui/league_extra.gd
+      - scripts/ui/league_stats_sheet.gd
+      - scripts/ui/league_interest_sheet.gd
+      - scripts/ui/league_field_focus.gd
       - scripts/ui/league_system.gd
       - scripts/ui/league_system_actions.gd
       - scripts/ui/interest_menu.gd
@@ -145,7 +148,7 @@ screens:
       - scripts/ui/league_calendar_view.gd
       - scripts/ui/league_month.gd
       - scripts/ui/league_plan_rows.gd
-    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-desk-l-calendar-1600.jpg
+    baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261128-desk-l-calendar-1600.png
   - id: encyclopedia
     title: Encyclopedia
     kind: browse
@@ -155,7 +158,13 @@ screens:
       - scripts/ui/wiki_body.gd
       - scripts/ui/wiki_chrome.gd
       - scripts/ui/wiki_model.gd
+      - scripts/ui/wiki_league.gd
+      - scripts/ui/wiki_team.gd
+      - scripts/ui/wiki_player.gd
+      - scripts/ui/wiki_manager.gd
+      - scripts/ui/wiki_absence.gd
       - scripts/ui/wiki_ledger.gd
+      - scripts/ui/wiki_player_log.gd
       - scripts/ui/wiki_competitions.gd
       - scripts/ui/wiki_interest.gd
       - scripts/ui/league_clubs.gd

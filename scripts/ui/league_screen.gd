@@ -60,7 +60,8 @@ var book: LeagueBook = LeagueBook.new()
 
 var system := LeagueSystemSheet.new()
 
-var sheet_extra := LeagueExtra.new()
+var sheet_stats := LeagueStatsSheet.new()
+var sheet_interest := LeagueInterestSheet.new()
 
 var interest_query := ""
 

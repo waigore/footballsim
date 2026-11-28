@@ -13,6 +13,18 @@ const ROW_H := 26.0
 const ROW_GAP := 5.0
 
 
+const TAP_ROW_H := 48.0
+const TAP_ROW_GAP := 6.0
+
+
+static func plan_row_h(touch: bool) -> float:
+	return TAP_ROW_H if touch else ROW_H
+
+
+static func plan_row_gap(touch: bool) -> float:
+	return TAP_ROW_GAP if touch else ROW_GAP
+
+
 static func zone_color(band: String) -> Color:
 	if band == "ucl":
 		return UiChrome.C_GOLD
@@ -58,62 +70,97 @@ const WINNER_MODES: Array = [["draw", "ALLOW DRAW"], ["extra", "EXTRA TIME & PEN
 const WINNER_H := 24.0
 const WINNER_GAP := 14.0
 
-static func winner_rects(vp: Vector2, card_bottom: float) -> Array:
+static func winner_rects(vp: Vector2, card_bottom: float, touch := false) -> Array:
 	var w: float = minf(150.0, (vp.x - 48.0) * 0.5)
+	var h: float = UiChrome.tap_h(WINNER_H, touch)
 	var out: Array = []
 	for i in range(WINNER_MODES.size()):
 		out.append({"id": str(WINNER_MODES[i][0]), "label": str(WINNER_MODES[i][1]),
 			"rect": Rect2(vp.x * 0.5 - w - 4.0 + float(i) * (w + 8.0),
-				card_bottom + WINNER_GAP, w, WINNER_H)})
+				card_bottom + WINNER_GAP, w, h)})
 	return out
 
 
-static func winner_bottom(card_bottom: float) -> float:
-	return card_bottom + WINNER_GAP + WINNER_H
+static func winner_bottom(card_bottom: float, touch := false) -> float:
+	return card_bottom + WINNER_GAP + UiChrome.tap_h(WINNER_H, touch)
 
 
 const PICKER_CHIP_H := 24.0
-static func picker_header(vp: Vector2) -> Dictionary:
+
+const TAP_POSE_MIN_H := 340.0
+
+
+static func tap_pose(vp: Vector2, touch: bool) -> bool:
+	return touch and vp.y >= TAP_POSE_MIN_H
+
+
+static func picker_chip_h(vp: Vector2, touch: bool) -> float:
+	return UiChrome.tap_h(PICKER_CHIP_H, tap_pose(vp, touch))
+
+
+static func picker_header(vp: Vector2, touch := false) -> Dictionary:
 	var compact: bool = vp.y < COMPACT_H
+	var chip_h: float = picker_chip_h(vp, touch)
+	var tap: bool = tap_pose(vp, touch)
+	if tap:
+		var chips_y: float = HEADER + 2.0
+		var rule_y: float = chips_y + chip_h + 8.0
+		return {
+			"compact": compact,
+			"title": not compact,
+			"tap": tap,
+			"chip_h": chip_h,
+			"wordmark_y": 14.0,
+			"rule_y": rule_y,
+			"chips_y": chips_y,
+			"title_y": rule_y + 26.0,
+			"title_size": 30 if compact else 38,
+			"rule_w": 48.0 if compact else 54.0,
+		}
 	var rule_y: float = vp.y * (0.135 if compact else 0.185)
 	return {
 		"compact": compact,
 		"title": not compact,
+		"tap": tap,
+		"chip_h": chip_h,
 		"wordmark_y": vp.y * (0.075 if compact else 0.105),
 		"rule_y": rule_y,
 
 
-		"chips_y": vp.y * 0.155 if compact else rule_y - PICKER_CHIP_H - 6.0,
+		"chips_y": vp.y * 0.155 if compact else rule_y - chip_h - 6.0,
 		"title_y": vp.y * (0.195 if compact else 0.235),
 		"title_size": 30 if compact else 38,
 		"rule_w": 48.0 if compact else 54.0,
 	}
 
 
-static func picker_chips_band(vp: Vector2) -> Rect2:
-	return Rect2(24.0, float(picker_header(vp)["chips_y"]), vp.x - 48.0, PICKER_CHIP_H)
+static func picker_chips_band(vp: Vector2, touch := false) -> Rect2:
+	var head: Dictionary = picker_header(vp, touch)
+	return Rect2(24.0, float(head["chips_y"]), vp.x - 48.0, float(head["chip_h"]))
 
 
 const PICKER_CHIP_GAP := 8.0
-static func picker_chip_rects(vp: Vector2, count: int) -> Array:
+static func picker_chip_rects(vp: Vector2, count: int, touch := false) -> Array:
 	var out: Array = []
 	if count <= 0:
 		return out
-	var y: float = float(picker_header(vp)["chips_y"])
+	var head: Dictionary = picker_header(vp, touch)
+	var y: float = float(head["chips_y"])
+	var h: float = float(head["chip_h"])
 	var w: float = minf(150.0, (vp.x - 48.0 - PICKER_CHIP_GAP * float(count - 1)) / float(count))
 	var x := 24.0
 	for i in range(count):
-		out.append(Rect2(x, y, w, PICKER_CHIP_H))
+		out.append(Rect2(x, y, w, h))
 		x += w + PICKER_CHIP_GAP
 	return out
 
 
-static func picker_doors(vp: Vector2, card_bottom: float) -> Array:
+static func picker_doors(vp: Vector2, card_bottom: float, touch := false) -> Array:
 
 
 	var bw: float = minf(190.0, (vp.x - 32.0) * 0.5 - 4.0)
-	var bh := 50.0
-	var lowest: float = winner_bottom(card_bottom) + 10.0
+	var bh: float = UiChrome.tap_h(50.0, touch)
+	var lowest: float = winner_bottom(card_bottom, touch) + 10.0
 	var highest: float = maxf(vp.y - bh - 8.0, lowest)
 	var by: float = clampf(card_bottom + 54.0, lowest, highest)
 	return [
@@ -122,13 +169,14 @@ static func picker_doors(vp: Vector2, card_bottom: float) -> Array:
 	]
 
 static func winner_control(c: CanvasItem, vp: Vector2, card_bottom: float, mode: String,
-		bold: Font) -> void:
-	for spec in winner_rects(vp, card_bottom):
+		bold: Font, touch := false) -> void:
+	for spec in winner_rects(vp, card_bottom, touch):
 		var r: Rect2 = spec["rect"]
 		var on := str(spec["id"]) == mode
 		c.rect(UiChrome.C_GOLD.darkened(0.1) if on else UiChrome.C_PANEL, r, 6,
 			UiChrome.C_GOLD if on else Color(1, 1, 1, 0.10))
-		UiChrome.text_c(c, r.get_center().x, r.position.y + 16.0, str(spec["label"]), 10,
+		UiChrome.text_c(c, r.get_center().x, r.position.y + r.size.y * 0.5 + 4.0,
+			str(spec["label"]), 10,
 			Color(0.06, 0.06, 0.05) if on else UiChrome.C_DIM, bold)
 		c._add_button("win:" + str(spec["id"]), r)
 
@@ -186,8 +234,13 @@ static func picker_clubs_line(picker) -> String:
 
 
 static func pinned_door(c: CanvasItem, cache: Dictionary, item: Dictionary,
-		fonts: Dictionary) -> void:
+		fonts: Dictionary, vp: Vector2 = Vector2.ZERO) -> void:
 	var rect: Rect2 = item["rect"]
+	var bar := float(item.get("bar", 0.0))
+	if bar > 0.0 and vp.y > 0.0:
+		var band := Rect2(0.0, vp.y - bar, vp.x, bar)
+		c.draw_rect(band, Color(0.012, 0.020, 0.026, 0.96))
+		c.draw_rect(Rect2(band.position.x, band.position.y, band.size.x, 1.0), Color(1, 1, 1, 0.08))
 	if str(item["kind"]) == "chip":
 		UiChrome.chip(c, cache, rect, str(item["label"]), fonts["bold"])
 	else:

@@ -1,6 +1,6 @@
 # Agent guide — Footballsim
 
-Godot 4 football world sim for **desktop** (Windows, macOS, Linux) and **mobile** (Android, iOS). Prefer reuse over new abstractions. Player is god-like (not club manager); sim engines drive outcomes.
+Godot 4 football world sim for **desktop** (Windows, macOS, Linux) and **mobile** (Android, iOS). Prefer reuse. Player is god-like (not club manager); sim engines drive outcomes.
 
 ## Always refer to
 
@@ -54,6 +54,7 @@ Root and `docs/` Markdown **≤ 500 words** (fenced code excluded). CI `docs-lin
 - Don’t commit `.godot/`, export caches, or local overrides.
 - Don’t add plugins/addons without need; don’t hard-code resolutions or OS names in gameplay/sim.
 - Don’t bypass, force-merge, or skip required PR checks.
+- Don’t leave `tools/issueN_*` / `probe*` / `tools/test_*` (`tools-hygiene`).
 - Don’t build “manage this club” mode or use licensed real-world data unless explicitly asked.
 
 ## Project skills

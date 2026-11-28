@@ -5,9 +5,21 @@ var SAVE_DIR := TestScratch.dir("saves_test_english_pyramid")
 var CACHE_DIR := TestScratch.dir("cache_test_english_pyramid")
 const SEED := 7301
 const ENGLISH := ["PL", "CH", "L1", "L2", "NL"]
+const PAIR_EMPTY := "_pair_empty.sqlite"
+const PAIR_SEED_EMPTY := "_pair_seed_empty.sqlite"
+const MIXED := "_mixed.sqlite"
+const LONE_PL := "_lone_pl.sqlite"
+const STACK4_EMPTY := "_stack4_empty.sqlite"
+const MIXED_COMPS := ["PL", "CH", "L1", "LL", "BL", "BL2"]
+const STACK4 := ["PL", "CH", "L1", "L2"]
 
 var season: LeagueSeason = null
 var slug := ""
+var slug_pair := ""
+var slug_pair_seed := ""
+var slug_mixed := ""
+var slug_lone := ""
+var slug_stack := ""
 
 
 var expected_bracket: Dictionary = {}
@@ -22,6 +34,35 @@ func before_all() -> void:
 	season = _finished("English Pyramid", SEED, ENGLISH)
 	slug = season.save.slug if season != null else ""
 	expected_bracket = LeaguePlayoffs.build(season, "CH") if season != null else {}
+	var pair := LeagueSeason.create(
+		"Two Tiers", "generated", "fixture_days", 42, ["PL", "CH"])
+	assert_not_null(pair, "the shared two-tier calendar did not build")
+	slug_pair = pair.save.slug
+	_snapshot_as(pair, PAIR_EMPTY)
+	pair.close()
+	var seeded := LeagueSeason.create(
+		"Bracket B", "generated", "fixture_days", SEED, ["PL", "CH"])
+	assert_not_null(seeded, "the shared seed calendar did not build")
+	slug_pair_seed = seeded.save.slug
+	_snapshot_as(seeded, PAIR_SEED_EMPTY)
+	seeded.close()
+	var mixed := _finished("Two Countries", 6060, MIXED_COMPS)
+	assert_not_null(mixed, "the shared mixed-country calendar did not build")
+	slug_mixed = mixed.save.slug
+	_snapshot_as(mixed, MIXED)
+	mixed.close()
+	var lone := _finished("Premier League Alone", 7, ["PL"])
+	assert_not_null(lone, "the shared lone Premier League did not build")
+	slug_lone = lone.save.slug
+	_snapshot_as(lone, LONE_PL)
+	lone.close()
+	var stack := LeagueSeason.create(
+		"Stack 4", "generated", "fixture_days", 15, STACK4)
+	assert_not_null(stack, "the shared four-tier stack did not build")
+	slug_stack = stack.save.slug
+	_snapshot_as(stack, STACK4_EMPTY)
+	stack.close()
+	season = LeagueSeason.open(slug)
 
 
 func _current() -> LeagueSeason:
@@ -46,10 +87,42 @@ func _clean() -> void:
 			DirAccess.remove_absolute(SAVE_DIR.path_join(name))
 
 
-func _finished(name: String, seed: int, comps: Array) -> LeagueSeason:
-	var built := LeagueSeason.create(name, "generated", "fixture_days", seed, comps)
-	if built == null:
-		return null
+func _snapshot_as(built: LeagueSeason, name: String) -> void:
+	if built == null or built.save == null:
+		return
+	built.save.ensure_open()
+	PLDatabase.close()
+	var bytes := FileAccess.get_file_as_bytes(built.save.path)
+	var out := FileAccess.open(SAVE_DIR.path_join(name), FileAccess.WRITE)
+	if out != null and not bytes.is_empty():
+		out.store_buffer(bytes)
+		out.close()
+	built.save.ensure_open()
+
+
+func _restore(name: String, target_slug: String) -> LeagueSeason:
+	if season != null:
+		season.close()
+		season = null
+	LeagueSeason.active = null
+	PLDatabase.close()
+	var bytes := FileAccess.get_file_as_bytes(SAVE_DIR.path_join(name))
+	var dest := SAVE_DIR.path_join(target_slug + LeagueSave.EXT)
+	var out := FileAccess.open(dest, FileAccess.WRITE)
+	assert_true(out != null and not bytes.is_empty(), "the %s pyramid save was missing" % name)
+	out.store_buffer(bytes)
+	out.close()
+	var opened := LeagueSeason.open(target_slug)
+	assert_not_null(opened, "the %s pyramid save did not reopen" % name)
+	return opened
+
+
+func _reopen_main() -> void:
+	season = LeagueSeason.open(slug)
+	assert_not_null(season, "the English pyramid did not reopen")
+
+
+func _mark_finished(built: LeagueSeason) -> void:
 	for row in PLDatabase.rows(
 			"SELECT id, home_club_id, away_club_id FROM league_fixture;"):
 		var home := str(row["home_club_id"])
@@ -62,6 +135,13 @@ func _finished(name: String, seed: int, comps: Array) -> LeagueSeason:
 	built.record.standings.recompute()
 	if built.record.fixtures.unplayed() == 0:
 		built.save.set_status("complete")
+
+
+func _finished(name: String, seed: int, comps: Array) -> LeagueSeason:
+	var built := LeagueSeason.create(name, "generated", "fixture_days", seed, comps)
+	if built == null:
+		return null
+	_mark_finished(built)
 	return built
 
 
@@ -161,20 +241,19 @@ func test_a_five_tier_save_builds_every_calendar() -> void:
 
 
 func test_any_contiguous_english_stack_builds() -> void:
-	var stack: Array = ENGLISH.slice(0, 4)
-	var built := LeagueSeason.create(
-		"Stack 4", "generated", "fixture_days", 15, stack)
+	var built := _restore(STACK4_EMPTY, slug_stack)
 	assert_not_null(built, "the four-tier stack did not build")
-	assert_eq(built.save.competition_ids(), stack, "the four-tier stack lost a tier")
-	for cid in stack:
+	assert_eq(built.save.competition_ids(), STACK4, "the four-tier stack lost a tier")
+	for cid in STACK4:
 		var expected := 380 if cid == "PL" else 552
 		assert_eq(built.record.fixtures.unplayed(str(cid)), expected,
 			"%s did not build in the four-tier stack" % cid)
 	built.close()
+	_reopen_main()
 
 
 func test_the_pyramid_runs_beside_the_other_countries() -> void:
-	var mixed := _finished("Two Countries", 6060, ["PL", "CH", "L1", "LL", "BL", "BL2"])
+	var mixed := _restore(MIXED, slug_mixed)
 	assert_not_null(mixed, "the mixed save did not build")
 	var brackets := LeaguePlayoffs.build_all(mixed)
 	assert_true(brackets.has("CH"), "the Championship bracket did not settle beside Germany")
@@ -189,6 +268,7 @@ func test_the_pyramid_runs_beside_the_other_countries() -> void:
 		assert_eq(LeagueTiers.country_of(str(link["top"])), "England",
 			"the pyramid swapped a club out of England")
 	mixed.close()
+	_reopen_main()
 
 
 func test_the_bracket_draws_the_places_under_promotion() -> void:
@@ -235,20 +315,20 @@ func test_a_bracket_without_its_tier_above_is_not_played() -> void:
 
 	assert_false(LeaguePlayoffs.build(_current(), "CH").is_empty(),
 		"the Championship's bracket needs the Premier League above it")
-	var pair := LeagueSeason.create(
-		"Two Tiers", "generated", "fixture_days", 42, ["PL", "CH"])
-	assert_not_null(pair, "the two-tier save did not build")
+	var pair := _restore(PAIR_EMPTY, slug_pair)
 	assert_true(LeaguePlayoffs.build(pair, "L1").is_empty(),
 		"League One played a bracket with no tier above it")
 	pair.close()
+	_reopen_main()
 
 func test_one_seed_settles_one_bracket() -> void:
 
 
-	var again := _finished("Bracket B", SEED, ["PL", "CH"])
-	assert_not_null(again, "the second English season was not created")
+	var again := _restore(PAIR_SEED_EMPTY, slug_pair_seed)
+	_mark_finished(again)
 	var bracket := LeaguePlayoffs.build(again, "CH")
 	again.close()
+	_reopen_main()
 	assert_eq(str(bracket["winner_club_id"]), str(expected_bracket["winner_club_id"]),
 		"the bracket's winner moved between runs of one seed")
 	assert_eq(bracket["rounds"], expected_bracket["rounds"], "the bracket differs for one seed")
@@ -338,16 +418,16 @@ func test_a_reopened_season_reads_the_same_end() -> void:
 	season = reopened
 
 func test_an_unplayed_calendar_settles_nothing() -> void:
-	var fresh := LeagueSeason.create("Fresh Calendar", "generated", "fixture_days", 5, ["PL", "CH"])
-	assert_not_null(fresh, "the fresh save did not build")
+	var fresh := _restore(PAIR_EMPTY, slug_pair)
 	assert_true(LeaguePlayoffs.build_all(fresh).is_empty(), "an unplayed calendar settled a bracket")
 	assert_true(LeaguePyramid.movers(fresh, {}).is_empty(), "an empty bracket set swapped clubs")
 	assert_false(LeaguePyramid.apply(fresh, {}), "an empty swap reported success")
 	assert_true(LeaguePlayoffs.build(fresh, "PL").is_empty(), "the Premier League played a bracket")
 	fresh.close()
+	_reopen_main()
 
 func test_a_lone_tier_settles_nothing() -> void:
-	var alone := _finished("Premier League Alone", 7, ["PL"])
+	var alone := _restore(LONE_PL, slug_lone)
 	assert_not_null(alone, "the single-tier save did not build")
 	var summary := alone.summary()
 	assert_true((summary.get("playoffs", {}) as Dictionary).is_empty(),
@@ -356,6 +436,7 @@ func test_a_lone_tier_settles_nothing() -> void:
 		"a lone Premier League swapped clubs")
 	assert_eq(int(PLCompetitions.clubs("PL")), 20, "the Premier League lost clubs with nowhere to go")
 	alone.close()
+	_reopen_main()
 
 func test_a_club_finds_its_new_tier_in_the_encyclopedia() -> void:
 	var summary := _current().summary()

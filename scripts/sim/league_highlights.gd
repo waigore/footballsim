@@ -173,22 +173,28 @@ static func short_name(club_id: String) -> String:
 
 static func engine_events(engine, fixture_id: String) -> Array:
 	var rows: Array = []
-	for e in engine.events:
+	for e in engine.report_log:
 		var kind := str(e.get("type", ""))
-		if kind != "goal" and kind != "card":
-			continue
+		var key := str(e.get("player_key", ""))
+		var name := str(e.get("player", ""))
+		var card := str(e.get("card", ""))
 		var p = engine.by_id.get(int(e.get("player_id", -1)), null)
-		if p == null:
+		if key == "" and p != null:
+			key = str(p.key)
+			name = str(p.name)
+		if key == "" and kind == "card":
 			continue
+		if card == "" and p != null:
+			card = "red" if p.red else "yellow"
 		var mapped := "goal"
 		if kind == "card":
-			mapped = "red" if p.red else "yellow"
+			mapped = "red" if card == "red" else "yellow"
 		rows.append({
 			"fixture_id": fixture_id,
 			"minute": int(e.get("minute", 0)),
 			"kind": mapped,
-			"player_id": str(p.key),
+			"player_id": key,
 			"club_id": str(engine.teams[int(e.get("team", 0))]["id"]),
-			"detail": str(p.name),
+			"detail": name,
 		})
 	return rows

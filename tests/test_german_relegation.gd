@@ -5,6 +5,7 @@ var SAVE_DIR := TestScratch.dir("saves_test_german_relegation")
 var CACHE_DIR := TestScratch.dir("cache_test_german_relegation")
 const SEED := 5150
 const PRISTINE := "_pristine.sqlite"
+const PRISTINE_EMPTY := "_pristine_empty.sqlite"
 
 var season: LeagueSeason = null
 var slug := ""
@@ -17,11 +18,14 @@ func before_all() -> void:
 	_clean()
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
-	season = _build_finished(SEED)
+	season = LeagueSeason.create("German Relegation", "generated", "fixture_days", SEED,
+		["BL", "BL2"])
 	assert_not_null(season, "the German season was not created")
 	slug = season.save.slug
+	_snapshot_as(PRISTINE_EMPTY)
+	_finish_open_season(season)
 	expected_tie = LeagueRelegation.build(season)
-	_snapshot()
+	_snapshot_as(PRISTINE)
 
 func after_all() -> void:
 	if season != null:
@@ -41,15 +45,12 @@ func _clean() -> void:
 			DirAccess.remove_absolute(SAVE_DIR.path_join(name))
 
 
-func _build_finished(seed: int) -> LeagueSeason:
-	var built := LeagueSeason.create("German Relegation", "generated", "fixture_days", seed,
-		["BL", "BL2"])
-	if built == null:
-		return null
+func _finish_open_season(built: LeagueSeason) -> void:
 	var scored := {}
 	for i in range(18):
 		scored[i] = 40 - i * 2
-	var rows := PLDatabase.rows("SELECT id, home_club_id, away_club_id, competition_id FROM league_fixture;")
+	var rows := PLDatabase.rows(
+		"SELECT id, home_club_id, away_club_id, competition_id FROM league_fixture;")
 	for row in rows:
 		var comp := str(row["competition_id"])
 		var home := str(row["home_club_id"])
@@ -62,40 +63,47 @@ func _build_finished(seed: int) -> LeagueSeason:
 		PLDatabase.execute("UPDATE league_fixture SET status = 'played', home_goals = ?, "
 			+ "away_goals = ? WHERE id = ?;", [hg, ag, str(row["id"])])
 	built.record.standings.recompute()
-
-
 	if built.record.fixtures.unplayed() == 0:
 		built.save.set_status("complete")
-	return built
 
 
-func _snapshot() -> void:
+func _snapshot_as(name: String) -> void:
 	if season == null or season.save == null:
 		return
 	season.save.ensure_open()
 	PLDatabase.close()
 	var bytes := FileAccess.get_file_as_bytes(season.save.path)
-	var out := FileAccess.open(SAVE_DIR.path_join(PRISTINE), FileAccess.WRITE)
+	var out := FileAccess.open(SAVE_DIR.path_join(name), FileAccess.WRITE)
 	if out != null and not bytes.is_empty():
 		out.store_buffer(bytes)
 		out.close()
 	season.save.ensure_open()
 
 
-func _fresh() -> LeagueSeason:
+func _restore(name: String) -> LeagueSeason:
 	if season != null:
 		season.close()
 		season = null
 	PLDatabase.close()
-	var bytes := FileAccess.get_file_as_bytes(SAVE_DIR.path_join(PRISTINE))
+	var bytes := FileAccess.get_file_as_bytes(SAVE_DIR.path_join(name))
 	var dest := SAVE_DIR.path_join(slug + LeagueSave.EXT)
 	var out := FileAccess.open(dest, FileAccess.WRITE)
-	assert_true(out != null and not bytes.is_empty(), "the pristine German save was missing")
+	assert_true(out != null and not bytes.is_empty(), "the %s German save was missing" % name)
 	out.store_buffer(bytes)
 	out.close()
 	season = LeagueSeason.open(slug)
-	assert_not_null(season, "the pristine German save did not reopen")
+	assert_not_null(season, "the %s German save did not reopen" % name)
 	return season
+
+
+func _fresh() -> LeagueSeason:
+	return _restore(PRISTINE)
+
+
+func _refinish_from_empty() -> LeagueSeason:
+	var built := _restore(PRISTINE_EMPTY)
+	_finish_open_season(built)
+	return built
 
 
 func _place(table: Array, club_id: String, scored: Dictionary, comp: String) -> int:
@@ -124,12 +132,9 @@ func test_the_tie_is_the_sixteenth_against_the_third() -> void:
 	assert_true(str(tie["text"]).contains("—"), "the tie has no reading")
 
 func test_the_same_seed_settles_the_same_tie() -> void:
-
-
-	var again := _build_finished(SEED)
-	assert_not_null(again, "the second German season was not created")
+	var again := _refinish_from_empty()
+	assert_not_null(again, "the second German season was not refinished")
 	var tie := LeagueRelegation.build(again)
-	again.close()
 	assert_eq(str(tie["top_club_id"]), str(expected_tie["top_club_id"]), "the tie moved between runs")
 	assert_eq(tie["legs"], expected_tie["legs"], "the legs differ for one seed")
 	assert_eq(str(tie["winner_club_id"]), str(expected_tie["winner_club_id"]),
@@ -249,14 +254,9 @@ func _links_league(page: Dictionary, competition_id: String) -> bool:
 	return false
 
 func test_a_tie_between_the_tiers_is_only_for_a_german_pair() -> void:
-	var alone := LeagueSeason.create("Only Bundesliga", "generated", "fixture_days", 1, ["BL"])
-	assert_not_null(alone, "the single-tier save was not created")
-	assert_false(LeagueRelegation.runs(alone.save.actives), "a lone tier plays a Relegation")
-	alone.close()
-	var english := LeagueSeason.create("English Only", "generated", "fixture_days", 2, ["PL"])
-	assert_not_null(english, "the English save was not created")
-	assert_false(LeagueRelegation.runs(english.save.actives), "England plays a German Relegation")
-	english.close()
+	assert_false(LeagueRelegation.runs(["BL"]), "a lone tier plays a Relegation")
+	assert_false(LeagueRelegation.runs(["PL"]), "England plays a German Relegation")
+	assert_true(LeagueRelegation.runs(["BL", "BL2"]), "a German pair skipped the Relegation")
 
 func test_the_tie_is_applied_only_once() -> void:
 	var current := _fresh()

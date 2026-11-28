@@ -137,7 +137,7 @@ func test_the_tables_sheet_tabs_per_league() -> void:
 	assert_false(table.press("tbl:league:LL", null), "a repeated tab press repainted")
 
 func test_stats_filters_reports_and_leaders() -> void:
-	var extra := LeagueExtra.new()
+	var extra := LeagueStatsSheet.new()
 	var view := {
 		"filters": {"league": "LL", "month": "", "team": "BAR", "stat": "assists"},
 		"competitions": [{"id": "PL", "short": "PREMIER LEAGUE"}, {"id": "LL", "short": "LA LIGA"}],
@@ -145,7 +145,7 @@ func test_stats_filters_reports_and_leaders() -> void:
 			"goals": 3, "assists": 7, "stat_value": 7}],
 		"complete": false,
 	}
-	var items: Array = extra.stats_layout(Vector2(1280, 720), view)
+	var items: Array = extra.layout(Vector2(1280, 720), view)
 	var ids: Array = []
 	for item in items:
 		ids.append(str(item["id"]))
