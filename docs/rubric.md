@@ -24,7 +24,7 @@ Cite `REQ-*`/`RUB-*` in PRs.
 | 0 | Fail | Missing, contradicted, harmful |
 | — | N/A | Outside this change |
 
-**Pass:** applicable ≥2, none 0 per touched pillar; overall = all touched pass. Any **0** fails.
+**Pass:** applicable ≥2, none 0 per touched pillar; overall = all touched. Any **0** fails.
 
 ## Criteria (pass ≥2)
 
@@ -36,9 +36,9 @@ Cite `REQ-*`/`RUB-*` in PRs.
 | RUB-P1-02 | Football-world look (`REQ-P1-02`) |
 | RUB-P1-03 | Readable intentional art (`REQ-P1-03`) |
 | RUB-P1-04 | Key actions/transitions animated (`REQ-P1-04`) |
-| RUB-P1-05 | Touch + mouse/keyboard OK (`REQ-P1-05`) |
+| RUB-P1-05 | Touch + mouse/keyboard (`REQ-P1-05`) |
 | RUB-P1-06 | Music optional; mute/volume (`REQ-P1-06`) |
-| RUB-P1-07 | Non-match type comfortable; scales with viewport (`REQ-P1-07`) |
+| RUB-P1-07 | Non-match type comfortable, themed (`REQ-P1-07`) |
 | RUB-P1-08 | Entity icons; theme + style (`REQ-P1-08`) |
 
 ### P2 — Rules fidelity
@@ -55,11 +55,12 @@ Cite `REQ-*`/`RUB-*` in PRs.
 
 | ID | Pass bar |
 |----|----------|
-| RUB-P3-01 | **S:** ≤400/25; shrink-only allowlist; no new untyped params (`REQ-P3-01`) |
-| RUB-P3-02 | **I:** no deep `get_node`/`$` (≥3); autoload declare+consumers (`REQ-P3-02`) |
-| RUB-P3-03 | **D:** sim/data pure; no ui/view loads; view reactive (`REQ-P3-03`) |
+| RUB-P3-01 | **S:** ≤400/25; shrink-only allowlist; typed params (`REQ-P3-01`) |
+| RUB-P3-02 | **I:** no deep `get_node`/`$`; autoloads scoped (`REQ-P3-02`) |
+| RUB-P3-03 | **D:** sim/data pure; no ui/view loads; reactive views (`REQ-P3-03`) |
 | RUB-P3-04 | Changed `scripts/sim/**` (+rules) with `tests/` (`REQ-P3-04`) |
 | RUB-P3-05 | OS APIs only in `scripts/platform/**` (`REQ-P3-05`) |
+| RUB-P3-06 | Controls chrome, one Theme, canvas budget (`REQ-P3-06`) |
 
 ### P4 — Performance & latency
 
@@ -78,11 +79,11 @@ Cite `REQ-*`/`RUB-*` in PRs.
 | RUB-P5-01 | Clear god-action entry (`REQ-P5-01`) |
 | RUB-P5-02 | Choice primary; bookkeeping batched (`REQ-P5-02`) |
 | RUB-P5-03 | World actions discoverable (`REQ-P5-03`) |
-| RUB-P5-04 | Batch/default/confirm-once for chores (`REQ-P5-04`) |
-| RUB-P5-05 | State-change ack ~1–2 frames; never silent (`REQ-P5-05`) |
+| RUB-P5-04 | Batch/default/confirm-once chores (`REQ-P5-04`) |
+| RUB-P5-05 | State-change ack ~1–2 frames (`REQ-P5-05`) |
 | RUB-P5-06 | Juice non-modal/skippable; no hidden outcomes (`REQ-P5-06`) |
 | RUB-P5-07 | Phone+tablet↔desktop intent parity (`REQ-P5-07`) |
-| RUB-P5-08 | Overflow content scrolls on touch + desktop (`REQ-P5-08`) |
+| RUB-P5-08 | Overflow scrolls on touch + desktop (`REQ-P5-08`) |
 
 ## Decision record
 
