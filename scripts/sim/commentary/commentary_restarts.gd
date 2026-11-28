@@ -2,18 +2,18 @@ class_name CommentaryRestarts
 extends RefCounted
 
 
-static func _pick(rng: RandomNumberGenerator, lines: Array) -> String:
+static func _pick(rng, lines: Array) -> String:
 	return lines[rng.randi_range(0, lines.size() - 1)]
 
 
-static func kickoff(rng: RandomNumberGenerator, team_name: String) -> String:
+static func kickoff(rng: Variant, team_name: String) -> String:
 	return _pick(rng, [
 		"We're underway — %s get us started." % team_name,
 		"Kick-off! %s to get us going." % team_name,
 	])
 
 
-static func restart(rng: RandomNumberGenerator, kind: String, team_short: String, taker: String,
+static func restart(rng: Variant, kind: String, team_short: String, taker: String,
 		waiting: bool) -> String:
 	if waiting:
 		match kind:
@@ -63,7 +63,7 @@ static func restart(rng: RandomNumberGenerator, kind: String, team_short: String
 	return "Restart to %s." % team_short
 
 
-static func half_time(rng: RandomNumberGenerator, short_a: String, score_a: int, short_b: String,
+static func half_time(rng: Variant, short_a: String, score_a: int, short_b: String,
 		score_b: int) -> String:
 	return _pick(rng, [
 		"Half-time: %s %d-%d %s." % [short_a, score_a, score_b, short_b],
@@ -71,7 +71,7 @@ static func half_time(rng: RandomNumberGenerator, short_a: String, score_a: int,
 	])
 
 
-static func full_time(rng: RandomNumberGenerator, short_a: String, score_a: int, short_b: String,
+static func full_time(rng: Variant, short_a: String, score_a: int, short_b: String,
 		score_b: int) -> String:
 	var tail := ""
 	if score_a == score_b:
@@ -83,7 +83,7 @@ static func full_time(rng: RandomNumberGenerator, short_a: String, score_a: int,
 	return "Full time: %s %d-%d %s.%s" % [short_a, score_a, score_b, short_b, tail]
 
 
-static func penalty_taken(rng: RandomNumberGenerator, name: String) -> String:
+static func penalty_taken(rng: Variant, name: String) -> String:
 	return _pick(rng, [
 		"%s steps up..." % name,
 		"%s places the ball. Big moment." % name,

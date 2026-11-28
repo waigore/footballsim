@@ -58,7 +58,7 @@ func _header(p) -> void:
 			ball.vel = (Vector2(goal.x, wing) - p.pos).normalized() * speed * 0.94
 		ball.vz = 0.4
 		ball.z = maxf(ball.z, 1.1)
-		_emit("header", Commentary.shot(rng, p.name, to_goal.length(), hxg, pressure_on(p), "header"), p.team, p)
+		_emit("header", _narrate("header", {"player": p.name, "dist": to_goal.length(), "xg": hxg, "pressure": pressure_on(p)}), p.team, p)
 		_stats_shot(p, hxg, "header")
 		stats[p.team]["xg"] += hxg
 	elif p.team == possession_team or attacking:
@@ -71,7 +71,7 @@ func _header(p) -> void:
 		ball.vel = away.normalized() * rng.randf_range(10.0, 16.0)
 		ball.vz = 5.5
 		ball.z = maxf(ball.z, 1.8)
-		_emit("clearance", Commentary.clearance(rng, p.name, true), p.team, p)
+		_emit("clearance", _narrate("clearance", {"player": p.name, "headed": true}), p.team, p)
 		ball_kicked.emit(0.5)
 
 
@@ -154,10 +154,10 @@ func _award_foul(fouler, victim) -> void:
 	var spot = victim.pos
 	if box:
 		spot = Vector2(PEN_D if fouler.team == 1 else L - PEN_D, W * 0.5)
-		_emit("foul", Commentary.foul(rng, fouler.name, victim.name, true), victim.team, victim)
+		_emit("foul", _narrate("foul", {"fouler": fouler.name, "victim": victim.name, "penalty": true}), victim.team, victim)
 		_start_restart("penalty", victim.team, spot, 3.6)
 	else:
-		_emit("foul", Commentary.foul(rng, fouler.name, victim.name, false), victim.team, victim)
+		_emit("foul", _narrate("foul", {"fouler": fouler.name, "victim": victim.name, "penalty": false}), victim.team, victim)
 		_start_restart("free_kick", victim.team, spot, 2.6)
 	_flash(0.4)
 
@@ -175,7 +175,7 @@ func _award_handball(q) -> void:
 	ball.last_touch_team = q.team
 	possession_team = attack
 	_flash(0.4)
-	_emit("handball", Commentary.handball(rng, q.name, box), attack, q)
+	_emit("handball", _narrate("handball", {"player": q.name, "penalty": box}), attack, q)
 	_add_involvement(q, "handball", "Handball", q.pos)
 	if box:
 		_start_restart("penalty", attack, q.pos, 3.6)
@@ -183,7 +183,7 @@ func _award_handball(q) -> void:
 		_start_restart("free_kick", attack, q.pos, 2.6)
 
 func _send_off_or_book(p, card: String) -> void:
-	var line: String = Commentary.card(rng, p.name, card)
+	var line: String = _narrate("card", {"player": p.name, "card": card})
 	if card == "yellow":
 		_emit("card", line, p.team, p)
 	elif card == "red_second":

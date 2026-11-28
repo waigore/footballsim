@@ -69,7 +69,7 @@ static func replace_injured(m: MatchManager, p: Variant) -> bool:
 	var at_ht: bool = m.e.phase == "half_time"
 	if not m.e.sub_window_available(t, at_ht):
 		return false
-	m.e._emit("injury", CommentaryBench.injury(m.e.rng, p.name, true), t, p)
+	m.e._emit("injury", m.e._narrate("injury", {"player": p.name, "continues": true}), t, p)
 	var ok: bool = m.e._bring_on(t, p, false, at_ht, {"reason": "injury", "manager": m.manager_name(t)})
 	if ok:
 		m.last_sub[t] = m.e.clock

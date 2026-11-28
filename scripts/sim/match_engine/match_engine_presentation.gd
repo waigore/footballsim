@@ -65,6 +65,20 @@ var goal_sheet: Array = []
 var report_log: Array = []
 
 
+var narrator: Callable = Callable()
+
+
+func _narrate(kind: String, fields: Dictionary, steps: int = 1) -> String:
+	var pick := 0
+	if steps > 0:
+		pick = rng.randi()
+		for _i in range(steps - 1):
+			rng.randi()
+	if narrator.is_valid():
+		return str(narrator.call(kind, pick, fields))
+	return ""
+
+
 func _log_from_events(source: Array) -> Array:
 	var out: Array = []
 	for e in source:

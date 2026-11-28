@@ -87,7 +87,7 @@ static func apply(m: MatchManager, t: int, change: Dictionary, reason: String) -
 				q.base = TeamData.formation_slot_for(m.tactics[t].formation, q.role)
 	m.e.live_style[t] = m.tactics[t].style()
 	var short: String = str(m.e.teams[t]["data"]["short"])
-	var text: String = CommentaryBench.tactics(m.e.rng, m.manager_name(t), short, labels)
+	var text: String = m.e._narrate("tactics", {"manager": m.manager_name(t), "team_short": short, "changes": labels})
 	m.e._emit("tactics", text, t, null, {
 		"manager": m.manager_name(t), "changes": labels, "formation": m.tactics[t].formation,
 		"mentality": m.tactics[t].mentality, "reason": reason, "count": m.changes[t],
