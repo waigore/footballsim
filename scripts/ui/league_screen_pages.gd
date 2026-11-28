@@ -14,7 +14,7 @@ func open_wizard() -> void:
 	screen.nav.clear()
 	screen.wizard = {"name": "",
 		"calendar_mode": "generated", "advance_mode": "fixture_days",
-		"competitions": ["PL"], "cups_off": [], "error": ""}
+		"competitions": ["PL"], "uefa": LeagueEurope.available(), "cups_off": [], "error": ""}
 	screen.visible = true
 	screen.refresh()
 
@@ -105,6 +105,12 @@ func sheet(pose: Array) -> RefCounted:
 			return screen.sheet_stats
 		"interest":
 			return screen.sheet_interest
+		"europe":
+			return screen.sheet_europe
+		"europe_stage":
+			return screen.sheet_europe_stage
+		"europe_draw":
+			return screen.sheet_europe_draw
 		"cups":
 			return screen.sheet_cups
 		"cup":
@@ -150,6 +156,8 @@ func refresh() -> void:
 	screen.pinned.queue_redraw()
 	screen.body.frozen = screen.delete_confirm_open()
 	screen.panel.active = LeagueView.panel_reading(screen.mode)
+	var save: LeagueSave = screen.season.save if screen.season != null else null
+	screen.panel.europe_on = LeagueEurope.runs(save)
 
 
 	if screen.panel.active == "":

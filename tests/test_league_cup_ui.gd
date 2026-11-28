@@ -80,8 +80,9 @@ func open_cups() -> void:
 	screen().panel.settle()
 	screen().refresh()
 	assert_true(screen().panel.cups, "the open save carries no CUPS door")
-	for i in range(LeaguePanel.rows(true).size()):
-		if str(LeaguePanel.rows(true)[i]["id"]) == "nav:cups":
+	var list: Array = screen().panel.items()
+	for i in range(list.size()):
+		if str(list[i]["id"]) == "nav:cups":
 			press(screen().panel.item_rect(vp(), i).get_center())
 			screen().panel.settle()
 			assert_eq(screen().mode, "cups", "the drawer did not open the cups hub")

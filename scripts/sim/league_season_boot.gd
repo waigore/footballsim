@@ -65,6 +65,12 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	save.reload()
 	season.rules_by = save.rules_by
 	season.rules = save.rules
+	if uefa:
+		var earliest := PLDatabase.row(
+			"SELECT MIN(kickoff) AS d FROM league_fixture WHERE status <> 'played';")
+		if earliest.get("d", null) != null and str(earliest["d"]) < save.current_date():
+			save.set_date(str(earliest["d"]))
+			save.set_matchday(season._matchday_of(str(earliest["d"])))
 	LeagueSeason.active = season
 	return season
 

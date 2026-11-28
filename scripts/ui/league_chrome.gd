@@ -26,12 +26,14 @@ static func plan_row_gap(touch: bool) -> float:
 
 
 static func zone_color(band: String) -> Color:
-	if band == "ucl":
+	if band == "ucl" or band == "r16":
 		return UiChrome.C_GOLD
-	if band == "uel":
+	if band == "uel" or band == "kopo":
 		return UiChrome.C_LIVE
 	if band == "uecl":
 		return Color(0.55, 0.72, 0.92)
+	if band == "out":
+		return Color(0.42, 0.44, 0.50)
 	if band == "promotion":
 		return Color(0.45, 0.85, 0.55)
 	if band == "playoff":

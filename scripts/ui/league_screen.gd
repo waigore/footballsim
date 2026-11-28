@@ -24,6 +24,9 @@ const MODE_SYSTEM := "system"
 
 const MODE_STATS := "stats"
 const MODE_INTEREST := "interest"
+const MODE_EUROPE := "europe"
+const MODE_EUROPE_STAGE := "europe_stage"
+const MODE_EUROPE_DRAW := "europe_draw"
 
 const MODE_CUPS := "cups"
 const MODE_CUP := "cup"
@@ -40,7 +43,7 @@ var holding := false
 var mode := MODE_WIZARD
 var season: LeagueSeason = null
 var wizard := {"name": "", "calendar_mode": "generated", "advance_mode": "fixture_days",
-	"competitions": ["PL"], "error": ""}
+	"competitions": ["PL"], "uefa": true, "error": ""}
 var saves: Array = []
 
 var delete := LeagueDelete.new()
@@ -68,6 +71,15 @@ var system := LeagueSystemSheet.new()
 
 var sheet_stats := LeagueStatsSheet.new()
 var sheet_interest := LeagueInterestSheet.new()
+var sheet_europe := LeagueEuropeSheet.new()
+var sheet_europe_stage := LeagueEuropeStage.new()
+var sheet_europe_draw := LeagueEuropeDraw.new()
+
+var europe := {"comp": "", "tab": "", "round": ""}
+var europe_draw := {"competition": "", "round": "", "revealed": 0, "done": false, "t": 0.0}
+
+var calendar_filter := ""
+
 var sheet_cups := LeagueCupsSheet.new()
 var sheet_cup := LeagueCupSheet.new()
 var sheet_bracket := LeagueCupBracket.new()
@@ -156,6 +168,8 @@ func _process(delta: float) -> void:
 	if interest.tick(delta):
 		overlay.queue_redraw()
 	if visible and panel.update(delta):
+		overlay.queue_redraw()
+	if visible and LeagueEuropeActions.tick(self, delta):
 		overlay.queue_redraw()
 	if visible and pages != null:
 		LeagueCupDoors.tick(self, delta)

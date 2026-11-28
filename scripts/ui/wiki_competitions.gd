@@ -7,6 +7,7 @@ const ACCENT := "#f7c948"
 const SHORT := {
 	"BL": "BL", "BL2": "2.BL", "CH": "CHAMP", "LL": "LA LIGA",
 	"L1": "L1", "L2": "L2", "NL": "NL", "PL": "PL", "SA": "SERIE A", "SB": "SERIE B",
+	"UCL": "UCL", "UEL": "UEL", "UECL": "UECL",
 }
 
 
@@ -17,6 +18,18 @@ static func index(active_id: String) -> Dictionary:
 		var item := {
 			"text": str(comp["short_name"]).to_upper(),
 			"short": str(SHORT.get(id, str(comp["short_name"]).to_upper())),
+			"accent": ACCENT if id == active_id else "",
+		}
+		if id != active_id:
+			item["target"] = {"page": WikiModel.LEAGUE, "id": id}
+		items.append(item)
+	for comp in PLRepository.shared().continentals():
+		var id := str(comp.get("id", ""))
+		if not PLCompetitions.season_owns(id):
+			continue
+		var item := {
+			"text": str(comp.get("short_name", id)).to_upper(),
+			"short": str(SHORT.get(id, id)),
 			"accent": ACCENT if id == active_id else "",
 		}
 		if id != active_id:

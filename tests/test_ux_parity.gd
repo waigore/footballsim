@@ -41,11 +41,13 @@ func _panel_nav_ids(vp: Vector2, touch: bool) -> Array:
 	var panel := LeaguePanel.new()
 	panel.touch = touch
 	panel.cups = true
+	panel.europe_on = true
 	panel.open()
 	panel.settle()
 	var ids: Array = []
-	for i in range(LeaguePanel.rows(true).size()):
-		var item: Dictionary = LeaguePanel.rows(true)[i]
+	var list: Array = panel.items()
+	for i in range(list.size()):
+		var item: Dictionary = list[i]
 		var hit: String = panel.hit(panel.item_rect(vp, i).get_center(), vp)
 		assert_eq(hit, str(item["id"]), "panel row %s missed at %s (touch=%s)" % [item["id"], vp, touch])
 		ids.append(hit)
