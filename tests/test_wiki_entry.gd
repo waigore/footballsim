@@ -12,7 +12,7 @@ func before_all() -> void:
 	add_child(game)
 	game.dev.ui_scale = game.get_viewport_rect().size.y / 411.0
 	game._sync_overlay_scale()
-	game._on_fixture_confirmed("MUN", "MCI")
+	game._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 	TestBriefing.kick(game)
 	game.paused = true
 
@@ -60,11 +60,11 @@ func test_the_scoreboard_club_chrome_opens_the_club() -> void:
 	_tap(door.position + door.size * 0.5)
 	assert_true(game.wiki_host.is_open(), "the club chrome did not open a page")
 	assert_eq(str(game.wiki_host.screen.current()["page"]), "team", "the club chrome opened the wrong page")
-	assert_eq(str(game.wiki_host.screen.current()["id"]), "MUN", "the club chrome opened the wrong club")
+	assert_eq(str(game.wiki_host.screen.current()["id"]), "ENG-MUN1", "the club chrome opened the wrong club")
 	game.wiki_host.close()
 	await get_tree().process_frame
 	_tap(_door("team_1").position + _door("team_1").size * 0.5)
-	assert_eq(str(game.wiki_host.screen.current()["id"]), "MCI", "the away club chrome opened the wrong club")
+	assert_eq(str(game.wiki_host.screen.current()["id"]), "ENG-MCI1", "the away club chrome opened the wrong club")
 	game.wiki_host.close()
 
 func test_the_tracked_player_card_opens_the_profile() -> void:
@@ -101,7 +101,7 @@ func test_a_finished_match_is_written_to_the_seed_once() -> void:
 	game.engine.phase = "full_time"
 	game._process(0.016)
 	assert_true(game.result_recorded, "full time did not record the result")
-	var club := PLRepository.shared().sim_club("MUN")
+	var club := PLRepository.shared().sim_club("ENG-MUN1")
 	assert_eq(int(club.get("played", 0)), 1, "the club record did not land")
 	var lines := 0
 	for p in game.engine.players:
@@ -109,5 +109,5 @@ func test_a_finished_match_is_written_to_the_seed_once() -> void:
 			lines += 1
 	assert_eq(lines, game.engine.players.size(), "not every player made the ledger")
 	game._process(0.016)
-	assert_eq(int(PLRepository.shared().sim_club("MUN").get("played", 0)), 1, "full time recorded the match twice")
+	assert_eq(int(PLRepository.shared().sim_club("ENG-MUN1").get("played", 0)), 1, "full time recorded the match twice")
 	PLSimStats.clear()

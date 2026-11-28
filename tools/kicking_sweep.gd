@@ -26,7 +26,7 @@ const LEVELS := [44.0, 49.0, 56.0, 64.75, 70.0, 79.0]
 func _init() -> void:
 	print("kicking | travel m | off-line m | line err")
 	for level in LEVELS:
-		var eng := MatchEngine.new(4242, "MUN", "MCI")
+		var eng := MatchEngine.new(4242, "ENG-MUN1", "ENG-MCI1")
 		eng.phase = "play"
 		var gk = eng._gk_of(0)
 		var bars: Dictionary = gk.gk.duplicate()

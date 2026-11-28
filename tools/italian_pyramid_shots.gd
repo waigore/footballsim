@@ -38,9 +38,11 @@ func _initialize() -> void:
 	await _shot("issue420_encyclopedia_serie_a")
 	var page := WikiModel.page(WikiModel.LEAGUE, "SA")
 	print("ENCYCLOPEDIA title=%s chips=%d" % [str(page.get("title", "")), _chips(page)])
-	scene.wiki_host.open_page_over_league(WikiModel.TEAM, "SA-INT")
+	var serie_a: Array = TeamData.team_ids("SA")
+	var club_id := str(serie_a[0]) if not serie_a.is_empty() else ""
+	scene.wiki_host.open_page_over_league(WikiModel.TEAM, club_id)
 	await _shot("issue420_encyclopedia_club")
-	var club := WikiModel.page(WikiModel.TEAM, "SA-INT")
+	var club := WikiModel.page(WikiModel.TEAM, club_id)
 	print("CLUB PAGE title=%s" % str(club.get("title", "")))
 	season.close()
 	print("EXIT done")

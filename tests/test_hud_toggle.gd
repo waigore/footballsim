@@ -26,7 +26,7 @@ func before_all() -> void:
 	game.menus.restore_hud()
 	game.menus.close()
 	game.hud_layer.visible = true
-	game._on_fixture_confirmed("MUN", "MCI")
+	game._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 
 	TestBriefing.kick(game)
 	game.paused = true

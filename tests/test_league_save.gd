@@ -199,9 +199,9 @@ func test_a_report_keeps_its_penalty_tag_across_a_reopen() -> void:
 	var record := LeagueRecord.new(save)
 	record.report.add_events([
 		{"fixture_id": "tag-fx", "minute": 12, "kind": "goal", "player_id": "p1",
-			"club_id": "MCI", "detail": "A. Striker", "penalty": true},
+			"club_id": "ENG-MCI1", "detail": "A. Striker", "penalty": true},
 		{"fixture_id": "tag-fx", "minute": 40, "kind": "goal", "player_id": "p2",
-			"club_id": "MCI", "detail": "B. Winger"},
+			"club_id": "ENG-MCI1", "detail": "B. Winger"},
 	])
 	LeagueSave.close()
 	var reopened := LeagueSave.open(save.slug)

@@ -35,7 +35,7 @@ func _initialize() -> void:
 	_report("phone league table", scene.wiki_host.screen)
 	await _capture("issue203_phone_league")
 	# A club page: its first screen is the record and the tactical profile.
-	scene.wiki_host.screen.open(WikiModel.TEAM, "MUN")
+	scene.wiki_host.screen.open(WikiModel.TEAM, "ENG-MUN1")
 	await _frames(4)
 	scene.wiki_host.screen.body.scroll_to(0.0)
 	await _frames(3)
@@ -52,7 +52,7 @@ func _initialize() -> void:
 	await _frames(4)
 	_report("desktop league table", scene.wiki_host.screen)
 	await _capture("issue203_desktop_league")
-	scene.wiki_host.screen.open(WikiModel.TEAM, "MUN")
+	scene.wiki_host.screen.open(WikiModel.TEAM, "ENG-MUN1")
 	await _frames(4)
 	_report("desktop club page top", scene.wiki_host.screen)
 	await _capture("issue203_desktop_club_top")

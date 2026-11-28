@@ -15,7 +15,7 @@ func before_all() -> void:
 	_clean()
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
-	snapshot = PositionRace.series("MUN")
+	snapshot = PositionRace.series("ENG-MUN1")
 	season = LeagueSeason.create("Position Race", "generated", "fixture_days", SEED)
 
 func after_all() -> void:
@@ -32,7 +32,7 @@ func test_the_snapshot_race_lands_on_the_shipped_table() -> void:
 	assert_false(snapshot.is_empty(), "the shipped season drew no race")
 	assert_eq(int(snapshot["clubs"]), 20, "the race lists the wrong club count")
 	assert_eq(int(snapshot["place"]), int(PLDatabase.row(
-		"SELECT position FROM table_row WHERE club_id = 'MUN';").get("position", 0)),
+		"SELECT position FROM table_row WHERE club_id = 'ENG-MUN1';").get("position", 0)),
 		"the race's last day disagrees with the shipped table")
 	var dates := []
 	for day in snapshot["days"]:
@@ -45,24 +45,24 @@ func test_the_snapshot_race_lands_on_the_shipped_table() -> void:
 
 func test_a_new_season_has_no_race() -> void:
 	assert_not_null(season, "the season was not created")
-	assert_true(PositionRace.series("MUN").is_empty(), "an unplayed season drew a race")
+	assert_true(PositionRace.series("ENG-MUN1").is_empty(), "an unplayed season drew a race")
 
 
 func test_one_day_is_not_a_race() -> void:
 	_play_day()
-	assert_true(PositionRace.series("MUN").is_empty(), "a single day drew a race")
+	assert_true(PositionRace.series("ENG-MUN1").is_empty(), "a single day drew a race")
 
 
 func test_the_race_reads_a_position_for_every_day_played() -> void:
 	_play_day()
 	_play_day()
-	var race := PositionRace.series("MUN")
+	var race := PositionRace.series("ENG-MUN1")
 	assert_false(race.is_empty(), "three played days drew no race")
 	assert_eq(int(race["clubs"]), 20, "the race lists the wrong club count")
 	assert_eq((race["days"] as Array).size(), 3, "the race lost a played day")
 	assert_lte(int(race["best"]), int(race["place"]), "the best place is worse than the last")
 	assert_gte(int(race["worst"]), int(race["place"]), "the worst place is better than the last")
-	assert_eq(int(race["place"]), int(LeagueLedger.club_record("MUN").get("position", 0)),
+	assert_eq(int(race["place"]), int(LeagueLedger.club_record("ENG-MUN1").get("position", 0)),
 		"the race disagrees with the club's own table row")
 
 

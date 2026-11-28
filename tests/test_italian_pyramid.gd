@@ -117,8 +117,8 @@ func test_the_seed_ships_the_italian_pair() -> void:
 		assert_true(PLCompetitions.exists(cid), "the seed carries no %s" % cid)
 		assert_eq(int(PLCompetitions.clubs(cid)), 20, "%s shipped the wrong club set" % cid)
 		for club_id in TeamData.team_ids(cid):
-			assert_true(str(club_id).begins_with(cid + "-"),
-				"%s does not carry its competition namespace" % club_id)
+			assert_true(str(club_id).begins_with("ITA-"),
+				"%s does not carry its country prefix" % club_id)
 			var team := TeamData.get_team(str(club_id))
 			assert_eq((team["starters"] as Array).size(), 11, "%s has no XI" % club_id)
 			assert_true(str(team.get("stadium", "")) != "", "%s has no ground" % club_id)

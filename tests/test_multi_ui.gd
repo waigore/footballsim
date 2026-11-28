@@ -27,7 +27,8 @@ func test_the_picker_filters_by_league_and_mixes_sides() -> void:
 	picker.set_league("LL")
 	assert_eq(picker.ids.size(), 20, "the La Liga filter is not one league")
 	for id in picker.ids:
-		assert_true(str(id).begins_with("LL-"), "%s is not a La Liga club" % id)
+		assert_eq(str(PLRepository.shared().club(str(id))["competition_id"]), "LL",
+			"%s is not a La Liga club" % id)
 	picker.set_league("")
 	assert_eq(picker.ids.size(), 212, "the ALL filter is not every competition")
 	picker.set_league("BL")
@@ -35,25 +36,27 @@ func test_the_picker_filters_by_league_and_mixes_sides() -> void:
 	picker.set_league("BL2")
 	assert_eq(picker.ids.size(), 18, "the 2. Bundesliga filter is not one league")
 	for id in picker.ids:
-		assert_true(str(id).begins_with("BL2-"), "%s is not a 2. Bundesliga club" % id)
+		assert_eq(str(PLRepository.shared().club(str(id))["competition_id"]), "BL2",
+			"%s is not a 2. Bundesliga club" % id)
 	picker.set_league("")
-	picker.setup("ARS", "LL-BAR")
-	assert_eq(picker.home_id(), "ARS", "the home pick was lost")
-	assert_eq(picker.away_id(), "LL-BAR", "a cross-league away pick was refused")
+	picker.setup("ENG-ARS1", "ESP-BAR1")
+	assert_eq(picker.home_id(), "ENG-ARS1", "the home pick was lost")
+	assert_eq(picker.away_id(), "ESP-BAR1", "a cross-league away pick was refused")
 	var seen: Array = []
 	picker.confirmed.connect(func(home, away): seen.append([home, away]))
 	picker.confirm()
 	assert_eq(seen.size(), 1, "the cross-league fixture did not confirm")
-	assert_eq(str(seen[0][0]), "ARS", "the confirmed home side changed")
-	assert_eq(str(seen[0][1]), "LL-BAR", "the confirmed away side changed")
+	assert_eq(str(seen[0][0]), "ENG-ARS1", "the confirmed home side changed")
+	assert_eq(str(seen[0][1]), "ESP-BAR1", "the confirmed away side changed")
 
 func test_the_picker_offers_the_german_tiers() -> void:
 	var picker = load("res://scripts/ui/team_select.gd").new()
-	for pair in [["BL", 18, "BL-"], ["BL2", 18, "BL2-"]]:
+	for pair in [["BL", 18], ["BL2", 18]]:
 		picker.set_league(str(pair[0]))
 		assert_eq(picker.ids.size(), int(pair[1]), "%s filter is not one league" % pair[0])
 		for id in picker.ids:
-			assert_true(str(id).begins_with(str(pair[2])), "%s is not a %s club" % [id, pair[0]])
+			assert_eq(str(PLRepository.shared().club(str(id))["competition_id"]), str(pair[0]),
+				"%s is not a %s club" % [id, pair[0]])
 
 
 	assert_eq(LeagueChrome.competition_chip_label({"id": "BL", "short_name": "BUNDESLIGA"}, 150.0),
@@ -73,21 +76,21 @@ func test_the_picker_offers_the_german_tiers() -> void:
 	picker.set_league("")
 
 func test_a_cross_league_german_friendly_names_both_tiers() -> void:
-	var mixed := PreMatchModel.build("BL-FCB", "ARS", {}, null)
+	var mixed := PreMatchModel.build("GER-FCB1", "ENG-ARS1", {}, null)
 	assert_eq(str(mixed["caption"]), "FRIENDLY · BUNDESLIGA v PREMIER LEAGUE",
 		"a Bundesliga v Premier League friendly has no mixed caption")
-	var tiers := PreMatchModel.build("BL-DOR", "BL2-BSC", {}, null)
+	var tiers := PreMatchModel.build("GER-DOR1", "GER-BSC1", {}, null)
 	assert_eq(str(tiers["caption"]), "FRIENDLY · BUNDESLIGA v 2. BUNDESLIGA",
 		"a cross-tier German friendly has no mixed caption")
-	var same := PreMatchModel.build("BL-FCB", "BL-DOR", {}, null)
+	var same := PreMatchModel.build("GER-FCB1", "GER-DOR1", {}, null)
 	assert_eq(str(same["caption"]), MatchBilling.FRIENDLY_CAPTION,
 		"a same-league German friendly borrowed a league's round")
 
 func test_a_cross_league_friendly_says_so() -> void:
-	var mixed := PreMatchModel.build("ARS", "LL-BAR", {}, null)
+	var mixed := PreMatchModel.build("ENG-ARS1", "ESP-BAR1", {}, null)
 	assert_eq(str(mixed["caption"]), "FRIENDLY · PREMIER LEAGUE v LA LIGA",
 		"a cross-league friendly has no mixed caption")
-	var same := PreMatchModel.build("ARS", "MUN", {}, null)
+	var same := PreMatchModel.build("ENG-ARS1", "ENG-MUN1", {}, null)
 	assert_eq(str(same["caption"]), MatchBilling.FRIENDLY_CAPTION,
 		"a same-league friendly borrowed a league's round")
 
@@ -95,11 +98,11 @@ func test_the_hub_groups_a_mixed_day() -> void:
 	var sheet := LeagueSheet.new()
 	var plan := [
 		{"id": "p1", "competition_id": "PL", "matchday": 3, "kickoff": "2026-08-29",
-			"home_name": "Arsenal", "away_name": "Chelsea", "home_club_id": "ARS",
-			"away_club_id": "CHE", "status": "pending", "watched": 0},
+			"home_name": "Arsenal", "away_name": "Chelsea", "home_club_id": "ENG-ARS1",
+			"away_club_id": "ENG-CHE1", "status": "pending", "watched": 0},
 		{"id": "l1", "competition_id": "LL", "matchday": 3, "kickoff": "2026-08-29",
-			"home_name": "Barcelona", "away_name": "Sevilla", "home_club_id": "LL-BAR",
-			"away_club_id": "LL-SEV", "status": "pending", "watched": 0},
+			"home_name": "Barcelona", "away_name": "Sevilla", "home_club_id": "ESP-BAR1",
+			"away_club_id": "ESP-SEV1", "status": "pending", "watched": 0},
 	]
 	var items: Array = sheet.hub_layout(Vector2(1280, 720), {
 		"plan": plan, "interests": [], "can_suggest": false,

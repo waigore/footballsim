@@ -14,7 +14,7 @@ func before_all() -> void:
 
 	game.dev.ui_scale = 4.0
 	game._sync_overlay_scale()
-	game._on_fixture_confirmed("MUN", "MCI")
+	game._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 	TestBriefing.kick(game)
 	game.paused = true
 
@@ -85,7 +85,7 @@ func test_the_phone_sheet_is_compact_and_scrolls() -> void:
 	game.wiki_host.close()
 
 func test_every_page_kind_draws() -> void:
-	for page in [[WikiModel.LEAGUE, ""], [WikiModel.TEAM, "MUN"], [WikiModel.PLAYER, "MUN-b-fernandes"], [WikiModel.PLAYER, "MUN-s-lammens"]]:
+	for page in [[WikiModel.LEAGUE, ""], [WikiModel.TEAM, "ENG-MUN1"], [WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "B. Fernandes")], [WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "S. Lammens")]]:
 		game.wiki_host.open_page(str(page[0]), str(page[1]))
 		await get_tree().process_frame
 		var screen := _screen()
@@ -117,7 +117,7 @@ func test_a_pointer_tap_opens_a_row() -> void:
 
 
 func test_a_trackpad_pan_gesture_scrolls_the_body() -> void:
-	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
+	game.wiki_host.open_page(WikiModel.TEAM, "ENG-MUN1")
 	await get_tree().process_frame
 	var screen := _screen()
 	assert_gt(screen.body.max_scroll(), 0.0, "the club page should scroll on a phone")
@@ -128,7 +128,7 @@ func test_a_trackpad_pan_gesture_scrolls_the_body() -> void:
 	game.wiki_host.close()
 
 func test_wheel_up_and_down_both_move_the_body() -> void:
-	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
+	game.wiki_host.open_page(WikiModel.TEAM, "ENG-MUN1")
 	await get_tree().process_frame
 	var screen := _screen()
 	_press(Vector2(120.0, 260.0), MOUSE_BUTTON_WHEEL_DOWN)
@@ -140,7 +140,7 @@ func test_wheel_up_and_down_both_move_the_body() -> void:
 
 
 func test_a_drag_scrolls_without_opening_a_page() -> void:
-	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
+	game.wiki_host.open_page(WikiModel.TEAM, "ENG-MUN1")
 	await get_tree().process_frame
 	var screen := _screen()
 	var start := Vector2(120.0, 220.0)
@@ -156,7 +156,7 @@ func test_a_drag_scrolls_without_opening_a_page() -> void:
 
 func test_hover_and_a_stray_release_change_nothing() -> void:
 	game.touch = false
-	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
+	game.wiki_host.open_page(WikiModel.TEAM, "ENG-MUN1")
 	await get_tree().process_frame
 	var screen := _screen()
 	_move(Vector2(120.0, 220.0))
@@ -168,7 +168,7 @@ func test_hover_and_a_stray_release_change_nothing() -> void:
 
 
 func test_a_tap_after_scrolling_opens_the_row_that_is_drawn() -> void:
-	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
+	game.wiki_host.open_page(WikiModel.TEAM, "ENG-MUN1")
 	await get_tree().process_frame
 	var screen := _screen()
 	var picked: Dictionary = {}
@@ -189,7 +189,7 @@ func test_a_tap_after_scrolling_opens_the_row_that_is_drawn() -> void:
 	game.wiki_host.close()
 
 func test_a_tap_outside_the_sheet_is_ignored() -> void:
-	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
+	game.wiki_host.open_page(WikiModel.TEAM, "ENG-MUN1")
 	await get_tree().process_frame
 	var screen := _screen()
 	var blank := Vector2(screen.design_vp().x * 0.5, screen.body.position.y - 22.0)
@@ -200,7 +200,7 @@ func test_a_tap_outside_the_sheet_is_ignored() -> void:
 
 
 func test_keys_scroll_and_the_last_squad_row_is_reachable() -> void:
-	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
+	game.wiki_host.open_page(WikiModel.TEAM, "ENG-MUN1")
 	await get_tree().process_frame
 	var screen := _screen()
 	_key(KEY_DOWN)
@@ -222,7 +222,7 @@ func test_keys_scroll_and_the_last_squad_row_is_reachable() -> void:
 	game.wiki_host.close()
 
 func test_a_press_and_release_on_the_back_door_closes_the_sheet() -> void:
-	game.wiki_host.open_page(WikiModel.TEAM, "MUN")
+	game.wiki_host.open_page(WikiModel.TEAM, "ENG-MUN1")
 	await get_tree().process_frame
 	var screen := _screen()
 	screen.queue_redraw()

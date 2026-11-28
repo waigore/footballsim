@@ -35,8 +35,8 @@ const DEFAULT_RESULTS_DIR := ".gd-tools/census-results"
 
 
 const ANCHORS := {
-	"mci_ips": {"home": "MCI", "away": "IPS"},
-	"mci_mci": {"home": "MCI", "away": "MCI"},
+	"mci_ips": {"home": "ENG-MCI1", "away": "ENG-IPS1"},
+	"mci_mci": {"home": "ENG-MCI1", "away": "ENG-MCI1"},
 }
 
 

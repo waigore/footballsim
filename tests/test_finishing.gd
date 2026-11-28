@@ -233,14 +233,14 @@ func test_shot_records_expected_goals() -> void:
 func test_chance_quality_tracks_the_defence_faced() -> void:
 
 
-	var weak := MatchEngine.new(1, "MCI", "IPS")
-	var strong := MatchEngine.new(1, "MCI", "NEW")
+	var weak := MatchEngine.new(1, "ENG-MCI1", "ENG-IPS1")
+	var strong := MatchEngine.new(1, "ENG-MCI1", "ENG-NEW1")
 	var spot: Vector2 = weak.target_goal_pos(0) + Vector2(-14.0, 5.0)
-	var vs_weak: float = weak.expected_goals(spot, 0.0, 0) / _openness("MCI", "IPS")
-	var vs_strong: float = strong.expected_goals(spot, 0.0, 0) / _openness("MCI", "NEW")
+	var vs_weak: float = weak.expected_goals(spot, 0.0, 0) / _openness("ENG-MCI1", "ENG-IPS1")
+	var vs_strong: float = strong.expected_goals(spot, 0.0, 0) / _openness("ENG-MCI1", "ENG-NEW1")
 	assert_gt(vs_weak, vs_strong, "a shot against a weak defence was not worth more")
-	var ex_weak := PoissonModel.defence_exponents("MCI", "IPS")
-	var ex_strong := PoissonModel.defence_exponents("MCI", "NEW")
+	var ex_weak := PoissonModel.defence_exponents("ENG-MCI1", "ENG-IPS1")
+	var ex_strong := PoissonModel.defence_exponents("ENG-MCI1", "ENG-NEW1")
 	var expected: float = exp(MatchEngine.XG_CONTEST_ELASTICITY * (ex_weak.x - ex_strong.x))
 	assert_almost_eq(vs_weak / vs_strong, expected, 0.001,
 		"the contest gap does not read the model's defensive exponent")
@@ -253,31 +253,31 @@ func _openness(home: String, away: String) -> float:
 func test_chance_quality_tracks_how_open_the_fixture_is() -> void:
 
 
-	var even := MatchEngine.new(1, "MCI", "MCI")
-	var gap := MatchEngine.new(1, "MCI", "IPS")
+	var even := MatchEngine.new(1, "ENG-MCI1", "ENG-MCI1")
+	var gap := MatchEngine.new(1, "ENG-MCI1", "ENG-IPS1")
 	var spot: Vector2 = even.target_goal_pos(0) + Vector2(-14.0, 5.0)
 	var in_even: float = even.expected_goals(spot, 0.0, 0)
 	var in_gap: float = gap.expected_goals(spot, 0.0, 0)
 	assert_gt(in_gap, in_even, "the open fixture did not price the same chance higher")
-	var eg := PoissonModel.exponent_terms("MCI", "IPS")
-	var ee := PoissonModel.exponent_terms("MCI", "MCI")
+	var eg := PoissonModel.exponent_terms("ENG-MCI1", "ENG-IPS1")
+	var ee := PoissonModel.exponent_terms("ENG-MCI1", "ENG-MCI1")
 	var contest: float = exp(MatchEngine.XG_CONTEST_ELASTICITY * ((eg["attack"].x + eg["defence"].x) - (ee["attack"].x + ee["defence"].x)))
-	var expected: float = contest * _openness("MCI", "IPS") / _openness("MCI", "MCI")
+	var expected: float = contest * _openness("ENG-MCI1", "ENG-IPS1") / _openness("ENG-MCI1", "ENG-MCI1")
 	assert_almost_eq(in_gap / in_even, expected, 0.001,
 		"the level gap between the anchors is not the model's openness")
 
 func test_contest_factor_is_bounded_and_reads_the_ratings() -> void:
 
 
-	var strong_home := MatchEngine.new(1, "MCI", "IPS")
-	var even := MatchEngine.new(1, "MCI", "MCI")
-	var strong_away := MatchEngine.new(1, "IPS", "MCI")
-	var gap_home: float = float(strong_home.xg_form[0]) / _openness("MCI", "IPS")
-	var evening: float = float(even.xg_form[0]) / _openness("MCI", "MCI")
-	var gap_away: float = float(strong_away.xg_form[0]) / _openness("IPS", "MCI")
+	var strong_home := MatchEngine.new(1, "ENG-MCI1", "ENG-IPS1")
+	var even := MatchEngine.new(1, "ENG-MCI1", "ENG-MCI1")
+	var strong_away := MatchEngine.new(1, "ENG-IPS1", "ENG-MCI1")
+	var gap_home: float = float(strong_home.xg_form[0]) / _openness("ENG-MCI1", "ENG-IPS1")
+	var evening: float = float(even.xg_form[0]) / _openness("ENG-MCI1", "ENG-MCI1")
+	var gap_away: float = float(strong_away.xg_form[0]) / _openness("ENG-IPS1", "ENG-MCI1")
 	assert_gt(gap_home, evening, "a top side against a weak defence did not get the better contest")
 	assert_lt(gap_away, evening, "a weak side at home was given the same contest as an even fixture")
-	for pair in [["MCI", "IPS"], ["MCI", "MCI"], ["MCI", "ARS"], ["IPS", "MCI"], ["IPS", "ARS"]]:
+	for pair in [["ENG-MCI1", "ENG-IPS1"], ["ENG-MCI1", "ENG-MCI1"], ["ENG-MCI1", "ENG-ARS1"], ["ENG-IPS1", "ENG-MCI1"], ["ENG-IPS1", "ENG-ARS1"]]:
 		var e := MatchEngine.new(1, pair[0], pair[1])
 		assert_between(float(e.xg_form[0]), 0.30, 3.00,
 			"%s v %s home contest factor is out of family" % [pair[0], pair[1]])
@@ -287,7 +287,7 @@ func test_contest_factor_is_bounded_and_reads_the_ratings() -> void:
 func test_equal_squads_carry_no_pricing_edge() -> void:
 
 
-	var e := MatchEngine.new(1, "MCI", "MCI")
+	var e := MatchEngine.new(1, "ENG-MCI1", "ENG-MCI1")
 	assert_eq(MatchEngine.XG_HOME_EDGE, 0.0, "the finishing multiplier prices the venue again")
 	assert_almost_eq(float(e.xg_form[0]) / float(e.xg_form[1]), 1.0, 0.0001,
 		"equal squads did not read the same chance quality")
@@ -298,8 +298,8 @@ func test_equal_squads_carry_no_pricing_edge() -> void:
 func test_the_canonical_chance_sits_on_the_census_level() -> void:
 
 
-	var even := MatchEngine.new(1, "MCI", "MCI")
-	var strong := MatchEngine.new(1, "MCI", "IPS")
+	var even := MatchEngine.new(1, "ENG-MCI1", "ENG-MCI1")
+	var strong := MatchEngine.new(1, "ENG-MCI1", "ENG-IPS1")
 	var even_xg: float = even.expected_goals(even.target_goal_pos(0) + Vector2(-12.0, 0.0), 0.0, 0)
 	var strong_xg: float = strong.expected_goals(strong.target_goal_pos(0) + Vector2(-12.0, 0.0), 0.0, 0)
 	assert_between(even_xg, 0.038, 0.047, "the even fixture's chance left the calibrated level")

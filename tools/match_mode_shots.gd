@@ -24,7 +24,7 @@ func _initialize() -> void:
 	await _frames(3)
 	scene.menus.close()
 	scene.hud_layer.visible = true
-	scene._on_fixture_confirmed("MUN", "MCI")
+	scene._on_fixture_confirmed("ENG-MUN1", "ENG-MCI1")
 	# #157: the briefing comes before the sim, so kick it off.
 	if scene.prematch != null and scene.prematch.is_open():
 		scene.prematch.screen.click("kick")

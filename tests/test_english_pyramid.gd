@@ -332,8 +332,8 @@ func test_one_seed_settles_one_bracket() -> void:
 	assert_eq(bracket["rounds"], expected_bracket["rounds"], "the bracket differs for one seed")
 
 func test_a_level_tie_goes_to_extra_time_and_penalties() -> void:
-	var first := LeagueShootout.settle(9001, "CH-MID", "CH-STK")
-	var again := LeagueShootout.settle(9001, "CH-MID", "CH-STK")
+	var first := LeagueShootout.settle(9001, "ENG-MID1", "ENG-STK1")
+	var again := LeagueShootout.settle(9001, "ENG-MID1", "ENG-STK1")
 	assert_eq(first, again, "the shootout is not deterministic for a seed")
 	assert_ne(first.x, first.y, "a shootout finished level")
 

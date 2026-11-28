@@ -11,7 +11,7 @@ extends SceneTree
 ##   godot --path . --script res://tools/league_interest_shots.gd
 
 const SEED := 2030
-const CLUB := "MUN"
+const CLUB := "ENG-MUN1"
 
 var scene = null
 
