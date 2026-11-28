@@ -260,3 +260,66 @@ func _clean() -> void:
 	TestScratch.clear(CACHE_DIR)
 	if FileAccess.file_exists(PREFS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
+
+func test_the_encyclopedia_reads_a_cup_bracket_and_honours() -> void:
+	create_season()
+	var page := WikiModel.page(WikiModel.CUP, "FAC")
+	assert_eq(str(page["title"]), "FA CUP", "the cup page lost its name")
+	assert_true(str(page["subtitle"]).contains("CLUBS IN"), "the cup subtitle reads no field")
+	assert_true(_has_section(page, "BRACKET"), "the cup page has no bracket section")
+	assert_true(_has_section(page, "FIXTURES AHEAD"), "the cup page has no fixtures ahead")
+	assert_true(_has_note(page, "NO CUP TIE HAS BEEN PLAYED YET"),
+		"an untouched cup claims a result")
+	var facts := WikiCup.facts("FAC", "R1", {})
+	assert_true(_fact(facts, "LEGS") == "ONE", "the FA Cup round reads two legs")
+	assert_true(_fact(facts, "EXTRA TIME") == "YES", "the FA Cup round lost extra time")
+	var carabao := WikiCup.facts("EFLC", "PR", {})
+	assert_true(_fact(carabao, "EXTRA TIME") == "PENALTIES ONLY",
+		"the Carabao preliminary round claims extra time")
+	assert_eq(WikiCup.draw_note("EFLC", "PR"), "NORTH AND SOUTH POTS",
+		"the regional draw note is wrong")
+	assert_true(WikiCup.draw_note("FAC", "R1").contains("THE LOWER CLUB HOSTS"),
+		"the lower-club host note is missing")
+	assert_eq(WikiCup.draw_note("CS", "F"), "A NEUTRAL VENUE", "the Shield note is wrong")
+	assert_eq(WikiCup.draw_note("FAC", "QF"), "AN OPEN DRAW FROM THE SEASON SEED",
+		"the open draw note is wrong")
+	assert_eq(WikiCup.subtitle("FAC", "", {}, true), "NOT DRAWN YET",
+		"an undrawn cup reads a stage")
+	var fx := PLDatabase.row(
+		"SELECT * FROM league_fixture WHERE competition_id = 'FAC' AND stage = 'R1' LIMIT 1;")
+	LeagueSeasonSim.fixture(LeagueSeason.active, fx)
+	PLRepository.shared().invalidate()
+	var played := WikiModel.page(WikiModel.CUP, "FAC")
+	assert_true(_has_section(played, "LATEST RESULTS"), "the played cup lost its results")
+	assert_false(_has_note(played, "NO CUP TIE HAS BEEN PLAYED YET"),
+		"a played cup still says nothing was played")
+	var shield := PLDatabase.row(
+		"SELECT * FROM league_fixture WHERE competition_id = 'CS' AND stage = 'F' LIMIT 1;")
+	LeagueSeasonSim.fixture(LeagueSeason.active, shield)
+	PLRepository.shared().invalidate()
+	var honour := WikiModel.page(WikiModel.CUP, "CS")
+	assert_true(str(honour["subtitle"]).contains("WINNER"), "a settled cup has no winner line")
+	assert_true(_fact(WikiCup.facts("CS", "F", LeagueCupState.honours("CS")), "RUNNER-UP") != "",
+		"the cup facts lost the runner-up")
+
+func _has_section(page: Dictionary, title: String) -> bool:
+	for block in page.get("blocks", []):
+		var row: Dictionary = block
+		if str(row.get("k", "")) == "section" and str(row.get("text", "")) == title:
+			return true
+	return false
+
+func _has_note(page: Dictionary, text: String) -> bool:
+	for block in page.get("blocks", []):
+		var row: Dictionary = block
+		if str(row.get("k", "")) == "note" and str(row.get("text", "")) == text:
+			return true
+	return false
+
+func _fact(facts: Array, key: String) -> String:
+	for row in facts:
+		var pair: Array = row
+		if str(pair[0]) == key:
+			return str(pair[1])
+	return ""
+
