@@ -203,3 +203,50 @@ func test_the_club_page_reads_cash_wages_ffp_and_the_ledger_tail() -> void:
 		if str((block as Dictionary).get("k", "")) == "table":
 			tables += 1
 	assert_gte(tables, 1, "the club page shows no ledger tail")
+
+
+func test_the_bootstrap_runs_once_and_never_rewrites_a_funded_club() -> void:
+	var season := _fresh("Finance Bootstrap")
+	var club_id := _club()
+	var cash := MarketFinance.cash(club_id)
+	var again := MarketFinance.bootstrap(season.save)
+	assert_true(bool(again.get("ok", false)), "a second bootstrap failed")
+	assert_true(bool(again.get("skipped", false)), "a second bootstrap rewrote the envelope")
+	assert_eq(MarketFinance.cash(club_id), cash, "a second bootstrap moved the cash")
+
+
+func test_money_reads_a_club_s_affordability_and_reputation() -> void:
+	var season := _fresh("Finance Purse")
+	var club_id := _club()
+	assert_true(MarketFinance.can_afford(club_id, MarketFinance.cash(club_id)),
+		"a club cannot afford its own cash")
+	assert_false(MarketFinance.can_afford(club_id, MarketFinance.cash(club_id) + 1),
+		"a club can spend more than it holds")
+	assert_gt(MarketFinance.reputation(club_id), 0, "a club holds no reputation")
+	assert_eq(MarketFinance.ledger_tail(club_id).size(), 0, "a new save opens with ledger lines")
+	assert_eq(MarketPurse.prize("PL", 0, 20), 0, "a prize was paid for no place")
+	assert_eq(MarketPurse.prize("PL", 1, 0), 0, "a prize was paid in an empty league")
+	assert_eq(MarketPurse.size("PL"), 20, "the prize curve does not read the table size")
+
+
+func test_signed_and_blank_amounts_still_read() -> void:
+	assert_eq(MarketCurrency.format(-450000), "-£450K", "a negative thousand reads wrong")
+	assert_eq(MarketCurrency.format_units(-12345678), "-£12,345,678",
+		"a negative amount reads wrong")
+	assert_eq(MarketCurrency.format(0), "£0", "zero does not read")
+	assert_true(Prefs.save_currency("XXX", TestScratch.file("prefs_currency_bad.cfg")),
+		"an unknown currency was refused a save")
+	Prefs._currency_cache = ""
+	assert_true(Prefs.save_currency("GBP"), "the real setting did not reset")
+
+
+func test_an_unfunded_club_reads_no_finances_block() -> void:
+	var season := _fresh("Finance Unfunded")
+	var cup_club := str(PLDatabase.row(
+		"SELECT id FROM club WHERE competition_id = 'FAC' ORDER BY id LIMIT 1;").get("id", ""))
+	assert_true(cup_club != "", "the seed has no cup club")
+	assert_true(MarketFinance.club(cup_club).is_empty(), "a cup club holds a finance row")
+	var page := WikiModel.page(WikiModel.TEAM, cup_club)
+	for block in page.get("blocks", []):
+		assert_ne(str((block as Dictionary).get("text", "")), "FINANCES",
+			"an unfunded club reads a finances block")
