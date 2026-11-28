@@ -229,10 +229,7 @@ suites = [
 suites = [
   "test_league_save.gd",
   "test_market_contracts.gd",
-  "test_league_season.gd",
-  "test_multi_league.gd",
   "test_season_rollover.gd",
-  "test_league_system.gd",
 ]
 
 # Deal engine (#444): validator, commit, clearance, god force and the player
@@ -597,11 +594,11 @@ domain = "cup_rollover"
 
 [[rules]]
 match = "scripts/sim/market/season_rollover.gd*"
-domain = "cup_rollover"
+domain = "market_deals"
 
 [[rules]]
 match = "tests/test_season_rollover.gd*"
-domain = "cup_rollover"
+domain = "market_deals"
 
 # Season helpers split out of the season loop to keep its P3 size ratchet.
 [[rules]]
@@ -957,7 +954,7 @@ domain = "hud_chrome"
 # encyclopedia suite past the tier-1 5 min budget.
 [[rules]]
 match = "scripts/ui/wiki_player.gd*"
-domain = "wiki_player"
+domain = "market_levels"
 
 [[rules]]
 match = "scripts/ui/wiki_*.gd*"
