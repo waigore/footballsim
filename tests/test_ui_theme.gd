@@ -78,3 +78,28 @@ func test_the_theme_owns_the_readability_floor() -> void:
 	assert_gt(UiTheme.font_size(&"Caption"), 0, "the caption role has no size")
 	assert_eq(ChromeDensity.read_size(1), ChromeDensity.MIN_READ,
 		"the legacy reading floor moved without the Theme")
+
+
+func test_a_missing_theme_falls_back_to_the_baked_palette() -> void:
+	UiTheme.use_path_for_tests("res://ui/themes/absent.tres")
+	assert_false(UiTheme.has_theme(), "a missing Theme still reported itself")
+	assert_eq(UiTheme.color(&"gold"), UiTheme.FALLBACK[&"gold"], "the fallback colour moved")
+	assert_eq(UiTheme.color(&"absent"), Color.MAGENTA, "an unknown colour lost its sentinel")
+	assert_false(UiTheme.has_color(&"gold"), "a colour was found without a Theme")
+	assert_null(UiTheme.style(&"Panel", &"panel"), "a style survived without a Theme")
+	assert_null(UiTheme.box(&"Panel", &"panel"), "a stylebox survived without a Theme")
+	assert_null(UiTheme.font(&"Body"), "a font survived without a Theme")
+	assert_eq(UiTheme.font_size(&"Body"), 0, "a font size survived without a Theme")
+	assert_null(UiTheme.body(), "the body font survived without a Theme")
+	var fonts := UiChrome.fonts()
+	assert_not_null(fonts["bold"], "the chrome lost its bold font without a Theme")
+	assert_not_null(fonts["med"], "the chrome lost its medium font without a Theme")
+	assert_not_null(fonts["body"], "the chrome lost its body font without a Theme")
+	UiTheme.reset_for_tests()
+	assert_true(UiTheme.has_theme(), "the Theme did not come back")
+
+
+func test_the_chrome_exposes_the_shared_theme() -> void:
+	assert_eq(UiChrome.theme(), UiTheme.theme(), "UiChrome reached a different Theme")
+	assert_true(UiChrome.theme().has_stylebox(&"panel", &"Panel"),
+		"the shared Theme has no panel style")

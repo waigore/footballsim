@@ -22,14 +22,15 @@ const FALLBACK := {
 
 static var _theme: Theme = null
 static var _loaded := false
+static var _path := PATH
 
 
 static func theme() -> Theme:
 	if _loaded:
 		return _theme
 	_loaded = true
-	if ResourceLoader.exists(PATH):
-		_theme = load(PATH) as Theme
+	if ResourceLoader.exists(_path):
+		_theme = load(_path) as Theme
 	return _theme
 
 
@@ -106,6 +107,13 @@ static func color_keys() -> PackedStringArray:
 	return PackedStringArray(FALLBACK.keys())
 
 
+static func use_path_for_tests(path: String) -> void:
+	_path = path
+	_theme = null
+	_loaded = false
+
+
 static func reset_for_tests() -> void:
+	_path = PATH
 	_theme = null
 	_loaded = false
