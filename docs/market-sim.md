@@ -27,6 +27,7 @@ invariant.
 | `loan` | a loan split, trigger and return | registration, splits, caps, obligations |
 | `clauses` | clause, sell-on, agent, solidarity | the money beyond the fee |
 | `clearance` | a cross-association move | pending, failure, the window close |
+| `youth` | ageing, retirement and intake for N seasons | the intake shape, the exit, names |
 
 Each verb owns a file under `tools/market_sim/`; `tools/market_sim.gd` only
 parses flags, loads the verb and prints its dictionary.
@@ -74,3 +75,13 @@ prove: `none` signs, `list` refuses at the list check, `clearance` fails the
 association wait, `fault` rolls back between the money and the contract, and
 `registration` signs a player the buyer cannot register. The printed JSON is the
 deal's own reading: state, reason, cash and headroom after the move.
+
+## The youth verb
+
+```bash
+godot --headless --path . --script res://tools/market_sim.gd -- youth \
+  --seasons 3 --clubs 20
+```
+
+It ages and retires the oldest, runs each club's intake, and prints intake and
+retired counts plus a name sample. A fixed seed repeats the names.

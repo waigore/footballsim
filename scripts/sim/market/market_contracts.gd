@@ -40,6 +40,9 @@ static func bootstrap(save: LeagueSave, start_date: String = "") -> Dictionary:
 		count += _insert_squad(club_id, squad, wages, seed, start)
 		filled += 1
 	PLDatabase.transaction("COMMIT;")
+	PLDatabase.execute(
+		"UPDATE player SET homegrown_club_id = club_id WHERE homegrown_club_id = '' "
+		+ "AND club_id <> '';")
 	MarketFinance.invalidate()
 	return {"ok": true, "skipped": false, "contracts": count, "clubs": filled, "start": start}
 
