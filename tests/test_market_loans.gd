@@ -300,6 +300,19 @@ func _items(blocks: Array) -> Dictionary:
 	return out
 
 
+func test_a_loan_returns_on_the_tick_past_its_end_date() -> void:
+	var season := _fresh("Loan Tick")
+	var parent := _club_in("PL", 0)
+	var loanee := _club_in("PL", 1)
+	var player := _player_at(parent)
+	var out := _loan(season, parent, loanee, player)
+	assert_true(bool(out.get("ok", false)), "the loan did not seal")
+	MarketTick.advance(season, DATE, "2027-06-01")
+	assert_eq(_player_club(player), parent, "the tick did not return the loan past its end date")
+	var loan := MarketLoanRecords.load(str(out.get("loan", "")))
+	assert_eq(str(loan.get("status", "")), MarketLoanRecords.RETURNED, "the loan did not close")
+
+
 func test_the_engine_refuses_an_empty_loan() -> void:
 	var season := _fresh("Loan Empty")
 	var parent := _club_in("PL", 0)

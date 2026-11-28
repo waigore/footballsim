@@ -159,31 +159,6 @@ func test_the_rollover_starts_season_two_on_its_own_calendar() -> void:
 	assert_true(SeasonArchive.table(0, "").size() >= 20, "the archive holds no club rows")
 
 
-func test_a_loan_returns_to_the_parent_before_the_new_season() -> void:
-	var season := _finished("Loan Rollover")
-	var parent := str(PLDatabase.row(
-		"SELECT id FROM club WHERE competition_id = 'PL' ORDER BY id LIMIT 1;").get("id", ""))
-	var loanee := str(PLDatabase.row(
-		"SELECT id FROM club WHERE competition_id = 'PL' ORDER BY id LIMIT 1 OFFSET 1;").get(
-		"id", ""))
-	var player := str(PLDatabase.row(
-		"SELECT id FROM player WHERE club_id = ? ORDER BY ovr DESC, id LIMIT 1;", [parent]).get(
-		"id", ""))
-	var wage := int(MarketDealRecords.active_contract(player).get("wage", 5000))
-	var proposed := MarketLoans.propose(season, parent, loanee, player, {
-		"wage": wage, "wage_loanee": wage, "start_date": str(season.save.current_date()),
-		"end_date": "2027-05-31"}, str(season.save.current_date()))
-	assert_eq(str(MarketLoans.seal(str(proposed.get("loan", "")),
-		str(season.save.current_date())).get("state", "")), MarketLoanRecords.ACTIVE,
-		"the loan did not seal")
-	assert_eq(str(PLDatabase.row("SELECT club_id FROM player WHERE id = ?;",
-		[player]).get("club_id", "")), loanee, "the loan did not move the player")
-	var result := SeasonRollover.apply(season)
-	assert_true(bool(result.get("ok", false)), "the rollover refused a finished season")
-	assert_eq(str(PLDatabase.row("SELECT club_id FROM player WHERE id = ?;",
-		[player]).get("club_id", "")), parent, "the loan did not return at the rollover")
-
-
 func test_an_unserved_ban_carries_into_the_next_season() -> void:
 	var season := _finished("Carried Ban")
 	var row := PLDatabase.row(
