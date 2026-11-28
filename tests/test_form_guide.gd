@@ -157,6 +157,20 @@ func test_the_form_reading_fits_a_phone_row() -> void:
 				"the form row ran past the phone sheet")
 
 
+func test_each_mark_carries_its_own_colour() -> void:
+	assert_eq(LeagueFormColumns.mark_color(LeagueFormGuide.WIN), UiChrome.C_LIVE,
+		"a win is not the live green")
+	assert_eq(LeagueFormColumns.mark_color(LeagueFormGuide.DRAW), UiChrome.C_SOFT,
+		"a draw is not the soft grey")
+	assert_eq(LeagueFormColumns.mark_color(LeagueFormGuide.LOSS), UiChrome.C_DANGER,
+		"a loss is not the danger red")
+	assert_almost_eq(LeagueFormColumns.lane(5),
+		5.0 * LeagueFormColumns.PIP + 4.0 * LeagueFormColumns.GAP, 0.01,
+		"the pip lane is not five boxes and four gaps")
+	assert_gt(LeagueFormColumns.min_row(), LeagueFormColumns.lane(),
+		"the reading has no club column beside its pips")
+
+
 func _fixture(home: String, away: String, home_goals: int, away_goals: int) -> Dictionary:
 	return {"home_club_id": home, "away_club_id": away,
 		"home_goals": home_goals, "away_goals": away_goals}
