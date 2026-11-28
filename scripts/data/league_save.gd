@@ -4,7 +4,7 @@ extends RefCounted
 
 const DEFAULT_DIR := "user://saves"
 const EXT := ".sqlite"
-const SCHEMA_VERSION := 18
+const SCHEMA_VERSION := 19
 const NEW_SAVE_MESSAGE := "This save predates the transfer market. Start a new league."
 
 
@@ -69,6 +69,11 @@ static func create(name: String, rules: Dictionary, seed: int = 0,
 	var season := PLDatabase.row("SELECT value FROM metadata WHERE key = 'season_label';")
 	save.put_meta("season_label", str(season.get("value", "")))
 	PLRepository.shared().invalidate()
+	var contracts := MarketContracts.bootstrap(save, str(primary_rules.get("season_start", "")))
+	if not bool(contracts.get("ok", false)):
+		last_error = "the contracts could not be written"
+		PLDatabase.reset()
+		return null
 	current = save
 	return save
 
@@ -100,6 +105,10 @@ static func open(slug_or_path: String) -> LeagueSave:
 		PLDatabase.reset()
 		return null
 	if not save.theme_ready():
+		last_error = NEW_SAVE_MESSAGE
+		PLDatabase.reset()
+		return null
+	if int(str(save.meta.get("db_version", "0"))) < SCHEMA_VERSION:
 		last_error = NEW_SAVE_MESSAGE
 		PLDatabase.reset()
 		return null
