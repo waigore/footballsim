@@ -215,3 +215,24 @@ func test_the_clearance_verb_pends_clears_and_fails() -> void:
 	var failed: Dictionary = verb.run({"seed": "7047", "inject": "clearance"})
 	assert_eq(str(failed.get("outcome", "")), MarketDealRecords.FAILED, "the fail did not fail")
 	assert_eq(str(failed.get("reason", "")), MarketDealRules.CLEARANCE, "the fail has no code")
+	var shut: Dictionary = verb.run({"seed": "7047", "inject": "window"})
+	assert_eq(str(shut.get("outcome", "")), MarketDealRecords.FAILED, "the window close did not fail")
+	assert_eq(str(shut.get("reason", "")), MarketDealRules.WINDOW_CLOSED, "the close has no code")
+
+
+func test_a_domestic_clearance_never_pends_and_the_free_agent_skips() -> void:
+	var season := _fresh("Clear Guards")
+	var from := _club_in("PL", 0)
+	var to := _club_in("PL", 1)
+	var player := _player_at(from)
+	var deal := MarketDealRecords.load(_propose(season, from, to, player, _terms(player)))
+	assert_false(MarketDeals.needs_clearance(deal), "a domestic deal needs clearance")
+	assert_true(MarketDeals._window_open_for(deal, DATE), "the domestic window is shut")
+	var empty := MarketDealRecords.load("")
+	assert_true(MarketDeals._window_open_for(empty, DATE) == false,
+		"an empty deal read an open window")
+	var club := _club_in("LL", 0)
+	var cross := _propose(season, club, to, _player_at(club), _terms(_player_at(club)))
+	assert_true(MarketDeals.needs_clearance(MarketDealRecords.load(cross)),
+		"a cross-association deal needs no clearance")
+	MarketDeals._close_pending_registration({})

@@ -243,8 +243,43 @@ func _aged(birth: String, years: int) -> String:
 func test_the_clauses_verb_runs_without_the_deal_engine_loaded() -> void:
 	var verb: Script = load("res://tools/market_sim/clauses.gd")
 	var out: Dictionary = verb.run({"seed": "7046", "fee": "40m", "clause": "35m",
-		"sell-on": "10"})
+		"sell-on": "10", "solidarity": "1"})
 	assert_true(bool(out.get("ok", false)), "the clauses verb did not settle: %s" % str(out))
 	assert_true(bool(out.get("clause_met", false)), "a fee at the clause did not count")
 	assert_eq(int(out.get("buyer_cost", 0)) >= int(out.get("fee", 0)), true,
 		"the buyer cost is below the fee")
+	assert_false((out.get("sell_on", {}) as Dictionary).is_empty(), "the verb lost the sell-on")
+	assert_false((out.get("solidarity", []) as Array).is_empty(), "the verb lost the solidarity")
+
+
+func test_the_attribution_edge_cases() -> void:
+	var season := _fresh("Attribution Edges")
+	assert_eq(MarketAttribution.release_clause(""), 0, "an empty player has a clause")
+	assert_false(MarketAttribution.clause_met("", 1), "an empty player met a clause")
+	assert_true((MarketAttribution.extras({}).get("sell_on", {}) as Dictionary).is_empty(),
+		"an empty deal paid a sell-on")
+	assert_true(MarketAttribution.solidarity_shares("", 1_000_000).is_empty(),
+		"an empty player earned solidarity")
+	assert_true(MarketAttribution.solidarity_shares("nobody", 1_000_000).is_empty(),
+		"an unknown player earned solidarity")
+	var player := _player_at(_club_in("PL", 0))
+	PLDatabase.execute("UPDATE player SET date_of_birth = '' WHERE id = ?;", [player])
+	assert_true(MarketAttribution.solidarity_shares(player, 1_000_000).is_empty(),
+		"a player with no birth date earned solidarity")
+	assert_true(MarketAttribution.training_due("", "", 1_000_000).is_empty(),
+		"an empty player owed training")
+	assert_true(MarketAttribution.training_due(player, _club_in("PL", 1), 0).is_empty(),
+		"a free move owed training")
+	MarketAttribution.apply({}, DATE)
+
+
+func test_the_sell_on_needs_a_former_club_that_is_not_the_seller() -> void:
+	var season := _fresh("Sell On Edges")
+	var from := _club_in("PL", 0)
+	var to := _club_in("PL", 1)
+	var player := _player_at(from)
+	var cash_from := MarketFinance.cash(from)
+	var fee := 6_000_000
+	var done := _seal(season, from, to, player, _terms(player, {"fee": fee, "sell_on": 0.0}))
+	assert_eq(str(done.get("state", "")), MarketDealRecords.SIGNED, "the no-sell-on deal did not sign")
+	assert_eq(MarketFinance.cash(from), cash_from + fee, "a zero sell-on cost the seller the fee")
