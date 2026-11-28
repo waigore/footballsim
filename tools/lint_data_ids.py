@@ -36,7 +36,8 @@ CLUB_BY_ABBR = [
 ]
 PLAYER_IDENTITY = [
     (re.compile(r"\bplayer_by_(?!id\b|name\b)\w+"), "a player lookup keyed by something but id/name"),
-    (re.compile(r"player_id\s*(?::=|=(?!=))\s*[^\n]*\bclub_id\b"), "a player id built from a club id"),
+    (re.compile(r"player_id\s*(?::=|=(?!=))\s*(?!\s*\?)[^\n]*\bclub_id\b"),
+     "a player id built from a club id"),
     (re.compile(r"player_id\s*\+\s*[\"']-"), "a player id glued onto a club id"),
     (re.compile(r"[\"']-[^\"']*[\"']\s*%\s*\[\s*club"), "a player id glued onto a club id"),
     (re.compile(r"player_id\.(?:begins_with|substr|split|trim_prefix)\("),
@@ -62,6 +63,7 @@ SAMPLES_GOOD = {
     "uuid_lookup": 'var row := PLDatabase.row("SELECT * FROM player WHERE id = ?;", [player_id])\n',
     "secondary_find": "func player_by_name(club_id: String, name: String) -> Dictionary:\n\treturn {}\n",
     "minted_id": 'var club_id := ClubIds.mint(country, abbr)\n',
+    "sql_both_ids": 'var sql := "WHERE player_id = ? AND club_id = ?;"\n',
 }
 
 
