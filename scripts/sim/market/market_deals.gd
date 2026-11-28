@@ -332,8 +332,8 @@ static func _close_pending_registration(deal: Dictionary) -> void:
 	if player_id == "" or buyer == "":
 		return
 	PLDatabase.execute(
-		"DELETE FROM player_registration WHERE player_id = ? AND club_id = ? AND state = 'pending';",
-		[player_id, buyer])
+		"DELETE FROM player_registration WHERE club_id = ? AND state = 'pending' "
+		+ "AND player_id = ?;", [buyer, player_id])
 
 
 static func _window_open_for(deal: Dictionary, date: String) -> bool:

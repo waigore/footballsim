@@ -188,7 +188,7 @@ static func triggered(season: LeagueSeason, loan: Dictionary, date: String) -> b
 			var needed := maxi(int(value), 1)
 			var apps := int(PLDatabase.row(
 				"SELECT COALESCE(SUM(apps), 0) AS n FROM league_player_stat "
-				+ "WHERE player_id = ? AND club_id = ?;", [player_id, loanee]).get("n", 0))
+				+ "WHERE club_id = ? AND player_id = ?;", [loanee, player_id]).get("n", 0))
 			return apps >= needed
 		"club_promoted":
 			return _promoted(season, loanee)
@@ -248,8 +248,8 @@ static func _register(loan: Dictionary) -> bool:
 	var competition_id := _competition_of(loanee)
 	PLDatabase.execute(
 		"UPDATE player_registration SET state = 'closed', reason = 'loaned', deal_id = ? "
-		+ "WHERE player_id = ? AND club_id = ? AND state <> 'closed';",
-		[str(loan.get("id", "")), player_id, parent])
+		+ "WHERE club_id = ? AND player_id = ? AND state <> 'closed';",
+		[str(loan.get("id", "")), parent, player_id])
 	return PLDatabase.execute(
 		"INSERT OR REPLACE INTO player_registration (player_id, competition_id, club_id, kind, "
 		+ "state, reason, deal_id, season_index) VALUES (?, ?, ?, 'loan', 'registered', '', ?, ?);",
@@ -261,7 +261,8 @@ static func _register(loan: Dictionary) -> bool:
 static func _close_registration(player_id: String, club_id: String) -> void:
 	PLDatabase.execute(
 		"UPDATE player_registration SET state = 'closed', reason = 'returned' "
-		+ "WHERE player_id = ? AND club_id = ? AND state <> 'closed';", [player_id, club_id])
+		+ "WHERE club_id = ? AND state <> 'closed' AND player_id = ?;",
+		[club_id, player_id])
 
 
 static func _mark_registered(player_id: String, club_id: String, index: int) -> void:
