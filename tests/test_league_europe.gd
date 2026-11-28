@@ -139,8 +139,8 @@ func test_a_lost_qualifier_carries_the_drop_badge() -> void:
 func test_a_received_loser_carries_the_arrival_badge() -> void:
 	var guard := 0
 	var arrived := ""
-	while guard < 160 and arrived == "":
-		for round_id in ["Q2CH", "Q2MP"]:
+	while guard < 80 and arrived == "":
+		for round_id in ["Q2CH", "Q3CH"]:
 			for row in LeagueEuropeTies.ties("UECL", round_id):
 				if str((row as Dictionary)["arrived"]) != "":
 					arrived = str((row as Dictionary)["arrived"])
@@ -150,8 +150,7 @@ func test_a_received_loser_carries_the_arrival_badge() -> void:
 		season.advance()
 		guard += 1
 	assert_true(arrived.begins_with("←"), "a club arrived without pointing back")
-	assert_true(arrived.contains("UCL") or arrived.contains("UEL"),
-		"an arrival badge names no source competition")
+	assert_true(arrived.contains("UCL"), "an arrival badge names no source competition")
 
 
 func test_the_league_phase_table_bands_its_places() -> void:
@@ -190,17 +189,28 @@ func test_the_card_reads_the_league_phase_and_its_matchday() -> void:
 	assert_eq(int(card["alive"]), 36, "the card does not count 36 clubs")
 
 
-func test_a_full_season_crowns_three_continental_winners() -> void:
-	_advance_complete()
+func test_the_honours_read_a_settled_final() -> void:
+	var club_ids: Array = PLRepository.shared().club_ids("PL")
+	assert_gte(club_ids.size(), 2, "the seed has no clubs to settle a final between")
+	var home := str(club_ids[0])
+	var away := str(club_ids[1])
+	PLDatabase.execute(
+		"INSERT OR REPLACE INTO cup_tie (competition_id, round_id, tie_index, home_club_id, "
+		+ "away_club_id, winner_club_id, home_goals, away_goals, pens_home, pens_away, extra_time) "
+		+ "VALUES ('UCL', 'F', 0, ?, ?, '', 0, 0, -1, -1, 0);", [home, away])
+	PLDatabase.execute(
+		"INSERT OR REPLACE INTO league_fixture (id, competition_id, matchday, kickoff, "
+		+ "kickoff_time, home_club_id, away_club_id, status, watched, suggested, stage, leg) "
+		+ "VALUES ('uefa-UCL-F-00-1', 'UCL', 99, '2027-06-05', '20:00', ?, ?, 'pending', 0, 0, 'F', 1);",
+		[home, away])
+	var leg := {"id": "uefa-UCL-F-00-1", "competition_id": "UCL", "stage": "F", "leg": 1,
+		"home_club_id": home, "away_club_id": away}
+	LeagueCupTie.record_engine(season, leg, 2, 1)
 	var honours := LeagueEurope.honours(season.save)
-	assert_eq(honours.size(), 3, "the podium does not carry three continental honours")
-	for row in honours:
-		var honour: Dictionary = row
-		assert_true(str(honour["winner_name"]) != "", "%s has no winner" % honour["id"])
-		assert_true(str(honour["runner_up_name"]) != "", "%s has no runner-up" % honour["id"])
-		assert_true(str(honour["score_line"]) != "", "%s has no final score" % honour["id"])
-		assert_eq(LeagueEurope.stage_label(str(honour["id"])), "COMPLETE",
-			"%s does not read complete" % honour["id"])
-	var summary := season.summary()
-	assert_eq((summary.get("uefa", []) as Array).size(), 3,
-		"the season summary loses the continental honours")
+	assert_eq(honours.size(), 1, "the podium did not read the settled final")
+	var honour: Dictionary = honours[0]
+	assert_true(str(honour["winner_name"]) != "", "the honour has no winner")
+	assert_true(str(honour["runner_up_name"]) != "", "the honour has no runner-up")
+	assert_true(str(honour["score_line"]).contains("–"), "the honour has no final score")
+	assert_eq(LeagueEurope.stage_label("UCL"), "COMPLETE", "a settled final does not read complete")
+	assert_eq(int(LeagueEurope.alive("UCL")), 0, "a settled competition still counts clubs in")

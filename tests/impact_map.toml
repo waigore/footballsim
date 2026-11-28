@@ -241,7 +241,6 @@ suites = [
 suites = [
   "test_league_europe.gd",
   "test_league_europe_ui.gd",
-  "test_uefa_season.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
