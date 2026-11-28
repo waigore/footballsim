@@ -129,6 +129,13 @@ screens:
       - scripts/ui/interest_layer.gd
       # Season-complete podium paint rides the same surface (#240/#260).
       - scripts/ui/league_podium_sheet.gd
+      # Domestic cups ride the season surface too (#455/#459).
+      - scripts/ui/league_cups_sheet.gd
+      - scripts/ui/league_cup_sheet.gd
+      - scripts/ui/league_cup_bracket.gd
+      - scripts/ui/league_cup_draw_sheet.gd
+      - scripts/ui/league_cup_view.gd
+      - scripts/ui/league_cup_doors.gd
     baseline_url: https://raw.githubusercontent.com/wiki/waigore/footballsim/evidence/images/ux-20261126-l-hub-1600.jpg
   - id: league-table
     title: League table
@@ -158,6 +165,7 @@ screens:
       - scripts/ui/wiki_host.gd
       - scripts/ui/wiki_body.gd
       - scripts/ui/wiki_chrome.gd
+      - scripts/ui/wiki_cup.gd
       - scripts/ui/wiki_model.gd
       - scripts/ui/wiki_league.gd
       - scripts/ui/wiki_team.gd

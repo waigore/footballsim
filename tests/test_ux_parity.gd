@@ -40,11 +40,12 @@ func _settings_ids(vp: Vector2) -> Array:
 func _panel_nav_ids(vp: Vector2, touch: bool) -> Array:
 	var panel := LeaguePanel.new()
 	panel.touch = touch
+	panel.cups = true
 	panel.open()
 	panel.settle()
 	var ids: Array = []
-	for i in range(LeaguePanel.ITEMS.size()):
-		var item: Dictionary = LeaguePanel.ITEMS[i]
+	for i in range(LeaguePanel.rows(true).size()):
+		var item: Dictionary = LeaguePanel.rows(true)[i]
 		var hit: String = panel.hit(panel.item_rect(vp, i).get_center(), vp)
 		assert_eq(hit, str(item["id"]), "panel row %s missed at %s (touch=%s)" % [item["id"], vp, touch])
 		ids.append(hit)

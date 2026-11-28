@@ -12,6 +12,16 @@ const TABLES := [
 	"CREATE TABLE IF NOT EXISTS save_competition (competition_id TEXT PRIMARY KEY, "
 	+ "active INTEGER NOT NULL DEFAULT 1, position INTEGER NOT NULL DEFAULT 0);",
 	"CREATE TABLE IF NOT EXISTS league_interest (club_id TEXT PRIMARY KEY);",
+	"CREATE TABLE IF NOT EXISTS cup_round (competition_id TEXT NOT NULL, "
+	+ "round_id TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0, "
+	+ "status TEXT NOT NULL DEFAULT 'open', PRIMARY KEY (competition_id, round_id));",
+	"CREATE TABLE IF NOT EXISTS cup_tie (competition_id TEXT NOT NULL, "
+	+ "round_id TEXT NOT NULL, tie_index INTEGER NOT NULL, "
+	+ "home_club_id TEXT NOT NULL, away_club_id TEXT NOT NULL, "
+	+ "winner_club_id TEXT NOT NULL DEFAULT '', home_goals INTEGER NOT NULL DEFAULT 0, "
+	+ "away_goals INTEGER NOT NULL DEFAULT 0, pens_home INTEGER NOT NULL DEFAULT -1, "
+	+ "pens_away INTEGER NOT NULL DEFAULT -1, extra_time INTEGER NOT NULL DEFAULT 0, "
+	+ "PRIMARY KEY (competition_id, round_id, tie_index));",
 	"CREATE TABLE IF NOT EXISTS league_fixture (id TEXT PRIMARY KEY, "
 	+ "competition_id TEXT NOT NULL DEFAULT '', matchday INTEGER NOT NULL, "
 	+ "kickoff TEXT NOT NULL, kickoff_time TEXT NOT NULL DEFAULT '', "
@@ -19,7 +29,7 @@ const TABLES := [
 	+ "home_goals INTEGER NOT NULL DEFAULT 0, away_goals INTEGER NOT NULL DEFAULT 0, "
 	+ "status TEXT NOT NULL DEFAULT 'pending', watched INTEGER NOT NULL DEFAULT 0, "
 	+ "suggested INTEGER NOT NULL DEFAULT 0);",
-	"CREATE TABLE IF NOT EXISTS league_table (club_id TEXT PRIMARY KEY, "
+	"CREATE TABLE IF NOT EXISTS league_table (club_id TEXT NOT NULL, "
 	+ "competition_id TEXT NOT NULL DEFAULT '', "
 	+ "played INTEGER NOT NULL DEFAULT 0, won INTEGER NOT NULL DEFAULT 0, "
 	+ "drawn INTEGER NOT NULL DEFAULT 0, lost INTEGER NOT NULL DEFAULT 0, "
@@ -30,7 +40,8 @@ const TABLES := [
 	+ "home_gf INTEGER NOT NULL DEFAULT 0, home_ga INTEGER NOT NULL DEFAULT 0, "
 	+ "away_played INTEGER NOT NULL DEFAULT 0, away_won INTEGER NOT NULL DEFAULT 0, "
 	+ "away_drawn INTEGER NOT NULL DEFAULT 0, away_lost INTEGER NOT NULL DEFAULT 0, "
-	+ "away_gf INTEGER NOT NULL DEFAULT 0, away_ga INTEGER NOT NULL DEFAULT 0);",
+	+ "away_gf INTEGER NOT NULL DEFAULT 0, away_ga INTEGER NOT NULL DEFAULT 0, "
+	+ "PRIMARY KEY (club_id, competition_id));",
 	"CREATE TABLE IF NOT EXISTS match_event (id INTEGER PRIMARY KEY AUTOINCREMENT, "
 	+ "fixture_id TEXT NOT NULL, minute INTEGER NOT NULL, kind TEXT NOT NULL, "
 	+ "player_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL DEFAULT '', "
@@ -64,6 +75,7 @@ const INDEXES := [
 	"CREATE INDEX IF NOT EXISTS league_fixture_comp_idx ON league_fixture (competition_id);",
 	"CREATE INDEX IF NOT EXISTS match_event_fixture_idx ON match_event (fixture_id);",
 	"CREATE INDEX IF NOT EXISTS goal_highlight_fixture_idx ON goal_highlight (fixture_id);",
+	"CREATE INDEX IF NOT EXISTS cup_tie_round_idx ON cup_tie (competition_id, round_id);",
 ]
 
 
@@ -112,12 +124,16 @@ static func migrate() -> void:
 		PLDatabase.execute(sql)
 	for table in ["league_fixture", "league_table", "league_player_stat"]:
 		add_column(table, "competition_id", "TEXT NOT NULL DEFAULT ''")
+	add_column("league_fixture", "stage", "TEXT NOT NULL DEFAULT ''")
+	add_column("league_fixture", "leg", "INTEGER NOT NULL DEFAULT 0")
 	var hint_rows := hint()
 	var owner := str(hint_rows[0]) if not hint_rows.is_empty() else "PL"
 	for table in ["league_fixture", "league_table", "league_player_stat"]:
 		backfill(table, owner)
+	_rebuild_table_for_two_tables()
 	for sql in INDEXES:
 		PLDatabase.execute(sql)
+	create_two_table_index()
 	LeagueRules.migrate(owner)
 
 
@@ -133,11 +149,46 @@ static func ensure_schema(save: LeagueSave) -> void:
 
 	add_column("match_event", "penalty")
 	add_column("goal_highlight", "penalty")
+	add_column("league_fixture", "stage", "TEXT NOT NULL DEFAULT ''")
+	add_column("league_fixture", "leg", "INTEGER NOT NULL DEFAULT 0")
 	for cid in save.actives:
 		PLDatabase.execute(
 			"INSERT INTO save_competition (competition_id, active, position) VALUES (?, 1, ?) "
 			+ "ON CONFLICT(competition_id) DO UPDATE SET active = 1;",
 			[str(cid), save.actives.find(cid)])
+
+
+static func _rebuild_table_for_two_tables() -> void:
+	var row := PLDatabase.row(
+		"SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'league_table';")
+	if row.is_empty():
+		return
+	var sql := str(row.get("sql", ""))
+	if "PRIMARY KEY (club_id, competition_id)" in sql:
+		return
+	var have := {}
+	for column in PLDatabase.rows("PRAGMA table_info(league_table);"):
+		have[str(column["name"])] = true
+	if not have.has("competition_id"):
+		return
+	var carried := ["club_id", "competition_id"]
+	for column in ["played", "won", "drawn", "lost", "gf", "ga", "points"] + SIDE_COLUMNS:
+		if have.has(column):
+			carried.append(column)
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	PLDatabase.execute("ALTER TABLE league_table RENAME TO league_table_pre_two;")
+	PLDatabase.execute(TABLES[6])
+	PLDatabase.execute(
+		"INSERT INTO league_table (" + ", ".join(carried) + ") SELECT "
+		+ ", ".join(carried) + " FROM league_table_pre_two;")
+	PLDatabase.execute("DROP TABLE league_table_pre_two;")
+	PLDatabase.transaction("COMMIT;")
+
+
+static func create_two_table_index() -> void:
+	PLDatabase.execute(
+		"CREATE UNIQUE INDEX IF NOT EXISTS league_table_pair_idx "
+		+ "ON league_table (club_id, competition_id);")
 
 
 static func add_column(table: String, column: String,

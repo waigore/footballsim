@@ -91,10 +91,10 @@ func set_league(competition_id: String) -> void:
 		away_idx = (home_idx + 1) % ids.size()
 
 func home_id() -> String:
-	return str(ids[home_idx]) if not ids.is_empty() else "MUN"
+	return str(ids[home_idx]) if not ids.is_empty() else "ENG-MUN1"
 
 func away_id() -> String:
-	return str(ids[away_idx]) if not ids.is_empty() else "MCI"
+	return str(ids[away_idx]) if not ids.is_empty() else "ENG-MCI1"
 
 
 func cycle(side: int, dir: int) -> void:

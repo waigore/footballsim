@@ -11,6 +11,7 @@ func controls(p: HudPaint, c: CanvasItem, game, touch: bool, mouse: Vector2, f_b
 
 
 	var held: bool = over and game != null and bool(game.result_hold)
+	var watch: bool = MatchBilling.league_watch(game)
 	var specs := control_specs(p, game, touch, phase, held)
 	for i in range(specs.size()):
 		var spec: Array = specs[i]
@@ -41,7 +42,7 @@ func controls(p: HudPaint, c: CanvasItem, game, touch: bool, mouse: Vector2, f_b
 		p.text_c(c, r.position.x + r.size.x * 0.5, cap_y, spec[1], 13, ink, f_bold)
 
 
-		if not touch and not (held and dead):
+		if not touch and not (dead and (held or watch)):
 			p.text_c(c, r.position.x + r.size.x * 0.5, r.position.y + 36, spec[2], 9, UiChrome.C_DIM if not dead else Color(UiChrome.C_DIM.r, UiChrome.C_DIM.g, UiChrome.C_DIM.b, 0.35), f_med)
 		if not dead:
 			p.add_button(spec[0], r, spec[1], spec[2])
@@ -49,6 +50,7 @@ func controls(p: HudPaint, c: CanvasItem, game, touch: bool, mouse: Vector2, f_b
 
 func control_specs(p: HudPaint, game, touch: bool, phase: String = "", held: bool = false) -> Array:
 	var over: bool = phase == "full_time"
+	var watch: bool = MatchBilling.league_watch(game)
 	var speed_hint: String = "1-4"
 	if game.mode != "full" and game.fast_mode:
 		speed_hint = ""
@@ -59,11 +61,11 @@ func control_specs(p: HudPaint, game, touch: bool, phase: String = "", held: boo
 		["skip", "STOP" if game.get("skip_armed") == true else "SKIP", "S", not over],
 		["camera", "FOLLOW" if game.camera_follow else "WIDE", "C", true],
 		["league", "LEAGUE", "L", true],
-		["restart", "PLAY AGAIN" if over else "RESTART", "R", not (over and held)],
+		["restart", "PLAY AGAIN" if over else "RESTART", "R", not (over and held) and not watch],
 		["menu", "MENU", "M", true],
 	]
 	if touch or p.compact():
-		specs.append(["teams", "TEAMS", "CLUBS", true])
+		specs.append(["teams", "TEAMS", "CLUBS", not watch])
 
 
 	if over and held:

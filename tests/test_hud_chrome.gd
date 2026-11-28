@@ -417,7 +417,7 @@ func test_the_fixture_card_and_team_sheet_follow_the_scene_billing() -> void:
 	assert_eq(HudTopBand.billing_name(game, eng), "FRIENDLY", "a friendly's card claims a league")
 
 
-	MatchBilling.bind_scene(game, "MUN", {"matchday": 5})
+	MatchBilling.bind_scene(game, "ENG-MUN1", {"matchday": 5})
 	assert_eq(HudTopBand.billing_name(game, eng), game.billing.chrome_name(),
 		"the card disagrees with the briefing about the competition")
 	assert_eq(game.billing.caption(), "PREMIER LEAGUE · MATCHDAY 5",
@@ -535,9 +535,28 @@ func test_the_paused_banner_resumes_when_the_chrome_is_hidden() -> void:
 	hud.queue_redraw()
 	await get_tree().process_frame
 	var vp: Vector2 = hud.design_vp()
-	var banner := Rect2(vp.x * 0.5 - 130.0, vp.y * 0.5 - 27.0, 260.0, 54.0)
+	var banner := Rect2(vp.x * 0.5 - 150.0, vp.y * 0.5 - 27.0, 300.0, 54.0)
 	assert_eq(hud.button_at(banner.get_center()), "pause",
 		"a hidden chrome's PAUSED banner pointed at a RESUME door that is not on screen")
+	var chip := Rect2(banner.position.x + 160.0, banner.position.y + 13.0, 116.0, 28.0)
+	assert_eq(hud.button_at(chip.get_center()), "pause",
+		"the RESUME chip is painted but does not answer its own press")
+	hud.queue_free()
+
+
+func test_the_docked_resume_chip_is_a_real_door_on_a_desktop_too() -> void:
+	var eng := MatchEngine.new(203)
+	var hud := _hud(eng)
+	hud.touch = false
+	hud.ui_scale = 1.0
+	hud.game.paused = true
+	hud.set_hud_visible(false, true)
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var vp: Vector2 = hud.design_vp()
+	var chip := Rect2(vp.x * 0.5 - 140.0, vp.y * 0.5 - 14.0, 116.0, 28.0)
+	assert_eq(hud.button_at(chip.get_center()), "pause",
+		"a desktop reader with the chrome hidden had no RESUME to click")
 	hud.queue_free()
 
 func test_a_finished_match_offers_no_play_doors() -> void:
@@ -584,4 +603,69 @@ func test_a_finished_match_offers_no_play_doors() -> void:
 		"a finished match kept the live RESTART caption instead of PLAY AGAIN")
 	assert_eq(hud.roster_band.state_label(hud.game, "SIM", "full_time"), "FULL TIME  ·  MATCH OVER",
 		"the state line still calls a finished match live")
+	hud.queue_free()
+
+
+func test_a_league_watch_takes_away_the_picker_and_restart() -> void:
+	var eng := MatchEngine.new(418)
+	var hud := _hud(eng)
+	hud.ui_scale = hud.get_viewport().get_visible_rect().size.y / 900.0
+	var paint := HudPaint.new(hud.chrome, hud.design_vp())
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var door := Rect2()
+	for b in hud.buttons:
+		if str(b["id"]) == "teams":
+			door = b["rect"]
+	assert_true(door.size.x > 0.0, "a single match has no CHANGE TEAMS door")
+	assert_eq(hud.button_at(door.get_center()), "teams", "a single match's CHANGE TEAMS answered nothing")
+
+	hud.game.billing.bind_fixture("ENG-MUN1", {"matchday": 3})
+	hud.queue_redraw()
+	await get_tree().process_frame
+	var ids: Array = []
+	for b in hud.buttons:
+		ids.append(str(b["id"]))
+	assert_false(ids.has("teams"), "a league watch drew the fixture picker: %s" % str(ids))
+	for id in ["menu", "league", "mode", "camera"]:
+		assert_true(ids.has(id), "a league watch lost %s: %s" % [id, str(ids)])
+	assert_eq(hud.button_at(door.get_center()), "", "a league watch's CHANGE TEAMS still answered a press")
+
+	for phase in ["play", "full_time"]:
+		for touch in [false, true]:
+			for spec in hud.controls_band.control_specs(paint, hud.game, touch, phase):
+				if str(spec[0]) in ["restart", "teams"]:
+					assert_false(bool(spec[3]), "%s stayed live over a league watch (touch=%s, phase=%s)" % [str(spec[0]), touch, phase])
+
+	hud.game.billing.bind_friendly("ENG-MUN1", "ENG-MCI1")
+	hud.queue_redraw()
+	await get_tree().process_frame
+	ids = []
+	for b in hud.buttons:
+		ids.append(str(b["id"]))
+	assert_true(ids.has("teams"), "the picker did not come back for a single match: %s" % str(ids))
+	var restart_live := false
+	for spec in hud.controls_band.control_specs(paint, hud.game, true, "play"):
+		if str(spec[0]) == "restart":
+			restart_live = bool(spec[3])
+	assert_true(restart_live, "a single match lost its RESTART")
+	hud.queue_free()
+
+func test_the_card_draws_the_full_sheet_on_a_desktop_and_keeps_its_bars_on_a_phone() -> void:
+	var eng := MatchEngine.new(41)
+	var hud := _hud(eng)
+	hud.game.focus_id = eng.players[2].id
+	hud.ui_scale = 1.0
+	hud.card.mode = "FULL"
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_gt(hud.card.rect_for(hud.design_vp()).size.y, 300.0, "the Full reading left the desktop column")
+	assert_gte(hud.card._subs(eng.players[2]).size(), 30, "the card found no sub-stat sheet")
+	var door: Rect2 = hud.card.attrs_rect(hud.design_vp())
+	assert_true(door.size.x > 100.0, "the desktop door is too narrow for its pair")
+	hud.card.mode = "SIMPLIFIED"
+	hud.queue_redraw()
+	await get_tree().process_frame
+	assert_eq(hud.card.rect_for(hud.design_vp()), hud.card.rect_for(hud.design_vp()),
+		"the card moved when the reading changed")
 	hud.queue_free()

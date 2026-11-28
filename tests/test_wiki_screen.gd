@@ -41,7 +41,7 @@ func test_a_tap_on_a_table_row_opens_that_club() -> void:
 	assert_eq(str(wiki.page_data["title"]), str(PLRepository.shared().club(str(target["id"]))["name"]).to_upper(), "the club page did not render")
 
 func test_a_club_row_opens_a_player_and_back_returns() -> void:
-	wiki.open(WikiModel.TEAM, "MUN")
+	wiki.open(WikiModel.TEAM, "ENG-MUN1")
 	var player_row: Dictionary = _row_with_target("player")
 	assert_false(player_row.is_empty(), "the squad has no player links")
 	var point: Vector2 = wiki.body.position + player_row["rect"].position + Vector2(20.0, 8.0)
@@ -57,8 +57,8 @@ func test_a_club_row_opens_a_player_and_back_returns() -> void:
 
 func test_crumbs_walk_back_to_an_earlier_page() -> void:
 	wiki.open(WikiModel.LEAGUE, "")
-	wiki.push(WikiModel.TEAM, "MUN")
-	wiki.push(WikiModel.PLAYER, "MUN-b-fernandes")
+	wiki.push(WikiModel.TEAM, "ENG-MUN1")
+	wiki.push(WikiModel.PLAYER, TestSquad.id_of("ENG-MUN1", "B. Fernandes"))
 	assert_eq(wiki.stack.size(), 3, "the stack did not grow")
 	assert_eq(wiki.crumb_pages().size(), 2, "both earlier pages should be crumbs")
 	wiki.click("crumb:1")
@@ -69,7 +69,7 @@ func test_crumbs_walk_back_to_an_earlier_page() -> void:
 	assert_eq(str(wiki.current()["page"]), "league", "the crumb walked to the wrong page")
 
 func test_rows_inside_a_page_stay_inside_the_viewport() -> void:
-	wiki.open(WikiModel.TEAM, "MUN")
+	wiki.open(WikiModel.TEAM, "ENG-MUN1")
 	var vp: Vector2 = wiki.design_vp()
 	var box: Rect2 = wiki.body_rect(vp)
 	assert_gte(box.position.y, 60.0, "the body starts inside the header")
@@ -83,20 +83,20 @@ func test_scrolling_clamps_to_the_content() -> void:
 
 	var body := WikiBody.new()
 	body.size = Vector2(800.0, 360.0)
-	body.set_page(WikiModel.page(WikiModel.TEAM, "MUN"), true)
+	body.set_page(WikiModel.page(WikiModel.TEAM, "ENG-MUN1"), true)
 	assert_gt(body.max_scroll(), 0.0, "a club page should scroll in a phone window")
 	body.scroll_by(-100000.0)
 	assert_eq(body.scroll, 0.0, "scrolling above the top did not clamp")
 	body.scroll_by(100000.0)
 	assert_almost_eq(body.scroll, body.max_scroll(), 0.5, "scrolling past the end did not clamp")
 	body.free()
-	wiki.open(WikiModel.TEAM, "MUN")
+	wiki.open(WikiModel.TEAM, "ENG-MUN1")
 	wiki.key(KEY_DOWN)
 	assert_lte(wiki.body.scroll, wiki.body.max_scroll(), "the key scrolled past the end")
 
 func test_a_bad_target_is_ignored() -> void:
 	wiki.open(WikiModel.LEAGUE, "")
-	wiki.push(WikiModel.PLAYER, "NOPE-x")
+	wiki.push(WikiModel.PLAYER, TestSquad.none())
 	assert_eq(wiki.stack.size(), 1, "a missing player was pushed onto the stack")
 	wiki.push(WikiModel.LEAGUE, "")
 	assert_eq(wiki.stack.size(), 1, "a repeat page was pushed twice")
@@ -104,7 +104,7 @@ func test_a_bad_target_is_ignored() -> void:
 func test_the_back_door_and_the_close_door() -> void:
 	var closed := [0]
 	wiki.closed.connect(func(): closed[0] += 1)
-	wiki.open(WikiModel.TEAM, "MCI")
+	wiki.open(WikiModel.TEAM, "ENG-MCI1")
 	await get_tree().process_frame
 	var back_rect: Rect2 = Rect2()
 	for b in wiki.buttons:
@@ -196,7 +196,7 @@ func test_a_short_page_has_no_scroll_advice() -> void:
 func test_a_club_page_top_has_no_row_to_open_but_its_squad_has() -> void:
 	var body := WikiBody.new()
 	body.size = Vector2(800.0, 360.0)
-	body.set_page(WikiModel.page(WikiModel.TEAM, "MUN"), true)
+	body.set_page(WikiModel.page(WikiModel.TEAM, "ENG-MUN1"), true)
 	assert_false(body.has_open_row_in_view(), "the club page top advertises a row it does not paint")
 	var squad: Rect2 = Rect2()
 	for row in body.rows():
@@ -267,13 +267,13 @@ func test_the_league_table_keeps_the_row_hint() -> void:
 	body.free()
 
 func test_the_club_page_opens_its_manager() -> void:
-	wiki.open(WikiModel.TEAM, "MUN")
+	wiki.open(WikiModel.TEAM, "ENG-MUN1")
 	var chip: Dictionary = _chip_with_target("manager")
 	assert_false(chip.is_empty(), "the club page has no door to its manager")
 	var point: Vector2 = wiki.body.position + (chip["rect"] as Rect2).position + Vector2(20.0, 8.0)
 	assert_true(wiki.tap(point), "the manager chip did not answer a tap")
 	assert_eq(str(wiki.current()["page"]), "manager", "the manager chip opened another page")
-	assert_eq(str(wiki.current()["id"]), "MUN", "the manager chip opened another club's manager")
+	assert_eq(str(wiki.current()["id"]), "ENG-MUN1", "the manager chip opened another club's manager")
 	assert_eq(str(wiki.page_data["title"]), "R. AMORIM", "the manager page did not render")
 	assert_eq(wiki.crumb_pages().size(), 1, "the club should be one crumb back")
 	wiki.key(KEY_ESCAPE)
@@ -315,14 +315,18 @@ func test_a_phone_league_page_opens_on_the_table() -> void:
 		assert_gte(shown, 4, "the phone league page opens on %d club rows at %s" % [shown, vp])
 
 
+func _strip_size() -> int:
+	return PLCompetitions.all().size() + PLRepository.shared().cups().size()
+
+
 func test_a_phone_league_page_keeps_its_competition_doors() -> void:
 	var width: float = WikiHeader.metrics(Vector2(914.0, 411.0), true, true, true)["width"]
 	var chips := WikiPageStrip.items(WikiModel.page(WikiModel.LEAGUE, ""))
 	var built := WikiPageStrip.layout(wiki.f_bold, width, chips)
 	var rects: Array = built["rects"]
-	assert_eq(rects.size(), 8, "the phone strip dropped a competition")
+	assert_eq(rects.size(), _strip_size(), "the phone strip dropped a competition")
 	var doors := WikiPageStrip.doors(Vector2(24.0, 60.0), rects, chips)
-	assert_eq(doors.size(), 7, "the phone strip lost a door to another competition")
+	assert_eq(doors.size(), _strip_size() - 1, "the phone strip lost a door to another competition")
 	for door in doors:
 		var r: Rect2 = door["rect"]
 		assert_gte(r.size.y, 24.0, "a strip door is too short to press")
@@ -355,7 +359,7 @@ func test_a_phone_strip_names_the_league_it_cannot_fit() -> void:
 	var built := WikiPageStrip.layout(wiki.f_bold, 150.0, chips)
 	assert_true(bool(built["short"]), "a strip narrower than its names kept the long ones")
 	var rects: Array = built["rects"]
-	assert_eq(rects.size(), 8, "the squeezed strip dropped a competition")
+	assert_eq(rects.size(), _strip_size(), "the squeezed strip dropped a competition")
 	assert_lte((rects[7] as Rect2).end.x, 150.5, "the squeezed strip ran past its band")
 
 

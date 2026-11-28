@@ -247,7 +247,7 @@ func test_an_auto_fixture_can_injure_and_the_season_keeps_it() -> void:
 	PLDatabase.execute("DELETE FROM league_absence;")
 
 func test_a_watched_fixture_settles_cards_and_injuries_through_the_same_path() -> void:
-	var engine = MatchEngine.new(SEED, "MUN", "MCI")
+	var engine = MatchEngine.new(SEED, "ENG-MUN1", "ENG-MCI1")
 	engine.tick()
 	var hurt = engine.players[0]
 	var booked = engine.players[1]

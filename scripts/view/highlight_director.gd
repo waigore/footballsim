@@ -132,7 +132,8 @@ func meta(e: Dictionary, engine: MatchEngine) -> Dictionary:
 		"club_id": str(engine.teams[team]["id"]),
 		"scorer_id": str(scorer.key) if scorer != null else "",
 		"scorer_name": str(goal.get("scorer", e.get("player", ""))),
-		"assist_id": "", "assist_name": str(goal.get("assist", "")),
+		"assist_id": str(goal.get("assist_key", "")),
+		"assist_name": str(goal.get("assist", "")),
 		"commentary": str(e.get("text", "")),
 		"score_after": [int(engine.score[0]), int(engine.score[1])],
 	}

@@ -50,6 +50,39 @@ func competition(competition_id: String) -> Dictionary:
 	return {}
 
 
+func leagues() -> Array:
+	var out: Array = []
+	for row in competitions():
+		var rules: Dictionary = row.get("rules", {})
+		if str(rules.get("kind", "league")) == "league":
+			out.append(row)
+	return out
+
+
+func cups() -> Array:
+	var out: Array = []
+	for row in competitions():
+		var rules: Dictionary = row.get("rules", {})
+		var kind := str(rules.get("kind", "league"))
+		if kind == "cup" or kind == "supercup":
+			out.append(row)
+	return out
+
+
+func continentals() -> Array:
+	var out: Array = []
+	for row in competitions():
+		var rules: Dictionary = row.get("rules", {})
+		if str(rules.get("kind", "league")) == "continental":
+			out.append(row)
+	return out
+
+
+func competition_kind(competition_id: String) -> String:
+	var rules: Dictionary = competition(competition_id).get("rules", {})
+	return str(rules.get("kind", "league"))
+
+
 func competition_name(competition_id: String) -> String:
 	var row := competition(competition_id)
 	return str(row.get("short_name", row.get("name", competition_id)))
@@ -57,12 +90,13 @@ func competition_name(competition_id: String) -> String:
 
 func club_ids(competition_id: String = "") -> Array:
 	var ids: Array = []
-	var sql := "SELECT id FROM club "
-	var bindings: Array = []
-	if competition_id != "":
-		sql += "WHERE competition_id = ? "
-		bindings.append(competition_id)
-	for row in PLDatabase.rows(sql + "ORDER BY name;", bindings):
+	if competition_id == "":
+		for row in leagues():
+			ids.append_array(club_ids(str(row["id"])))
+		ids.sort()
+		return ids
+	for row in PLDatabase.rows(
+		"SELECT id FROM club WHERE competition_id = ? ORDER BY name;", [competition_id]):
 		ids.append(str(row["id"]))
 	return ids
 
@@ -87,6 +121,7 @@ func club(club_id: String) -> Dictionary:
 	var out := {
 		"id": str(row["id"]),
 		"competition_id": str(row.get("competition_id", "")),
+		"country": str(row.get("country", "")),
 		"name": str(row["name"]),
 		"short": str(row["short"]),
 		"abbr": str(row["abbr"]),
@@ -162,7 +197,19 @@ func _player_row(row: Dictionary) -> Dictionary:
 		"phy": int(row["phy"]), "height": int(row["height"]), "gk": gk,
 		"squad": str(row["squad"]), "age": int(row["age"]), "nationality": str(row["nationality"]),
 		"date_of_birth": str(row["date_of_birth"]), "espn_id": str(row["espn_id"]),
+		"subs": _json_field(row.get("subs")),
+		"extras": _json_field(row.get("extras")),
+		"ratings_matched": int(row.get("ratings_matched", 0)) == 1,
 	}
+
+
+static func _json_field(raw: Variant) -> Dictionary:
+	if raw is Dictionary:
+		return raw
+	if raw == null or str(raw) == "":
+		return {}
+	var parsed: Variant = JSON.parse_string(str(raw))
+	return parsed if parsed is Dictionary else {}
 
 
 func player(player_id: String) -> Dictionary:

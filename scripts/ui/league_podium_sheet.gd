@@ -44,10 +44,26 @@ func frame_height(view: Dictionary) -> float:
 
 		if brackets.has(str(section.get("id", ""))):
 			h += 6.0 + 16.0
+		var ties: Dictionary = summary_data.get("playout", {})
+		if ties.has(str(section.get("id", ""))):
+			h += 6.0 + 16.0
 		h += 12.0
+	h += cups_height(summary)
 	if not (summary.get("relegation", {}) as Dictionary).is_empty():
 		h += 8.0 + 16.0
 	return h + 8.0
+
+
+static func cups_of(summary: Dictionary) -> Array:
+	var list: Variant = summary.get("cups", [])
+	return list if list is Array else []
+
+
+static func cups_height(summary: Dictionary) -> float:
+	var cups := cups_of(summary)
+	if cups.is_empty():
+		return 0.0
+	return 26.0 + 18.0 * float(cups.size())
 
 
 static func sections(summary: Dictionary) -> Array:
@@ -124,6 +140,13 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary)
 			UiChrome.text(c, Vector2(24.0, y + 12.0), "PLAY-OFFS  %s" % str(bracket.get("text", "")),
 				10, UiChrome.C_GOLD, bold)
 			y += 16.0
+		var playout: Dictionary = (summary.get("playout", {}) as Dictionary).get(
+			str(section.get("id", "")), {})
+		if not playout.is_empty():
+			y += 6.0
+			UiChrome.text(c, Vector2(24.0, y + 12.0), "PLAY-OUT  %s" % str(playout.get("text", "")),
+				10, UiChrome.C_GOLD, bold)
+			y += 16.0
 		y += 6.0
 		UiChrome.text(c, Vector2(24.0, y), "RELEGATED", 10, UiChrome.C_DIM, bold)
 		y += 16.0
@@ -143,6 +166,43 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary)
 		UiChrome.text(c, Vector2(24.0, y + 8.0), "RELEGATION  %s" % str(tie.get("text", "")),
 			10, UiChrome.C_GOLD, bold)
 		y += 16.0
+	_paint_cups(c, vp, summary, y, bold, med)
+
+
+static func cups_lines(summary: Dictionary) -> Array:
+	var out: Array = []
+	for cup in cups_of(summary):
+		var row: Dictionary = cup
+		var line := "%s  ·  %s" % [str(row.get("short", row.get("id", ""))),
+			str(row.get("winner_name", row.get("winner", "")))]
+		var runner := str(row.get("runner_up_name", row.get("runner_up", "")))
+		if runner != "":
+			line += "  beat  %s" % runner
+		var score := "%d – %d" % [int(row.get("home_goals", 0)), int(row.get("away_goals", 0))]
+		if int(row.get("pens_home", -1)) >= 0:
+			score += "  (%d–%d PENS)" % [int(row.get("pens_home", 0)), int(row.get("pens_away", 0))]
+		elif bool(row.get("extra_time", false)):
+			score += "  AET"
+		out.append({"name": str(row.get("name", row.get("id", ""))), "line": line,
+			"score": score})
+	return out
+
+
+func _paint_cups(c: CanvasItem, vp: Vector2, summary: Dictionary, y_in: float, bold: Font,
+		med: Font) -> void:
+	var lines := cups_lines(summary)
+	if lines.is_empty():
+		return
+	var y := y_in + 8.0
+	UiChrome.text(c, Vector2(24.0, y), "DOMESTIC HONOURS", 10, UiChrome.C_DIM, bold)
+	y += 16.0
+	for row in lines:
+		var line: Dictionary = row
+		UiChrome.text(c, Vector2(24.0, y + 12.0),
+			LeagueColumns.fit_name(str(line["line"]), bold, 11, vp.x - 48.0 - 96.0), 11,
+			UiChrome.C_TEXT, bold)
+		UiChrome.text_r(c, vp.x - 24.0, y + 12.0, str(line["score"]), 10, UiChrome.C_GOLD, bold)
+		y += 18.0
 
 
 func _paint_promoted(c: CanvasItem, vp: Vector2, section: Dictionary, up: int,

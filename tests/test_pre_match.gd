@@ -13,8 +13,8 @@ class StubGame extends Node:
 	var paused := false
 	var touch := false
 	var chrome_scale := 1.0
-	var home_id := "MUN"
-	var away_id := "MCI"
+	var home_id := "ENG-MUN1"
+	var away_id := "ENG-MCI1"
 	var select_open := false
 	var select_from_menu := false
 	var sel_layer = CanvasLayer.new()
@@ -86,7 +86,7 @@ func test_a_league_briefing_reads_the_fixture_and_the_season() -> void:
 	assert_true(str(view["home_captain"]) != "", "no captain was marked")
 
 func test_a_single_match_briefing_says_kick_off_and_has_no_absences() -> void:
-	var view := PreMatchModel.build("MUN", "MCI", {}, null)
+	var view := PreMatchModel.build("ENG-MUN1", "ENG-MCI1", {}, null)
 	assert_eq(str(view["kick"]), "KICK OFF", "a single match does not say KICK OFF")
 	assert_eq(str(view["caption"]), MatchBilling.FRIENDLY_CAPTION,
 		"a single match is not a league fixture")
@@ -98,7 +98,7 @@ func test_the_briefing_names_who_is_out_and_drops_them_from_the_xi() -> void:
 	var player: Dictionary = TeamData.get_team(club)["starters"][0]
 	var id := str(player["id"])
 	SeasonAvailability.suspend(id, club, 2, "red", "2026-08-15")
-	var view := PreMatchModel.build(club, "MCI", _fixture(), season)
+	var view := PreMatchModel.build(club, "ENG-MCI1", _fixture(), season)
 	var absences: Array = view["home_absences"]
 	assert_eq(absences.size(), 1, "the briefing did not list the suspension")
 	assert_eq(str((absences[0] as Dictionary)["label"]), "2 MATCHES", "the ban reads wrong")
@@ -116,16 +116,16 @@ func test_the_quotes_and_blurb_are_seeded_from_the_fixture() -> void:
 		"the same fixture read two different blurbs")
 
 func test_a_derby_reads_as_one() -> void:
-	assert_true(PreMatchCopy.derby("MUN", "MCI"), "a derby is not recognised")
-	assert_true(PreMatchCopy.derby("MCI", "MUN"), "the derby depends on the order")
-	assert_false(PreMatchCopy.derby("MUN", "LIV"), "a non-derby was called a derby")
+	assert_true(PreMatchCopy.derby("ENG-MUN1", "ENG-MCI1"), "a derby is not recognised")
+	assert_true(PreMatchCopy.derby("ENG-MCI1", "ENG-MUN1"), "the derby depends on the order")
+	assert_false(PreMatchCopy.derby("ENG-MUN1", "ENG-LIV1"), "a non-derby was called a derby")
 	var ctx := {"derby": true, "matchday": 4, "home_position": 2, "away_position": 3}
-	var news := PreMatchCopy.news(11, TeamData.get_team("MUN"), TeamData.get_team("MCI"), ctx)
+	var news := PreMatchCopy.news(11, TeamData.get_team("ENG-MUN1"), TeamData.get_team("ENG-MCI1"), ctx)
 	assert_eq(str(news["title"]), "DERBY DAY", "a derby blurb does not say derby")
 
 func test_every_quote_pack_can_be_reached() -> void:
-	var home := TeamData.get_team("MUN")
-	var away := TeamData.get_team("MCI")
+	var home := TeamData.get_team("ENG-MUN1")
+	var away := TeamData.get_team("ENG-MCI1")
 	var derby := PreMatchCopy.quote(3, home, away, {"derby": true, "form": "WWWWW", "position": 1})
 	assert_true(str(derby["line"]) != "", "a derby quote is empty")
 	var good := PreMatchCopy.quote(3, home, away, {"form": "WWWDW", "position": 2})
@@ -151,8 +151,8 @@ func _in_pack(pack: Array, line: String, placeholder: String, value: String) -> 
 	return false
 
 func test_every_blurb_pack_can_be_reached() -> void:
-	var home := TeamData.get_team("MUN")
-	var away := TeamData.get_team("MCI")
+	var home := TeamData.get_team("ENG-MUN1")
+	var away := TeamData.get_team("ENG-MCI1")
 	var top := PreMatchCopy.news(1, home, away, {"home_position": 2, "away_position": 3, "matchday": 9})
 	assert_eq(str(top["title"]), "TITLE RACE", "a top-four meeting is not a title-race blurb")
 	var bottom := PreMatchCopy.news(1, home, away, {"home_position": 17, "away_position": 19})
@@ -164,7 +164,7 @@ func test_every_blurb_pack_can_be_reached() -> void:
 
 func test_the_doors_lay_out_inside_the_window() -> void:
 	var screen := PreMatchScreen.new()
-	screen.setup(PreMatchModel.build("MUN", "MCI", {}, null))
+	screen.setup(PreMatchModel.build("ENG-MUN1", "ENG-MCI1", {}, null))
 	for vp in [Vector2(1280.0, 720.0), Vector2(390.0, 780.0), Vector2(1024.0, 600.0)]:
 		var rects := screen.layout(vp)
 		var buttons: Array = rects["buttons"]
@@ -189,7 +189,7 @@ func test_the_doors_lay_out_inside_the_window() -> void:
 
 func test_a_press_reaches_its_door() -> void:
 	var screen := PreMatchScreen.new()
-	screen.setup(PreMatchModel.build("MUN", "MCI", {}, null))
+	screen.setup(PreMatchModel.build("ENG-MUN1", "ENG-MCI1", {}, null))
 	screen.size = Vector2(1280.0, 720.0)
 	var rects := screen.layout(Vector2(1280.0, 720.0))
 	screen.buttons = rects["buttons"]
@@ -362,11 +362,11 @@ func test_the_picker_hands_a_decided_match_to_the_engine() -> void:
 	game.selector = StubSelector.new()
 	game.selector.winner_mode = "extra"
 	game.engine = StubEngine.new()
-	FixtureSheet.new(game).start("MUN", "MCI")
+	FixtureSheet.new(game).start("ENG-MUN1", "ENG-MCI1")
 	assert_true(game.engine.requires_winner, "the picker did not ask the engine for a winner")
 	game.selector.winner_mode = "draw"
 	game.engine = StubEngine.new()
-	FixtureSheet.new(game).start("MUN", "MCI")
+	FixtureSheet.new(game).start("ENG-MUN1", "ENG-MCI1")
 	assert_false(game.engine.requires_winner, "a friendly was forced to a winner")
 	game.free()
 
@@ -378,7 +378,7 @@ func test_the_picker_confirms_into_the_briefing_and_back_reopens_it() -> void:
 	game.prematch = StubPreMatch.new()
 	game.selector = StubSelector.new()
 	var sheet := FixtureSheet.new(game)
-	sheet.confirm("MUN", "MCI")
+	sheet.confirm("ENG-MUN1", "ENG-MCI1")
 	assert_false(game.prematch.asked.is_empty(), "KICK OFF skipped the briefing")
 	assert_false(game.match_started, "the match started before the briefing")
 	assert_eq(str(game.prematch.asked["kick"]), "KICK OFF", "a single match does not say KICK OFF")
@@ -387,13 +387,13 @@ func test_the_picker_confirms_into_the_briefing_and_back_reopens_it() -> void:
 	assert_true(game.match_started, "the briefing's KICK OFF did not start the match")
 
 	game.match_started = false
-	sheet.confirm("MUN", "MCI")
+	sheet.confirm("ENG-MUN1", "ENG-MCI1")
 	game.prematch.back.call()
 	assert_false(game.match_started, "BACK from the briefing started the match")
 
 	sheet.reopen()
 	assert_true(game.select_open, "the picker did not come back")
-	sheet.start("MUN", "MCI")
+	sheet.start("ENG-MUN1", "ENG-MCI1")
 	assert_true(game.match_started, "the picker's start did not start the match")
 	assert_false(game.select_open, "the picker stayed open over a match")
 	game.free()
@@ -428,7 +428,7 @@ func test_the_host_shows_and_hides_its_layer() -> void:
 	host.attach(game)
 	host.build()
 	assert_false(host.is_open(), "the briefing opened on its own")
-	host.ask(PreMatchModel.build("MUN", "MCI", {}, null), Callable(), Callable())
+	host.ask(PreMatchModel.build("ENG-MUN1", "ENG-MCI1", {}, null), Callable(), Callable())
 	assert_true(host.is_open(), "the briefing did not open")
 	assert_true(game.paused, "the scene was not paused under the briefing")
 	host.close()
@@ -442,7 +442,7 @@ func test_the_host_runs_one_callback_per_press() -> void:
 	host.attach(game)
 	host.build()
 	var calls := [0, 0]
-	host.ask(PreMatchModel.build("MUN", "MCI", {}, null),
+	host.ask(PreMatchModel.build("ENG-MUN1", "ENG-MCI1", {}, null),
 		func(): calls[0] += 1, func(): calls[1] += 1)
 	host.sync(Transform2D.IDENTITY, 1.5, true)
 	assert_eq(host.screen.ui_scale, 1.5, "the host did not hand its scale to the briefing")
@@ -450,7 +450,7 @@ func test_the_host_runs_one_callback_per_press() -> void:
 	host.screen.click("kick")
 	assert_eq(calls[0], 1, "KICK OFF did not run its callback once")
 	assert_false(host.is_open(), "the briefing stayed up after a kick")
-	host.ask(PreMatchModel.build("MUN", "MCI", {}, null),
+	host.ask(PreMatchModel.build("ENG-MUN1", "ENG-MCI1", {}, null),
 		func(): calls[0] += 1, func(): calls[1] += 1)
 	host.screen.click("back")
 	assert_eq(calls[1], 1, "BACK did not run its callback once")
@@ -482,7 +482,7 @@ func test_the_host_answers_mouse_and_keys_while_open() -> void:
 	host.attach(game)
 	host.build()
 	var calls := [0, 0]
-	host.ask(PreMatchModel.build("MUN", "MCI", {}, null),
+	host.ask(PreMatchModel.build("ENG-MUN1", "ENG-MCI1", {}, null),
 		func(): calls[0] += 1, func(): calls[1] += 1)
 	assert_true(host.handle_input(_event_motion(Vector2(10.0, 10.0)), Vector2(10.0, 10.0)),
 		"the briefing did not take a hover")
@@ -490,7 +490,7 @@ func test_the_host_answers_mouse_and_keys_while_open() -> void:
 	assert_true(host.screen.held, "S did not hold the briefing")
 	assert_true(host.handle_input(_event_key(KEY_ESCAPE), Vector2.ZERO), "the briefing did not take ESC")
 	assert_eq(calls[1], 1, "ESC did not leave the briefing")
-	host.ask(PreMatchModel.build("MUN", "MCI", {}, null),
+	host.ask(PreMatchModel.build("ENG-MUN1", "ENG-MCI1", {}, null),
 		func(): calls[0] += 1, func(): calls[1] += 1)
 	var kick: Rect2 = (host.screen.layout(host.screen.design_vp())["buttons"][2] as Dictionary)["rect"]
 	host.handle_input(_event_click(kick.get_center(), true), kick.get_center())
@@ -560,7 +560,7 @@ func test_a_league_match_names_its_competition_everywhere() -> void:
 
 func test_a_single_match_names_one_competition_on_every_surface() -> void:
 
-	var view := PreMatchModel.build("MUN", "LIV", {}, null)
+	var view := PreMatchModel.build("ENG-MUN1", "ENG-LIV1", {}, null)
 	assert_eq(str(view["caption"]), MatchBilling.FRIENDLY_CAPTION, "the caption changed shape")
 	assert_eq(str(view["competition"]), MatchBilling.FRIENDLY, "the briefing claims a league")
 	assert_eq(int(view["matchday"]), 0, "a friendly was given a matchday")
@@ -573,7 +573,7 @@ func test_a_single_match_names_one_competition_on_every_surface() -> void:
 
 
 func test_a_friendly_derby_promises_no_points() -> void:
-	var news := PreMatchCopy.news(5, TeamData.get_team("MUN"), TeamData.get_team("MCI"),
+	var news := PreMatchCopy.news(5, TeamData.get_team("ENG-MUN1"), TeamData.get_team("ENG-MCI1"),
 		{"derby": true, "friendly": true})
 	assert_eq(str(news["title"]), PreMatchCopy.NEWS_TITLE_DERBY, "a derby lost its title in a friendly")
 	assert_false(str(news["line"]).contains("three points"), "a friendly promised league points")
@@ -581,9 +581,9 @@ func test_a_friendly_derby_promises_no_points() -> void:
 
 
 func test_a_friendly_briefing_speaks_as_a_friendly() -> void:
-	var home := TeamData.get_team("MUN")
-	var away := TeamData.get_team("MCI")
-	var view := PreMatchModel.build("MUN", "MCI", {}, null)
+	var home := TeamData.get_team("ENG-MUN1")
+	var away := TeamData.get_team("ENG-MCI1")
+	var view := PreMatchModel.build("ENG-MUN1", "ENG-MCI1", {}, null)
 	var quote := str((view["home_quote"] as Dictionary).get("line", ""))
 	assert_true(quote != "", "a friendly's manager said nothing")
 	assert_false(quote.contains("no friendly"), "a friendly's manager denied it is a friendly")
@@ -598,13 +598,13 @@ func test_a_friendly_briefing_speaks_as_a_friendly() -> void:
 func test_the_scene_binding_is_the_one_answer_every_surface_reads() -> void:
 	var game := StubScene.new()
 	assert_eq(game.billing.chrome_name(), MatchBilling.FRIENDLY, "the scene started billed as a league")
-	MatchBilling.bind_scene(game, "MUN", {"matchday": 5})
+	MatchBilling.bind_scene(game, "ENG-MUN1", {"matchday": 5})
 	assert_eq(game.billing.chrome_name(), "PREMIER LEAGUE", "the league was not bound")
 	assert_eq(game.billing.caption(), "PREMIER LEAGUE · MATCHDAY 5", "the caption lost its round")
 
-	var bare := MatchBilling.bind_scene(null, "MUN", {})
+	var bare := MatchBilling.bind_scene(null, "ENG-MUN1", {})
 	assert_true(bare.friendly, "a bare scene is not a friendly")
-	assert_eq(MatchBilling.bind_scene(null, "MUN", {"matchday": 2}).matchday, 2,
+	assert_eq(MatchBilling.bind_scene(null, "ENG-MUN1", {"matchday": 2}).matchday, 2,
 		"a bare scene dropped its round")
 
 
@@ -630,10 +630,10 @@ func test_the_picker_rebinds_the_scene_to_a_friendly() -> void:
 	var game := StubScene.new()
 	game.prematch = StubPreMatch.new()
 	game.selector = StubSelector.new()
-	MatchBilling.bind_scene(game, "MUN", {"matchday": 7})
+	MatchBilling.bind_scene(game, "ENG-MUN1", {"matchday": 7})
 	assert_false(game.billing.friendly, "the scene did not start on a league")
 	var sheet := FixtureSheet.new(game)
-	sheet.confirm("MUN", "MCI")
+	sheet.confirm("ENG-MUN1", "ENG-MCI1")
 	assert_true(game.billing.friendly, "the picker kept the season's competition")
 	assert_eq(str(game.prematch.asked["caption"]), MatchBilling.FRIENDLY_CAPTION,
 		"the picker's briefing still names a league")
@@ -650,6 +650,18 @@ func test_the_picker_footer_names_the_file_s_competition() -> void:
 		"the picker footer is hard-coded to one league")
 
 
+func test_the_league_watch_answer_is_the_binding_and_nothing_else() -> void:
+	assert_false(MatchBilling.league_watch(null), "a bare scene reads as a league watch")
+	var game := StubScene.new()
+	assert_false(MatchBilling.league_watch(game), "a fresh scene reads as a league watch")
+	MatchBilling.bind_scene(game, "ENG-MUN1", {"matchday": 5})
+	assert_true(MatchBilling.league_watch(game), "a fixture-bound scene does not read as a league watch")
+	game.billing.bind_friendly("ENG-MUN1", "ENG-MCI1")
+	assert_false(MatchBilling.league_watch(game), "a friendly still reads as a league watch")
+	assert_false(MatchBilling.league_watch({"paused": false}), "a host with no binding reads as a league watch")
+	game.free()
+
+
 class StubScene extends Node:
 	var billing := MatchBilling.new()
 	var prematch = null
@@ -657,8 +669,8 @@ class StubScene extends Node:
 	var paused := false
 	var select_open := false
 	var select_from_menu := false
-	var home_id := "MUN"
-	var away_id := "MCI"
+	var home_id := "ENG-MUN1"
+	var away_id := "ENG-MCI1"
 	var seeded := 1000
 	var match_started := false
 	var hud_layer = null

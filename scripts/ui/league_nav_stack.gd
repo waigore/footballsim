@@ -41,6 +41,9 @@ static func snapshot(screen) -> Dictionary:
 		"report_back": str(screen.report_back),
 		"query": str(screen.interest_query),
 		"sys": (screen.sys as Dictionary).duplicate(true),
+		"cup": str(screen.cup_focus),
+		"cup_round": str(screen.cups_round),
+		"draw": (screen.draw_state as Dictionary).duplicate(true),
 		"scroll": float(body.scroll) if body != null else 0.0,
 		"hscroll": float(body.hscroll) if body != null else 0.0,
 	}
@@ -59,6 +62,9 @@ static func restore(screen, entry: Dictionary) -> void:
 	screen.report_back = str(entry.get("report_back", screen.MODE_HUB))
 	screen.interest_query = str(entry.get("query", ""))
 	screen.sys = (entry.get("sys", {}) as Dictionary).duplicate(true)
+	screen.cup_focus = str(entry.get("cup", screen.cup_focus))
+	screen.cups_round = str(entry.get("cup_round", screen.cups_round))
+	screen.draw_state = (entry.get("draw", screen.draw_state) as Dictionary).duplicate(true)
 	screen.refresh()
 	if screen.body != null:
 		screen.body.scroll_to(float(entry.get("scroll", 0.0)))

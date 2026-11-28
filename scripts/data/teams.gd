@@ -5,8 +5,8 @@ extends RefCounted
 const REFEREE := "M. OLIVER"
 
 const FIXTURE := {
-	"home": "MUN",
-	"away": "MCI",
+	"home": "ENG-MUN1",
+	"away": "ENG-MCI1",
 	"stadium": "OLD TRAFFORD",
 	"city": "MANCHESTER",
 	"competition": "PREMIER LEAGUE",
@@ -105,7 +105,7 @@ static func get_team(id: String) -> Dictionary:
 	return PLRepository.shared().team(id)
 
 static func other(id: String) -> String:
-	return "MCI" if id == "MUN" else "MUN"
+	return "ENG-MCI1" if id == "ENG-MUN1" else "ENG-MUN1"
 
 static func slots(formation: String) -> Dictionary:
 	return FORMATIONS.get(formation, FORMATIONS["4-2-3-1"])

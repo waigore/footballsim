@@ -22,7 +22,7 @@ func _init() -> void:
 				for mx in [0.86, 0.90, 0.94]:
 					var kinds: Array = []
 					for level in [0.0, 1.0]:
-						var eng := MatchEngine.new(770 + cells, "MUN", "MCI")
+						var eng := MatchEngine.new(770 + cells, "ENG-MUN1", "ENG-MCI1")
 						eng.phase = "play"
 						eng.possession_team = 0
 						# Park the other side on its own byline, keeper in goal.

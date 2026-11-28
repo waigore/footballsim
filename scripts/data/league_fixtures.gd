@@ -26,19 +26,21 @@ func install(fixtures: Array, competition_id: String, set_clock: bool = true) ->
 	var values: Array = []
 	var bindings: Array = []
 	for fx in fixtures:
-		values.append("(?, ?, ?, ?, ?, ?, ?, 'pending')")
+		values.append("(?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, '', 0)")
 		bindings.append_array([
 			str(fx["id"]), competition_id, int(fx["matchday"]), str(fx["kickoff"]),
 			str(fx.get("kickoff_time", "")), str(fx["home"]), str(fx["away"]),
 		])
 	PLDatabase.execute(
 		"INSERT INTO league_fixture (id, competition_id, matchday, kickoff, kickoff_time, "
-		+ "home_club_id, away_club_id, status) VALUES " + ", ".join(values) + ";",
+		+ "home_club_id, away_club_id, status, watched, suggested, stage, leg) VALUES "
+		+ ", ".join(values) + ";",
 		bindings,
 	)
-	PLDatabase.execute(
-		"INSERT INTO league_table (club_id, competition_id) SELECT id, competition_id "
-		+ "FROM club WHERE competition_id = ?;", [competition_id])
+	if not LeagueCup.is_cup(competition_id):
+		PLDatabase.execute(
+			"INSERT INTO league_table (club_id, competition_id) SELECT id, competition_id "
+			+ "FROM club WHERE competition_id = ?;", [competition_id])
 	if set_clock:
 		save.set_date(str(fixtures[0]["kickoff"]))
 		save.set_matchday(int(fixtures[0]["matchday"]))
@@ -102,6 +104,10 @@ func _in_save_order(rows: Array) -> Array:
 		var cb := int(order.get(str(b.get("competition_id", "")), 99))
 		if ca != cb:
 			return ca < cb
+		var da := str(a.get("kickoff", ""))
+		var db := str(b.get("kickoff", ""))
+		if da != db:
+			return da < db
 		var ta := str(a.get("kickoff_time", ""))
 		var tb := str(b.get("kickoff_time", ""))
 		if ta != tb:

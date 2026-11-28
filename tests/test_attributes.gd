@@ -81,32 +81,32 @@ func test_stamina_drain_follows_effort_and_physicality() -> void:
 func test_keeper_ratings_map_to_reach_reaction_and_hands() -> void:
 	var poor := _keeper(30, 30, 40, 30, 60)
 	var elite := _keeper(95, 95, 90, 95, 70)
-	assert_lt(Attrs.gk_reach(poor), Attrs.gk_reach(elite), "reflexes do not raise reach")
-	assert_lt(Attrs.gk_dive_reach(poor), Attrs.gk_dive_reach(elite), "diving does not raise dive reach")
-	assert_gt(Attrs.gk_reaction(poor), Attrs.gk_reaction(elite), "a better keeper does not react sooner")
-	assert_lt(Attrs.gk_handling(poor), Attrs.gk_handling(elite), "handling does not raise catch chance")
-	assert_gte(Attrs.gk_reaction(elite), 0.10, "reaction time must stay positive")
+	assert_lt(AttrKeeper.reach(poor), AttrKeeper.reach(elite), "reflexes do not raise reach")
+	assert_lt(AttrKeeper.dive_reach(poor), AttrKeeper.dive_reach(elite), "diving does not raise dive reach")
+	assert_gt(AttrKeeper.reaction(poor), AttrKeeper.reaction(elite), "a better keeper does not react sooner")
+	assert_lt(AttrKeeper.handling(poor), AttrKeeper.handling(elite), "handling does not raise catch chance")
+	assert_gte(AttrKeeper.reaction(elite), 0.10, "reaction time must stay positive")
 
 func test_role_helpers_classify_every_line() -> void:
 	for role in ["RB", "LB", "CB", "RCB", "LCB", "RWB", "LWB"]:
-		assert_true(Attrs.is_defender(role), role + " is not read as a defender")
+		assert_true(AttrRoles.is_defender(role), role + " is not read as a defender")
 	for role in ["CDM", "RDM", "LDM", "CM", "RM", "LM", "CAM"]:
-		assert_true(Attrs.is_mid(role), role + " is not read as a midfielder")
+		assert_true(AttrRoles.is_mid(role), role + " is not read as a midfielder")
 	for role in ["RW", "LW", "ST", "CF"]:
-		assert_true(Attrs.is_forward(role), role + " is not read as a forward")
+		assert_true(AttrRoles.is_forward(role), role + " is not read as a forward")
 	for role in ["RB", "LB", "RWB", "LWB", "RW", "LW", "RM", "LM"]:
-		assert_true(Attrs.is_wide(role), role + " is not read as a wide player")
-	assert_true(Attrs.is_gk("GK"), "GK is not read as a keeper")
-	assert_false(Attrs.is_gk("CB"), "a centre-back is read as a keeper")
-	assert_false(Attrs.is_forward("CB"), "a centre-back is read as a forward")
+		assert_true(AttrRoles.is_wide(role), role + " is not read as a wide player")
+	assert_true(AttrRoles.is_gk("GK"), "GK is not read as a keeper")
+	assert_false(AttrRoles.is_gk("CB"), "a centre-back is read as a keeper")
+	assert_false(AttrRoles.is_forward("CB"), "a centre-back is read as a forward")
 
 func test_role_push_orders_the_attacking_weight() -> void:
-	assert_gt(Attrs.role_push("ST"), Attrs.role_push("CAM"), "a striker does not push higher than a 10")
-	assert_gt(Attrs.role_push("CAM"), Attrs.role_push("CM"), "a 10 does not push higher than a centre-mid")
-	assert_gt(Attrs.role_push("CM"), Attrs.role_push("CB"), "a centre-mid does not push higher than a centre-back")
-	assert_almost_eq(Attrs.role_push("ST"), 1.0, 0.001)
-	assert_almost_eq(Attrs.role_push("CB"), 0.05, 0.001)
-	assert_almost_eq(Attrs.role_push("UNKNOWN"), 0.3, 0.001)
+	assert_gt(AttrRoles.role_push("ST"), AttrRoles.role_push("CAM"), "a striker does not push higher than a 10")
+	assert_gt(AttrRoles.role_push("CAM"), AttrRoles.role_push("CM"), "a 10 does not push higher than a centre-mid")
+	assert_gt(AttrRoles.role_push("CM"), AttrRoles.role_push("CB"), "a centre-mid does not push higher than a centre-back")
+	assert_almost_eq(AttrRoles.role_push("ST"), 1.0, 0.001)
+	assert_almost_eq(AttrRoles.role_push("CB"), 0.05, 0.001)
+	assert_almost_eq(AttrRoles.role_push("UNKNOWN"), 0.3, 0.001)
 
 
 const TRIES := 40

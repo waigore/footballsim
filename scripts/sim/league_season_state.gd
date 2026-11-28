@@ -35,7 +35,12 @@ static func build(season: LeagueSeason) -> Dictionary:
 
 
 	var ready := 0
+	var league_played := 0
+	var league_total := 0
 	for cid in save.actives:
+		var played := season.record.fixtures.played(str(cid))
+		league_played += played
+		league_total += played + season.record.fixtures.unplayed(str(cid))
 		if season.record.fixtures.completed_matchdays(str(cid)) >= LeaguePlanner.SUGGEST_AFTER_ROUNDS:
 			ready += 1
 	return {
@@ -52,8 +57,8 @@ static func build(season: LeagueSeason) -> Dictionary:
 		"competitions": comps,
 		"gameweeks": gameweeks,
 		"primary": primary,
-		"played": season.record.fixtures.played(),
-		"total": season.record.fixtures.played() + season.record.fixtures.unplayed(),
+		"played": league_played,
+		"total": league_total,
 		"rounds": season.record.fixtures.completed_matchdays(primary),
 		"can_suggest": ready > 0,
 		"interests": season.record.interest.interests(),

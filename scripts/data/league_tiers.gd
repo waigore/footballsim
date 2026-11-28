@@ -6,6 +6,7 @@ const TIERS := {
 	"England": ["PL", "CH", "L1", "L2", "NL"],
 	"Spain": ["LL"],
 	"Germany": ["BL", "BL2"],
+	"Italy": ["SA", "SB"],
 }
 
 

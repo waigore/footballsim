@@ -15,6 +15,10 @@ const SPARK_H := 96.0
 const SPARK_COMPACT_H := 78.0
 const CHIP_H := 34.0
 const HEADER_ROW := 22.0
+const GRID_HEAD := 20.0
+const GRID_ROW := 26.0
+const GRID_COMPACT_ROW := 22.0
+const DOOR_H := 34.0
 
 var f_bold: FontFile
 var f_med: FontFile
@@ -78,6 +82,34 @@ static func layout(blocks: Array, width: float, compact: bool = false,
 				rows.append({"k": "bar", "rect": Rect2(x, y, width, BAR_H), "label": str(item[0]), "value": float(item[1])})
 				y += BAR_H
 			y += 4.0
+		elif kind == "grid":
+			var grid_cols := 2 if compact else int(block.get("cols", 3))
+			var grid_row_h: float = GRID_COMPACT_ROW if compact else GRID_ROW
+			var groups: Array = block.get("groups", [])
+			var lines := int(ceil(float(groups.size()) / float(maxi(grid_cols, 1))))
+			for line in range(lines):
+				var chunk: Array = groups.slice(line * grid_cols, mini((line + 1) * grid_cols, groups.size()))
+				var deepest := 0
+				for group in chunk:
+					deepest = maxi(deepest, (group as Dictionary).get("cells", []).size())
+				var h: float = GRID_HEAD + float(deepest) * grid_row_h + 6.0
+				rows.append({
+					"k": "gridrow", "rect": Rect2(x, y, width, h), "groups": chunk,
+					"cols": grid_cols, "rows": deepest, "row_h": grid_row_h,
+				})
+				y += h
+			y += 4.0
+		elif kind == "door":
+			var items: Array = block.get("items", [])
+			var door_w: float = width / float(maxi(items.size(), 1))
+			for i in range(items.size()):
+				var door: Dictionary = items[i]
+				rows.append({
+					"k": "door", "rect": Rect2(x + door_w * float(i), y, door_w - 8.0, DOOR_H),
+					"text": str(door.get("text", "")), "id": str(door.get("id", "")),
+					"accent": str(door.get("accent", "")),
+				})
+			y += DOOR_H
 		elif kind == "spark":
 			var h: float = SPARK_COMPACT_H if compact else SPARK_H
 			rows.append({
@@ -183,6 +215,19 @@ func hit(p: Vector2) -> Dictionary:
 		if rect.has_point(local) and not (row.get("target", {}) as Dictionary).is_empty():
 			return row["target"]
 	return {}
+
+
+func button_id(p: Vector2) -> String:
+	"""The door a press lands on, for the rows that carry one by id."""
+	var local := _content_point(p)
+	if local.x < 0.0:
+		return ""
+	for row in _rows:
+		if str(row.get("k", "")) != "door":
+			continue
+		if (row["rect"] as Rect2).has_point(local):
+			return str(row.get("id", ""))
+	return ""
 
 
 func club_at(p: Vector2) -> String:
