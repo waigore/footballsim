@@ -33,9 +33,12 @@ static func caption(view: Dictionary) -> String:
 		parts.append("NEXT  %s" % FixtureCalendar.day_label(str(view["next_date"])))
 	if str(view.get("winner", "")) != "":
 		parts = ["WINNER  %s" % str(view["winner"])]
-	elif str(view.get("entry", "")) != "":
-		parts.append(str(view["entry"]))
 	return "  ·  ".join(PackedStringArray(parts))
+
+
+static func entry_note(view: Dictionary) -> String:
+	var entry := str(view.get("entry", ""))
+	return "" if entry == "" else "FIELD  %s" % entry
 
 
 static func round_caption(row: Dictionary) -> String:
@@ -66,6 +69,10 @@ func cup_layout(vp: Vector2, view: Dictionary) -> Array:
 			"rect": Rect2(24.0, y, w, 24.0)})
 		items.append(LeagueExtra.back_item(touch))
 		return items
+	if entry_note(view) != "":
+		items.append({"id": "", "kind": "note", "label": entry_note(view),
+			"rect": Rect2(24.0, y, w, 24.0)})
+		y += 28.0
 	var rounds: Array = view.get("rounds", [])
 	if rounds.is_empty():
 		items.append({"id": "", "kind": "note", "label": "No round has been drawn yet.",

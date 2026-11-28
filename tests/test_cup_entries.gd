@@ -187,6 +187,27 @@ func test_a_stub_keeps_its_id_in_the_new_pool() -> void:
 	season.close()
 
 
+func test_the_cup_page_carries_the_field_line() -> void:
+	var season := _finished("Field Line")
+	var cup_winner := _placed(5)
+	_crown("FAC", cup_winner, _placed(6))
+	SeasonRollover.apply(season)
+	var view := LeagueCupView.cup(season, "CS", "F")
+	assert_true(str(view.get("entry", "")).find("FA CUP WINNER") >= 0,
+		"the shield page carries no field line")
+	assert_true(LeagueCupSheet.entry_note(view).begins_with("FIELD"),
+		"the shield page does not label the field line")
+	var items: Array = LeagueCupSheet.new().cup_layout(Vector2(1600, 900), view)
+	var found := false
+	for item in items:
+		if str((item as Dictionary).get("label", "")).begins_with("FIELD"):
+			found = true
+	assert_true(found, "the cup layout does not draw the field line")
+	var card := LeagueCupView.card(season, "CS")
+	assert_true(str(card.get("entry", "")) != "", "the cup card carries no field line")
+	season.close()
+
+
 func test_cups_that_are_off_write_nothing() -> void:
 	var season := _finished("Cups Off", false)
 	var before := _members("FAC", "R1")
