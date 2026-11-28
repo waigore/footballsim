@@ -28,8 +28,8 @@ var last_advance: Dictionary = {}
 
 
 static func create(name: String, calendar_mode: String, advance_mode: String, seed: int = 0,
-		competitions: Array = ["PL"]) -> LeagueSeason:
-	return LeagueSeasonBoot.create(name, calendar_mode, advance_mode, seed, competitions)
+		competitions: Array = ["PL"], cups: bool = false) -> LeagueSeason:
+	return LeagueSeasonBoot.create(name, calendar_mode, advance_mode, seed, competitions, cups)
 
 
 static func open(slug: String) -> LeagueSeason:

@@ -245,6 +245,82 @@ func test_season_reads_cover_filter_branches() -> void:
 	assert_true(PLRepository.shared().sim_leaders(3, "PL", "goals", ["ENG-MUN1"]) is Array,
 		"team-filtered goal leaders failed")
 
+func test_the_seed_ships_the_domestic_cups() -> void:
+	var cups := PLRepository.shared().cups()
+	assert_eq(cups.size(), 7, "the seed should ship seven cups and supercups")
+	var ids: Array = []
+	for row in cups:
+		ids.append(str(row["id"]))
+	for cid in ["FAC", "EFLC", "CS", "CDR", "SCE", "DFBP", "DFLS"]:
+		assert_true(ids.has(cid), "the seed has no %s" % cid)
+	assert_eq(PLRepository.shared().leagues().size(), 8, "a cup leaked into the league list")
+	assert_eq(TeamData.team_ids().size(), 172, "the friendly picker should still read the leagues")
+	assert_eq(PLRepository.shared().competition_kind("FAC"), "cup", "the FA Cup is not a cup")
+	assert_eq(PLRepository.shared().competition_kind("CS"), "supercup", "the Shield is not a supercup")
+
+
+func test_cup_entry_pools_match_the_regulations() -> void:
+	var expected := {
+		"FAC": {"R1": 80, "R3": 44},
+		"EFLC": {"PR": 4, "R1": 68, "R2": 11, "R3": 9},
+		"CS": {"F": 2},
+		"CDR": {"PR": 20, "R1": 102, "R32": 4},
+		"SCE": {"SF": 4},
+		"DFBP": {"R1": 64},
+		"DFLS": {"F": 2},
+	}
+	for cid in expected:
+		var total := 0
+		for role in expected[cid]:
+			var row := PLDatabase.row(
+				"SELECT COUNT(*) AS n FROM competition_member WHERE competition_id = ? AND role = ?;",
+				[cid, role])
+			assert_eq(int(row["n"]), int(expected[cid][role]), "%s %s entry pool drifted" % [cid, role])
+			total += int(row["n"])
+		assert_gte(total, 2, "%s has no entrants" % cid)
+	var stubs := PLDatabase.row("SELECT COUNT(*) AS n FROM club WHERE stub = 1;")
+	assert_eq(int(stubs["n"]), 142, "the cup entry pools need 142 stubs")
+	var spanish := PLDatabase.row(
+		"SELECT COUNT(*) AS n FROM club WHERE stub = 1 AND competition_id = 'CDR';")
+	assert_eq(int(spanish["n"]), 106, "the Copa del Rey entry pool is short")
+
+
+func test_supercup_priors_are_the_2025_26_results() -> void:
+	assert_eq(_member_names("CS"), ["Arsenal", "Manchester City"], "the Shield pairing drifted")
+	assert_eq(_member_names("DFLS"), ["Bayern Munich", "Borussia Dortmund"], "the DFL-Supercup drifted")
+	assert_eq(_member_names("SCE"),
+		["Atlético Madrid", "Barcelona", "Real Madrid", "Real Sociedad"], "the Supercopa field drifted")
+	var row := PLDatabase.row("SELECT rules FROM competition WHERE id = 'SCE';")
+	var rules: Variant = JSON.parse_string(str(row.get("rules", "{}")))
+	assert_true(rules is Dictionary, "the Supercopa rules are not JSON")
+	var pairs: Array = (rules as Dictionary).get("semi_finals", [])
+	assert_eq(pairs.size(), 2, "the Supercopa semi-finals are not pinned")
+	for pair in pairs:
+		assert_eq((pair as Array).size(), 2, "a Supercopa semi-final is not a pair")
+		for club_id in pair:
+			assert_true(str(club_id).begins_with("ESP-"), "a Supercopa tie names a non-Spanish club")
+
+
+func test_cup_winners_name_a_european_slot() -> void:
+	var slots := {"FAC": "UEL", "EFLC": "UECL", "CDR": "UEL", "DFBP": "UEL"}
+	for cid in slots:
+		var rules: Dictionary = PLRepository.shared().competition(cid)["rules"]
+		var europe: Dictionary = rules.get("europe", {})
+		assert_eq(str(europe.get("competition", "")), str(slots[cid]), "%s has no Europe slot" % cid)
+	for cid in ["CS", "SCE", "DFLS"]:
+		var rules: Dictionary = PLRepository.shared().competition(cid)["rules"]
+		assert_true((rules.get("europe", {}) as Dictionary).is_empty(), "%s should not earn Europe" % cid)
+
+
+func _member_names(cup_id: String) -> Array:
+	var out: Array = []
+	for row in PLDatabase.rows(
+		"SELECT c.name FROM competition_member m JOIN club c ON c.id = m.member_id "
+		+ "WHERE m.competition_id = ? ORDER BY c.name;", [cup_id]):
+		out.append(str(row["name"]))
+	return out
+
+
 func _clean_cache() -> void:
 	PLDatabase.reset()
 	DirAccess.make_dir_recursive_absolute(CACHE_DIR)
