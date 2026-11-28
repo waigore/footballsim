@@ -23,6 +23,9 @@ invariant.
 | `windows` | the association calendar | open and closed by date alone |
 | `ledger` | revenue, wages, amortisation, prize | ledger kinds, currency display |
 | `deal` | one permanent move end to end | the validators, the commit, clearance |
+| `loan` | a loan split, trigger and return | registration, splits, caps, obligations |
+| `clauses` | clause, sell-on, agent, solidarity | the money beyond the fee |
+| `clearance` | a cross-association move | pending, failure, the window close |
 
 Each verb owns a file under `tools/market_sim/`; `tools/market_sim.gd` only
 parses flags, loads the verb and prints its dictionary.

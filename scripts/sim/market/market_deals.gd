@@ -79,6 +79,7 @@ static func agree(deal_id: String, date: String, mode: Dictionary = {}) -> Dicti
 		fields["clears_on"] = FixtureCalendar.add_days(date, clearance_days(deal_id))
 		MarketDealRecords.update(deal_id, fields)
 		MarketDealRecords.set_state(deal_id, MarketDealRecords.CLEARANCE_PENDING, date, "")
+		_write_pending_registration(deal)
 		var pending := answer(deal_id)
 		pending["clears_on"] = str(fields["clears_on"])
 		return pending
@@ -122,11 +123,17 @@ static func resolve_clearance(deal_id: String, date: String, mode: Dictionary = 
 			var waiting := answer(deal_id)
 			waiting["ok"] = false
 			return waiting
+		if not _window_open_for(deal, date):
+			MarketDealRecords.set_state(deal_id, MarketDealRecords.FAILED, date,
+				MarketDealRules.WINDOW_CLOSED)
+			_close_pending_registration(deal)
+			return answer(deal_id)
 		passed = MarketSeed.unit(_seed(), deal_id, 5) \
 			>= MarketRules.number("deal", "clearance_fail_share", 0.08)
 	if not passed:
 		MarketDealRecords.set_state(deal_id, MarketDealRecords.FAILED, date,
 			MarketDealRules.CLEARANCE)
+		_close_pending_registration(deal)
 		return answer(deal_id)
 	MarketDealRecords.update(deal_id, {"clears_on": ""})
 	MarketDealRecords.set_state(deal_id, MarketDealRecords.AGREED, date, "cleared")
@@ -210,6 +217,41 @@ static func clearance_days(deal_id: String) -> int:
 
 static func commit(deal: Dictionary, date: String, mode: Dictionary = {}) -> Dictionary:
 	return MarketDealCommit.run(deal, date, mode)
+
+
+static func _write_pending_registration(deal: Dictionary) -> void:
+	var player_id := str(deal.get("player_id", ""))
+	var buyer := str(deal.get("to_club_id", ""))
+	var club := MarketDealRules.club_row(buyer)
+	var competition_id := str(club.get("competition_id", ""))
+	if player_id == "" or competition_id == "":
+		return
+	PLDatabase.execute(
+		"INSERT OR REPLACE INTO player_registration (player_id, competition_id, club_id, kind, "
+		+ "state, reason, deal_id, season_index) VALUES (?, ?, ?, ?, 'pending', 'clearance', ?, ?);",
+		[player_id, competition_id, buyer, str(deal.get("kind", PERMANENT)),
+			str(deal.get("id", "")), int(deal.get("season_index", 0))])
+
+
+static func _close_pending_registration(deal: Dictionary) -> void:
+	var player_id := str(deal.get("player_id", ""))
+	var buyer := str(deal.get("to_club_id", ""))
+	if player_id == "" or buyer == "":
+		return
+	PLDatabase.execute(
+		"DELETE FROM player_registration WHERE club_id = ? AND state = 'pending' "
+		+ "AND player_id = ?;", [buyer, player_id])
+
+
+static func _window_open_for(deal: Dictionary, date: String) -> bool:
+	var buyer := MarketDealRules.club_row(str(deal.get("to_club_id", "")))
+	if buyer.is_empty():
+		return false
+	var kind: String = MarketWindows.FREE_AGENT if MarketDealRules.is_free_agent(deal) \
+		else MarketWindows.FEE
+	var seller := MarketDealRules.club_row(str(deal.get("from_club_id", "")))
+	return bool(MarketWindows.allows(kind, date, MarketWindows.country_of_club(buyer),
+		MarketWindows.country_of_club(seller)).get("ok", false))
 
 
 static func _seed() -> int:

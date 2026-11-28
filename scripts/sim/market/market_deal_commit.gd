@@ -7,6 +7,7 @@ static func run(deal: Dictionary, date: String, mode: Dictionary = {}) -> Dictio
 	var buyer := str(deal.get("to_club_id", ""))
 	PLDatabase.transaction("BEGIN TRANSACTION;")
 	_move_money(deal, date)
+	MarketAttribution.apply(deal, date)
 	if str(mode.get("fault", "")) == "contract":
 		PLDatabase.transaction("ROLLBACK;")
 		MarketDealRecords.event(deal_id, date, MarketDealRecords.AGREED, "injected")

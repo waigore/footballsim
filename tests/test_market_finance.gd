@@ -85,8 +85,8 @@ func test_the_ledger_holds_every_kind_and_a_fee_amortises() -> void:
 		"a fee line did not post")
 	assert_eq(MarketFinance.cash(club_id), before - 5000000, "cash did not follow the fee")
 	for kind in [MarketFinance.KIND_AGENT, MarketFinance.KIND_PRIZE, MarketFinance.KIND_GATE,
-			MarketFinance.KIND_COMMERCIAL, MarketFinance.KIND_WAGE, MarketFinance.KIND_SOLIDARITY,
-			MarketFinance.KIND_TRAINING, MarketFinance.KIND_FFP]:
+			MarketFinance.KIND_COMMERCIAL, MarketFinance.KIND_WAGE, MarketFinance.KIND_SELL_ON,
+			MarketFinance.KIND_SOLIDARITY, MarketFinance.KIND_TRAINING, MarketFinance.KIND_FFP]:
 		MarketFinance.post(club_id, date, kind, 1000, "check")
 	for kind in MarketFinance.KINDS:
 		if kind == MarketFinance.KIND_AMORTISATION:
