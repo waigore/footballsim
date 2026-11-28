@@ -56,6 +56,7 @@ static func page(club_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 			["FORMATION", str(club["formation"]), false],
 		],
 	})
+	finance_blocks(out, club_id)
 	var race := PositionRace.series(club_id)
 	if not race.is_empty():
 		out["blocks"].append({"k": "section",
@@ -179,3 +180,26 @@ static func thousands(n: int) -> String:
 		if c % 3 == 0 and i > 0:
 			out = "," + out
 	return out
+
+
+static func finance_blocks(out: Dictionary, club_id: String) -> void:
+	var finance := MarketFinance.club(club_id)
+	if finance.is_empty():
+		return
+	out["blocks"].append({"k": "section", "text": "FINANCES"})
+	out["blocks"].append({"k": "kv", "items": [
+		["CASH", MarketCurrency.format(int(finance.get("cash", 0))), true],
+		["WAGE BILL", MarketCurrency.format(MarketFinance.annual_wages(club_id)) + " / SEASON", false],
+		["WAGE BUDGET", MarketCurrency.format(int(finance.get("wage_budget", 0))), false],
+		["FFP HEADROOM", MarketCurrency.format(MarketFinance.ffp_headroom(club_id)), false],
+		["REPUTATION", str(int(finance.get("reputation", 0))), false],
+	]})
+	var tail := MarketFinance.ledger_tail(club_id, 5)
+	if tail.is_empty():
+		return
+	var rows: Array = []
+	for line in tail:
+		rows.append({"cells": [str(line.get("date", "")), str(line.get("kind", "")).to_upper(),
+			MarketCurrency.format_units(int(line.get("amount", 0)))]})
+	out["blocks"].append({"k": "table", "cols": ["DATE", "KIND", "AMOUNT"],
+		"widths": [0.34, 0.30, 0.36], "text_cols": [0, 1, 2], "rows": rows})
