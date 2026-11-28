@@ -62,4 +62,4 @@ P1 = look; P4 = latency; P5 = agency.
 
 ## Non-goals
 
-Club-manager career; licensed data beyond the four shipped chains ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01), [DR-20261128-17](https://github.com/waigore/footballsim/wiki/dr-20261128-17)); photoreal/3D primary; desktop-only mobile; UEFA stubs ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15))
+Club-manager career; licensed data beyond the four shipped chains ([DR-20261123-01](https://github.com/waigore/footballsim/wiki/dr-20261123-01), [DR-20261128-18](https://github.com/waigore/footballsim/wiki/dr-20261128-18)); photoreal/3D primary; desktop-only mobile; UEFA stubs ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15))
