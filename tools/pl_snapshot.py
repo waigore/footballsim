@@ -1127,11 +1127,11 @@ STUB_COLORS = [
 
 
 def _stub_club(cup_id: str, country: str, name: str, abbr: str, city: str,
-               tier: int, region: str, band: int) -> dict:
+               tier: int, region: str, band: int, pool: dict | None = None) -> dict:
     digest = hashlib.sha1(name.encode("utf-8")).hexdigest()
     h = int(digest[:8], 16)
     color = STUB_COLORS[h % len(STUB_COLORS)]
-    ground = {"England": "Park", "Germany": "Stadion", "Spain": "Municipal"}[country]
+    ground = {"England": "Park", "Germany": "Stadion", "Spain": "Municipal"}.get(country, "Stadium")
     style = {k: round(0.5 + _jitter(name + k, 12) / 100.0, 2) for k in STYLE_KEYS}
     return {
         "id": f"STUB-{name}",
@@ -1141,14 +1141,15 @@ def _stub_club(cup_id: str, country: str, name: str, abbr: str, city: str,
         "color": color, "color_dark": _shade(color, 0.62), "color_light": _shade(color, 1.35),
         "shorts": "#ffffff", "gk_color": "#1a1a1a", "text": _ink(color),
         "style": style,
-        "players": _stub_squad(country, name, band),
+        "players": _stub_squad(country, name, band, pool),
         "competition_id": cup_id, "country": country,
         "stub": 1, "tier": tier, "region": region,
     }
 
 
-def _stub_squad(country: str, club_name: str, band: int) -> list[dict]:
-    pool = NAME_POOLS[country]
+def _stub_squad(country: str, club_name: str, band: int,
+                pool: dict | None = None) -> list[dict]:
+    pool = pool or NAME_POOLS[country]
     players: list[dict] = []
     used: set[str] = set()
     for i, (role, pos) in enumerate(STUB_ROLES):
@@ -1163,7 +1164,9 @@ def _stub_squad(country: str, club_name: str, band: int) -> list[dict]:
             if step > len(pool["last"]):
                 player_name = f"{first} {pool['last'][last_index]}-{i}"
         used.add(player_name)
-        attrs = _attributes(band + (1.5 if i < 11 else -3.0), role, player_name + club_name)
+        base = band + (1.5 if i < 11 else -3.0)
+        subs = fc_ratings.synthesize(base, role, _wobble(player_name + club_name))
+        attrs = _card_from_subs(subs, role)
         players.append({
             "id": f"{club_name}-{i + 1}-{player_name}",
             "name": player_name, "number": i + 1, "role": role, "pos": pos,
@@ -1171,6 +1174,12 @@ def _stub_squad(country: str, club_name: str, band: int) -> list[dict]:
             "squad": "starter" if i < 11 else "bench",
             "age": 19 + (int(hashlib.sha1(f"{club_name}{player_name}".encode()).hexdigest()[:4], 16) % 16),
             "nationality": country, "date_of_birth": "",
+            "subs": subs,
+            "extras": {
+                "potential": 0, "weak_foot": 0, "skill_moves": 0, "work_rate": "",
+                "play_styles": "", "traits": "", "international_reputation": 1,
+            },
+            "ratings_matched": 0,
             **attrs,
         })
     return players
@@ -1329,19 +1338,15 @@ def cmd_seed_cups(args: argparse.Namespace) -> int:
 def _uefa_stub_club(competition_id: str, iso: str, name: str, abbr: str, city: str,
                     band: int) -> dict:
     """A continental entrant's identity: no licensed squad, a playable band."""
-    club = _stub_club(competition_id, "England", name, abbr, city, 1, "", band)
+    club = _stub_club(competition_id, "England", name, abbr, city, 1, "", band,
+                      pool=STUB_NAMES)
     club["id"] = f"STUB-{name}"
     club["competition_id"] = competition_id
     club["country"] = iso
     club["stadium"] = f"{city} Stadium"
     club["capacity"] = 8000 + (int(hashlib.sha1(name.encode()).hexdigest()[:4], 16) % 24) * 1000
-    pool = STUB_NAMES
-    for i, player in enumerate(club["players"]):
-        first = pool["first"][(i * 3 + len(name)) % len(pool["first"])]
-        last = pool["last"][(i * 7 + len(name) * 3) % len(pool["last"])]
-        player["name"] = f"{first} {last}"
+    for player in club["players"]:
         player["nationality"] = iso
-        player["id"] = f"{name}-{i + 1}-{player['name']}"
     return club
 
 
