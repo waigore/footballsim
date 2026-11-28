@@ -36,7 +36,7 @@ static func layout(rows: Array, rules: Dictionary, interest: Dictionary, box: Re
 		items.append({
 			"id": "club:" + club, "kind": "table_row",
 			"rect": Rect2(box.position.x, y, box.size.x, ROW_H), "row": row,
-			"zone": LeagueRules.zone(int(row["position"]), rules),
+			"zone": LeagueTableChrome.zone_for(row, rules),
 			"places": rail, "interested": interest.has(club),
 		})
 		y += ROW_H

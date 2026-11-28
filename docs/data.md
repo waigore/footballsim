@@ -18,19 +18,20 @@ A `db_version` bump replaces the cache and clears in-sim stats.
 
 ## Competitions
 
-Ten leagues: England's five linked tiers (`PL`, `CH`, `L1`, `L2`, `NL`), La
-Liga (`LL`), Germany's pair (`BL`, `BL2`) and Italy's pair (`SA`, `SB`) — 212
-league clubs, 358 with cup stubs. Ids are country-stable (`ENG-MUN1`, `ITA-INT1`)
-and player ids are UUIDs, minted once and kept. Rules: wiki
+Eleven leagues: England's five linked tiers (`PL`, `CH`, `L1`, `L2`, `NL`), La
+Liga and La Liga 2 (`LL`, `LL2`), Germany's pair (`BL`, `BL2`) and Italy's pair
+(`SA`, `SB`) — 234 league clubs, 380 with cup stubs. Club ids are country-stable
+(`ENG-MUN1`), player ids UUIDs, minted once and kept. Rules: wiki
 [DR-20261128-16](https://github.com/waigore/footballsim/wiki/dr-20261128-16) /
-[18](https://github.com/waigore/footballsim/wiki/dr-20261128-18).
+[18](https://github.com/waigore/footballsim/wiki/dr-20261128-18) /
+[33](https://github.com/waigore/footballsim/wiki/dr-20261128-33).
 
 Nine cups and supercups ship beside them: `FAC`, `EFLC`, `CS`, `CDR`, `SCE`,
-`DFBP`, `DFLS`, `CI`, `SCI`. The wiki is their rules source of truth
-([Domestic cups](https://github.com/waigore/footballsim/wiki/domestic-cups)).
-Their pools need 146 **stub** clubs outside the shipped tiers: identity,
-colours, a tier band and a synthetic squad. A stub never matches the sheet; its
-invented names would pair with real players.
+`DFBP`, `DFLS`, `CI`, `SCI`. Wiki rules:
+[Domestic cups](https://github.com/waigore/footballsim/wiki/domestic-cups).
+Their pools need 146 **stub** clubs: identity, colours, a tier band and a
+synthetic squad. A stub never matches the sheet; its invented names would pair
+with real players.
 
 ## Tool
 
@@ -75,7 +76,7 @@ The report audits λ for fixed pairings then samples whole seasons.
 | Table | Holds |
 |-------|-------|
 | `metadata` | `db_version`, `schema_version`, `season_label`, `snapshot_date`, `source`, `ratings_source`, `competition_ids` |
-| `competition`, `club` | Competition rules JSON; club identity, kit, formation, style, `stub`/`tier`/`region` |
+| `competition`, `club` | Competition rules JSON; club identity, kit, formation, style, `stub`/`tier`/`region`/`reserve_of` |
 | `competition_member` | Club/player ↔ competition membership: league squads and cup entry pools |
 | `player` | Identity, role, ratings, keeper stats, `subs`, `extras`, `ratings_matched`, `squad`, `ord` |
 | `table_row`, `fixture` | The 2026-27 table at snapshot date and every fixture, each with `competition_id` |

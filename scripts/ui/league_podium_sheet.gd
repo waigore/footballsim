@@ -45,7 +45,7 @@ func frame_height(view: Dictionary) -> float:
 		h += 16.0 * float((section["relegated"] as Array).size())
 
 
-		var up := _promoted_count(section, section_rules)
+		var up := _promoted_count(section)
 		if up > 0:
 			h += 6.0 + 16.0 + 16.0 * float(up)
 
@@ -82,10 +82,26 @@ static func sections(summary: Dictionary) -> Array:
 	return out
 
 
-static func _promoted_count(section: Dictionary, rules: Dictionary) -> int:
-	var up := int(rules.get("promotion_places", 0)) + int(rules.get("promotion_playoff_places", 0))
+static func _promoted_count(section: Dictionary) -> int:
+	if not section.has("promotion") and (section.get("table", []) as Array).is_empty():
+		var rules: Dictionary = section.get("rules", {})
+		return int(rules.get("promotion_places", 0)) + int(rules.get("promotion_playoff_places", 0))
+	var ladder := promotion_rows(section)
+	return (ladder["automatic"] as Array).size() + (ladder["playoff"] as Array).size()
+
+
+static func promotion_rows(section: Dictionary) -> Dictionary:
+	var ladder: Variant = section.get("promotion", {})
+	if ladder is Dictionary and not (ladder as Dictionary).is_empty():
+		return {
+			"automatic": (ladder as Dictionary).get("automatic", []),
+			"playoff": (ladder as Dictionary).get("playoff", []),
+		}
 	var rows: Array = section.get("table", [])
-	return up if rows.is_empty() else mini(up, rows.size())
+	var rules: Dictionary = section.get("rules", {})
+	var auto := int(rules.get("promotion_places", 0))
+	var more := int(rules.get("promotion_playoff_places", 0))
+	return {"automatic": rows.slice(0, auto), "playoff": rows.slice(auto, auto + more)}
 
 
 func _paint_band(c: CanvasItem, body: Callable) -> void:
@@ -129,7 +145,7 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary)
 			int(section["runner_up"]["points"])], 12, UiChrome.C_SOFT, bold)
 		y += 24.0
 
-		var section_up := _promoted_count(section, section_rules)
+		var section_up := _promoted_count(section)
 		if (section["europe"] as Array).is_empty() and section_up > 0:
 			_paint_promoted(c, vp, section, section_up, y, bold, med)
 			y += 16.0 + 16.0 * float(section_up)
@@ -245,16 +261,23 @@ func _paint_cups(c: CanvasItem, vp: Vector2, summary: Dictionary, y_in: float, b
 func _paint_promoted(c: CanvasItem, vp: Vector2, section: Dictionary, up: int,
 		y: float, bold: Font, med: Font) -> void:
 	UiChrome.text(c, Vector2(24.0, y), "PROMOTION", 10, UiChrome.C_DIM, bold)
-	var rows: Array = section.get("table", [])
-	var auto := int((section.get("rules", {}) as Dictionary).get("promotion_places", 0))
-	for i in range(mini(up, rows.size())):
-		var row: Dictionary = rows[i]
-		var band := "promotion" if i < auto else "playoff"
-		var cy := y + 16.0 + 16.0 * float(i)
-		c.draw_rect(Rect2(24.0, cy + 2.0, 3.0, 12.0), LeagueChrome.zone_color(band))
-		UiChrome.text(c, Vector2(32.0, cy + 12.0), "%d" % (i + 1), 10, UiChrome.C_DIM, med)
-		UiChrome.text(c, Vector2(54.0, cy + 12.0), str(row.get("club_name", "")), 11, UiChrome.C_TEXT, med)
-		UiChrome.text_r(c, vp.x - 24.0, cy + 12.0, str(row.get("points", "")), 10, UiChrome.C_SOFT, bold)
+	var ladder := promotion_rows(section)
+	var bands := [["promotion", ladder["automatic"]], ["playoff", ladder["playoff"]]]
+	var i := 0
+	for pair in bands:
+		for row_in in pair[1]:
+			if i >= up:
+				return
+			var row: Dictionary = row_in
+			var cy := y + 16.0 + 16.0 * float(i)
+			c.draw_rect(Rect2(24.0, cy + 2.0, 3.0, 12.0), LeagueChrome.zone_color(str(pair[0])))
+			UiChrome.text(c, Vector2(32.0, cy + 12.0), "%d" % int(row.get("position", i + 1)),
+				10, UiChrome.C_DIM, med)
+			UiChrome.text(c, Vector2(54.0, cy + 12.0),
+				str(row.get("club_name", row.get("name", ""))), 11, UiChrome.C_TEXT, med)
+			UiChrome.text_r(c, vp.x - 24.0, cy + 12.0, str(row.get("points", "")), 10,
+				UiChrome.C_SOFT, bold)
+			i += 1
 
 func _club_row(section: Dictionary, club_id: String) -> Dictionary:
 	for row in section.get("table", []):

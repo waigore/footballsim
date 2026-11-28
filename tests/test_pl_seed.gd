@@ -75,7 +75,7 @@ func test_the_seed_ships_the_multi_competition_set() -> void:
 			assert_eq(str(PLRepository.shared().club(str(id))["competition_id"]), cid,
 				"%s is not a %s club" % [id, cid])
 	var all_ids := TeamData.team_ids()
-	assert_eq(all_ids.size(), 212, "the seed should ship the whole pyramid")
+	assert_eq(all_ids.size(), 234, "the seed should ship the whole pyramid")
 	var unique := {}
 	for id in all_ids:
 		unique[str(id)] = true
@@ -253,8 +253,8 @@ func test_the_seed_ships_the_domestic_cups() -> void:
 		ids.append(str(row["id"]))
 	for cid in ["FAC", "EFLC", "CS", "CDR", "SCE", "DFBP", "DFLS", "CI", "SCI"]:
 		assert_true(ids.has(cid), "the seed has no %s" % cid)
-	assert_eq(PLRepository.shared().leagues().size(), 10, "a cup leaked into the league list")
-	assert_eq(TeamData.team_ids().size(), 212, "the friendly picker should still read the leagues")
+	assert_eq(PLRepository.shared().leagues().size(), 11, "a cup leaked into the league list")
+	assert_eq(TeamData.team_ids().size(), 234, "the friendly picker should still read the leagues")
 	assert_eq(PLRepository.shared().competition_kind("FAC"), "cup", "the FA Cup is not a cup")
 	assert_eq(PLRepository.shared().competition_kind("CS"), "supercup", "the Shield is not a supercup")
 
