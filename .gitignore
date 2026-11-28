@@ -51,3 +51,6 @@ venv/
 .orc/config.local.yaml
 .orc/worktrees/
 .orc/logs/
+
+# Command Code local state
+.commandcode/

@@ -40,6 +40,8 @@ func click(id: String) -> void:
 		screen.close()
 	elif id.begins_with("attrs:"):
 		screen.set_attr_view(id.substr(6))
+	elif id.begins_with("currency:"):
+		screen.set_currency(id.substr(9))
 	elif id.begins_with("crumb:"):
 		screen.nav.truncate_to(int(id.substr(6)))
 		screen._refresh()

@@ -100,6 +100,7 @@ suites = [
   "test_league_season.gd",
 ]
 
+
 [domains.ui_state]
 suites = [
   "test_ui_state.gd",
@@ -129,6 +130,13 @@ suites = [
   "test_multi_ui.gd",
   "test_ux_parity.gd",
   "test_hud_layout.gd",
+]
+
+# The shared Theme (visual source of truth) and the chrome modules that read it.
+# A palette or font change moves every non-match surface and the broadcast ink.
+[domains.ui_theme]
+suites = [
+  "test_ui_theme.gd",
 ]
 
 [domains.shell]
@@ -334,6 +342,18 @@ suites = [
 suites = [
   "test_league_europe.gd",
   "test_league_europe_ui.gd",
+]
+
+# Domestic cup pools after NEW SEASON (#506): the rebuild beside the rollover
+# and the cups it redraws. Kept off the full league domain so the tier-1 gate
+# stays inside five minutes.
+[domains.cup_rollover]
+suites = [
+  "test_season_rollover.gd",
+  "test_league_cups.gd",
+  "test_cup_season.gd",
+  "test_league_europe.gd",
+  "test_market_contracts.gd",
 ]
 
 # Encyclopedia screens: page data, the sheet itself and every door into it.
@@ -553,6 +573,19 @@ domain = "europe"
 match = "scripts/sim/league_planner.gd*"
 domain = "league"
 
+# Cup pool rebuild (#506): before the league_* and market/** catch-alls.
+[[rules]]
+match = "scripts/sim/league_cup_pools.gd*"
+domain = "cup_rollover"
+
+[[rules]]
+match = "scripts/sim/market/season_rollover.gd*"
+domain = "cup_rollover"
+
+[[rules]]
+match = "tests/test_season_rollover.gd*"
+domain = "cup_rollover"
+
 # Season helpers split out of the season loop to keep its P3 size ratchet.
 [[rules]]
 match = "scripts/sim/league_*.gd*"
@@ -577,10 +610,6 @@ domain = "market_deals"
 # here too: the bootstrap envelope, expiry and options run on the same clock.
 [[rules]]
 match = "scripts/sim/market/**"
-domain = "league"
-
-[[rules]]
-match = "tests/test_season_rollover.gd*"
 domain = "league"
 
 [[rules]]
@@ -821,6 +850,24 @@ domain = "shell"
 [[rules]]
 match = "scripts/ui/ui_chrome.gd*"
 domain = "shell"
+
+# The one Theme and its adapter: the palette, fonts and styleboxes every chrome
+# module reads (DR-20261128-37).
+[[rules]]
+match = "scripts/ui/ui_theme.gd*"
+domain = "ui_theme"
+
+[[rules]]
+match = "ui/**"
+domain = "ui_theme"
+
+[[rules]]
+match = "tests/test_ui_theme.gd*"
+domain = "ui_theme"
+
+[[rules]]
+match = "tools/theme_shots.gd*"
+domain = "misc"
 
 [[rules]]
 match = "scripts/audio/**"
