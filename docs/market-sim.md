@@ -24,6 +24,7 @@ invariant.
 | `ledger` | revenue, wages, amortisation, prize | ledger kinds, currency display |
 | `deal` | one permanent move end to end | the validators, the commit, clearance |
 | `youth` | ageing, retirement and intake for N seasons | the intake shape, the exit, names |
+| `news` | scripted deals build the rumour feed | rumour threshold, news kinds, cap |
 
 Each verb owns a file under `tools/market_sim/`; `tools/market_sim.gd` only
 parses flags, loads the verb and prints its dictionary.

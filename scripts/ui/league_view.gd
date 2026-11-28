@@ -141,9 +141,10 @@ static func build(screen) -> Dictionary:
 	if mode == LeagueScreen.MODE_REPORT:
 		if not (screen.roundup as Array).is_empty():
 			var first: Dictionary = screen.roundup[0]
+			var day := str(first["fixture"]["kickoff"]) if first.has("fixture") else ""
 			return {"roundup": screen.roundup, "interests": state.get("interests", []),
-				"filters": screen.report_filter,
-				"day": str(first["fixture"]["kickoff"]) if first.has("fixture") else "",
+				"filters": screen.report_filter, "market_news": MarketNews.digest(day),
+				"day": day,
 				"touch": bool(screen.touch)}
 		var card: Dictionary = screen.report
 		return {
