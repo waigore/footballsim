@@ -17,6 +17,7 @@ import argparse
 import base64
 import json
 import os
+import re
 import ssl
 import sys
 import time
@@ -218,6 +219,25 @@ def build_prompt(
     return "\n\n".join(parts)
 
 
+def _reason_affirms_label(labels: list[str], reason: str) -> bool:
+    """True when free text says the button reads/says a required label."""
+    for label in labels:
+        escaped = re.escape(label)
+        if re.search(
+            rf"(?:reads?|says|labelled|labeled)\s+['\"]?{escaped}['\"]?",
+            reason,
+            re.I,
+        ):
+            return True
+        if re.search(
+            rf"['\"]?{escaped}['\"]?\s+is\s+present",
+            reason,
+            re.I,
+        ):
+            return True
+    return False
+
+
 def enforce_cta(
     screen: dict[str, Any] | None, results: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
@@ -225,9 +245,9 @@ def enforce_cta(
 
     The prompt asks for the label; this makes the requirement hard rather than
     trusting a model that is happy to call any door "the obvious primary".
-    When the model returns pass=false but still reports the required label
-    (and side), trust the structured read — models often contradict themselves
-    in free-text reasons while naming the door correctly in cta_label.
+    When the model returns pass=false but still names the required door in
+    cta_label or affirms it in the reason text, trust that read — models often
+    contradict themselves while describing the correct button.
     """
     labels = cta_labels(screen or {})
     if not labels:
@@ -240,7 +260,8 @@ def enforce_cta(
             out.append(result)
             continue
         read = str(result.get("cta_label") or "").strip()
-        probe = read or str(result.get("reason") or "")
+        reason = str(result.get("reason") or "")
+        probe = read or reason
         label_ok = any(label_seen(label, probe) for label in labels)
         seen_side = str(result.get("cta_side") or "").strip().lower()
         side_ok = not side or not seen_side or seen_side == side
@@ -265,12 +286,12 @@ def enforce_cta(
                 continue
             out.append(result)
             continue
-        if label_ok and side_ok and read:
+        affirmed = (bool(read) and label_ok) or _reason_affirms_label(labels, reason)
+        if affirmed and side_ok:
             salvaged = dict(result)
             salvaged["pass"] = True
             salvaged["reason"] = (
-                f"grader named {wanted} in cta_label; "
-                f"ignoring contradictory fail reason"
+                f"grader affirmed {wanted}; ignoring contradictory fail reason"
             )
             out.append(salvaged)
             continue

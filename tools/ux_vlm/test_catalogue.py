@@ -212,6 +212,22 @@ def _check_cta_enforcement(screens: list[dict]) -> None:
     )
     _assert(salvage["pass"], "a matching cta_label salvages a contradictory fail")
 
+    menu = _screen(screens, "main-menu")
+    text_only, = enforce_cta(
+        menu,
+        [
+            {
+                "rubric_id": "cta",
+                "pass": False,
+                "reason": (
+                    "The required primary CTA label 'START SIM' is missing; "
+                    "the button reads 'START SIM' instead of 'START SIM'."
+                ),
+            }
+        ],
+    )
+    _assert(text_only["pass"], "a reason that affirms the button text salvages")
+
     pre = _screen(screens, "pre-match")
     either, = enforce_cta(pre, _cta(label="KICK OFF", side="right"))
     _assert(either["pass"], "pre-match accepts KICK OFF")
