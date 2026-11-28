@@ -135,6 +135,24 @@ func test_the_keyboard_is_put_away_by_another_press_and_by_back() -> void:
 	assert_gte(hidden[0], 1, "BACK left the keyboard up")
 	assert_eq(str(screen().focus.kind), "", "BACK did not release the field")
 
+func test_the_wizard_opens_on_a_blank_field_and_types_a_fresh_name() -> void:
+	game.menus.league.open_wizard()
+	assert_eq(str(screen().wizard["name"]), "",
+		"the wizard prefilled the field a player has to type into")
+	asked.clear()
+	press_id("name")
+	assert_eq(asked.size(), 1, "the blank name field did not take the keyboard")
+	assert_eq(str(asked[0]["text"]), "", "the keyboard opened on text the player never typed")
+	for ch in ["w", "i", "n", "t", "e", "r"]:
+		assert_true(screen().text_key(0, ch.unicode_at(0)),
+			"the blank field refused the character '%s'" % ch)
+	assert_eq(str(screen().wizard["name"]), "Winter",
+		"typing into the wizard did not start a fresh, capitalised name")
+	assert_eq(LeagueStartSheet.save_name(str(screen().wizard["name"])), "Winter",
+		"the season would be saved under the wizard's default instead of the typed name")
+	screen().close()
+
+
 func test_a_soft_keyboards_characters_reach_the_name() -> void:
 	game.menus.league.open_wizard()
 	screen().wizard["name"] = ""

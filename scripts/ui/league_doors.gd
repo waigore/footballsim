@@ -238,7 +238,8 @@ static func create(screen) -> void:
 	var comps: Array = screen.wizard.get("competitions", ["PL"])
 	if comps.is_empty():
 		comps = ["PL"]
-	var created: LeagueSeason = LeagueSeason.create(str(screen.wizard["name"]),
+	var name := LeagueStartSheet.save_name(str(screen.wizard.get("name", "")))
+	var created: LeagueSeason = LeagueSeason.create(name,
 		str(screen.wizard["calendar_mode"]), str(screen.wizard["advance_mode"]), 0, comps)
 	if created == null:
 		screen.wizard["error"] = "The season could not be created."
