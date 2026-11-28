@@ -87,7 +87,10 @@ static func set_state(deal_id: String, state: String, date: String, reason: Stri
 		fields["signed_on"] = date
 	if not update(deal_id, fields):
 		return false
-	return event(deal_id, date, state, reason)
+	if not event(deal_id, date, state, reason):
+		return false
+	MarketNews.on_state(deal_id, state, date)
+	return true
 
 
 static func event(deal_id: String, date: String, state: String, reason: String = "") -> bool:
