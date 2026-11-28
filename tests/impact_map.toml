@@ -597,7 +597,7 @@ domain = "league"
 
 # Cup pool rebuild (#506): before the league_* and market/** catch-alls.
 [[rules]]
-match = "scripts/sim/league_cup_pools.gd*"
+match = "scripts/sim/league/league_cup_pools.gd*"
 domain = "cup_rollover"
 
 [[rules]]
