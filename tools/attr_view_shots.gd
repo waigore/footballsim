@@ -54,9 +54,12 @@ func _initialize() -> void:
 	_report_card("match_simple_desktop")
 	await _shot("attrs_match_simplified")
 
+	Prefs.save_attrs("SIMPLIFIED")
+	scene.paused = true
 	scene.hud.set_hud_visible(false, true)
 	await _frames(6)
 	await _shot("attrs_match_hud_hidden")
+	scene.paused = false
 	scene.hud.set_hud_visible(true, true)
 	await _frames(6)
 
