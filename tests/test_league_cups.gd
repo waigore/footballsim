@@ -55,6 +55,33 @@ func test_a_regional_round_pairs_every_club() -> void:
 		+ "SELECT away_club_id FROM cup_tie WHERE competition_id = 'EFLC' AND round_id = 'PR');")
 	assert_eq(int(clubs["n"]), 4, "the regional sections did not pair four clubs")
 
+func test_the_regional_sections_are_balanced_both_ways() -> void:
+	var north: Array = ["n1"]
+	var south: Array = ["s1", "s2"]
+	LeagueCupDraw._balance(north, south)
+	assert_eq(north.size(), 2, "an odd north section did not take a southern club")
+	assert_eq(south.size(), 1, "the southern section kept its extra club")
+	var north2: Array = ["n1", "n2"]
+	var south2: Array = ["s1"]
+	LeagueCupDraw._balance(north2, south2)
+	assert_eq(south2.size(), 2, "an odd south section did not take a northern club")
+	assert_eq(north2.size(), 1, "the northern section kept its extra club")
+
+func test_the_first_round_pairs_all_seventy_after_the_preliminary() -> void:
+	var pr := PLDatabase.rows(
+		"SELECT * FROM league_fixture WHERE competition_id = 'EFLC' AND stage = 'PR' ORDER BY id;")
+	assert_eq(pr.size(), 2, "the Carabao preliminary round is not two ties")
+	for fx in pr:
+		LeagueSeasonSim.fixture(season, fx)
+	var row := PLDatabase.row(
+		"SELECT COUNT(*) AS n FROM cup_tie WHERE competition_id = 'EFLC' AND round_id = 'R1';")
+	assert_eq(int(row["n"]), 35, "the first round does not hold thirty-five ties")
+	var clubs := PLDatabase.row(
+		"SELECT COUNT(DISTINCT club_id) AS n FROM (SELECT home_club_id AS club_id "
+		+ "FROM cup_tie WHERE competition_id = 'EFLC' AND round_id = 'R1' UNION "
+		+ "SELECT away_club_id FROM cup_tie WHERE competition_id = 'EFLC' AND round_id = 'R1');")
+	assert_eq(int(clubs["n"]), 70, "the first round did not pair seventy clubs")
+
 func test_the_draw_is_deterministic() -> void:
 	var first := _fa_pairs(season)
 	var other := LeagueSeason.create("Cup Season Other", "generated", "fixture_days", SEED, ["PL"], true)
