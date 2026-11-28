@@ -289,6 +289,9 @@ func test_the_panel_doors_jump_pose_and_bind_the_table() -> void:
 	_hub()
 	LeaguePanelDoors.nav(screen, "fixtures")
 	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "Today's Fixtures did not land on the hub")
+	LeaguePanelDoors.nav(screen, "cups")
+	assert_eq(screen.mode, LeagueScreen.MODE_CUPS, "CUPS does not open from its panel row")
+	assert_eq(str(screen.cups.get("cup", "x")), "", "opening CUPS kept a prior cup page")
 
 func test_deleting_the_open_save_unloads_it_first() -> void:
 

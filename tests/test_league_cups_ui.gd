@@ -203,6 +203,40 @@ func test_a_save_without_cups_reads_an_empty_hub() -> void:
 	plain.close()
 
 
+func test_a_settled_cup_card_reads_its_result() -> void:
+	var run: LeagueSeason = LeagueSeason.create("Settled Card", "generated", "fixture_days",
+		SEED + 5, ["PL"], true, ["England"])
+	assert_not_null(run, "the settled-card season could not be created")
+	var guard := 0
+	while LeagueCupState.winner("CS") == "" and guard < 20:
+		run.advance()
+		guard += 1
+	assert_true(LeagueCupState.winner("CS") != "", "the Shield never settled")
+	var card: Dictionary = {}
+	for row in LeagueCupHub.competitions(run):
+		if str(row["id"]) == "CS":
+			card = row
+	assert_false(card.is_empty(), "the hub dropped the Shield")
+	assert_eq(str(card["winner"]), LeagueCupState.winner("CS"),
+		"the settled card lost its winner")
+	assert_eq(str(card["runner_up"]), LeagueCupState.runner_up("CS"),
+		"the settled card lost its runner-up")
+	assert_true(str(card["score"]) != "", "the settled card had no score")
+	assert_true(str(card["score"]).contains("–"), "the settled score lost its dash")
+	run.close()
+
+
+func test_an_explicit_cup_country_list_is_kept() -> void:
+	var run: LeagueSeason = LeagueSeason.create("Spain Cups", "generated", "fixture_days",
+		SEED + 7, ["PL", "LL"], true, ["Spain"])
+	assert_not_null(run, "the Spain-only cup season could not be created")
+	assert_eq(LeagueCup.cup_countries(run.save), ["Spain"],
+		"an explicit cup country list was not kept")
+	assert_eq(LeagueCup.active_ids(run.save), ["CDR", "SCE"],
+		"Spain's cups did not start alone")
+	run.close()
+
+
 func test_the_podium_carries_a_domestic_honours_block() -> void:
 	var sheet := LeaguePodiumSheet.new()
 	var section := {"id": "PL", "name": "Premier League", "rules": LeagueRules.defaults(),
