@@ -4,7 +4,7 @@ extends RefCounted
 
 const META_SORT := "table_sort"
 const META_DIR := "table_dir"
-const FULL_COLS := LeagueTableView.FULL_COLS
+const FULL_COLS := LeagueColumns.FULL_COLS
 
 
 var key := ""

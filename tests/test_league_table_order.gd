@@ -97,3 +97,34 @@ func test_attach_clears_a_reading_without_a_save() -> void:
 	assert_eq(LeagueTableSort.cell({"points": 7}, "points"), 7, "a saved count was not read")
 	assert_eq(LeagueTableView.columns(LeagueTableView.FULL), LeagueTableView.FULL_COLS,
 		"the full reading lost its columns")
+	assert_eq(LeagueTableLayout.columns(LeagueTableLayout.FORM), LeagueFormColumns.FORM_COLS,
+		"the form reading lost its columns")
+	assert_eq(LeagueTableView.FULL_COLS, LeagueColumns.FULL_COLS,
+		"the full columns left the shared rail")
+
+
+func test_full_places_keep_the_home_and_away_groups() -> void:
+	var places := LeagueColumns.full_of(Rect2(24.0, 0.0, 900.0, 22.0), 150.0)
+	var groups: Array = []
+	for col in places["cols"]:
+		var group := str(col.get("group", ""))
+		if group != "" and (groups.is_empty() or groups[groups.size() - 1] != group):
+			groups.append(group)
+	assert_eq(groups, ["OVERALL", "HOME", "AWAY"],
+		"the full rail lost its home and away groups")
+	assert_gt(float(places["club_w"]), 0.0, "the club lane has no width")
+	assert_eq(LeagueColumns.numeric(LeagueColumns.FULL_COLS), (places["cols"] as Array).size(),
+		"the full rail dropped a numeric column")
+
+
+func test_mode_bar_marks_the_active_reading() -> void:
+	var items: Array = LeagueTableLayout.mode_bar(LeagueTableLayout.FORM, Vector2(800.0, 600.0),
+		false)
+	var labels: Array = []
+	var primary := ""
+	for item in items:
+		labels.append(str(item["label"]))
+		if bool(item.get("primary", false)):
+			primary = str(item["label"])
+	assert_eq(labels, ["COMPACT", "FULL", "FORM"], "the mode doors left the bar")
+	assert_eq(primary, "FORM", "the form door is not the active reading")
