@@ -53,6 +53,7 @@ from cup_seed_data import (  # noqa: E402
     ITALIAN_STUBS,
 )
 from uefa_seed_data import (  # noqa: E402
+    ACCESS as UEFA_ACCESS, ASSOCIATION_LEAGUE as UEFA_ASSOCIATION_LEAGUE,
     ASSOCIATIONS, CLUB_ALIASES as UEFA_ALIASES, COMPETITIONS as UEFA_COMPETITIONS,
     ENTRANTS as UEFA_ENTRANTS, STUB_NAMES, STUBS as UEFA_STUBS, TIER as UEFA_TIER,
 )
@@ -1630,6 +1631,69 @@ def _uefa_members(snapshot: dict) -> list[dict]:
     return members
 
 
+def _uefa_bands(snapshot: dict) -> dict[str, int]:
+    """Mint every continental entrant's frozen coefficient band, once.
+
+    The band is the pot the seed would have put the club in: the top nine
+    entrants are band 1, the next nine band 2, the next nine band 3, and the rest
+    band 4. The draw never reads squad strength again: a club keeps this band
+    across seasons, and a later entrant inherits its association's median band
+    when it has none of its own.
+    """
+    by_id = {str(club["id"]): club for club in snapshot["clubs"]}
+    bands: dict[str, int] = {}
+    for cid in UEFA_COMPETITIONS:
+        entrants = sorted({str(row["member_id"]) for row in snapshot["members"]
+                           if str(row["competition_id"]) == cid})
+        ranked: list[tuple[float, str, str]] = []
+        for club_id in entrants:
+            club = by_id.get(club_id)
+            if club is None:
+                continue
+            ovr = [float(p.get("ovr", 0)) for p in club.get("players", [])
+                   if p.get("squad") == "starter"]
+            strength = sum(ovr) / max(len(ovr), 1)
+            ranked.append((strength, str(club.get("name", "")), club_id))
+        ranked.sort(key=lambda row: (-row[0], row[1]))
+        for index, (_, _, club_id) in enumerate(ranked):
+            bands.setdefault(club_id, min(4, 1 + index // 9))
+    return bands
+
+
+def _uefa_access_rules(snapshot: dict) -> None:
+    """Freeze the access-list shape and the pot bands into each competition's rules."""
+    by_id = {str(club["id"]): club for club in snapshot["clubs"]}
+    bands = _uefa_bands(snapshot)
+    for cid in UEFA_COMPETITIONS:
+        comp = next((c for c in snapshot["competitions"] if str(c["id"]) == cid), None)
+        if comp is None:
+            continue
+        shape: dict[str, dict[str, int]] = {}
+        for row in snapshot["members"]:
+            if str(row["competition_id"]) != cid:
+                continue
+            club = by_id.get(str(row["member_id"]), {})
+            iso = str(club.get("country", ""))
+            if iso == "":
+                continue
+            counted = shape.setdefault(iso, {})
+            role = str(row.get("role", ""))
+            counted[role] = counted.get(role, 0) + 1
+        shaped: dict[str, dict[str, list]] = {}
+        for iso, access in UEFA_ACCESS.items():
+            for round_id, slots in access.get(cid, {}).items():
+                got = int(shape.get(iso, {}).get(round_id, 0))
+                if got != len(slots):
+                    raise SystemExit(
+                        f"{cid} {iso} {round_id}: the entry list holds {got} places, "
+                        f"the access list names {len(slots)}")
+            shaped[iso] = access[cid]
+        comp["rules"]["shape"] = shape
+        comp["rules"]["access"] = shaped
+        comp["rules"]["pot_bands"] = dict(bands)
+        comp["rules"]["leagues"] = dict(UEFA_ASSOCIATION_LEAGUE)
+
+
 def seed_uefa(snapshot: dict) -> dict:
     """Add the three continental competitions, their stubs and entry membership."""
     for cid, spec in UEFA_COMPETITIONS.items():
@@ -1671,6 +1735,7 @@ def cmd_seed_uefa(args: argparse.Namespace) -> int:
     snapshot = upgrade(snapshot)
     seed_uefa(snapshot)
     snapshot = remap_ids(snapshot)
+    _uefa_access_rules(snapshot)
     snapshot["db_version"] = int(snapshot.get("db_version", 1)) + (1 if args.bump_version else 0)
     snapshot["schema_version"] = SCHEMA_VERSION
     save(args.snapshot, snapshot)

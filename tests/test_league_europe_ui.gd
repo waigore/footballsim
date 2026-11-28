@@ -115,6 +115,25 @@ func test_the_hub_and_draw_lay_out_on_desktop_and_phone() -> void:
 	var settled: Array = draw.layout(Vector2(913, 411), LeagueEuropeView.draw(fake))
 	assert_true(_ids(settled).has("europe:draw:open"), "a settled draw has no stage door")
 	assert_false(_ids(settled).has("europe:draw:skip"), "a settled draw still offers SKIP")
+	var stage := LeagueEuropeStage.new()
+	fake.europe["tab"] = "entrants"
+	for touch in [false, true]:
+		fake.touch = touch
+		var vp := Vector2(1600, 900) if not touch else Vector2(913, 411)
+		var stage_items: Array = stage.layout(vp, LeagueEuropeView.stage(fake))
+		assert_true(_ids(stage_items).has("europe:tab:entrants"), "the stage has no ENTRANTS tab")
+		var named := 0
+		for item in stage_items:
+			if str(item.get("kind", "")) != "eu_entrant":
+				continue
+			named += 1
+			assert_true(str((item["row"] as Dictionary).get("source", "")) != "",
+				"an entrant is not named with its source")
+			assert_lte(float((item["rect"] as Rect2).end.x), vp.x + 0.5,
+				"an entrant row runs off the screen at %s" % vp)
+		assert_gte(named, 36, "the entrants tab does not name the field")
+	assert_true(str(((LeagueEuropeView.hub(fake)["cards"] as Array)[0] as Dictionary).get("entry", "")) != "",
+		"the hub card does not say where its entrants came from")
 	fake.season.close()
 
 
