@@ -145,15 +145,6 @@ static func stage_complete(competition_id: String, round_id: String) -> bool:
 		and int(done_ties.get("n", 0)) == int(total_ties.get("n", 0))
 
 
-static func club_rank(club_id: String) -> float:
-	var team := TeamData.get_team(club_id)
-	var picks := StrongestXI.pick(team)
-	var total := 0.0
-	for player in picks:
-		total += float((player as Dictionary).get("ovr", 0))
-	return total / float(maxi(picks.size(), 1))
-
-
 static func association_of(club_id: String) -> String:
 	var club := PLRepository.shared().club(club_id)
 	return str(club.get("country", ""))
