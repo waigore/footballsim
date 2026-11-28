@@ -54,6 +54,35 @@ static func reading(save: LeagueSave, competition_id: String) -> Dictionary:
 	return cell if cell is Dictionary else {}
 
 
+static func field_line(save: LeagueSave, competition_id: String) -> String:
+	if LeagueCup.kind(competition_id) != "supercup":
+		return ""
+	var rows := reading(save, competition_id)
+	if rows.is_empty():
+		return ""
+	var parts: Array = []
+	for club_id in _field_order(save, competition_id, rows):
+		var row: Dictionary = rows[str(club_id)]
+		parts.append("%s · %s" % [LeagueCup.name_of(str(club_id)).to_upper(),
+			str(row.get("source", ""))])
+	if parts.is_empty():
+		return ""
+	return "FIELD  " + "  /  ".join(PackedStringArray(parts))
+
+
+static func _field_order(save: LeagueSave, competition_id: String, rows: Dictionary) -> Array:
+	var out: Array = []
+	for row in LeagueCup.rounds(competition_id):
+		var round_id := str((row as Dictionary).get("id", ""))
+		for club_id in LeagueCup.entrants(competition_id, round_id):
+			if rows.has(club_id) and not out.has(club_id):
+				out.append(club_id)
+	for club_id in rows.keys():
+		if not out.has(str(club_id)):
+			out.append(str(club_id))
+	return out
+
+
 static func _active_countries(save: LeagueSave) -> Array:
 	var out: Array = []
 	for cid in LeagueCup.active_ids(save):
