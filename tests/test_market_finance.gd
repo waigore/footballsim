@@ -68,9 +68,15 @@ func test_every_league_club_opens_solvent_and_inside_its_envelope() -> void:
 			"%s budgets above 55%% of revenue" % club_id)
 		assert_gte(MarketFinance.ffp_headroom(club_id), 0, "%s opens in FFP breach" % club_id)
 	assert_eq(clubs, 20, "a Premier League save should fund twenty clubs")
+	var club_id := _club()
+	var cash := MarketFinance.cash(club_id)
+	var again := MarketFinance.bootstrap(season.save)
+	assert_true(bool(again.get("ok", false)), "a second bootstrap failed")
+	assert_true(bool(again.get("skipped", false)), "a second bootstrap rewrote the envelope")
+	assert_eq(MarketFinance.cash(club_id), cash, "a second bootstrap moved the cash")
 
 
-func test_the_ledger_holds_every_money_kind_and_cash_follows_it() -> void:
+func test_the_ledger_holds_every_kind_and_a_fee_amortises() -> void:
 	var season := _fresh("Finance Kinds")
 	var club_id := _club()
 	var date := season.save.current_date()
@@ -91,21 +97,14 @@ func test_the_ledger_holds_every_money_kind_and_cash_follows_it() -> void:
 		assert_gte(int(row.get("n", 0)), 1, "the ledger has no %s line" % kind)
 	assert_false(MarketFinance.post(club_id, date, "nonsense", 1), "an unknown kind posted")
 	assert_false(MarketFinance.post("", date, MarketFinance.KIND_GATE, 1), "a blank club posted")
-
-
-func test_a_fee_amortises_over_its_contract_years() -> void:
-	var season := _fresh("Finance Amortisation")
-	var club_id := _club()
-	var date := season.save.current_date()
 	assert_eq(MarketFinance.amortisation(40000000, 4), 10000000,
 		"forty million over four years is not ten a season")
-	assert_eq(MarketFinance.amortisation(40000000), 10000000,
-		"the default spread is not four years")
-	var cash := MarketFinance.cash(club_id)
+	assert_eq(MarketFinance.amortisation(40000000), 10000000, "the default spread is not four years")
 	var headroom := MarketFinance.ffp_headroom(club_id)
+	var held := MarketFinance.cash(club_id)
 	assert_eq(MarketFinance.post_amortisation(club_id, date, 40000000, 4, "player"),
 		10000000, "the amortisation row posted the wrong amount")
-	assert_eq(MarketFinance.cash(club_id), cash, "amortisation moved cash")
+	assert_eq(MarketFinance.cash(club_id), held, "amortisation moved cash")
 	assert_eq(MarketFinance.ffp_headroom(club_id), headroom - 10000000,
 		"amortisation did not bite the FFP measure")
 	assert_eq(MarketFinance.amortisation_season(club_id), 10000000,
@@ -215,16 +214,6 @@ func test_the_club_page_reads_cash_wages_ffp_and_the_ledger_tail() -> void:
 		if str((block as Dictionary).get("k", "")) == "table":
 			tables += 1
 	assert_gte(tables, 1, "the club page shows no ledger tail")
-
-
-func test_the_bootstrap_runs_once_and_never_rewrites_a_funded_club() -> void:
-	var season := _fresh("Finance Bootstrap")
-	var club_id := _club()
-	var cash := MarketFinance.cash(club_id)
-	var again := MarketFinance.bootstrap(season.save)
-	assert_true(bool(again.get("ok", false)), "a second bootstrap failed")
-	assert_true(bool(again.get("skipped", false)), "a second bootstrap rewrote the envelope")
-	assert_eq(MarketFinance.cash(club_id), cash, "a second bootstrap moved the cash")
 
 
 func test_money_reads_a_club_s_affordability_and_reputation() -> void:
