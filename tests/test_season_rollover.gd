@@ -156,6 +156,30 @@ func test_the_rollover_starts_season_two_on_its_own_calendar() -> void:
 	assert_true(SeasonArchive.table(0, "").size() >= 20, "the archive holds no club rows")
 
 
+func test_an_unserved_ban_carries_into_the_next_season() -> void:
+	var season := _finished("Carried Ban")
+	var row := PLDatabase.row(
+		"SELECT p.id AS id, p.club_id AS club_id FROM player p "
+		+ "JOIN player_contract c ON c.player_id = p.id "
+		+ "WHERE c.status = 'active' AND c.end_date > '2029-06-30' AND p.age <= 23 "
+		+ "ORDER BY p.id LIMIT 1;")
+	assert_false(row.is_empty(), "the save has no young contracted player")
+	var id := str(row["id"])
+	var club := str(row["club_id"])
+	SeasonAvailability.suspend(id, club, 2, "red", "2027-05-01")
+	SeasonAvailability.injure(id, club, "2027-05-01", "knock", 5, 1.0)
+	var result := SeasonRollover.apply(season)
+	assert_true(bool(result.get("ok", false)), "the rollover refused a finished season")
+	var ban := PLDatabase.row(
+		"SELECT matches_left, competition_id FROM league_absence WHERE player_id = ? "
+		+ "AND kind = 'suspension';", [id])
+	assert_false(ban.is_empty(), "the unserved ban was wiped at the season boundary")
+	assert_eq(int(ban.get("matches_left", 0)), 2, "the carried ban lost its length")
+	var injury := PLDatabase.row(
+		"SELECT 1 AS n FROM league_absence WHERE player_id = ? AND kind = 'injury';", [id])
+	assert_true(injury.is_empty(), "an old injury crossed the season boundary")
+
+
 func test_no_player_develops_across_the_rollover() -> void:
 	var season := _finished("Static Cards")
 	var ovr := {}

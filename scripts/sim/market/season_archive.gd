@@ -44,6 +44,10 @@ static func clear_live(season: LeagueSeason) -> bool:
 		return false
 	PLDatabase.transaction("BEGIN TRANSACTION;")
 	for table in LIVE_TABLES:
+		if table == "league_absence":
+			PLDatabase.execute("DELETE FROM league_absence WHERE kind = ?;",
+				[SeasonAvailability.KIND_INJURY])
+			continue
 		PLDatabase.execute("DELETE FROM %s;" % table)
 	PLDatabase.transaction("COMMIT;")
 	return true

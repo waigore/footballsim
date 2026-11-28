@@ -96,9 +96,12 @@ func add_player_lines(rows: Array) -> void:
 			var club := PLDatabase.row("SELECT competition_id FROM club WHERE id = ?;", [club_id])
 			comp_of[club_id] = str(club.get("competition_id", ""))
 		var line: Dictionary = row.get("line", {})
+		var competition_id := str(row.get("competition_id", ""))
+		if competition_id == "":
+			competition_id = str(comp_of[club_id])
 		values.append("(?, ?, ?, ?, ?, ?, ?, ?, ?)")
 		bindings.append_array([
-			player_id, str(comp_of[club_id]), club_id, season_index, int(line.get("apps", 1)),
+			player_id, competition_id, club_id, season_index, int(line.get("apps", 1)),
 			int(line.get("goals", 0)), int(line.get("assists", 0)),
 			int(line.get("yellow", 0)), int(line.get("red", 0)),
 		])
@@ -118,8 +121,8 @@ func add_player_lines(rows: Array) -> void:
 func top_scorers(limit: int = 5, competition_id: String = "") -> Array:
 	save.ensure_open()
 	var sql := (
-		"SELECT s.goals, s.assists, s.apps, p.name, p.id AS player_id, c.abbr, "
-		+ "c.name AS club_name "
+		"SELECT SUM(s.goals) AS goals, SUM(s.assists) AS assists, SUM(s.apps) AS apps, "
+		+ "p.name, p.id AS player_id, MAX(c.abbr) AS abbr, MAX(c.name) AS club_name "
 		+ "FROM league_player_stat s JOIN player p ON p.id = s.player_id "
 		+ "JOIN club c ON c.id = s.club_id WHERE s.goals > 0"
 	)
@@ -127,6 +130,6 @@ func top_scorers(limit: int = 5, competition_id: String = "") -> Array:
 	if competition_id != "":
 		sql += " AND s.competition_id = ?"
 		bindings.append(competition_id)
-	sql += " ORDER BY s.goals DESC, s.assists DESC, p.name LIMIT ?;"
+	sql += " GROUP BY p.id ORDER BY goals DESC, assists DESC, p.name LIMIT ?;"
 	bindings.append(limit)
 	return PLDatabase.rows(sql, bindings)

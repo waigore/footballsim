@@ -54,8 +54,8 @@ static func _record_league(season: LeagueSeason, fx: Dictionary, score: Vector2i
 	var away := str(fx["away_club_id"])
 	var cid := str(fx.get("competition_id", ""))
 	var stage := str(fx.get("stage", ""))
-	var hxi := StrongestXI.pick(TeamData.get_team(home))
-	var axi := StrongestXI.pick(TeamData.get_team(away))
+	var hxi := StrongestXI.pick(TeamData.get_team(home), cid)
+	var axi := StrongestXI.pick(TeamData.get_team(away), cid)
 	var events := _events(fx, score, seed)
 	var table: LeagueStandings = null
 	if stage == LeagueUefa.LEAGUE_STAGE:
@@ -64,7 +64,7 @@ static func _record_league(season: LeagueSeason, fx: Dictionary, score: Vector2i
 		table, cid)
 	season.record.report.add_events(events)
 	LeagueSettle.auto(season.record, fixture_id, home, away, hxi, axi, events, seed,
-		str(fx["kickoff"]), int(fx["matchday"]))
+		str(fx["kickoff"]), int(fx["matchday"]), cid)
 	LeagueHighlights.store_auto(season.record, int(season.rng.seed), fixture_id, events,
 		home, away)
 
@@ -81,14 +81,14 @@ static func _record(season: LeagueSeason, fx: Dictionary, score: Vector2i, seed:
 		LeagueHighlights.store_auto(season.record, int(season.rng.seed), fixture_id, cup_events,
 			home, away)
 		return
-	var hxi := StrongestXI.pick(TeamData.get_team(home))
-	var axi := StrongestXI.pick(TeamData.get_team(away))
+	var hxi := StrongestXI.pick(TeamData.get_team(home), cid)
+	var axi := StrongestXI.pick(TeamData.get_team(away), cid)
 	var events := _events(fx, score, seed)
 	season.record.report.save_result(fixture_id, score.x, score.y, home, away,
 		season.record.standings, cid)
 	season.record.report.add_events(events)
 	LeagueSettle.auto(season.record, fixture_id, home, away, hxi, axi, events, seed,
-		str(fx["kickoff"]), int(fx["matchday"]))
+		str(fx["kickoff"]), int(fx["matchday"]), cid)
 	LeagueHighlights.store_auto(season.record, int(season.rng.seed), fixture_id, events, home, away)
 
 
@@ -96,8 +96,9 @@ static func _events(fx: Dictionary, score: Vector2i, seed: int) -> Array:
 	var fixture_id := str(fx["id"])
 	var home := str(fx["home_club_id"])
 	var away := str(fx["away_club_id"])
-	var hxi := StrongestXI.pick(TeamData.get_team(home))
-	var axi := StrongestXI.pick(TeamData.get_team(away))
+	var cid := str(fx.get("competition_id", ""))
+	var hxi := StrongestXI.pick(TeamData.get_team(home), cid)
+	var axi := StrongestXI.pick(TeamData.get_team(away), cid)
 	var events: Array = []
 	events.append_array(MatchEvents.side(seed + 11, fixture_id, home, hxi, score.x))
 	events.append_array(MatchEvents.side(seed + 23, fixture_id, away, axi, score.y))
