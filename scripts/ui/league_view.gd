@@ -162,6 +162,7 @@ static func build(screen) -> Dictionary:
 
 
 	view["touch"] = bool(screen.touch)
+	view["windows"] = LeagueWindowsView.rows(str(state.get("date", "")))
 	if season != null:
 		view["plan"] = season.plan()
 		view["can_suggest"] = bool(view.get("can_suggest", false))

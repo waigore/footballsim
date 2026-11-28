@@ -344,6 +344,9 @@ suites = [
   # Windows and association calendars (#443): the four associations, the state a
   # date alone decides, the per-date market tick and the buying-club rule.
   "test_market_windows.gd",
+  # The windows board on Today's Fixtures (#443): one chip per association,
+  # open or closed with its opening day, and the isolated verb.
+  "test_league_windows_ui.gd",
   # Club money (#442): the opening envelope, the ledger's kinds, amortisation,
   # the prize curve, the currency setting and the club page's finances block.
   "test_market_finance.gd",
@@ -594,6 +597,15 @@ domain = "europe"
 [[rules]]
 match = "scripts/ui/league_europe*.gd*"
 domain = "europe"
+
+# The windows board the hub paints (#443): the read model the chips render.
+[[rules]]
+match = "scripts/ui/league_windows_view.gd*"
+domain = "league"
+
+[[rules]]
+match = "tests/test_league_windows_ui.gd*"
+domain = "league"
 
 # The planner's suggested watches read the table and flag fixtures.
 [[rules]]
