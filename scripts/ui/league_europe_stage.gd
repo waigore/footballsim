@@ -10,11 +10,6 @@ const COL_MIN := 256.0
 const COL_GAP := 10.0
 const TIE_H := 62.0
 const TIE_TOUCH_H := 68.0
-const ROW_H := 22.0
-const ROW_TOUCH_H := 44.0
-const NUM_W := 26.0
-const NUM_GAP := 2.0
-const NUM_COLS := 8
 
 var cache := {}
 var hints := DateHints.new()
@@ -38,7 +33,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 		y += UiChrome.tap_h(CHIP_H, touch) + 6.0
 	var tab := str(view.get("tab", ""))
 	if tab == "table":
-		items.append_array(_table(vp, view, y, touch))
+		items.append_array(LeagueEuropeTable.layout(vp, view, y))
 	elif tab == "bracket":
 		items.append_array(_rounds(vp, view, view.get("bracket", []), "BRACKET", y, touch))
 	else:
@@ -164,31 +159,6 @@ func _names(rect: Rect2, tie: Dictionary, touch: bool) -> Array:
 	return out
 
 
-func _table(vp: Vector2, view: Dictionary, y: float, touch: bool) -> Array:
-	var out: Array = []
-	var rows: Array = view.get("table", [])
-	var row_w: float = maxf(vp.x - 48.0, 30.0 + 150.0 + float(NUM_COLS) * (NUM_W + NUM_GAP))
-	out.append({"id": "", "kind": "eu_legend",
-		"rect": Rect2(24.0, y, row_w, 16.0)})
-	y += 18.0
-	if rows.is_empty():
-		out.append({"id": "", "kind": "note",
-			"label": "THE LEAGUE PHASE OPENS AFTER THE PLAY-OFF ROUND",
-			"rect": Rect2(24.0, y, row_w, 20.0)})
-		return out
-	out.append({"id": "", "kind": "eu_head", "rect": Rect2(24.0, y, row_w, 18.0)})
-	y += 20.0
-	var h: float = ROW_TOUCH_H if touch else ROW_H
-	var interest := LeagueInterestMark.set_of(view.get("interests", []))
-	for i in range(rows.size()):
-		var row: Dictionary = rows[i]
-		var position := int(row.get("position", i + 1))
-		out.append({"id": "club:" + str(row.get("club_id", "")), "kind": "eu_row", "row": row,
-			"zone": LeagueUefaLeaguePhase.zone(position),
-			"interested": interest.has(str(row.get("club_id", ""))),
-			"rect": Rect2(24.0, y + float(i) * h, row_w, h - 1.0)})
-	return out
-
 # gd-tools: no cover start
 
 
@@ -207,7 +177,11 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 	var med: Font = fonts["med"]
 	for item in items:
 		var rect: Rect2 = item["rect"]
-		match str(item.get("kind", "")):
+		var kind := str(item.get("kind", ""))
+		if LeagueEuropeTable.KINDS.has(kind):
+			LeagueEuropeTable.paint(c, rect, item, fonts, names)
+			continue
+		match kind:
 			"chip":
 				var on := bool(item.get("selected", false))
 				UiChrome.panel(c, cache, rect, UiChrome.C_GOLD.darkened(0.1) if on else UiChrome.C_PANEL,
@@ -223,12 +197,6 @@ func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 				_tie(c, rect, item["tie"], fonts, view)
 			"eu_name":
 				pass
-			"eu_legend":
-				_legend(c, rect, bold)
-			"eu_head":
-				_head(c, rect, bold)
-			"eu_row":
-				_row(c, rect, item, fonts)
 			"note":
 				UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
 					str(item.get("label", "")), 12, UiChrome.C_SOFT, med)
@@ -300,85 +268,5 @@ static func _status(tie: Dictionary) -> String:
 	if bool(tie.get("played", false)):
 		return "▶"
 	return "WATCH" if int(tie.get("watched", 0)) == 1 else "AUTO"
-
-
-func _legend(c: CanvasItem, rect: Rect2, bold: Font) -> void:
-	var parts := [["1–8 R16", "r16"], ["9–24 KO PLAY-OFF", "kopo"], ["25–36 OUT", "out"]]
-	var x := rect.position.x
-	for part in parts:
-		UiChrome.text(c, Vector2(x, rect.position.y + 11.0), str(part[0]), 8,
-			LeagueChrome.zone_color(str(part[1])), bold)
-		x += UiChrome.text_width(bold, str(part[0]), 8) + 12.0
-
-
-func _head(c: CanvasItem, rect: Rect2, bold: Font) -> void:
-	var places := _places(rect)
-	UiChrome.text(c, Vector2(float(places["pos_x"]), rect.position.y + 12.0), "#", 8,
-		UiChrome.C_DIM, bold)
-	UiChrome.text(c, Vector2(float(places["club_x"]), rect.position.y + 12.0), "CLUB", 8,
-		UiChrome.C_DIM, bold)
-	for col in places["cols"]:
-		UiChrome.text_r(c, float(col["right"]), rect.position.y + 12.0, str(col["label"]), 8,
-			UiChrome.C_DIM, bold)
-
-
-func _row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary) -> void:
-	var row: Dictionary = item["row"]
-	var band := str(item.get("zone", ""))
-	c.draw_rect(Rect2(rect.position.x, rect.position.y + 2.0, 3.0, rect.size.y - 4.0),
-		LeagueChrome.zone_color(band))
-	var places := _places(rect)
-	var y := rect.position.y + rect.size.y * 0.5 + 4.0
-	var bold: Font = fonts["bold"]
-	var med: Font = fonts["med"]
-	UiChrome.text(c, Vector2(float(places["pos_x"]), y), "%d" % int(row.get("position", 0)), 9,
-		UiChrome.C_DIM, med)
-	var name: String = LeagueColumns.fit_name(str(row.get("club_name", "")), bold, 11,
-		float(places["club_w"]))
-	InterestNames.run(c, names, str(row.get("club_id", "")), name,
-		Vector2(float(places["club_x"]), y), 11,
-		UiChrome.C_GOLD if bool(item.get("interested", false)) else UiChrome.C_TEXT, bold)
-	for col in places["cols"]:
-		var key := str(col["key"])
-		var points := key == "points"
-		UiChrome.text_r(c, float(col["right"]), y, _value(row, key), 9 if not points else 10,
-			UiChrome.C_TEXT if points else UiChrome.C_SOFT, bold if points else med)
-
-
-static func _places(rect: Rect2) -> Dictionary:
-	var club_x: float = rect.position.x + 30.0
-	var club_w: float = maxf(rect.size.x - 30.0 - float(NUM_COLS) * (NUM_W + NUM_GAP), 60.0)
-	var out := {"pos_x": rect.position.x + 8.0, "club_x": club_x, "club_w": club_w, "cols": []}
-	var x := club_x + club_w
-	for label in ["P", "W", "D", "L", "GF", "GA", "GD", "PTS"]:
-		out["cols"].append({"key": _key(label), "label": label, "right": x + NUM_W, "w": NUM_W})
-		x += NUM_W + NUM_GAP
-	return out
-
-
-static func _key(label: String) -> String:
-	match label:
-		"P":
-			return "played"
-		"W":
-			return "won"
-		"D":
-			return "drawn"
-		"L":
-			return "lost"
-		"GF":
-			return "gf"
-		"GA":
-			return "ga"
-		"GD":
-			return "gd"
-	return "points"
-
-
-static func _value(row: Dictionary, key: String) -> String:
-	if key == "gd":
-		var gd := int(row.get("gf", 0)) - int(row.get("ga", 0))
-		return ("+%d" % gd) if gd > 0 else str(gd)
-	return str(int(row.get(key, 0)))
 
 # gd-tools: no cover end
