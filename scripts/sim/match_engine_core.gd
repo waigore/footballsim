@@ -174,6 +174,7 @@ var stoppage_events = 0
 var injury_timer := 45.0
 var commentary_key = 0
 var verbose := false
+var record_trails := true
 var shot_buckets := {}
 var gk_debug := []
 

@@ -389,3 +389,27 @@ func test_sided_roles_share_a_bench_family() -> void:
 	assert_eq(eng._role_family("RDM"), "CDM", "a right holding mid is not read as a holding mid")
 	assert_eq(eng._role_family("RWB"), "RB", "a wing-back is not read as a full-back")
 	assert_eq(eng._role_family("ST"), "ST", "a plain role was rewritten")
+
+
+func test_auto_sim_skips_paint_trails() -> void:
+	var painted := _eng(64)
+	for _i in range(70):
+		painted.tick()
+	var painted_len := 0
+	for p in painted.players:
+		painted_len += p.trail.size()
+	assert_gt(painted_len, 0, "a watched match never wrote player trails")
+	var auto := _eng(64)
+	auto.record_trails = false
+	for _i in range(70):
+		auto.tick()
+	for p in auto.players:
+		assert_eq(p.trail.size(), 0, "an auto tick still wrote trails for %s" % p.key)
+	var leftover := MatchEngine.new(65)
+	leftover.half = 2
+	leftover.clock = 5399.5
+	leftover.added[1] = 0.0
+	leftover.phase = "play"
+	assert_true(leftover.run_to_full_time(), "auto finish never reached full time")
+	for p in leftover.players:
+		assert_eq(p.trail.size(), 0, "run_to_full_time still wrote trails for %s" % p.key)

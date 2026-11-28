@@ -199,6 +199,8 @@ func _update_possession(dt: float) -> void:
 	momentum[1] = float(momentum[1]) * fade
 
 func _update_trails(dt: float) -> void:
+	if not record_trails:
+		return
 	for p in players:
 		p.trail_t += dt
 		if p.trail_t >= 1.0:
