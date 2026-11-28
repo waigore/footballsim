@@ -69,6 +69,7 @@ static func page(player_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 				bars.append([str(pair[1]), float(p[pair[0]]) / 100.0])
 		out["blocks"].append({"k": "bars", "items": bars})
 	out["blocks"].append_array(contract_blocks(player_id, club_name, str(p.get("club_id", ""))))
+	out["blocks"].append_array(transfer_blocks(player_id))
 	var season_label := str(season.get("season_label", ""))
 	var season_head := "SEASON"
 	if season_label != "":
@@ -132,6 +133,34 @@ static func contract_blocks(player_id: String, club_name: String, registered: St
 		items.append(["OPTION", "+%d YR" % options, false])
 	out.append({"k": "kv", "items": items})
 	return out
+
+
+static func transfer_blocks(player_id: String) -> Array:
+	if not MarketDealRecords.available():
+		return []
+	var deal := MarketDealRecords.latest_for_player(player_id)
+	if deal.is_empty():
+		return []
+	var from_abbr := _abbr(str(deal.get("from_club_id", "")))
+	var to_abbr := _abbr(str(deal.get("to_club_id", "")))
+	var items: Array = [
+		["STATE", str(deal.get("state", "")).to_upper(), true],
+		["MOVE", "%s → %s" % ["FREE" if from_abbr == "" else from_abbr, to_abbr], false],
+	]
+	var fee := int(deal.get("fee", 0))
+	if fee > 0:
+		items.append(["FEE", MarketWages.money(fee), false])
+	if str(deal.get("signed_on", "")) != "":
+		items.append(["SIGNED", str(deal.get("signed_on", "")), false])
+	if str(deal.get("reason", "")) != "":
+		items.append(["REASON", str(deal.get("reason", "")).to_upper(), false])
+	return [{"k": "section", "text": "TRANSFER"}, {"k": "kv", "items": items}]
+
+
+static func _abbr(club_id: String) -> String:
+	if club_id == "":
+		return ""
+	return str(PLDatabase.row("SELECT abbr FROM club WHERE id = ?;", [club_id]).get("abbr", ""))
 
 
 static func count(source: Dictionary, key: String) -> String:

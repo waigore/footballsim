@@ -267,6 +267,9 @@ suites = [
   # Club money (#442): the opening envelope, the ledger's kinds, amortisation,
   # the prize curve, the currency setting and the club page's finances block.
   "test_market_finance.gd",
+  # The deal engine (#444): the state machine, the validator pipeline, the
+  # one-transaction commit and the player page's TRANSFER block.
+  "test_market_deals.gd",
 ]
 
 # Europe's own destination (#437): the hub read models, the two sheets and the
@@ -532,6 +535,11 @@ domain = "league"
 
 [[rules]]
 match = "tests/test_market_windows.gd*"
+domain = "league"
+
+# The deal engine (#444): the state machine, the validators and the commit.
+[[rules]]
+match = "tests/test_market_deals.gd*"
 domain = "league"
 
 # Season availability and the pre-match briefing (#155–#157): the absence model,

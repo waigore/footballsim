@@ -5,6 +5,7 @@ extends SceneTree
 
 const VERBS := {
 	"contracts": "res://tools/market_sim/contracts.gd",
+	"deal": "res://tools/market_sim/deal.gd",
 	"ledger": "res://tools/market_sim/ledger.gd",
 	"season": "res://tools/market_sim/season.gd",
 	"windows": "res://tools/market_sim/windows.gd",

@@ -11,8 +11,9 @@ godot --headless --path . --script res://tools/market_sim.gd -- <verb> [flags]
 ```
 
 Flags: `--seed`, `--clubs`, `--days`, `--expire`, `--seasons`, `--currency`,
-`--json`-style output is the printed JSON line. The run exits `1` on a failed
-invariant.
+`--from`, `--to`, `--player`, `--fee`, `--wage`, `--years`, `--date`, `--force`,
+`--inject`. `--json`-style output is the printed JSON line. The run exits `1` on
+a failed invariant or an injected failure.
 
 ## Verbs
 
@@ -22,6 +23,7 @@ invariant.
 | `contracts` | expiry, renewal, options | the bootstrap envelope, free agency |
 | `windows` | the association calendar | open and closed by date alone |
 | `ledger` | revenue, wages, amortisation, prize | ledger kinds, currency display |
+| `deal` | one permanent move through the engine | state machine, validators, commit and rollback |
 
 Each verb owns a file under `tools/market_sim/`; `tools/market_sim.gd` only
 parses flags, loads the verb and prints its dictionary.
@@ -46,4 +48,5 @@ stays untouched; a run copies it into the save directory it names, so two runs
 never share a file.
 
 The sandbox is development tooling. A player reaches the same code through the
-season, the club page's finances block and the player page's contract block.
+season, the club page's finances block and the player page's contract and
+TRANSFER blocks.
