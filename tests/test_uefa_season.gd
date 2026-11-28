@@ -7,7 +7,7 @@ const SEED := 424242
 func _season() -> LeagueSeason:
 	if LeagueSeason.active != null:
 		LeagueSeason.active.close()
-	return LeagueSeason.create("UEFA Path", "generated", "fixture_days", SEED, ["PL"], false, true)
+	return LeagueSeason.create("UEFA Path", "generated", "fixture_days", SEED, ["PL"], false, [], true)
 
 
 func _advance_to_complete(season: LeagueSeason, cap: int = 400) -> int:
