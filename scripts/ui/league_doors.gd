@@ -108,6 +108,12 @@ static func press(screen, id: String) -> void:
 		return
 	if id.begins_with("match:"):
 		screen.show_report(id.substr(6))
+	elif id == "transfer:news":
+		go(screen, screen.MODE_NEWS)
+	elif id.begins_with("deal:"):
+		open_deal(screen, id.substr(5))
+	elif id.begins_with("god:"):
+		god(screen, id.substr(4))
 	elif id.begins_with("goal:"):
 		LeagueGoalDoors.play(screen, int(id.substr(5)))
 	elif id.begins_with("club:"):
@@ -240,6 +246,47 @@ static func open_table(screen) -> void:
 	go(screen, screen.MODE_TABLE)
 	LeaguePanelDoors.attach_table(screen)
 	screen.refresh()
+
+
+static func open_deal(screen: Object, deal_id: String) -> void:
+	if deal_id == "":
+		return
+	screen.deal_id = deal_id
+	go(screen, screen.MODE_DEAL)
+	screen.refresh()
+
+
+static func god(screen: Object, rest: String) -> void:
+	var cut := rest.find(":")
+	if cut <= 0:
+		return
+	var verb := rest.substr(0, cut)
+	var deal_id := rest.substr(cut + 1)
+	var date := ""
+	if screen.season != null and screen.season.save != null:
+		date = screen.season.save.current_date()
+	var out := {}
+	match verb:
+		"force":
+			out = MarketDeals.force(deal_id, date)
+		"block":
+			out = MarketDeals.block(deal_id, date)
+		"rewrite":
+			out = MarketDeals.rewrite(deal_id, rewrite_terms(deal_id), date)
+	if not out.is_empty():
+		screen.market_view = "%s:%s" % [str(out.get("state", "")), str(out.get("reason", ""))]
+	screen.refresh()
+
+
+static func rewrite_terms(deal_id: String) -> Dictionary:
+	var deal := MarketDealRecords.load(deal_id)
+	if deal.is_empty():
+		return {}
+	return {"fee": int(deal.get("fee", 0)), "wage": int(deal.get("wage", 0)),
+		"signing_bonus": int(deal.get("signing_bonus", 0)),
+		"agent_fee": int(deal.get("agent_fee", 0)), "years": int(deal.get("years", 1)),
+		"sell_on": float(deal.get("sell_on", 0.0)), "kind": str(deal.get("kind", "permanent"))}
+
 
 static func open_calendar(screen) -> void:
 	go(screen, screen.MODE_CALENDAR)

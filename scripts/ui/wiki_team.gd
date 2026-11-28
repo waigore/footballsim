@@ -57,6 +57,7 @@ static func page(club_id: String, mode: String = "SIMPLIFIED") -> Dictionary:
 		],
 	})
 	finance_blocks(out, club_id)
+	squad_list_block(out, club_id)
 	var race := PositionRace.series(club_id)
 	if not race.is_empty():
 		out["blocks"].append({"k": "section",
@@ -193,6 +194,38 @@ static func currency_doors() -> Array:
 		doors.append({"text": str(code), "id": "currency:" + str(code),
 			"on": str(code) == active})
 	return doors
+
+
+static func squad_list_block(out: Dictionary, club_id: String) -> void:
+	if not MarketDealRecords.available():
+		return
+	var club := PLDatabase.row("SELECT competition_id FROM club WHERE id = ?;", [club_id])
+	var competition_id := str(club.get("competition_id", ""))
+	var reading := MarketLists.list_reading(club_id, competition_id)
+	out["blocks"].append({"k": "section", "text": "SQUAD LIST"})
+	out["blocks"].append({"k": "kv", "items": [
+		["SLOTS", "%d / %d" % [int(reading["used"]), int(reading["slots"])], true],
+		["HOMEGROWN", "%d / %d" % [int(reading["homegrown"]), int(reading["homegrown_min"])], false],
+	]})
+	var rows: Array = []
+	for row in PLDatabase.rows(
+			"SELECT p.id, p.name, p.pos, r.state, r.reason, r.u21_exempt FROM player p "
+			+ "LEFT JOIN player_registration r ON r.player_id = p.id "
+			+ "AND r.competition_id = ? WHERE p.club_id = ? ORDER BY p.ord;",
+			[competition_id, club_id]):
+		var state := str(row.get("state", ""))
+		if state == "":
+			state = "registered"
+		var exempt: Variant = row.get("u21_exempt", 0)
+		var flag := "U21" if exempt != null and int(exempt) == 1 else ""
+		if str(row.get("reason", "")) != "":
+			flag = str(row["reason"])
+		rows.append({"cells": [str(row.get("pos", "")), str(row.get("name", "")),
+			state.to_upper(), flag],
+			"target": {"page": WikiModel.PLAYER, "id": str(row.get("id", ""))}})
+	if not rows.is_empty():
+		out["blocks"].append({"k": "table", "cols": ["POS", "PLAYER", "REGISTRATION", "FLAG"],
+			"widths": [0.14, 0.48, 0.22, 0.16], "text_cols": [0, 1, 2, 3], "rows": rows})
 
 
 static func finance_blocks(out: Dictionary, club_id: String) -> void:

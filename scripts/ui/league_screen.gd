@@ -33,6 +33,10 @@ const MODE_CUP := "cup"
 const MODE_BRACKET := "bracket"
 const MODE_CUP_DRAW := "cup_draw"
 
+const MODE_TRANSFERS := "transfers"
+const MODE_DEAL := "deal"
+const MODE_NEWS := "news"
+
 
 var ui_scale := 1.0
 var touch := false
@@ -142,6 +146,12 @@ var sheet_cups := LeagueCupsSheet.new()
 var sheet_cup := LeagueCupSheet.new()
 var sheet_bracket := LeagueCupBracket.new()
 var sheet_cup_draw := LeagueCupDrawSheet.new()
+
+var sheet_transfers := LeagueTransferSheet.new()
+var sheet_deal := LeagueDealSheet.new()
+var sheet_news := LeagueNewsSheet.new()
+var deal_id := ""
+var market_view := ""
 
 var cups_round: String:
 	get:
