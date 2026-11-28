@@ -3,6 +3,7 @@ extends GdToolsTest
 
 var SAVE_DIR := TestScratch.dir("saves_test_issue58")
 var CACHE_DIR := TestScratch.dir("cache_test_issue58")
+const PRISTINE := "_pristine.sqlite"
 
 func before_all() -> void:
 	PLDatabase.cache_dir = CACHE_DIR
@@ -10,6 +11,12 @@ func before_all() -> void:
 	_clean()
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
+	var seed_save := LeagueSave.create("Pristine", LeagueRules.defaults())
+	assert_not_null(seed_save, "the pristine save was not created: %s" % LeagueSave.last_error)
+	_snapshot(seed_save)
+	var path := seed_save.path
+	LeagueSave.close()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func after_all() -> void:
 	LeagueSave.close()
@@ -19,8 +26,47 @@ func after_all() -> void:
 	PLDatabase.reset()
 	PLRepository.shared().invalidate()
 
+func _snapshot(save: LeagueSave) -> void:
+	save.ensure_open()
+	PLDatabase.close()
+	var bytes := FileAccess.get_file_as_bytes(save.path)
+	var out := FileAccess.open(SAVE_DIR.path_join(PRISTINE), FileAccess.WRITE)
+	assert_true(out != null and not bytes.is_empty(), "the pristine save could not be written")
+	out.store_buffer(bytes)
+	out.close()
+
+func _fresh(name: String, rules: Dictionary = {}) -> LeagueSave:
+	LeagueSave.close()
+	PLDatabase.close()
+	var slug := LeagueSaveCatalog.unique_slug(name)
+	var dest := SAVE_DIR.path_join(slug + LeagueSave.EXT)
+	var bytes := FileAccess.get_file_as_bytes(SAVE_DIR.path_join(PRISTINE))
+	var out := FileAccess.open(dest, FileAccess.WRITE)
+	assert_true(out != null and not bytes.is_empty(), "the pristine save was missing")
+	out.store_buffer(bytes)
+	out.close()
+	var save := LeagueSave.open(slug)
+	assert_not_null(save, "the pristine save did not reopen: %s" % LeagueSave.last_error)
+	var typed := name.strip_edges()
+	save.put_meta("name", typed if typed != "" else "New League")
+	if not rules.is_empty():
+		_stamp_rules(save, rules)
+	LeagueSave.current = save
+	return save
+
+func _stamp_rules(save: LeagueSave, rules: Dictionary) -> void:
+	save.put_meta("calendar_mode", str(rules.get("calendar_mode", "generated")))
+	save.put_meta("advance_mode", str(rules.get("advance_mode", "fixture_days")))
+	for cid in save.actives:
+		LeagueRules.write(str(cid), LeagueRules.normalize(rules))
+	save.rules_by = LeagueRules.read_all()
+	if not save.actives.is_empty():
+		save.rules = save.rules_by.get(str(save.actives[0]), rules)
+	else:
+		save.rules = rules
+
 func test_a_save_is_a_self_contained_copy_of_the_seed() -> void:
-	var save := LeagueSave.create("Test Season", LeagueRules.defaults())
+	var save := _fresh("Test Season")
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
 	assert_true(FileAccess.file_exists(save.path), "the save file is missing")
 	assert_true(save.path.begins_with(SAVE_DIR), "the save escaped its directory")
@@ -37,7 +83,7 @@ func test_a_save_is_a_self_contained_copy_of_the_seed() -> void:
 func test_name_rules_and_status_round_trip() -> void:
 	var rules := LeagueRules.defaults("generated", "every_day")
 	rules["ucl_places"] = 3
-	var save := LeagueSave.create("Round Trip", rules)
+	var save := _fresh("Round Trip", rules)
 	assert_eq(save.name(), "Round Trip", "the save lost its name")
 	assert_eq(str(save.meta["advance_mode"]), "every_day", "the advance mode was not stamped")
 	save.set_date("2027-01-02")
@@ -52,7 +98,7 @@ func test_name_rules_and_status_round_trip() -> void:
 	assert_eq(str(stored["calendar_mode"]), "generated", "the calendar mode was lost")
 
 func test_a_finished_save_can_be_listed_and_reopened() -> void:
-	var save := LeagueSave.create("Listed Season", LeagueRules.defaults())
+	var save := _fresh("Listed Season")
 	save.set_status("complete")
 	var entries := LeagueSaveCatalog.list()
 	var found := {}
@@ -69,8 +115,8 @@ func test_a_finished_save_can_be_listed_and_reopened() -> void:
 	assert_eq(reopened.status(), "complete", "the reopened save lost its status")
 
 func test_two_saves_are_separate_files() -> void:
-	var a := LeagueSave.create("Alpha", LeagueRules.defaults())
-	var b := LeagueSave.create("Alpha", LeagueRules.defaults())
+	var a := _fresh("Alpha")
+	var b := _fresh("Alpha")
 	assert_ne(a.slug, b.slug, "two saves with one name collided")
 	assert_ne(a.path, b.path, "two saves share a file")
 	a.set_date("2026-12-01")
@@ -79,7 +125,7 @@ func test_two_saves_are_separate_files() -> void:
 	assert_eq(LeagueSave.open(b.slug).current_date(), "2027-02-01", "save B lost its clock")
 
 func test_deleting_a_save_unbinds_and_removes_it() -> void:
-	var save := LeagueSave.create("Doomed", LeagueRules.defaults())
+	var save := _fresh("Doomed")
 	var file := save.path
 	assert_true(LeagueSaveCatalog.remove(save.slug), "the save was not deleted")
 	assert_false(FileAccess.file_exists(file), "the save file survived deletion")
@@ -91,7 +137,7 @@ func test_a_missing_save_does_not_open() -> void:
 	assert_eq(PLDatabase.current_path(), "", "a missing save bound the connection")
 
 func test_closing_returns_to_the_single_match_cache() -> void:
-	var save := LeagueSave.create("Cache Check", LeagueRules.defaults())
+	var save := _fresh("Cache Check")
 	assert_eq(PLDatabase.current_path(), save.path, "the save was not the live connection")
 	LeagueSave.close()
 	var cache := PLDatabase.ensure_cache()
@@ -103,7 +149,7 @@ func test_closing_returns_to_the_single_match_cache() -> void:
 
 
 func test_quick_save_stamps_the_live_save() -> void:
-	var save := LeagueSave.create("Quick Save", LeagueRules.defaults())
+	var save := _fresh("Quick Save")
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
 	save.set_date("2027-03-04")
 	assert_true(save.touch(), "Quick Save did not write")
@@ -114,7 +160,7 @@ func test_quick_save_stamps_the_live_save() -> void:
 
 
 func test_save_as_writes_a_named_copy_and_keeps_the_original_live() -> void:
-	var save := LeagueSave.create("Origin", LeagueRules.defaults())
+	var save := _fresh("Origin")
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
 	save.set_date("2027-04-05")
 	var slug := save.write_copy("Origin Snapshot")
@@ -141,7 +187,7 @@ func test_save_as_writes_a_named_copy_and_keeps_the_original_live() -> void:
 
 
 func test_save_as_with_the_seasons_own_name_rewrites_in_place() -> void:
-	var save := LeagueSave.create("Same Name", LeagueRules.defaults())
+	var save := _fresh("Same Name")
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
 	var before := LeagueSaveCatalog.list().size()
 	assert_eq(save.write_copy("Same Name"), save.slug, "naming the save did not rewrite it")
@@ -150,7 +196,7 @@ func test_save_as_with_the_seasons_own_name_rewrites_in_place() -> void:
 
 
 func test_save_as_refuses_an_empty_name() -> void:
-	var save := LeagueSave.create("Refused Copy", LeagueRules.defaults())
+	var save := _fresh("Refused Copy")
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
 	var before := LeagueSaveCatalog.list().size()
 	assert_eq(save.write_copy("   "), "", "an empty name was written")
@@ -164,7 +210,7 @@ func _columns(table: String = "league_table") -> Dictionary:
 	return out
 
 func test_the_league_table_keeps_home_and_away_aggregates() -> void:
-	var save := LeagueSave.create("Side Split", LeagueRules.defaults())
+	var save := _fresh("Side Split")
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
 	var columns := _columns()
 	assert_true(columns.has("home_played"), "the table has no home record")
@@ -173,7 +219,7 @@ func test_the_league_table_keeps_home_and_away_aggregates() -> void:
 
 
 func test_ensure_accepts_an_empty_active_list() -> void:
-	var save := LeagueSave.create("Migrate Guards", LeagueRules.defaults())
+	var save := _fresh("Migrate Guards")
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
 	save.actives = []
 	LeagueSaveMigrate.ensure(save)
@@ -185,7 +231,7 @@ func test_ensure_accepts_an_empty_active_list() -> void:
 
 
 func test_an_older_absence_and_discipline_gain_competition_keys() -> void:
-	var save := LeagueSave.create("Old Keys", LeagueRules.defaults())
+	var save := _fresh("Old Keys")
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
 	PLDatabase.execute("DROP TABLE league_absence;")
 	PLDatabase.execute(
@@ -218,7 +264,7 @@ func test_an_older_absence_and_discipline_gain_competition_keys() -> void:
 
 
 func test_an_older_save_gains_the_side_columns_when_it_opens() -> void:
-	var save := LeagueSave.create("Old Table", LeagueRules.defaults())
+	var save := _fresh("Old Table")
 	PLDatabase.execute("DROP TABLE league_table;")
 	PLDatabase.execute(
 		"CREATE TABLE league_table (club_id TEXT PRIMARY KEY, "
@@ -239,7 +285,7 @@ func test_an_older_save_gains_the_side_columns_when_it_opens() -> void:
 
 
 func test_a_report_keeps_its_penalty_tag_across_a_reopen() -> void:
-	var save := LeagueSave.create("Penalty Tags", LeagueRules.defaults())
+	var save := _fresh("Penalty Tags")
 	assert_not_null(save, "the save was not created: %s" % LeagueSave.last_error)
 	var record := LeagueRecord.new(save)
 	record.report.add_events([
@@ -258,7 +304,7 @@ func test_a_report_keeps_its_penalty_tag_across_a_reopen() -> void:
 
 
 func test_an_older_save_gains_the_penalty_columns_when_it_opens() -> void:
-	var save := LeagueSave.create("Old Events", LeagueRules.defaults())
+	var save := _fresh("Old Events")
 	PLDatabase.execute("DROP TABLE match_event;")
 	PLDatabase.execute(
 		"CREATE TABLE match_event (id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -284,11 +330,11 @@ func test_an_older_save_gains_the_penalty_columns_when_it_opens() -> void:
 
 
 func test_table_choices_belong_to_their_own_save() -> void:
-	var first := LeagueSave.create("Reading One", LeagueRules.defaults())
+	var first := _fresh("Reading One")
 	assert_true(first.put_meta("table_mode", "full"), "the save took no mode")
 	assert_true(first.put_meta("table_sort", "points"), "the save took no sort")
 	assert_true(first.put_meta("table_dir", "asc"), "the save took no direction")
-	var second := LeagueSave.create("Reading Two", LeagueRules.defaults())
+	var second := _fresh("Reading Two")
 	var view := LeagueTableView.new()
 	view.attach(LeagueSave.open(first.slug))
 	assert_eq(view.mode, "full", "the first save lost its reading")
