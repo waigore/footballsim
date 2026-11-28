@@ -240,8 +240,7 @@ func draw_body(c: CanvasItem, _vp: Vector2, fonts: Dictionary, items: Array,
 
 
 static func club_label(row: Dictionary) -> String:
-	var abbr := str(row.get("club_abbr", ""))
-	return abbr if abbr != "" else str(row.get("club_name", ""))
+	return LeagueColumns.club_label(row)
 
 func _draw_row(c: CanvasItem, rect: Rect2, item: Dictionary, fonts: Dictionary,
 		strips: InterestNames = null) -> void:

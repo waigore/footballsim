@@ -47,7 +47,7 @@ func test_the_player_page_reads_his_events_fixture_by_fixture() -> void:
 		assert_eq(str(cells[0]), FixtureCalendar.day_label(str(fx["kickoff"])),
 			"the log row is not on the match's own day")
 		assert_eq(str(cells[1]), "GW %d" % int(fx["matchday"]), "the log row lost its gameweek")
-		assert_eq(str(cells[2]), "%s (%s)" % [str(fx["opponent_abbr"]), "H" if bool(fx["home"]) else "A"],
+		assert_eq(str(cells[2]), "%s (%s)" % [str(fx["opponent_name"]), "H" if bool(fx["home"]) else "A"],
 			"the log row does not name the opponent and the venue")
 		assert_eq(str(cells[3]), "%d – %d" % [int(fx["home_goals"]), int(fx["away_goals"])],
 			"the log row does not carry the score")

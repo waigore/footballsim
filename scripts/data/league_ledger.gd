@@ -131,6 +131,7 @@ static func leaders(limit: int = 5, competition_id: String = "", stat: String = 
 	var column := "assists" if stat == "assists" else "goals"
 	var sql := (
 		"SELECT s.goals, s.assists, s.apps, p.name, p.id AS player_id, c.abbr, "
+		+ "c.name AS club_name, "
 		+ "c.id AS club_id, s.competition_id FROM league_player_stat s "
 		+ "JOIN player p ON p.id = s.player_id "
 		+ "JOIN club c ON c.id = s.club_id WHERE s.%s > 0" % column
@@ -152,7 +153,7 @@ static func player_events(player_id: String, club_id: String, limit: int = 10) -
 	var rows := PLDatabase.rows(
 		"SELECT e.fixture_id, e.minute, e.kind, e.penalty, f.kickoff, f.matchday, "
 		+ "f.home_club_id, f.away_club_id, f.home_goals, f.away_goals, "
-		+ "h.abbr AS home_abbr, a.abbr AS away_abbr "
+		+ "h.abbr AS home_abbr, a.abbr AS away_abbr, h.name AS home_name, a.name AS away_name "
 		+ "FROM match_event e JOIN league_fixture f ON f.id = e.fixture_id "
 		+ "JOIN club h ON h.id = f.home_club_id JOIN club a ON a.id = f.away_club_id "
 		+ "WHERE e.player_id = ? AND f.status = 'played' "
@@ -172,6 +173,7 @@ static func player_events(player_id: String, club_id: String, limit: int = 10) -
 				"matchday": int(row.get("matchday", 0)), "home": home,
 				"opponent_id": str(row["away_club_id"]) if home else str(row["home_club_id"]),
 				"opponent_abbr": str(row["away_abbr"]) if home else str(row["home_abbr"]),
+				"opponent_name": str(row["away_name"]) if home else str(row["home_name"]),
 				"home_goals": int(row["home_goals"]), "away_goals": int(row["away_goals"]),
 				"events": [],
 			})

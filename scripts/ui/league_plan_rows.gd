@@ -58,7 +58,7 @@ static func paint_table_row(c: CanvasItem, rect: Rect2, row: Dictionary, zone: S
 	var y := rect.position.y + 14.0
 	UiChrome.text(c, Vector2(float(places["pos_x"]), y), "%d" % int(row["position"]), 10,
 		UiChrome.C_DIM, med)
-	var label: String = LeagueColumns.fit_name(str(row["club_abbr"]), bold, 12,
+	var label: String = LeagueColumns.fit_name(LeagueColumns.club_label(row), bold, 12,
 		float(places["club_w"]))
 	InterestNames.run(c, names, str(row["club_id"]), label, Vector2(float(places["club_x"]), y), 12,
 		UiChrome.C_GOLD if interested else UiChrome.C_TEXT, bold)

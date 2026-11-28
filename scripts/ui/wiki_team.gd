@@ -90,7 +90,7 @@ static func page(club_id: String) -> Dictionary:
 		results.append({
 			"cells": [
 				FixtureCalendar.day_label(str(fx["kickoff"])),
-				"%s %d – %d %s" % [str(fx["home_abbr"]), int(fx["home_goals"]), int(fx["away_goals"]), str(fx["away_abbr"])],
+				"%s %d – %d %s" % [str(fx["home_name"]), int(fx["home_goals"]), int(fx["away_goals"]), str(fx["away_name"])],
 			],
 			"target": {"page": WikiModel.TEAM, "id": str(fx["away_club_id"] if str(fx["home_club_id"]) == club_id else fx["home_club_id"])},
 			"dates": {0: str(fx["kickoff"])},
@@ -111,7 +111,7 @@ static func page(club_id: String) -> Dictionary:
 		var cells := [FixtureCalendar.day_label(str(fx["kickoff"]))]
 		if with_gw:
 			cells.append("GW %d" % int(fx["matchday"]))
-		cells.append("%s v %s" % [str(fx["home_abbr"]), str(fx["away_abbr"])])
+		cells.append("%s v %s" % [str(fx["home_name"]), str(fx["away_name"])])
 		next.append({
 			"cells": cells,
 			"target": {"page": WikiModel.TEAM, "id": opponent},
