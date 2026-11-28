@@ -100,6 +100,14 @@ suites = [
   "test_league_season.gd",
 ]
 
+[domains.ui_state]
+suites = [
+  "test_ui_state.gd",
+  "test_league_ui.gd",
+  "test_league_nav_stack.gd",
+  "test_hud_layout.gd",
+]
+
 [domains.shell]
 suites = [
   "test_menu_nav.gd",
@@ -702,6 +710,16 @@ domain = "shell"
 [[rules]]
 match = "scripts/ui/type_density.gd*"
 domain = "hud_chrome"
+
+# The reactive bus and the league's UI state bag (DR-20261128-37): a change moves
+# the hub and the surfaces that subscribe to it.
+[[rules]]
+match = "scripts/ui/state/**"
+domain = "ui_state"
+
+[[rules]]
+match = "tests/test_ui_state.gd*"
+domain = "ui_state"
 
 [[rules]]
 match = "scripts/ui/app_shell.gd*"

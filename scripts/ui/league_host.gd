@@ -10,6 +10,7 @@ var screen: LeagueScreen = null
 
 var pointer: SheetPointer = null
 var season: LeagueSeason = null
+var bus: UiBus = null
 
 var watch: LeagueWatch = null
 
@@ -20,6 +21,8 @@ var was_paused := false
 
 func attach(host) -> void:
 	game = host
+	bus = UiBus.make()
+	bus.data_changed.connect(_on_data_changed)
 	watch = LeagueWatch.new(self)
 	result = LeagueResult.new(self)
 
@@ -30,6 +33,7 @@ func build() -> void:
 	layer.layer = LAYER
 	game.add_child(layer)
 	screen = LeagueScreen.new()
+	screen.bus = bus
 	screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(screen)
@@ -156,6 +160,8 @@ func detach_season() -> void:
 	if screen != null:
 		screen.season = null
 	season = null
+	if bus != null:
+		bus.unbind_season()
 	if LeagueSeason.active != null:
 		LeagueSeason.active.close()
 
@@ -165,6 +171,17 @@ func _on_season_opened(opened: LeagueSeason) -> void:
 	season = opened
 	if season != null and not season.match_recorded.is_connected(_on_recorded):
 		season.match_recorded.connect(_on_recorded)
+	bus.bind_season(season)
+
+
+func _on_data_changed(scope: String) -> void:
+	if scope != "season" and scope != "match":
+		return
+	if layer == null or not layer.visible or screen == null:
+		return
+	if result != null and result.holding:
+		return
+	screen.on_season_changed()
 
 
 func _on_quit_requested() -> void:
