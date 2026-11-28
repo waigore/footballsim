@@ -68,17 +68,34 @@ static func _winners(competition_id: String, round_id: String) -> Array:
 	return out
 
 
+static func _orient(competition_id: String, pairs: Array, legs: int) -> Array:
+	var places := {}
+	var table := LeagueUefaLeaguePhase.table(competition_id)
+	for i in range(table.size()):
+		places[str((table[i] as Dictionary)["club_id"])] = i
+	var better_at_home := legs <= 1
+	for pair in pairs:
+		var home := str(pair["home"])
+		var away := str(pair["away"])
+		var home_better := int(places.get(home, 999)) < int(places.get(away, 999))
+		if home_better != better_at_home:
+			pair["home"] = away
+			pair["away"] = home
+	return pairs
+
+
 static func _install(competition_id: String, round_id: String, pairs: Array) -> bool:
 	if pairs.is_empty():
 		return false
 	var rule := LeagueUefa.round_rule(competition_id, round_id)
 	if rule.is_empty():
 		return false
+	var legs := int(rule.get("legs", 2))
+	pairs = _orient(competition_id, pairs, legs)
 	PLDatabase.execute(
 		"INSERT OR REPLACE INTO cup_round (competition_id, round_id, position, status) "
 		+ "VALUES (?, ?, ?, 'open');",
 		[competition_id, round_id, LeagueUefa.round_ids(competition_id).find(round_id) + 1])
-	var legs := int(rule.get("legs", 2))
 	for i in range(pairs.size()):
 		var pair: Dictionary = pairs[i]
 		var home := str(pair["home"])

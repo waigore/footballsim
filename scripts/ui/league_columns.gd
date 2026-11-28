@@ -16,11 +16,40 @@ const COMPACT_COLS := [
 ]
 
 
+const FULL_COLS := [
+	{"key": "position", "label": "#", "num": false},
+	{"key": "club", "label": "CLUB", "num": false},
+	{"key": "played", "label": "P", "num": true, "group": "OVERALL"},
+	{"key": "won", "label": "W", "num": true, "group": "OVERALL"},
+	{"key": "drawn", "label": "D", "num": true, "group": "OVERALL"},
+	{"key": "lost", "label": "L", "num": true, "group": "OVERALL"},
+	{"key": "gf", "label": "GF", "num": true, "group": "OVERALL"},
+	{"key": "ga", "label": "GA", "num": true, "group": "OVERALL"},
+	{"key": "gd", "label": "GD", "num": true, "group": "OVERALL"},
+	{"key": "points", "label": "PTS", "num": true, "group": "OVERALL"},
+	{"key": "home_played", "label": "P", "num": true, "group": "HOME"},
+	{"key": "home_won", "label": "W", "num": true, "group": "HOME"},
+	{"key": "home_drawn", "label": "D", "num": true, "group": "HOME"},
+	{"key": "home_lost", "label": "L", "num": true, "group": "HOME"},
+	{"key": "home_gf", "label": "GF", "num": true, "group": "HOME"},
+	{"key": "home_ga", "label": "GA", "num": true, "group": "HOME"},
+	{"key": "away_played", "label": "P", "num": true, "group": "AWAY"},
+	{"key": "away_won", "label": "W", "num": true, "group": "AWAY"},
+	{"key": "away_drawn", "label": "D", "num": true, "group": "AWAY"},
+	{"key": "away_lost", "label": "L", "num": true, "group": "AWAY"},
+	{"key": "away_gf", "label": "GF", "num": true, "group": "AWAY"},
+	{"key": "away_ga", "label": "GA", "num": true, "group": "AWAY"},
+]
+
+
 const POS_INDENT := 10.0
 const CLUB_INDENT := 32.0
 
 const NUM_W := 26.0
 const NUM_GAP := 10.0
+
+const FULL_NUM_W := 28.0
+const FULL_NUM_GAP := 2.0
 
 
 const MIN_NUM_W := 18.0
@@ -75,6 +104,28 @@ static func of(row: Rect2, cols: Array, club_min: float = MIN_CLUB_W,
 		"club_w": club_w,
 		"cols": rail,
 	}
+
+
+static func numeric(cols: Array) -> int:
+	return numbers(cols).size()
+
+
+static func full_min_row(club_min: float) -> float:
+	return CLUB_INDENT + club_min + float(numeric(FULL_COLS)) * (FULL_NUM_W + FULL_NUM_GAP)
+
+
+static func full_of(row: Rect2, club_min: float) -> Dictionary:
+	var pos_x := row.position.x + POS_INDENT
+	var club_x := row.position.x + CLUB_INDENT
+	var club_w := row.size.x - CLUB_INDENT - float(numeric(FULL_COLS)) * (FULL_NUM_W + FULL_NUM_GAP)
+	var out := {"pos_x": pos_x, "club_x": club_x, "club_w": club_w, "cols": []}
+	var x := club_x + club_w
+	for col in FULL_COLS:
+		if bool(col["num"]):
+			out["cols"].append({"key": str(col["key"]), "label": str(col["label"]),
+				"right": x + FULL_NUM_W, "w": FULL_NUM_W, "group": str(col.get("group", ""))})
+			x += FULL_NUM_W + FULL_NUM_GAP
+	return out
 
 
 static func club_label(row: Dictionary) -> String:
