@@ -10,15 +10,16 @@ static func start(season: LeagueSeason, fixture_id: String) -> Dictionary:
 		return {}
 
 
-	StrongestXI.apply(str(fx["home_club_id"]))
-	StrongestXI.apply(str(fx["away_club_id"]))
+	var cid := str(fx.get("competition_id", ""))
+	StrongestXI.apply(str(fx["home_club_id"]), cid)
+	StrongestXI.apply(str(fx["away_club_id"]), cid)
 	season.watching_fixture = fixture_id
 	season.captured = []
 	return {
 		"fixture_id": fixture_id,
 		"home": str(fx["home_club_id"]), "away": str(fx["away_club_id"]),
-		"competition_id": str(fx.get("competition_id", "")),
-		"competition": PLRepository.shared().competition_name(str(fx.get("competition_id", ""))),
+		"competition_id": cid,
+		"competition": PLRepository.shared().competition_name(cid),
 	}
 
 
@@ -62,9 +63,8 @@ static func record_engine(season: LeagueSeason, engine: MatchEngine) -> void:
 	season.record.report.add_events(events)
 	if cup:
 		LeagueCupTie.record_engine(season, fx, home, away)
-	else:
-		LeagueSettle.watch(season.record, engine, events, int(season.rng.seed),
-			str(fx["kickoff"]), int(fx["matchday"]))
+	LeagueSettle.watch(season.record, engine, events, int(season.rng.seed),
+		str(fx["kickoff"]), int(fx["matchday"]), cid)
 	if uefa:
 		LeagueUefaState.record_engine(season, fx, home, away)
 	LeagueHighlights.store_watch(season.record, int(season.rng.seed), fixture_id, season.captured,

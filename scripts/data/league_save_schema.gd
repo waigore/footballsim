@@ -58,13 +58,16 @@ const TABLES := [
 	+ "assists INTEGER NOT NULL DEFAULT 0, yellow INTEGER NOT NULL DEFAULT 0, "
 	+ "red INTEGER NOT NULL DEFAULT 0, "
 	+ "PRIMARY KEY (player_id, competition_id, club_id));",
-	"CREATE TABLE IF NOT EXISTS league_absence (player_id TEXT PRIMARY KEY, "
-	+ "club_id TEXT NOT NULL, kind TEXT NOT NULL, grade TEXT NOT NULL DEFAULT '', "
-	+ "days_left INTEGER NOT NULL DEFAULT 0, matches_left INTEGER NOT NULL DEFAULT 0, "
-	+ "started_on TEXT NOT NULL DEFAULT '', due_on TEXT NOT NULL DEFAULT '', "
-	+ "rate REAL NOT NULL DEFAULT 1.0);",
-	"CREATE TABLE IF NOT EXISTS league_discipline (player_id TEXT PRIMARY KEY, "
-	+ "club_id TEXT NOT NULL, yellow_mark INTEGER NOT NULL DEFAULT 0);",
+	"CREATE TABLE IF NOT EXISTS league_absence (player_id TEXT NOT NULL, "
+	+ "competition_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL, kind TEXT NOT NULL, "
+	+ "grade TEXT NOT NULL DEFAULT '', days_left INTEGER NOT NULL DEFAULT 0, "
+	+ "matches_left INTEGER NOT NULL DEFAULT 0, started_on TEXT NOT NULL DEFAULT '', "
+	+ "due_on TEXT NOT NULL DEFAULT '', rate REAL NOT NULL DEFAULT 1.0, "
+	+ "PRIMARY KEY (player_id, competition_id));",
+	"CREATE TABLE IF NOT EXISTS league_discipline (player_id TEXT NOT NULL, "
+	+ "competition_id TEXT NOT NULL DEFAULT '', club_id TEXT NOT NULL, "
+	+ "yellows INTEGER NOT NULL DEFAULT 0, yellow_mark INTEGER NOT NULL DEFAULT 0, "
+	+ "PRIMARY KEY (player_id, competition_id));",
 	"CREATE TABLE IF NOT EXISTS goal_highlight (id INTEGER PRIMARY KEY AUTOINCREMENT, "
 	+ "fixture_id TEXT NOT NULL, goal_index INTEGER NOT NULL, "
 	+ "match_event_id INTEGER NOT NULL DEFAULT 0, minute INTEGER NOT NULL DEFAULT 0, "
@@ -169,6 +172,8 @@ static func migrate() -> void:
 		backfill(table, owner)
 	_rebuild_table_for_two_tables()
 	_rebuild_player_stat_for_season()
+	_rebuild_absence_for_competition()
+	_rebuild_discipline_for_competition()
 	for table in SEASON_TABLES:
 		add_column(table, "season_index", "INTEGER NOT NULL DEFAULT 0")
 	for sql in INDEXES:
@@ -263,6 +268,59 @@ static func _rebuild_player_stat_for_season() -> void:
 		+ ", ".join(sets) + " FROM league_player_stat_pre_season;")
 	PLDatabase.execute("DROP TABLE league_player_stat_pre_season;")
 	PLDatabase.transaction("COMMIT;")
+
+
+static func _rebuild_absence_for_competition() -> void:
+	if not _needs_competition_key("league_absence"):
+		return
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	PLDatabase.execute("ALTER TABLE league_absence RENAME TO league_absence_pre_comp;")
+	PLDatabase.execute(_create_sql("league_absence"))
+	PLDatabase.execute(
+		"INSERT INTO league_absence (player_id, competition_id, club_id, kind, grade, "
+		+ "days_left, matches_left, started_on, due_on, rate) "
+		+ "SELECT a.player_id, CASE WHEN a.kind = 'injury' THEN '' ELSE "
+		+ _club_competition("a") + " END, a.club_id, a.kind, a.grade, a.days_left, "
+		+ "a.matches_left, a.started_on, a.due_on, a.rate FROM league_absence_pre_comp a;")
+	PLDatabase.execute("DROP TABLE league_absence_pre_comp;")
+	PLDatabase.transaction("COMMIT;")
+
+
+static func _rebuild_discipline_for_competition() -> void:
+	if not _needs_competition_key("league_discipline"):
+		return
+	PLDatabase.transaction("BEGIN TRANSACTION;")
+	PLDatabase.execute("ALTER TABLE league_discipline RENAME TO league_discipline_pre_comp;")
+	PLDatabase.execute(_create_sql("league_discipline"))
+	PLDatabase.execute(
+		"INSERT INTO league_discipline (player_id, competition_id, club_id, yellows, yellow_mark) "
+		+ "SELECT d.player_id, " + _club_competition("d") + ", d.club_id, "
+		+ "COALESCE((SELECT SUM(s.yellow) FROM league_player_stat s "
+		+ "WHERE s.player_id = d.player_id AND s.competition_id = "
+		+ _club_competition("d") + "), 0), d.yellow_mark "
+		+ "FROM league_discipline_pre_comp d;")
+	PLDatabase.execute("DROP TABLE league_discipline_pre_comp;")
+	PLDatabase.transaction("COMMIT;")
+
+
+static func _needs_competition_key(table: String) -> bool:
+	var row := PLDatabase.row(
+		"SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?;", [table])
+	if row.is_empty():
+		return false
+	return not ("PRIMARY KEY (player_id, competition_id)" in str(row.get("sql", "")))
+
+
+static func _club_competition(alias: String) -> String:
+	return ("COALESCE((SELECT c.competition_id FROM club c WHERE c.id = %s.club_id), '')"
+		% alias)
+
+
+static func _create_sql(name: String) -> String:
+	for sql in TABLES:
+		if "CREATE TABLE IF NOT EXISTS %s (" % name in sql:
+			return sql
+	return ""
 
 
 static func _columns(table: String) -> Dictionary:

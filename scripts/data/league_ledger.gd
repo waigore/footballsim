@@ -108,8 +108,12 @@ static func upcoming(club_id: String = "", limit: int = 6, competition_id: Strin
 
 
 static func player_line(player_id: String) -> Dictionary:
-	var row := PLDatabase.row("SELECT * FROM league_player_stat WHERE player_id = ?;", [player_id])
-	if row.is_empty():
+	var row := PLDatabase.row(
+		"SELECT COALESCE(SUM(apps), 0) AS apps, COALESCE(SUM(goals), 0) AS goals, "
+		+ "COALESCE(SUM(assists), 0) AS assists, COALESCE(SUM(yellow), 0) AS yellow, "
+		+ "COALESCE(SUM(red), 0) AS red, COUNT(*) AS lines FROM league_player_stat "
+		+ "WHERE player_id = ?;", [player_id])
+	if row.is_empty() or int(row.get("lines", 0)) <= 0:
 		return {}
 	return {
 		"apps": int(row.get("apps", 0)), "goals": int(row.get("goals", 0)),
@@ -120,22 +124,25 @@ static func player_line(player_id: String) -> Dictionary:
 
 static func scorers(club_id: String, limit: int = 5) -> Array:
 	return PLDatabase.rows(
-		"SELECT s.goals, s.assists, s.apps, p.name, p.id AS player_id "
+		"SELECT SUM(s.goals) AS goals, SUM(s.assists) AS assists, SUM(s.apps) AS apps, "
+		+ "p.name, p.id AS player_id "
 		+ "FROM league_player_stat s JOIN player p ON p.id = s.player_id "
-		+ "WHERE s.club_id = ? AND s.goals > 0 "
-		+ "ORDER BY s.goals DESC, s.assists DESC, p.name LIMIT ?;", [club_id, limit])
+		+ "WHERE s.club_id = ? AND s.goals > 0 GROUP BY p.id "
+		+ "ORDER BY goals DESC, assists DESC, p.name LIMIT ?;", [club_id, limit])
 
 
 static func leaders(limit: int = 5, competition_id: String = "", stat: String = "goals",
 		teams: Array = []) -> Array:
 	var column := "assists" if stat == "assists" else "goals"
-	var sql := (
-		"SELECT s.goals, s.assists, s.apps, p.name, p.id AS player_id, c.abbr, "
-		+ "c.name AS club_name, "
-		+ "c.id AS club_id, s.competition_id FROM league_player_stat s "
+	var base := (
+		"SELECT SUM(s.%s) AS %s, SUM(s.assists) AS assists, SUM(s.apps) AS apps, "
+		+ "p.name, p.id AS player_id, MAX(c.abbr) AS abbr, "
+		+ "MAX(c.name) AS club_name, MAX(c.id) AS club_id, "
+		+ "MAX(s.competition_id) AS competition_id FROM league_player_stat s "
 		+ "JOIN player p ON p.id = s.player_id "
-		+ "JOIN club c ON c.id = s.club_id WHERE s.%s > 0" % column
+		+ "JOIN club c ON c.id = s.club_id WHERE s.%s > 0"
 	)
+	var sql: String = base % [column, column, column]
 	var bindings: Array = []
 	if competition_id != "":
 		sql += " AND s.competition_id = ?"
@@ -143,7 +150,7 @@ static func leaders(limit: int = 5, competition_id: String = "", stat: String = 
 	if not teams.is_empty():
 		sql += " AND c.id IN (" + ",".join(_placeholders(teams.size())) + ")"
 		bindings.append_array(teams)
-	sql += " ORDER BY s.%s DESC, s.assists DESC, p.name LIMIT ?;" % column
+	sql += " GROUP BY p.id ORDER BY %s DESC, assists DESC, p.name LIMIT ?;" % column
 	bindings.append(limit)
 	return PLDatabase.rows(sql, bindings)
 
