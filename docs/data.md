@@ -7,7 +7,7 @@ engine, picker and encyclopedia all read it, so a squad change lands everywhere.
 
 | Path | Role |
 |------|------|
-| `data/pl_snapshot.json` | Readable snapshot: competitions, clubs, players, tables, fixtures, `db_version` |
+| `data/pl_snapshot.json` | Snapshot: competitions, clubs, players, tables, fixtures, `db_version` |
 | `data/pl_seed.sqlite` | Shipped seed built from the JSON; `res://`, read-only |
 | `data/fc_sheet.csv` | Sofifa EA FC 26 sheet: sub-stats and card extras |
 | `data/fc_ratings.json` | Face weights, positional weights, synthesis |
@@ -28,9 +28,9 @@ and player ids are UUIDs, minted once and kept. Rules: wiki
 Seven cups and supercups ship beside them: `FAC`, `EFLC`, `CS`, `CDR`, `SCE`,
 `DFBP`, `DFLS`. The wiki is their rules source of truth
 ([Domestic cups](https://github.com/waigore/footballsim/wiki/domestic-cups)).
-Their pools need 142 **stub** clubs outside the shipped tiers (England 8, Spain
-106, Germany 28): identity, colours, a tier band and a synthetic squad. A stub
-never matches the sheet — its invented names would pair with real players.
+Their pools need 142 **stub** clubs outside the shipped tiers: identity,
+colours, a tier band and a synthetic squad. A stub never matches the sheet; its
+invented names would pair with real players.
 
 ## Tool
 
@@ -47,9 +47,9 @@ python tools/pl_snapshot.py verify
 - **One source per run.** `seed` creates a league's clubs and squads from ESPN
   rosters; ratings survive a refresh.
 - `fetch` rewrites the table, fixtures, identity and season figures.
-- `cups` adds the catalogue, stubs, entry pools and frozen priors.
+- `cups` adds the catalogue, stubs and entry pools.
 - `ratings` remaps squads from `data/fc_sheet.csv`, synthesizes the rest and
-  derives every card, offline.
+  derives every card.
 - `build` writes the seed; `verify` checks counts, ids, eleven starters per club,
   cup entry pools, all 34 sub-stats, that every stored card re-derives, and the
   version.
