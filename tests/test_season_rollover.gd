@@ -39,8 +39,10 @@ func _track(season: LeagueSeason) -> LeagueSeason:
 	return season
 
 
-func _finished(name: String, cups: bool = false, comps: Array = ["PL"]) -> LeagueSeason:
-	var season := _track(LeagueSeason.create(name, "generated", "fixture_days", SEED, comps, cups))
+func _finished(name: String, cups: bool = false, comps: Array = ["PL"],
+		uefa: bool = false) -> LeagueSeason:
+	var season := _track(LeagueSeason.create(name, "generated", "fixture_days", SEED, comps, cups,
+		[], uefa))
 	assert_not_null(season, "%s was not created" % name)
 	_mark_finished(season)
 	SeasonSettle.apply(season)
@@ -304,6 +306,112 @@ func test_an_unfinished_season_cannot_roll_over() -> void:
 	assert_eq(str(result.get("reason", "")), "season_open", "the refusal named no reason")
 	assert_eq(season.save.season_index(), 0, "the refused rollover moved the season")
 	assert_eq(FileAccess.get_md5(season.save.path), before, "the refused rollover wrote to the save")
+
+
+func _members(competition_id: String, role: String, iso: String) -> Array:
+	var out: Array = []
+	for row in PLDatabase.rows(
+			"SELECT member_id FROM competition_member WHERE competition_id = ? AND role = ? "
+			+ "AND member_kind = 'club';", [competition_id, role]):
+		var club := str(row["member_id"])
+		if LeagueUefa.association_of(club) == iso:
+			out.append(club)
+	out.sort()
+	return out
+
+
+func _shape_counts() -> Dictionary:
+	var out := {}
+	for row in PLDatabase.rows(
+			"SELECT competition_id, role, member_id FROM competition_member "
+			+ "WHERE member_kind = 'club';"):
+		var cid := str(row["competition_id"])
+		var role := str(row["role"])
+		if not LeagueUefa.is_continental(cid) or role.begins_with("drop:"):
+			continue
+		var key := "%s|%s|%s" % [cid, LeagueUefa.association_of(str(row["member_id"])), role]
+		out[key] = int(out.get(key, 0)) + 1
+	return out
+
+
+func _sorted(values: Array) -> Array:
+	var out := values.duplicate()
+	out.sort()
+	return out
+
+
+func _pin_cup_final(competition_id: String, winner: String, loser: String) -> void:
+	PLDatabase.execute(
+		"INSERT OR REPLACE INTO cup_tie (competition_id, round_id, tie_index, home_club_id, "
+		+ "away_club_id, winner_club_id, home_goals, away_goals) VALUES (?, 'F', 0, ?, ?, ?, 2, 0);",
+		[competition_id, winner, loser, winner])
+
+
+func _finish_places(season: LeagueSeason) -> Array:
+	var places: Array = []
+	for row in season.record.standings.table("PL"):
+		places.append(str(row["club_id"]))
+	return places
+
+
+func test_season_two_fills_the_places_and_keeps_every_other_slot() -> void:
+	var season := _finished("UEFA Places", false, ["PL"], true)
+	var places := _finish_places(season)
+	var shape := _shape_counts()
+	var carried := _members("UCL", "LP", "ESP")
+	assert_gte(carried.size(), 2, "the seed carries no Spanish Champions League entrants")
+	var stub_iso := ""
+	var stub_round := ""
+	for row in PLDatabase.rows(
+			"SELECT competition_id, role, member_id FROM competition_member "
+			+ "WHERE member_kind = 'club' AND role NOT LIKE 'drop:%';"):
+		var iso := LeagueUefa.association_of(str(row["member_id"]))
+		if LeagueUefa.is_continental(str(row["competition_id"])) \
+				and not ["ENG", "ESP", "GER", "ITA"].has(iso):
+			stub_iso = iso
+			stub_round = str(row["role"])
+			break
+	assert_true(stub_iso != "", "the seed carries no stub association")
+	var stubs := _members("UCL", stub_round, stub_iso)
+	var result := SeasonRollover.apply(season)
+	assert_true(bool(result.get("ok", false)), "the rollover refused a finished season")
+	assert_eq(places.size(), 20, "season one's table was not finished")
+	assert_eq(_members("UCL", "LP", "ENG"), _sorted(places.slice(0, 5)),
+		"the Champions League places are not last season's top five")
+	assert_eq(_members("UEL", "LP", "ENG"), _sorted(places.slice(5, 8)),
+		"the Europa League places are not places six to eight")
+	assert_eq(_members("UECL", "POMP", "ENG"), _sorted([places[8]]),
+		"a cup that did not run did not pass its place down the league table")
+	assert_eq(_shape_counts(), shape, "the frozen access-list shape moved")
+	assert_eq(_members("UCL", "LP", "ESP"), carried,
+		"an association whose league is not active changed its entrants")
+	var labelled := 0
+	for row in LeagueEuropeEntries.entrants(season.save, "UCL"):
+		if str(row["association"]) == "ESP" and str(row["source"]) == "CARRIED OVER":
+			labelled += 1
+	assert_eq(labelled, carried.size(), "the carried entrants are not labelled")
+	assert_eq(_members("UCL", stub_round, stub_iso), stubs,
+		"a stub association's entrants did not stay put")
+
+
+func test_a_cup_winner_takes_its_slot_and_a_taken_one_passes_down() -> void:
+	var season := _finished("UEFA Cups", true, ["PL"], true)
+	var places := _finish_places(season)
+	var cup_winner := str(places[11])
+	var league_cup_winner := str(places[1])
+	_pin_cup_final("FAC", cup_winner, str(places[13]))
+	_pin_cup_final("EFLC", league_cup_winner, str(places[14]))
+	var result := SeasonRollover.apply(season)
+	assert_true(bool(result.get("ok", false)), "the cup rollover refused a finished season")
+	assert_true(_members("UEL", "LP", "ENG").has(cup_winner),
+		"the FA Cup winner is not in the Europa League")
+	assert_eq(_members("UECL", "POMP", "ENG"), _sorted([places[7]]),
+		"a League Cup winner already in Europe did not pass its place down")
+	var reading := LeagueEuropeEntries.reading(season.save, "UEL")
+	assert_eq(str((reading[cup_winner] as Dictionary).get("source", "")), "FA CUP WINNER",
+		"the entrants reading does not name the cup winner")
+	assert_true(LeagueEuropeEntries.summary(season.save, "UEL").contains("1 CUP WINNER"),
+		"the hub summary does not count the cup winner")
 
 
 class FakeScreen extends RefCounted:

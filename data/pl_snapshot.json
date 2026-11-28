@@ -1003389,7 +1003389,513 @@
       }
      ]
     },
-    "kind": "continental"
+    "kind": "continental",
+    "shape": {
+     "HUN": {
+      "Q1": 1
+     },
+     "ROU": {
+      "Q1": 1
+     },
+     "BUL": {
+      "Q1": 1
+     },
+     "AZE": {
+      "Q1": 1
+     },
+     "IRL": {
+      "Q1": 1
+     },
+     "MDA": {
+      "Q1": 1
+     },
+     "ISL": {
+      "Q1": 1
+     },
+     "BIH": {
+      "Q1": 1
+     },
+     "ARM": {
+      "Q1": 1
+     },
+     "LVA": {
+      "Q1": 1
+     },
+     "KOS": {
+      "Q1": 1
+     },
+     "FIN": {
+      "Q1": 1
+     },
+     "KAZ": {
+      "Q1": 1
+     },
+     "FRO": {
+      "Q1": 1
+     },
+     "MLT": {
+      "Q1": 1
+     },
+     "NIR": {
+      "Q1": 1
+     },
+     "LTU": {
+      "Q1": 1
+     },
+     "EST": {
+      "Q1": 1
+     },
+     "ALB": {
+      "Q1": 1
+     },
+     "MNE": {
+      "Q1": 1
+     },
+     "LUX": {
+      "Q1": 1
+     },
+     "WAL": {
+      "Q1": 1
+     },
+     "GEO": {
+      "Q1": 1
+     },
+     "MKD": {
+      "Q1": 1
+     },
+     "BLR": {
+      "Q1": 1
+     },
+     "AND": {
+      "Q1": 1
+     },
+     "GIB": {
+      "Q1": 1
+     },
+     "SMR": {
+      "Q1": 1
+     },
+     "POL": {
+      "Q2CH": 1,
+      "Q2LP": 1
+     },
+     "DEN": {
+      "Q2CH": 1
+     },
+     "SUI": {
+      "Q2CH": 1
+     },
+     "ISR": {
+      "Q2CH": 1
+     },
+     "CYP": {
+      "Q2CH": 1
+     },
+     "SWE": {
+      "Q2CH": 1
+     },
+     "CRO": {
+      "Q2CH": 1
+     },
+     "SRB": {
+      "Q2CH": 1
+     },
+     "SVK": {
+      "Q2CH": 1
+     },
+     "SVN": {
+      "Q2CH": 1
+     },
+     "TUR": {
+      "Q2LP": 1,
+      "LP": 1
+     },
+     "AUT": {
+      "Q2LP": 1,
+      "POCH": 1
+     },
+     "SCO": {
+      "Q2LP": 1,
+      "POCH": 1
+     },
+     "FRA": {
+      "Q3LP": 1,
+      "LP": 3
+     },
+     "NED": {
+      "Q3LP": 1,
+      "LP": 2
+     },
+     "BEL": {
+      "Q3LP": 1,
+      "LP": 1
+     },
+     "CZE": {
+      "Q3LP": 1,
+      "LP": 1
+     },
+     "NOR": {
+      "Q3LP": 1,
+      "POCH": 1
+     },
+     "GRE": {
+      "Q3LP": 1,
+      "POCH": 1
+     },
+     "ENG": {
+      "LP": 5
+     },
+     "ITA": {
+      "LP": 4
+     },
+     "ESP": {
+      "LP": 5
+     },
+     "GER": {
+      "LP": 4
+     },
+     "POR": {
+      "LP": 2
+     },
+     "UKR": {
+      "LP": 1
+     }
+    },
+    "access": {
+     "ENG": {
+      "LP": [
+       [
+        "place",
+        1
+       ],
+       [
+        "place",
+        2
+       ],
+       [
+        "place",
+        3
+       ],
+       [
+        "place",
+        4
+       ],
+       [
+        "place",
+        5
+       ]
+      ]
+     },
+     "ESP": {
+      "LP": [
+       [
+        "place",
+        1
+       ],
+       [
+        "place",
+        2
+       ],
+       [
+        "place",
+        3
+       ],
+       [
+        "place",
+        4
+       ],
+       [
+        "place",
+        5
+       ]
+      ]
+     },
+     "GER": {
+      "LP": [
+       [
+        "place",
+        1
+       ],
+       [
+        "place",
+        2
+       ],
+       [
+        "place",
+        3
+       ],
+       [
+        "place",
+        4
+       ]
+      ]
+     },
+     "ITA": {
+      "LP": [
+       [
+        "place",
+        1
+       ],
+       [
+        "place",
+        2
+       ],
+       [
+        "place",
+        3
+       ],
+       [
+        "place",
+        4
+       ]
+      ]
+     }
+    },
+    "pot_bands": {
+     "ENG-LIV1": 1,
+     "ENG-ARS1": 1,
+     "ENG-MCI1": 1,
+     "ITA-INT1": 1,
+     "GER-FCB1": 1,
+     "ENG-AVL1": 1,
+     "ENG-MUN1": 1,
+     "ESP-BAR1": 1,
+     "ESP-RMA1": 1,
+     "ITA-NAP1": 2,
+     "ESP-ATM1": 2,
+     "FRA-LIL1": 2,
+     "FRA-LYO1": 2,
+     "FRA-PSG1": 2,
+     "ESP-VIL1": 2,
+     "GER-DOR1": 2,
+     "ESP-BET1": 2,
+     "FRA-LEN1": 2,
+     "ITA-ROMA1": 3,
+     "GER-RBL1": 3,
+     "NED-PE1": 3,
+     "NED-FEY1": 3,
+     "TUR-FEN1": 3,
+     "CZE-SP21": 3,
+     "TUR-GAL1": 3,
+     "BEL-CB1": 3,
+     "NED-NEC1": 3,
+     "CZE-SP1": 4,
+     "BEL-USG1": 4,
+     "POR-SC1": 4,
+     "POR-POR1": 4,
+     "POL-GZ1": 4,
+     "GRE-AA1": 4,
+     "POL-LP1": 4,
+     "GER-VFB1": 4,
+     "SCO-HOM1": 4,
+     "GRE-OLY1": 4,
+     "NOR-VIK1": 4,
+     "SCO-CEL1": 4,
+     "AUT-SG1": 4,
+     "ITA-COMO1": 4,
+     "NOR-BG1": 4,
+     "AUT-LAS1": 4,
+     "SWE-MA1": 4,
+     "SUI-THU1": 4,
+     "DEN-AGF1": 4,
+     "ISR-HBE1": 4,
+     "HUN-EGR1": 4,
+     "CYP-OMO1": 4,
+     "BUL-LS1": 4,
+     "SRB-RSB1": 4,
+     "UKR-SD1": 4,
+     "ROU-UC1": 4,
+     "AZE-SAB1": 4,
+     "SVK-SB1": 4,
+     "CRO-DZ1": 4,
+     "LTU-KA1": 4,
+     "FRO-KI1": 4,
+     "SVN-CEL1": 4,
+     "KOS-DRI1": 4,
+     "NIR-LAR1": 4,
+     "BIH-BBL1": 4,
+     "MLT-FLO1": 4,
+     "FIN-KUP1": 4,
+     "ISL-VR1": 4,
+     "IRL-SR1": 4,
+     "KAZ-KAI1": 4,
+     "LVA-RIG1": 4,
+     "ARM-AA1": 4,
+     "MDA-PHT1": 4,
+     "EST-FLO1": 4,
+     "ALB-EGN1": 4,
+     "LUX-AB1": 4,
+     "GIB-LRI1": 4,
+     "BLR-MV1": 4,
+     "WAL-TNS1": 4,
+     "SMR-TF1": 4,
+     "MKD-VAR1": 4,
+     "GEO-I11": 4,
+     "AND-ICD1": 4,
+     "MNE-SUT1": 4,
+     "ENG-CRY1": 1,
+     "ITA-MIL1": 1,
+     "ENG-BOU1": 1,
+     "GER-B041": 1,
+     "FRA-MAR1": 1,
+     "FRA-REN1": 1,
+     "ITA-JUV1": 1,
+     "ENG-SUN1": 1,
+     "ESP-RSO1": 1,
+     "NED-TWE1": 2,
+     "POR-BEN1": 2,
+     "BEL-ST1": 2,
+     "NED-AZ1": 2,
+     "BEL-AND1": 2,
+     "TUR-BI1": 2,
+     "TUR-TRA1": 2,
+     "POR-TOR1": 2,
+     "CZE-VP1": 2,
+     "ESP-CEL1": 3,
+     "CZE-HK1": 3,
+     "POL-JBY1": 3,
+     "AUT-RBS1": 3,
+     "NOR-TRO1": 3,
+     "NOR-LIL1": 3,
+     "GRE-OFI1": 3,
+     "SCO-RAN1": 3,
+     "GRE-PAO1": 3,
+     "SWE-HI1": 4,
+     "GER-TSG1": 4,
+     "DEN-MID1": 4,
+     "SUI-SG1": 4,
+     "ISR-MTA1": 4,
+     "ROU-UC21": 4,
+     "CYP-PAF1": 4,
+     "SRB-VOJ1": 4,
+     "HUN-FER1": 4,
+     "SVK-ILI1": 4,
+     "SVN-ALU1": 4,
+     "AZE-QAR1": 4,
+     "BUL-CS1": 4,
+     "UKR-DK1": 4,
+     "CRO-HS1": 4,
+     "MDA-ST1": 4,
+     "ISL-VES1": 4,
+     "IRL-DC1": 4,
+     "ENG-BHA1": 1,
+     "FRA-MON1": 1,
+     "POR-BRA1": 1,
+     "CZE-JAB1": 1,
+     "TUR-SBA1": 1,
+     "BEL-GEN1": 1,
+     "NED-AJA1": 1,
+     "SCO-MOT1": 1,
+     "NOR-BRA1": 1,
+     "SCO-HIB1": 2,
+     "AUT-RW1": 2,
+     "POL-RCS1": 2,
+     "POL-GK1": 2,
+     "GRE-PAN1": 2,
+     "AUT-AW1": 2,
+     "SWE-GAI1": 2,
+     "SUI-LUG1": 2,
+     "DEN-COP1": 2,
+     "SUI-SIO1": 3,
+     "ITA-ATA1": 3,
+     "CYP-AL21": 3,
+     "ISR-BJ1": 3,
+     "DEN-NOR1": 3,
+     "GER-SCF1": 3,
+     "CYP-AL1": 3,
+     "SWE-IG1": 3,
+     "ISR-HTA1": 3,
+     "SVK-DDS1": 4,
+     "ESP-GET1": 4,
+     "CRO-RIJ1": 4,
+     "ROU-FCS1": 4,
+     "BUL-LR1": 4,
+     "SVN-BRA1": 4,
+     "ROU-CC1": 4,
+     "BUL-C11": 4,
+     "AZE-ZIR1": 4,
+     "SVN-KOP1": 4,
+     "CRO-VD1": 4,
+     "SRB-PAR1": 4,
+     "UKR-PZ1": 4,
+     "SRB-EAP1": 4,
+     "HUN-PAK1": 4,
+     "UKR-LC1": 4,
+     "EST-PL1": 4,
+     "AZE-NEF1": 4,
+     "SVK-ST1": 4,
+     "ISL-VAL1": 4,
+     "HUN-DEB1": 4,
+     "KAZ-AST1": 4,
+     "NIR-COL1": 4,
+     "ARM-ALA1": 4,
+     "EST-NK1": 4,
+     "IRL-BOH1": 4,
+     "KAZ-YEL1": 4,
+     "MDA-ZCI1": 4,
+     "FRO-HB1": 4,
+     "NIR-LIN1": 4,
+     "MLT-MAR1": 4,
+     "ARM-NOA1": 4,
+     "NIR-GLE1": 4,
+     "FIN-ILV1": 4,
+     "LVA-RFS1": 4,
+     "BIH-SAR1": 4,
+     "MDA-MO1": 4,
+     "BIH-ZM1": 4,
+     "ARM-PYU1": 4,
+     "LTU-ALG1": 4,
+     "LVA-AUD1": 4,
+     "KOS-DUK1": 4,
+     "MLT-HS1": 4,
+     "KAZ-TOB1": 4,
+     "KOS-BAL1": 4,
+     "LTU-HEG1": 4,
+     "BIH-VM1": 4,
+     "ISL-STJ1": 4,
+     "MLT-VAL1": 4,
+     "WAL-CSQ1": 4,
+     "EST-FL1": 4,
+     "FIN-IT1": 4,
+     "LVA-LJ1": 4,
+     "FRO-NSI1": 4,
+     "LIE-VAD1": 4,
+     "LTU-PY1": 4,
+     "IRL-SHE1": 4,
+     "FRO-VG1": 4,
+     "MNE-DI1": 4,
+     "GIB-SJS1": 4,
+     "SMR-VIR1": 4,
+     "FIN-HJK1": 4,
+     "LUX-MLB1": 4,
+     "GEO-DG1": 4,
+     "KOS-MAL1": 4,
+     "LUX-D01": 4,
+     "ALB-VLL1": 4,
+     "AND-FSC1": 4,
+     "SMR-LF1": 4,
+     "BLR-DM1": 4,
+     "AND-ACD1": 4,
+     "GEO-TK1": 4,
+     "MKD-SHK1": 4,
+     "ALB-DC1": 4,
+     "GEO-DT1": 4,
+     "MNE-PET1": 4,
+     "LUX-US1": 4,
+     "MNE-MOR1": 4,
+     "BLR-BB1": 4,
+     "MKD-SIL1": 4,
+     "ALB-ELB1": 4,
+     "WAL-PEN1": 4,
+     "WAL-CT1": 4,
+     "GIB-EUR1": 4
+    },
+    "leagues": {
+     "ENG": "PL",
+     "ESP": "LL",
+     "GER": "BL",
+     "ITA": "SA"
+    }
    }
   },
   {
@@ -1003535,7 +1004041,411 @@
       }
      ]
     },
-    "kind": "continental"
+    "kind": "continental",
+    "shape": {
+     "CRO": {
+      "Q1": 1
+     },
+     "SRB": {
+      "Q1": 1
+     },
+     "UKR": {
+      "Q1": 1
+     },
+     "HUN": {
+      "Q1": 1
+     },
+     "ROU": {
+      "Q1": 1
+     },
+     "SVK": {
+      "Q1": 1
+     },
+     "SVN": {
+      "Q1": 1
+     },
+     "BUL": {
+      "Q1": 1
+     },
+     "AZE": {
+      "Q1": 1
+     },
+     "IRL": {
+      "Q1": 1
+     },
+     "MDA": {
+      "Q1": 1
+     },
+     "ISL": {
+      "Q1": 1
+     },
+     "NED": {
+      "Q2": 1,
+      "LP": 1
+     },
+     "POR": {
+      "Q2": 1,
+      "LP": 1
+     },
+     "BEL": {
+      "Q2": 1,
+      "PO": 1
+     },
+     "CZE": {
+      "Q2": 1,
+      "PO": 1
+     },
+     "TUR": {
+      "Q2": 1,
+      "PO": 1
+     },
+     "NOR": {
+      "Q2": 1,
+      "PO": 1
+     },
+     "GRE": {
+      "Q2": 1,
+      "PO": 1
+     },
+     "DEN": {
+      "Q2": 1
+     },
+     "SUI": {
+      "Q2": 1
+     },
+     "ISR": {
+      "Q2": 1
+     },
+     "CYP": {
+      "Q2": 1
+     },
+     "SWE": {
+      "Q2": 1
+     },
+     "AUT": {
+      "Q3MP": 1
+     },
+     "SCO": {
+      "Q3MP": 1
+     },
+     "POL": {
+      "Q3MP": 1
+     },
+     "ENG": {
+      "LP": 3
+     },
+     "ITA": {
+      "LP": 2
+     },
+     "ESP": {
+      "LP": 2
+     },
+     "GER": {
+      "LP": 2
+     },
+     "FRA": {
+      "LP": 2
+     }
+    },
+    "access": {
+     "ENG": {
+      "LP": [
+       [
+        "cup",
+        "FAC"
+       ],
+       [
+        "place",
+        6
+       ],
+       [
+        "place",
+        7
+       ]
+      ]
+     },
+     "ESP": {
+      "LP": [
+       [
+        "cup",
+        "CDR"
+       ],
+       [
+        "place",
+        6
+       ]
+      ]
+     },
+     "GER": {
+      "LP": [
+       [
+        "cup",
+        "DFBP"
+       ],
+       [
+        "place",
+        5
+       ]
+      ]
+     },
+     "ITA": {
+      "LP": [
+       [
+        "cup",
+        "CI"
+       ],
+       [
+        "place",
+        5
+       ]
+      ]
+     }
+    },
+    "pot_bands": {
+     "ENG-LIV1": 1,
+     "ENG-ARS1": 1,
+     "ENG-MCI1": 1,
+     "ITA-INT1": 1,
+     "GER-FCB1": 1,
+     "ENG-AVL1": 1,
+     "ENG-MUN1": 1,
+     "ESP-BAR1": 1,
+     "ESP-RMA1": 1,
+     "ITA-NAP1": 2,
+     "ESP-ATM1": 2,
+     "FRA-LIL1": 2,
+     "FRA-LYO1": 2,
+     "FRA-PSG1": 2,
+     "ESP-VIL1": 2,
+     "GER-DOR1": 2,
+     "ESP-BET1": 2,
+     "FRA-LEN1": 2,
+     "ITA-ROMA1": 3,
+     "GER-RBL1": 3,
+     "NED-PE1": 3,
+     "NED-FEY1": 3,
+     "TUR-FEN1": 3,
+     "CZE-SP21": 3,
+     "TUR-GAL1": 3,
+     "BEL-CB1": 3,
+     "NED-NEC1": 3,
+     "CZE-SP1": 4,
+     "BEL-USG1": 4,
+     "POR-SC1": 4,
+     "POR-POR1": 4,
+     "POL-GZ1": 4,
+     "GRE-AA1": 4,
+     "POL-LP1": 4,
+     "GER-VFB1": 4,
+     "SCO-HOM1": 4,
+     "GRE-OLY1": 4,
+     "NOR-VIK1": 4,
+     "SCO-CEL1": 4,
+     "AUT-SG1": 4,
+     "ITA-COMO1": 4,
+     "NOR-BG1": 4,
+     "AUT-LAS1": 4,
+     "SWE-MA1": 4,
+     "SUI-THU1": 4,
+     "DEN-AGF1": 4,
+     "ISR-HBE1": 4,
+     "HUN-EGR1": 4,
+     "CYP-OMO1": 4,
+     "BUL-LS1": 4,
+     "SRB-RSB1": 4,
+     "UKR-SD1": 4,
+     "ROU-UC1": 4,
+     "AZE-SAB1": 4,
+     "SVK-SB1": 4,
+     "CRO-DZ1": 4,
+     "LTU-KA1": 4,
+     "FRO-KI1": 4,
+     "SVN-CEL1": 4,
+     "KOS-DRI1": 4,
+     "NIR-LAR1": 4,
+     "BIH-BBL1": 4,
+     "MLT-FLO1": 4,
+     "FIN-KUP1": 4,
+     "ISL-VR1": 4,
+     "IRL-SR1": 4,
+     "KAZ-KAI1": 4,
+     "LVA-RIG1": 4,
+     "ARM-AA1": 4,
+     "MDA-PHT1": 4,
+     "EST-FLO1": 4,
+     "ALB-EGN1": 4,
+     "LUX-AB1": 4,
+     "GIB-LRI1": 4,
+     "BLR-MV1": 4,
+     "WAL-TNS1": 4,
+     "SMR-TF1": 4,
+     "MKD-VAR1": 4,
+     "GEO-I11": 4,
+     "AND-ICD1": 4,
+     "MNE-SUT1": 4,
+     "ENG-CRY1": 1,
+     "ITA-MIL1": 1,
+     "ENG-BOU1": 1,
+     "GER-B041": 1,
+     "FRA-MAR1": 1,
+     "FRA-REN1": 1,
+     "ITA-JUV1": 1,
+     "ENG-SUN1": 1,
+     "ESP-RSO1": 1,
+     "NED-TWE1": 2,
+     "POR-BEN1": 2,
+     "BEL-ST1": 2,
+     "NED-AZ1": 2,
+     "BEL-AND1": 2,
+     "TUR-BI1": 2,
+     "TUR-TRA1": 2,
+     "POR-TOR1": 2,
+     "CZE-VP1": 2,
+     "ESP-CEL1": 3,
+     "CZE-HK1": 3,
+     "POL-JBY1": 3,
+     "AUT-RBS1": 3,
+     "NOR-TRO1": 3,
+     "NOR-LIL1": 3,
+     "GRE-OFI1": 3,
+     "SCO-RAN1": 3,
+     "GRE-PAO1": 3,
+     "SWE-HI1": 4,
+     "GER-TSG1": 4,
+     "DEN-MID1": 4,
+     "SUI-SG1": 4,
+     "ISR-MTA1": 4,
+     "ROU-UC21": 4,
+     "CYP-PAF1": 4,
+     "SRB-VOJ1": 4,
+     "HUN-FER1": 4,
+     "SVK-ILI1": 4,
+     "SVN-ALU1": 4,
+     "AZE-QAR1": 4,
+     "BUL-CS1": 4,
+     "UKR-DK1": 4,
+     "CRO-HS1": 4,
+     "MDA-ST1": 4,
+     "ISL-VES1": 4,
+     "IRL-DC1": 4,
+     "ENG-BHA1": 1,
+     "FRA-MON1": 1,
+     "POR-BRA1": 1,
+     "CZE-JAB1": 1,
+     "TUR-SBA1": 1,
+     "BEL-GEN1": 1,
+     "NED-AJA1": 1,
+     "SCO-MOT1": 1,
+     "NOR-BRA1": 1,
+     "SCO-HIB1": 2,
+     "AUT-RW1": 2,
+     "POL-RCS1": 2,
+     "POL-GK1": 2,
+     "GRE-PAN1": 2,
+     "AUT-AW1": 2,
+     "SWE-GAI1": 2,
+     "SUI-LUG1": 2,
+     "DEN-COP1": 2,
+     "SUI-SIO1": 3,
+     "ITA-ATA1": 3,
+     "CYP-AL21": 3,
+     "ISR-BJ1": 3,
+     "DEN-NOR1": 3,
+     "GER-SCF1": 3,
+     "CYP-AL1": 3,
+     "SWE-IG1": 3,
+     "ISR-HTA1": 3,
+     "SVK-DDS1": 4,
+     "ESP-GET1": 4,
+     "CRO-RIJ1": 4,
+     "ROU-FCS1": 4,
+     "BUL-LR1": 4,
+     "SVN-BRA1": 4,
+     "ROU-CC1": 4,
+     "BUL-C11": 4,
+     "AZE-ZIR1": 4,
+     "SVN-KOP1": 4,
+     "CRO-VD1": 4,
+     "SRB-PAR1": 4,
+     "UKR-PZ1": 4,
+     "SRB-EAP1": 4,
+     "HUN-PAK1": 4,
+     "UKR-LC1": 4,
+     "EST-PL1": 4,
+     "AZE-NEF1": 4,
+     "SVK-ST1": 4,
+     "ISL-VAL1": 4,
+     "HUN-DEB1": 4,
+     "KAZ-AST1": 4,
+     "NIR-COL1": 4,
+     "ARM-ALA1": 4,
+     "EST-NK1": 4,
+     "IRL-BOH1": 4,
+     "KAZ-YEL1": 4,
+     "MDA-ZCI1": 4,
+     "FRO-HB1": 4,
+     "NIR-LIN1": 4,
+     "MLT-MAR1": 4,
+     "ARM-NOA1": 4,
+     "NIR-GLE1": 4,
+     "FIN-ILV1": 4,
+     "LVA-RFS1": 4,
+     "BIH-SAR1": 4,
+     "MDA-MO1": 4,
+     "BIH-ZM1": 4,
+     "ARM-PYU1": 4,
+     "LTU-ALG1": 4,
+     "LVA-AUD1": 4,
+     "KOS-DUK1": 4,
+     "MLT-HS1": 4,
+     "KAZ-TOB1": 4,
+     "KOS-BAL1": 4,
+     "LTU-HEG1": 4,
+     "BIH-VM1": 4,
+     "ISL-STJ1": 4,
+     "MLT-VAL1": 4,
+     "WAL-CSQ1": 4,
+     "EST-FL1": 4,
+     "FIN-IT1": 4,
+     "LVA-LJ1": 4,
+     "FRO-NSI1": 4,
+     "LIE-VAD1": 4,
+     "LTU-PY1": 4,
+     "IRL-SHE1": 4,
+     "FRO-VG1": 4,
+     "MNE-DI1": 4,
+     "GIB-SJS1": 4,
+     "SMR-VIR1": 4,
+     "FIN-HJK1": 4,
+     "LUX-MLB1": 4,
+     "GEO-DG1": 4,
+     "KOS-MAL1": 4,
+     "LUX-D01": 4,
+     "ALB-VLL1": 4,
+     "AND-FSC1": 4,
+     "SMR-LF1": 4,
+     "BLR-DM1": 4,
+     "AND-ACD1": 4,
+     "GEO-TK1": 4,
+     "MKD-SHK1": 4,
+     "ALB-DC1": 4,
+     "GEO-DT1": 4,
+     "MNE-PET1": 4,
+     "LUX-US1": 4,
+     "MNE-MOR1": 4,
+     "BLR-BB1": 4,
+     "MKD-SIL1": 4,
+     "ALB-ELB1": 4,
+     "WAL-PEN1": 4,
+     "WAL-CT1": 4,
+     "GIB-EUR1": 4
+    },
+    "leagues": {
+     "ENG": "PL",
+     "ESP": "LL",
+     "GER": "BL",
+     "ITA": "SA"
+    }
    }
   },
   {
@@ -1003669,7 +1004579,464 @@
      }
     ],
     "drops": {},
-    "kind": "continental"
+    "kind": "continental",
+    "shape": {
+     "AZE": {
+      "Q1": 1,
+      "Q2MP": 1
+     },
+     "IRL": {
+      "Q1": 1,
+      "Q2MP": 1
+     },
+     "MDA": {
+      "Q1": 1,
+      "Q2MP": 1
+     },
+     "ISL": {
+      "Q1": 1,
+      "Q2MP": 1
+     },
+     "BIH": {
+      "Q1": 2,
+      "Q2MP": 1
+     },
+     "ARM": {
+      "Q1": 2,
+      "Q2MP": 1
+     },
+     "LVA": {
+      "Q1": 2,
+      "Q2MP": 1
+     },
+     "KOS": {
+      "Q1": 2,
+      "Q2MP": 1
+     },
+     "FIN": {
+      "Q1": 2,
+      "Q2MP": 1
+     },
+     "KAZ": {
+      "Q1": 2,
+      "Q2MP": 1
+     },
+     "FRO": {
+      "Q1": 2,
+      "Q2MP": 1
+     },
+     "MLT": {
+      "Q1": 2,
+      "Q2MP": 1
+     },
+     "NIR": {
+      "Q1": 2,
+      "Q2MP": 1
+     },
+     "LTU": {
+      "Q1": 2,
+      "Q2MP": 1
+     },
+     "EST": {
+      "Q1": 3
+     },
+     "ALB": {
+      "Q1": 3
+     },
+     "MNE": {
+      "Q1": 3
+     },
+     "LUX": {
+      "Q1": 3
+     },
+     "WAL": {
+      "Q1": 3
+     },
+     "GEO": {
+      "Q1": 3
+     },
+     "MKD": {
+      "Q1": 2
+     },
+     "BLR": {
+      "Q1": 2
+     },
+     "AND": {
+      "Q1": 2
+     },
+     "GIB": {
+      "Q1": 2
+     },
+     "SMR": {
+      "Q1": 2
+     },
+     "NED": {
+      "Q2MP": 1
+     },
+     "POR": {
+      "Q2MP": 1
+     },
+     "BEL": {
+      "Q2MP": 1
+     },
+     "CZE": {
+      "Q2MP": 1
+     },
+     "TUR": {
+      "Q2MP": 1
+     },
+     "NOR": {
+      "Q2MP": 1
+     },
+     "GRE": {
+      "Q2MP": 1
+     },
+     "AUT": {
+      "Q2MP": 2
+     },
+     "SCO": {
+      "Q2MP": 2
+     },
+     "POL": {
+      "Q2MP": 2
+     },
+     "DEN": {
+      "Q2MP": 2
+     },
+     "SUI": {
+      "Q2MP": 2
+     },
+     "ISR": {
+      "Q2MP": 2
+     },
+     "CYP": {
+      "Q2MP": 2
+     },
+     "SWE": {
+      "Q2MP": 2
+     },
+     "CRO": {
+      "Q2MP": 2
+     },
+     "SRB": {
+      "Q2MP": 2
+     },
+     "UKR": {
+      "Q2MP": 2
+     },
+     "HUN": {
+      "Q2MP": 2
+     },
+     "ROU": {
+      "Q2MP": 2
+     },
+     "SVK": {
+      "Q2MP": 2
+     },
+     "SVN": {
+      "Q2MP": 2
+     },
+     "BUL": {
+      "Q2MP": 2
+     },
+     "LIE": {
+      "Q2MP": 1
+     },
+     "ENG": {
+      "POMP": 1
+     },
+     "ITA": {
+      "POMP": 1
+     },
+     "ESP": {
+      "POMP": 1
+     },
+     "GER": {
+      "POMP": 1
+     },
+     "FRA": {
+      "POMP": 1
+     }
+    },
+    "access": {
+     "ENG": {
+      "POMP": [
+       [
+        "cup",
+        "EFLC"
+       ]
+      ]
+     },
+     "ESP": {
+      "POMP": [
+       [
+        "place",
+        7
+       ]
+      ]
+     },
+     "GER": {
+      "POMP": [
+       [
+        "place",
+        6
+       ]
+      ]
+     },
+     "ITA": {
+      "POMP": [
+       [
+        "place",
+        6
+       ]
+      ]
+     }
+    },
+    "pot_bands": {
+     "ENG-LIV1": 1,
+     "ENG-ARS1": 1,
+     "ENG-MCI1": 1,
+     "ITA-INT1": 1,
+     "GER-FCB1": 1,
+     "ENG-AVL1": 1,
+     "ENG-MUN1": 1,
+     "ESP-BAR1": 1,
+     "ESP-RMA1": 1,
+     "ITA-NAP1": 2,
+     "ESP-ATM1": 2,
+     "FRA-LIL1": 2,
+     "FRA-LYO1": 2,
+     "FRA-PSG1": 2,
+     "ESP-VIL1": 2,
+     "GER-DOR1": 2,
+     "ESP-BET1": 2,
+     "FRA-LEN1": 2,
+     "ITA-ROMA1": 3,
+     "GER-RBL1": 3,
+     "NED-PE1": 3,
+     "NED-FEY1": 3,
+     "TUR-FEN1": 3,
+     "CZE-SP21": 3,
+     "TUR-GAL1": 3,
+     "BEL-CB1": 3,
+     "NED-NEC1": 3,
+     "CZE-SP1": 4,
+     "BEL-USG1": 4,
+     "POR-SC1": 4,
+     "POR-POR1": 4,
+     "POL-GZ1": 4,
+     "GRE-AA1": 4,
+     "POL-LP1": 4,
+     "GER-VFB1": 4,
+     "SCO-HOM1": 4,
+     "GRE-OLY1": 4,
+     "NOR-VIK1": 4,
+     "SCO-CEL1": 4,
+     "AUT-SG1": 4,
+     "ITA-COMO1": 4,
+     "NOR-BG1": 4,
+     "AUT-LAS1": 4,
+     "SWE-MA1": 4,
+     "SUI-THU1": 4,
+     "DEN-AGF1": 4,
+     "ISR-HBE1": 4,
+     "HUN-EGR1": 4,
+     "CYP-OMO1": 4,
+     "BUL-LS1": 4,
+     "SRB-RSB1": 4,
+     "UKR-SD1": 4,
+     "ROU-UC1": 4,
+     "AZE-SAB1": 4,
+     "SVK-SB1": 4,
+     "CRO-DZ1": 4,
+     "LTU-KA1": 4,
+     "FRO-KI1": 4,
+     "SVN-CEL1": 4,
+     "KOS-DRI1": 4,
+     "NIR-LAR1": 4,
+     "BIH-BBL1": 4,
+     "MLT-FLO1": 4,
+     "FIN-KUP1": 4,
+     "ISL-VR1": 4,
+     "IRL-SR1": 4,
+     "KAZ-KAI1": 4,
+     "LVA-RIG1": 4,
+     "ARM-AA1": 4,
+     "MDA-PHT1": 4,
+     "EST-FLO1": 4,
+     "ALB-EGN1": 4,
+     "LUX-AB1": 4,
+     "GIB-LRI1": 4,
+     "BLR-MV1": 4,
+     "WAL-TNS1": 4,
+     "SMR-TF1": 4,
+     "MKD-VAR1": 4,
+     "GEO-I11": 4,
+     "AND-ICD1": 4,
+     "MNE-SUT1": 4,
+     "ENG-CRY1": 1,
+     "ITA-MIL1": 1,
+     "ENG-BOU1": 1,
+     "GER-B041": 1,
+     "FRA-MAR1": 1,
+     "FRA-REN1": 1,
+     "ITA-JUV1": 1,
+     "ENG-SUN1": 1,
+     "ESP-RSO1": 1,
+     "NED-TWE1": 2,
+     "POR-BEN1": 2,
+     "BEL-ST1": 2,
+     "NED-AZ1": 2,
+     "BEL-AND1": 2,
+     "TUR-BI1": 2,
+     "TUR-TRA1": 2,
+     "POR-TOR1": 2,
+     "CZE-VP1": 2,
+     "ESP-CEL1": 3,
+     "CZE-HK1": 3,
+     "POL-JBY1": 3,
+     "AUT-RBS1": 3,
+     "NOR-TRO1": 3,
+     "NOR-LIL1": 3,
+     "GRE-OFI1": 3,
+     "SCO-RAN1": 3,
+     "GRE-PAO1": 3,
+     "SWE-HI1": 4,
+     "GER-TSG1": 4,
+     "DEN-MID1": 4,
+     "SUI-SG1": 4,
+     "ISR-MTA1": 4,
+     "ROU-UC21": 4,
+     "CYP-PAF1": 4,
+     "SRB-VOJ1": 4,
+     "HUN-FER1": 4,
+     "SVK-ILI1": 4,
+     "SVN-ALU1": 4,
+     "AZE-QAR1": 4,
+     "BUL-CS1": 4,
+     "UKR-DK1": 4,
+     "CRO-HS1": 4,
+     "MDA-ST1": 4,
+     "ISL-VES1": 4,
+     "IRL-DC1": 4,
+     "ENG-BHA1": 1,
+     "FRA-MON1": 1,
+     "POR-BRA1": 1,
+     "CZE-JAB1": 1,
+     "TUR-SBA1": 1,
+     "BEL-GEN1": 1,
+     "NED-AJA1": 1,
+     "SCO-MOT1": 1,
+     "NOR-BRA1": 1,
+     "SCO-HIB1": 2,
+     "AUT-RW1": 2,
+     "POL-RCS1": 2,
+     "POL-GK1": 2,
+     "GRE-PAN1": 2,
+     "AUT-AW1": 2,
+     "SWE-GAI1": 2,
+     "SUI-LUG1": 2,
+     "DEN-COP1": 2,
+     "SUI-SIO1": 3,
+     "ITA-ATA1": 3,
+     "CYP-AL21": 3,
+     "ISR-BJ1": 3,
+     "DEN-NOR1": 3,
+     "GER-SCF1": 3,
+     "CYP-AL1": 3,
+     "SWE-IG1": 3,
+     "ISR-HTA1": 3,
+     "SVK-DDS1": 4,
+     "ESP-GET1": 4,
+     "CRO-RIJ1": 4,
+     "ROU-FCS1": 4,
+     "BUL-LR1": 4,
+     "SVN-BRA1": 4,
+     "ROU-CC1": 4,
+     "BUL-C11": 4,
+     "AZE-ZIR1": 4,
+     "SVN-KOP1": 4,
+     "CRO-VD1": 4,
+     "SRB-PAR1": 4,
+     "UKR-PZ1": 4,
+     "SRB-EAP1": 4,
+     "HUN-PAK1": 4,
+     "UKR-LC1": 4,
+     "EST-PL1": 4,
+     "AZE-NEF1": 4,
+     "SVK-ST1": 4,
+     "ISL-VAL1": 4,
+     "HUN-DEB1": 4,
+     "KAZ-AST1": 4,
+     "NIR-COL1": 4,
+     "ARM-ALA1": 4,
+     "EST-NK1": 4,
+     "IRL-BOH1": 4,
+     "KAZ-YEL1": 4,
+     "MDA-ZCI1": 4,
+     "FRO-HB1": 4,
+     "NIR-LIN1": 4,
+     "MLT-MAR1": 4,
+     "ARM-NOA1": 4,
+     "NIR-GLE1": 4,
+     "FIN-ILV1": 4,
+     "LVA-RFS1": 4,
+     "BIH-SAR1": 4,
+     "MDA-MO1": 4,
+     "BIH-ZM1": 4,
+     "ARM-PYU1": 4,
+     "LTU-ALG1": 4,
+     "LVA-AUD1": 4,
+     "KOS-DUK1": 4,
+     "MLT-HS1": 4,
+     "KAZ-TOB1": 4,
+     "KOS-BAL1": 4,
+     "LTU-HEG1": 4,
+     "BIH-VM1": 4,
+     "ISL-STJ1": 4,
+     "MLT-VAL1": 4,
+     "WAL-CSQ1": 4,
+     "EST-FL1": 4,
+     "FIN-IT1": 4,
+     "LVA-LJ1": 4,
+     "FRO-NSI1": 4,
+     "LIE-VAD1": 4,
+     "LTU-PY1": 4,
+     "IRL-SHE1": 4,
+     "FRO-VG1": 4,
+     "MNE-DI1": 4,
+     "GIB-SJS1": 4,
+     "SMR-VIR1": 4,
+     "FIN-HJK1": 4,
+     "LUX-MLB1": 4,
+     "GEO-DG1": 4,
+     "KOS-MAL1": 4,
+     "LUX-D01": 4,
+     "ALB-VLL1": 4,
+     "AND-FSC1": 4,
+     "SMR-LF1": 4,
+     "BLR-DM1": 4,
+     "AND-ACD1": 4,
+     "GEO-TK1": 4,
+     "MKD-SHK1": 4,
+     "ALB-DC1": 4,
+     "GEO-DT1": 4,
+     "MNE-PET1": 4,
+     "LUX-US1": 4,
+     "MNE-MOR1": 4,
+     "BLR-BB1": 4,
+     "MKD-SIL1": 4,
+     "ALB-ELB1": 4,
+     "WAL-PEN1": 4,
+     "WAL-CT1": 4,
+     "GIB-EUR1": 4
+    },
+    "leagues": {
+     "ENG": "PL",
+     "ESP": "LL",
+     "GER": "BL",
+     "ITA": "SA"
+    }
    }
   },
   {
