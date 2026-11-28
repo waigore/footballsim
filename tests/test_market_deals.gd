@@ -95,7 +95,7 @@ func _terms(player_id: String, overrides: Dictionary = {}) -> Dictionary:
 
 func _propose(season: LeagueSeason, from: String, to: String, player: String,
 		terms: Dictionary, date: String = DATE) -> String:
-	var out := MarketDeals.propose(season, from, to, player, terms, date)
+	var out := MarketDeals.propose(season.save, from, to, player, terms, date)
 	assert_true(str(out.get("deal", "")) != "", "the deal was not proposed")
 	return str(out.get("deal", ""))
 
@@ -452,7 +452,7 @@ func test_the_engine_refuses_a_deal_it_does_not_have() -> void:
 		"an empty deal was rewritten")
 	assert_eq(str(MarketDeals.resolve_clearance("", DATE).get("reason", "")), "no_deal",
 		"an empty deal cleared")
-	assert_eq(str(MarketDeals.propose(season, "", "", "", {}, DATE).get("reason", "")),
+	assert_eq(str(MarketDeals.propose(season.save, "", "", "", {}, DATE).get("reason", "")),
 		"terms_incomplete", "an empty proposal was written")
 	assert_true(MarketDealRecords.load("").is_empty(), "an empty deal loaded a row")
 	assert_false(MarketDealRecords.update("", {"fee": 1}), "an empty deal updated")

@@ -44,7 +44,7 @@ func _initialize() -> void:
 		"id", ""))
 	var wage := int(MarketDealRecords.active_contract(player).get("wage", 5000))
 	var terms := {"fee": 24_000_000, "wage": wage, "years": 4, "agent_fee": 1_200_000}
-	var deal := MarketDeals.propose(season, from, to, player, terms, DATE)
+	var deal := MarketDeals.propose(season.save, from, to, player, terms, DATE)
 	var agreed := MarketDeals.agree(str(deal.get("deal", "")), DATE)
 	var done := MarketDeals.seal(str(deal.get("deal", "")), DATE)
 	print("EXIT deal=", str(agreed.get("state", "")), " -> ", str(done.get("state", "")),

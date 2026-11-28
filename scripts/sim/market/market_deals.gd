@@ -10,16 +10,16 @@ static func available() -> bool:
 	return MarketDealRecords.available()
 
 
-static func propose(season: LeagueSeason, from_club_id: String, to_club_id: String,
+static func propose(save: LeagueSave, from_club_id: String, to_club_id: String,
 		player_id: String, terms: Dictionary, date: String = "") -> Dictionary:
 	if player_id == "" or to_club_id == "" or not available():
 		return {"ok": false, "reason": "terms_incomplete"}
 	var day := date
 	var index := 0
-	if season != null and season.save != null:
-		index = season.save.season_index()
+	if save != null:
+		index = save.season_index()
 		if day == "":
-			day = season.save.current_date()
+			day = save.current_date()
 	if day == "":
 		return {"ok": false, "reason": "no_date"}
 	var row := {

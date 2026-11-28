@@ -32,14 +32,14 @@ static func run(options: Dictionary) -> Dictionary:
 		MarketFinanceFlows.month(FixtureCalendar.add_days(start, 30 * (i + 1)))
 	var posted := MarketFinance.post_amortisation(club_id, start, 40000000, 4, "")
 	LeagueSeasonSim.fixture(season, season.record.fixtures.all(1)[0])
-	MarketFinanceFlows.tick_gates(season, start)
+	MarketFinanceFlows.tick_gates(season.save, start)
 	PLDatabase.transaction("BEGIN TRANSACTION;")
 	PLDatabase.execute("UPDATE league_fixture SET status = 'played', home_goals = 2, "
 		+ "away_goals = 1 WHERE status <> 'played';")
 	PLDatabase.transaction("COMMIT;")
 	season.record.standings.recompute()
 	season.save.set_status("complete")
-	var paid := MarketFinanceFlows.season_end(season, season.save.season_index())
+	var paid := MarketFinanceFlows.season_end(season.save, season.save.season_index())
 	var kinds: Array = []
 	for row in PLDatabase.rows("SELECT DISTINCT kind FROM club_ledger ORDER BY kind;"):
 		kinds.append(str(row["kind"]))

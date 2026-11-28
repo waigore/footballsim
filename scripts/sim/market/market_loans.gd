@@ -6,16 +6,16 @@ static func available() -> bool:
 	return MarketLoanRecords.available() and MarketDeals.available()
 
 
-static func propose(season: LeagueSeason, parent_id: String, loanee_id: String, player_id: String,
+static func propose(save: LeagueSave, parent_id: String, loanee_id: String, player_id: String,
 		terms: Dictionary, date: String = "") -> Dictionary:
 	if parent_id == "" or loanee_id == "" or player_id == "" or not available():
 		return {"ok": false, "reason": MarketLoanRules.TERMS}
 	var day := str(terms.get("start_date", date))
 	var index := 0
-	if season != null and season.save != null:
-		index = season.save.season_index()
+	if save != null:
+		index = save.season_index()
 		if day == "":
-			day = season.save.current_date()
+			day = save.current_date()
 	if day == "":
 		return {"ok": false, "reason": "no_date"}
 	var id := loan_id(player_id, day)
@@ -131,7 +131,7 @@ static func buy(loan_id: String, date: String) -> Dictionary:
 	return out
 
 
-static func due(season: LeagueSeason, date: String) -> Array:
+static func due(_save: LeagueSave, date: String) -> Array:
 	var out: Array = []
 	if not available() or date == "":
 		return out
@@ -145,23 +145,23 @@ static func due(season: LeagueSeason, date: String) -> Array:
 	return out
 
 
-static func review(season: LeagueSeason, date: String) -> Dictionary:
+static func review(save: LeagueSave, date: String) -> Dictionary:
 	var returned := 0
-	for loan_id in due(season, date):
+	for loan_id in due(save, date):
 		var out := return_loan(str(loan_id), date)
 		if str(out.get("state", "")) == MarketLoanRecords.RETURNED:
 			returned += 1
-	var triggered := fire_obligations(season, date)
+	var triggered := fire_obligations(save, date)
 	return {"returned": returned, "converted": triggered}
 
 
-static func fire_obligations(season: LeagueSeason, date: String) -> int:
+static func fire_obligations(save: LeagueSave, date: String) -> int:
 	var fired := 0
 	for loan in MarketLoanRecords.all_active():
 		var kind := str(loan.get("trigger_kind", ""))
 		if kind == "":
 			continue
-		if not triggered(season, loan, date):
+		if not triggered(save, loan, date):
 			continue
 		var out := buy(str(loan.get("id", "")), date)
 		if str(out.get("state", "")) == MarketLoanRecords.CONVERTED:
@@ -176,7 +176,7 @@ static func trigger(loan_id: String, date: String) -> Dictionary:
 	return buy(loan_id, date)
 
 
-static func triggered(season: LeagueSeason, loan: Dictionary, date: String) -> bool:
+static func triggered(save: LeagueSave, loan: Dictionary, date: String) -> bool:
 	var kind := str(loan.get("trigger_kind", ""))
 	if kind == "":
 		return false
@@ -191,11 +191,11 @@ static func triggered(season: LeagueSeason, loan: Dictionary, date: String) -> b
 				+ "WHERE club_id = ? AND player_id = ?;", [loanee, player_id]).get("n", 0))
 			return apps >= needed
 		"club_promoted":
-			return _promoted(season, loanee)
+			return _promoted(save, loanee)
 		"league_position":
 			return _position_met(loanee, int(value))
 		"season_end":
-			return _season_over(season, date)
+			return _season_over(save, date)
 	return false
 
 
@@ -295,10 +295,10 @@ static func _last_fixture_passed(loanee_club_id: String, date: String) -> bool:
 	return int(any.get("n", 0)) > 0
 
 
-static func _promoted(season: LeagueSeason, club_id: String) -> bool:
-	if season == null or season.record == null or season.save == null:
+static func _promoted(save: LeagueSave, club_id: String) -> bool:
+	if save == null:
 		return false
-	var payload := SeasonSettle.stored_payload(season)
+	var payload := _linked_payload(save)
 	for key in ["pyramid", "promotion"]:
 		var part: Dictionary = payload.get(key, {})
 		if part.is_empty():
@@ -310,6 +310,17 @@ static func _promoted(season: LeagueSeason, club_id: String) -> bool:
 			if (entry as Dictionary).get("to_top", []).has(club_id):
 				return true
 	return false
+
+
+static func _linked_payload(save: LeagueSave) -> Dictionary:
+	if save == null:
+		return {}
+	var stored: Variant = save.meta.get("linked_end", "")
+	if stored is String and str(stored) != "":
+		var parsed: Variant = JSON.parse_string(str(stored))
+		if parsed is Dictionary:
+			return parsed
+	return {}
 
 
 static func _position_met(club_id: String, wanted: int) -> bool:
@@ -325,12 +336,14 @@ static func _position_met(club_id: String, wanted: int) -> bool:
 	return false
 
 
-static func _season_over(season: LeagueSeason, date: String) -> bool:
-	if season == null or season.record == null:
+static func _season_over(save: LeagueSave, date: String) -> bool:
+	if save == null:
 		return false
-	if season.record.fixtures.unplayed() == 0:
+	var row := PLDatabase.row(
+		"SELECT COUNT(*) AS n FROM league_fixture WHERE status <> 'played';")
+	if int(row.get("n", 0)) == 0:
 		return true
-	if season.save == null:
+	if save.actives.is_empty():
 		return false
-	var end := str(season.save.rules.get("season_end", ""))
+	var end := str(save.rules_for(str(save.actives[0])).get("season_end", ""))
 	return end != "" and date >= end

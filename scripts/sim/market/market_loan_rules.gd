@@ -14,11 +14,11 @@ const OPTION_KINDS := ["none", "option", "obligation"]
 const TRIGGER_KINDS := ["", "appearances_n", "club_promoted", "league_position", "season_end"]
 
 
-static func validate(season: LeagueSeason, parent_id: String, loanee_id: String, player_id: String,
+static func validate(save: LeagueSave, parent_id: String, loanee_id: String, player_id: String,
 		terms: Dictionary, date: String, exclude: String = "") -> Dictionary:
 	if parent_id == "" or loanee_id == "" or player_id == "" or parent_id == loanee_id:
 		return fail(TERMS, "no move")
-	var index := _season_index(season)
+	var index := _season_index(save)
 	var window := MarketWindows.allows(
 		MarketWindows.FEE, date, MarketWindows.country_of_club(_club(loanee_id)),
 		MarketWindows.country_of_club(_club(parent_id)))
@@ -83,9 +83,9 @@ static func _terms(terms: Dictionary, date: String) -> Dictionary:
 	return {"ok": true, "wage": wage, "start_date": start, "end_date": end}
 
 
-static func _season_index(season: LeagueSeason) -> int:
-	if season != null and season.save != null:
-		return season.save.season_index()
+static func _season_index(save: LeagueSave) -> int:
+	if save != null:
+		return save.season_index()
 	return 0
 
 

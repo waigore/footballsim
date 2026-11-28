@@ -25,7 +25,7 @@ static func run(options: Dictionary) -> Dictionary:
 			"SELECT id FROM player WHERE club_id = ? ORDER BY ovr DESC LIMIT 1;",
 			[from]).get("id", ""))
 	var terms := terms_for(player, options)
-	var opened := MarketDeals.propose(season, from, to, player, terms, date)
+	var opened := MarketDeals.propose(season.save, from, to, player, terms, date)
 	var deal_id := str(opened.get("deal", ""))
 	print("proposed %s: %s -> %s for %s on %s" % [deal_id, from, to,
 		MarketCurrency.format(int(terms["fee"])), date])

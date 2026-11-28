@@ -5,18 +5,16 @@ extends RefCounted
 const DAY_KEY := "market_day"
 
 
-static func advance(season: LeagueSeason, from_date: String, to_date: String) -> bool:
-	if season == null or season.save == null or to_date == "" or from_date == to_date:
-		return false
-	walk(season, from_date, to_date)
-	post_months(season, from_date, to_date)
-	MarketLoans.review(season, to_date)
-	season.market_date = to_date
-	season.market_ticks += 1
-	return true
+static func advance(save: LeagueSave, from_date: String, to_date: String) -> Dictionary:
+	if save == null or to_date == "" or from_date == to_date:
+		return {"ok": false, "days": 0, "date": to_date}
+	var days := walk(save, from_date, to_date)
+	post_months(save, from_date, to_date)
+	MarketLoans.review(save, to_date)
+	return {"ok": true, "days": days, "date": to_date}
 
 
-static func post_months(season: LeagueSeason, from_date: String, to_date: String) -> int:
+static func post_months(save: LeagueSave, from_date: String, to_date: String) -> int:
 	if from_date.length() < 7 or to_date.length() < 7:
 		return 0
 	var year := int(from_date.substr(0, 4))
@@ -31,25 +29,23 @@ static func post_months(season: LeagueSeason, from_date: String, to_date: String
 			year += 1
 		var stamp := "%04d-%02d-01" % [year, month]
 		posted += MarketFinanceFlows.month(stamp)
-		MarketFinanceFlows.tick_gates(season, stamp)
+		MarketFinanceFlows.tick_gates(save, stamp)
 	return posted
 
 
-static func walk(season: LeagueSeason, from_date: String, to_date: String) -> int:
-	if season == null or season.save == null or from_date == "" or to_date <= from_date:
+static func walk(save: LeagueSave, from_date: String, to_date: String) -> int:
+	if save == null or from_date == "" or to_date <= from_date:
 		return 0
-	var seen := str(season.save.meta.get(DAY_KEY, ""))
+	var seen := str(save.meta.get(DAY_KEY, ""))
 	var day := from_date
 	var walked := 0
 	while day < to_date:
 		day = FixtureCalendar.add_days(day, 1)
 		if seen != "" and day <= seen:
 			continue
-		season.market_days += 1
 		walked += 1
 	if walked > 0:
-		season.market_day = to_date
-		season.save.put_meta(DAY_KEY, to_date)
+		save.put_meta(DAY_KEY, to_date)
 	return walked
 
 
@@ -65,10 +61,10 @@ static func window_days(from_date: String, to_date: String, country: String) -> 
 	return count
 
 
-static func roll(season: LeagueSeason, date: String, key: String) -> float:
+static func roll(save: LeagueSave, date: String, key: String) -> float:
 	var seed_value := 0
-	if season != null and season.save != null:
-		seed_value = int(str(season.save.meta.get("seed", "0")))
+	if save != null:
+		seed_value = int(str(save.meta.get("seed", "0")))
 	var h := absi(seed_value) + 7919
 	for part in [str(date), str(key)]:
 		var text := str(part)

@@ -66,29 +66,27 @@ func test_a_jump_across_the_window_still_ticks_each_day() -> void:
 	var season := _season("Window Jump")
 	assert_eq(MarketTick.window_days("2026-08-30", "2026-09-03", "ENG"), 2,
 		"31 August and 1 September are not both in the window")
-	var ticked := MarketTick.advance(season, "2026-08-30", "2026-09-03")
-	assert_true(ticked, "the jump did not tick")
-	assert_eq(season.market_days, 4, "the jump did not walk every calendar date")
-	assert_eq(season.market_day, "2026-09-03", "the market day is not the clock's date")
-	var again := MarketTick.advance(season, "2026-08-30", "2026-09-03")
-	assert_true(again, "the repeated jump was refused outright")
-	assert_eq(season.market_days, 4, "re-opening the same date ticked it twice")
+	var ticked := MarketTick.advance(season.save, "2026-08-30", "2026-09-03")
+	assert_true(bool(ticked.get("ok", false)), "the jump did not tick")
+	assert_eq(int(ticked.get("days", 0)), 4, "the jump did not walk every calendar date")
+	assert_eq(str(ticked.get("date", "")), "2026-09-03", "the market day is not the clock's date")
+	var again := MarketTick.advance(season.save, "2026-08-30", "2026-09-03")
+	assert_true(bool(again.get("ok", false)), "the repeated jump was refused outright")
+	assert_eq(int(again.get("days", 0)), 0, "re-opening the same date ticked it twice")
 
 
 func test_a_reload_mid_date_does_no_second_tick() -> void:
 	var season := _season("Reload Guard")
-	MarketTick.advance(season, "2026-08-20", "2026-08-21")
+	MarketTick.advance(season.save, "2026-08-20", "2026-08-21")
 	assert_eq(str(season.save.meta.get(MarketTick.DAY_KEY, "")), "2026-08-21",
 		"the save does not remember the market day")
-	var days := season.market_days
 	season.save.reload()
 	assert_eq(str(season.save.meta.get(MarketTick.DAY_KEY, "")), "2026-08-21",
 		"the market day did not survive a reload")
-	assert_false(MarketTick.advance(season, "2026-08-21", "2026-08-21"),
+	assert_false(bool(MarketTick.advance(season.save, "2026-08-21", "2026-08-21").get("ok", false)),
 		"the same date ticked again")
-	var walked := MarketTick.walk(season, "2026-08-20", "2026-08-21")
+	var walked := MarketTick.walk(season.save, "2026-08-20", "2026-08-21")
 	assert_eq(walked, 0, "a reload re-walked a date it had already ticked")
-	assert_eq(season.market_days, days, "a reload moved the day count")
 
 
 func test_a_fee_deal_in_june_is_closed_but_a_free_agent_signs() -> void:
@@ -145,11 +143,11 @@ func test_stub_entrants_are_not_market_participants() -> void:
 
 func test_the_market_roll_is_keyed_by_the_save_and_the_date() -> void:
 	var season := _season("Market Roll")
-	var first := MarketTick.roll(season, "2026-08-20", "deal")
-	assert_almost_eq(MarketTick.roll(season, "2026-08-20", "deal"), first, 0.0000001,
+	var first := MarketTick.roll(season.save, "2026-08-20", "deal")
+	assert_almost_eq(MarketTick.roll(season.save, "2026-08-20", "deal"), first, 0.0000001,
 		"the same date and key rolled differently")
-	assert_ne(MarketTick.roll(season, "2026-08-21", "deal"), first, "another date rolled the same")
-	assert_ne(MarketTick.roll(season, "2026-08-20", "news"), first, "another key rolled the same")
+	assert_ne(MarketTick.roll(season.save, "2026-08-21", "deal"), first, "another date rolled the same")
+	assert_ne(MarketTick.roll(season.save, "2026-08-20", "news"), first, "another key rolled the same")
 	assert_true(first >= 0.0 and first < 1.0, "the market roll is not a unit draw")
 
 
@@ -177,7 +175,7 @@ func test_edge_dates_and_tick_guards() -> void:
 	var shut := MarketWindows.state("", "ENG")
 	assert_false(bool(shut.get("open", false)), "a blank date opens a window")
 	assert_eq(MarketWindows.board("2026-08-01").size(), 4, "the board does not list every association")
-	assert_false(MarketTick.advance(null, "2026-08-01", "2026-08-02"), "a null season still ticks")
+	assert_false(bool(MarketTick.advance(null, "2026-08-01", "2026-08-02").get("ok", false)), "a null season still ticks")
 	assert_eq(MarketTick.walk(null, "2026-08-01", "2026-08-02"), 0, "a null walk still advances")
 	assert_eq(MarketTick.window_days("", "2026-08-02", "ENG"), 0, "a blank from-date still counts")
 	assert_true(MarketTick.roll(null, "2026-08-20", "deal") >= 0.0, "a null season cannot roll")

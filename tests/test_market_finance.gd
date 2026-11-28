@@ -116,13 +116,13 @@ func test_a_home_fixture_posts_its_gate_on_the_tick() -> void:
 	var fixture: Dictionary = season.record.fixtures.all(1)[0]
 	var home := str(fixture["home_club_id"])
 	LeagueSeasonSim.fixture(season, fixture)
-	assert_eq(MarketFinanceFlows.tick_gates(season, season.save.current_date()), 1,
+	assert_eq(MarketFinanceFlows.tick_gates(season.save, season.save.current_date()), 1,
 		"the tick did not post the one played home fixture")
 	var line := PLDatabase.row(
 		"SELECT amount FROM club_ledger WHERE club_id = ? AND kind = 'gate' LIMIT 1;", [home])
 	assert_false(line.is_empty(), "a home fixture posted no gate")
 	assert_gt(int(line.get("amount", 0)), 0, "the gate line is worth nothing")
-	assert_eq(MarketFinanceFlows.tick_gates(season, season.save.current_date()), 0,
+	assert_eq(MarketFinanceFlows.tick_gates(season.save, season.save.current_date()), 0,
 		"the same fixture posted its gate twice")
 
 
@@ -150,7 +150,7 @@ func test_the_season_end_pays_prize_money_by_place() -> void:
 	PLDatabase.execute("UPDATE league_fixture SET status = 'played', home_goals = 2, "
 		+ "away_goals = 1 WHERE status <> 'played';")
 	season.record.standings.recompute()
-	var paid := MarketFinanceFlows.season_end(season, 1)
+	var paid := MarketFinanceFlows.season_end(season.save, 1)
 	assert_eq(paid, 20, "the season end paid %d clubs" % paid)
 	var rows := PLDatabase.rows(
 		"SELECT amount FROM club_ledger WHERE kind = 'prize' ORDER BY amount DESC;")

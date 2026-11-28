@@ -2,7 +2,7 @@ class_name CommentaryBench
 extends RefCounted
 
 
-static func _pick(rng, lines: Array) -> String:
+static func _pick(rng: Variant, lines: Array) -> String:
 	return lines[rng.randi_range(0, lines.size() - 1)]
 
 

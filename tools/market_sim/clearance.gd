@@ -25,7 +25,7 @@ static func run(options: Dictionary) -> Dictionary:
 		"wage": int(contract.get("wage", 5000)), "years": 4, "agent_fee": 0,
 		"signing_bonus": 0, "sell_on": 0.0,
 	}
-	var proposed := MarketDeals.propose(season, from, to, player, terms, date)
+	var proposed := MarketDeals.propose(season.save, from, to, player, terms, date)
 	var deal_id := str(proposed.get("deal", ""))
 	var agreed := MarketDeals.agree(deal_id, date)
 	var inject := str(options.get("inject", ""))
