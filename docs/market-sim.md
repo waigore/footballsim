@@ -22,6 +22,7 @@ invariant.
 | `contracts` | expiry, renewal, options | the bootstrap envelope, free agency |
 | `windows` | the association calendar | open and closed by date alone |
 | `ledger` | revenue, wages, amortisation, prize | ledger kinds, currency display |
+| `deal` | one permanent move end to end | the validators, the commit, clearance |
 
 Each verb owns a file under `tools/market_sim/`; `tools/market_sim.gd` only
 parses flags, loads the verb and prints its dictionary.
@@ -44,6 +45,20 @@ only changes the printed display.
 writes a contract per player and a finance row per league club. The seed itself
 stays untouched; a run copies it into the save directory it names, so two runs
 never share a file.
+
+## The deal verb
+
+```bash
+godot --headless --path . --script res://tools/market_sim.gd -- deal \
+  --from ESP-ALA1 --to ENG-ARS1 --fee 500000 --inject clearance
+```
+
+It proposes one permanent move on `--date` (default `2026-08-20`), runs the
+validator pipeline and seals it in one transaction. `--inject` names the path to
+prove: `none` signs, `list` refuses at the list check, `clearance` fails the
+association wait, `fault` rolls back between the money and the contract, and
+`registration` signs a player the buyer cannot register. The printed JSON is the
+deal's own reading: state, reason, cash and headroom after the move.
 
 The sandbox is development tooling. A player reaches the same code through the
 season, the club page's finances block and the player page's contract block.

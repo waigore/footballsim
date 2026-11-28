@@ -84,7 +84,8 @@ func test_every_market_table_carries_a_season_index() -> void:
 	var season := _track(LeagueSeason.create("Season Schema", "generated", "fixture_days", SEED))
 	assert_not_null(season, "the save was not created")
 	for table in ["league_fixture", "league_table", "league_player_stat", "cup_round", "cup_tie",
-			"season_archive", "player_season_archive", "player_history"]:
+			"season_archive", "player_season_archive", "player_history", "player_contract",
+			"club_finance", "club_ledger"]:
 		var columns := {}
 		for row in PLDatabase.rows("PRAGMA table_info(%s);" % table):
 			columns[str(row["name"])] = true
@@ -211,6 +212,51 @@ func test_retirement_empties_the_top_of_the_age_curve() -> void:
 		"the retired players left no history")
 
 
+func test_the_season_end_pays_the_prize_and_the_windows_open() -> void:
+	var season := _finished("Season Money")
+	var champion := str(season.record.standings.table("PL")[0]["club_id"])
+	var result := SeasonRollover.apply(season)
+	assert_true(bool(result.get("ok", false)), "the rollover refused a finished season")
+	var prize := PLDatabase.row(
+		"SELECT amount, season_index FROM club_ledger WHERE kind = 'prize' AND club_id = ?;",
+		[champion])
+	assert_false(prize.is_empty(), "the champion was paid no prize money")
+	assert_eq(int(prize.get("season_index", -1)), 0, "the prize was booked against another season")
+	assert_eq(int(PLDatabase.row(
+		"SELECT COUNT(*) AS n FROM club_ledger WHERE kind = 'prize' AND season_index = 0;").get("n", 0)),
+		20, "the rollover did not pay the finished season's prize curve")
+	var opening := str(season.save.current_date())
+	var summer := MarketWindows.state(opening, "ENG")
+	assert_true(bool(summer.get("open", false)), "season two opens outside its summer window")
+	assert_eq(str(summer.get("season_label", "")), SECOND_LABEL,
+		"the window still belongs to season one")
+	assert_eq(str(summer.get("source", "")), "generated", "season two did not draw its own windows")
+	var winter := MarketWindows.state("2028-01-15", "ENG")
+	assert_true(bool(winter.get("open", false)), "season two has no winter window")
+	assert_eq(str(winter.get("season_label", "")), SECOND_LABEL, "the winter sits in another season")
+	var balances := PLDatabase.row(
+		"SELECT COUNT(*) AS n, MIN(season_index) AS oldest FROM club_finance;")
+	assert_eq(int(balances.get("n", 0)), 20, "the rollover left a club without an opening balance")
+	assert_eq(int(balances.get("oldest", -1)), 1, "a balance did not roll to the new season")
+
+
+func test_the_isolated_season_run_rolls_twice_and_repeats_itself() -> void:
+	var script: Script = load("res://tools/market_sim/season.gd")
+	var first: Dictionary = script.run({"seasons": "2", "seed": "7001", "name": "Isolated Run"})
+	assert_true(bool(first.get("ok", false)), "the isolated run refused to roll over")
+	var log: Array = first.get("log", [])
+	assert_eq(log.size(), 2, "the isolated run did not roll twice")
+	for entry in log:
+		assert_true(bool((entry as Dictionary).get("settle_repeat_is_a_no_op", false)),
+			"a repeated settle rewrote the save at season %d" % int(entry.get("season", -1)))
+		assert_eq(int((entry as Dictionary).get("archived_clubs", 0)), 20,
+			"an isolated season archived no table")
+	var second: Dictionary = script.run({"seasons": "2", "seed": "7001", "name": "Isolated Run"})
+	assert_true(bool(second.get("ok", false)), "the repeated run refused to roll over")
+	assert_eq(JSON.stringify(second.get("log", [])), JSON.stringify(log),
+		"a repeated isolated run changed its answer")
+
+
 func test_a_second_season_can_be_played_out() -> void:
 	var season := _finished("Third Season")
 	var first := SeasonRollover.apply(season)
@@ -282,6 +328,12 @@ func test_the_new_season_door_rolls_over_and_lands_on_the_hub() -> void:
 	assert_eq(season.save.season_index(), 1, "the door did not start season two")
 	assert_eq(screen.mode, LeagueScreen.MODE_HUB, "the door did not land on the hub")
 	assert_eq(screen.nav.depth(), 0, "the door left season one's pages behind")
+	assert_eq(season.record.fixtures.unplayed(), 380, "season two has no calendar to show")
+	assert_eq(season.record.fixtures.played(), 0, "season two opens with played fixtures")
+	var hub := season.state()
+	assert_eq(int(hub.get("season_index", -1)), 1, "the hub still reads season one")
+	assert_eq(str(hub.get("season_label", "")), SECOND_LABEL, "the hub lost season two's label")
+	assert_eq(int(hub.get("total", 0)), 380, "the hub does not count season two's fixtures")
 
 
 func test_an_old_save_refuses_to_open_and_writes_nothing() -> void:
