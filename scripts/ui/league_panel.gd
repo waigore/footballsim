@@ -6,11 +6,13 @@ const ITEMS := [
 	{"id": "nav:fixtures", "label": "TODAY'S FIXTURES", "icon": "fixtures", "pose": "hub"},
 	{"id": "nav:table", "label": "TABLES", "icon": "table", "pose": "table"},
 	{"id": "nav:calendar", "label": "CALENDAR", "icon": "calendar", "pose": "calendar"},
-	{"id": "nav:cups", "label": "CUPS", "icon": "cups", "pose": "cups"},
 	{"id": "nav:interest", "label": "TEAMS OF INTEREST", "icon": "interest", "pose": "interest"},
 	{"id": "nav:stats", "label": "STATS", "icon": "stats", "pose": "stats"},
 	{"id": "nav:system", "label": "SYSTEM", "icon": "system", "pose": "system"},
+	{"id": "nav:cups", "label": "CUPS", "icon": "cups", "pose": "cups"},
 ]
+
+const CUPS_ID := "nav:cups"
 
 const HEAD := 84.0
 const ROW_H := 46.0
@@ -38,6 +40,18 @@ var active := "nav:fixtures"
 var touch := false
 var cache := {}
 var icons := {}
+
+var cups := false
+
+
+static func rows(has_cups: bool) -> Array:
+	if has_cups:
+		return ITEMS
+	var out: Array = []
+	for item in ITEMS:
+		if str(item["id"]) != CUPS_ID:
+			out.append(item)
+	return out
 
 func open() -> void:
 	target = 1.0
@@ -97,9 +111,10 @@ func hit(p: Vector2, vp: Vector2) -> String:
 	var rect := panel_rect(vp)
 	if not rect.has_point(p):
 		return "panel:close"
-	for i in range(ITEMS.size()):
+	var visible_rows: Array = rows(cups)
+	for i in range(visible_rows.size()):
 		if item_rect(vp, i).has_point(p):
-			return str(ITEMS[i]["id"])
+			return str(visible_rows[i]["id"])
 
 
 	return ""
@@ -125,13 +140,14 @@ func draw(c: CanvasItem, vp: Vector2, fonts: Dictionary, active_pose: String) ->
 	UiChrome.text(c, Vector2(rect.position.x + 22.0, 34.0), "LEAGUE", 12, UiChrome.C_GOLD, bold)
 	UiChrome.text(c, Vector2(rect.position.x + 22.0, 54.0), "NAVIGATION", 10, UiChrome.C_DIM, med)
 	c.draw_rect(Rect2(rect.position.x + 22.0, 66.0, rect.size.x - 46.0, 1.0), UiChrome.C_BORDER)
-	for i in range(ITEMS.size()):
+	var visible_rows: Array = rows(cups)
+	for i in range(visible_rows.size()):
 		_draw_item(c, vp, i, active_pose, fonts)
 	UiChrome.text(c, Vector2(rect.position.x + 22.0, vp.y - 18.0),
 		"LONG-PRESS A TEAM NAME TO MARK IT", 8, UiChrome.C_DIM, med)
 
 func _draw_item(c: CanvasItem, vp: Vector2, index: int, active_pose: String, fonts: Dictionary) -> void:
-	var item: Dictionary = ITEMS[index]
+	var item: Dictionary = rows(cups)[index]
 	var rect := item_rect(vp, index)
 	var on := str(item["pose"]) == active_pose
 	if on:

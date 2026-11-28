@@ -37,11 +37,11 @@ static func active_ids(save: LeagueSave) -> Array:
 	var out: Array = []
 	if save == null or str(save.meta.get("cups", "off")) != "on":
 		return out
-	var only := cup_countries(save)
+	var off := str(save.meta.get("cups_off", ""))
 	for row in PLRepository.shared().cups():
 		var cid := str(row.get("id", ""))
 		var country := str(row.get("country", ""))
-		if not only.is_empty() and not only.has(country):
+		if off != "" and ("," + off + ",").find("," + country + ",") >= 0:
 			continue
 		for league_id in COUNTRY_LEAGUES.get(country, []):
 			if save.actives.has(league_id):
@@ -50,52 +50,15 @@ static func active_ids(save: LeagueSave) -> Array:
 	return out
 
 
-static func cup_countries(save: LeagueSave) -> Array:
-	var out: Array = []
-	if save == null:
-		return out
-	var raw := str(save.meta.get("cup_countries", ""))
-	for part in raw.split(",", false):
-		var country := str(part).strip_edges()
-		if country != "" and not out.has(country):
-			out.append(country)
-	return out
-
-
-static func countries_with_cups() -> Array:
+static func countries() -> Array:
 	var out: Array = []
 	for row in PLRepository.shared().cups():
 		var country := str(row.get("country", ""))
-		if country != "" and not out.has(country):
-			out.append(country)
-	return out
-
-
-static func country_cup_ids(country: String) -> Array:
-	var out: Array = []
-	for row in PLRepository.shared().cups():
-		if str(row.get("country", "")) == country:
-			out.append(str(row.get("id", "")))
-	return out
-
-
-static func countries_for(actives: Array) -> Array:
-	var out: Array = []
-	for country in countries_with_cups():
-		for league_id in COUNTRY_LEAGUES.get(country, []):
-			if actives.has(league_id):
-				out.append(country)
-				break
-	return out
-
-
-static func valid_countries(wanted: Array, actives: Array = []) -> Array:
-	var known := countries_for(actives) if not actives.is_empty() else countries_with_cups()
-	var out: Array = []
-	for entry in wanted:
-		var country := str(entry).strip_edges()
-		if known.has(country) and not out.has(country):
-			out.append(country)
+		if country == "" or out.has(country):
+			continue
+		if not LeagueTiers.countries().has(country):
+			continue
+		out.append(country)
 	return out
 
 

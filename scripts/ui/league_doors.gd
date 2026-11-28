@@ -100,9 +100,9 @@ static func press(screen, id: String) -> void:
 		return
 	if LeagueStatsActions.press(screen, id):
 		return
-	if LeagueCupActions.press(screen, id):
-		return
 	if LeagueReportActions.press(screen, id):
+		return
+	if LeagueCupDoors.press(screen, id):
 		return
 	if id.begins_with("match:"):
 		screen.show_report(id.substr(6))
@@ -122,8 +122,8 @@ static func press(screen, id: String) -> void:
 		screen.refresh()
 	elif id.begins_with("wleague:"):
 		LeagueWizardActions.toggle_league(screen, id.substr(8))
-	elif id.begins_with("wcup:"):
-		LeagueWizardActions.toggle_cups(screen, id.substr(5))
+	elif id.begins_with("wcups:"):
+		LeagueWizardActions.toggle_cups(screen, id.substr(6))
 	elif id.begins_with("mode:"):
 		screen.wizard["calendar_mode"] = id.substr(5)
 		screen.refresh()
@@ -199,9 +199,8 @@ static func back(screen) -> void:
 	if screen.season == null:
 		screen.close()
 		return
-
-	if screen.mode == screen.MODE_CUPS and LeagueCupActions.back(screen):
-		return
+	if screen.mode == screen.MODE_CUP_DRAW:
+		LeagueCupDoors.leave_draw(screen)
 	if screen.nav.is_empty():
 		return
 	LeagueNavStack.restore(screen, screen.nav.pop())
@@ -247,10 +246,10 @@ static func create(screen) -> void:
 	if comps.is_empty():
 		comps = ["PL"]
 	var name := LeagueStartSheet.save_name(str(screen.wizard.get("name", "")))
-	var cups: Array = LeagueWizardActions.cups_on(screen)
+	var countries: Array = LeagueWizardActions.cups_on(screen)
 	var created: LeagueSeason = LeagueSeason.create(name,
 		str(screen.wizard["calendar_mode"]), str(screen.wizard["advance_mode"]), 0, comps,
-		not cups.is_empty(), cups)
+		not countries.is_empty(), countries)
 	if created == null:
 		screen.wizard["error"] = "The season could not be created."
 		screen.refresh()

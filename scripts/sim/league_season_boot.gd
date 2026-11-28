@@ -3,8 +3,8 @@ extends RefCounted
 
 
 static func create(name: String, calendar_mode: String, advance_mode: String, seed: int = 0,
-		competitions: Array = ["PL"], cups: bool = false, cup_countries: Array = [],
-		uefa: bool = false) -> LeagueSeason:
+		competitions: Array = ["PL"], cups: bool = false,
+		cup_countries: Array = [], uefa: bool = false) -> LeagueSeason:
 	var saved_mode := calendar_mode if LeagueRules.CALENDAR_MODES.has(calendar_mode) else "generated"
 	var saved_advance := advance_mode if LeagueRules.ADVANCE_MODES.has(advance_mode) else "fixture_days"
 	if seed == 0:
@@ -55,10 +55,9 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	season.rules = save.rules
 	season.rng.seed = seed
 	save.put_meta("cups", "on" if cups else "off")
-	save.put_meta("cup_countries", ",".join(selected_cup_countries(cups, cup_countries, wanted)))
+	save.put_meta("cups_off", ",".join(PackedStringArray(_off_countries(cup_countries))))
 	save.put_meta("uefa", "on" if uefa else "off")
 	LeagueCupState.start(season)
-	_clock_to_first_competition(season)
 	save.reload()
 	season.rules_by = save.rules_by
 	season.rules = save.rules
@@ -68,6 +67,16 @@ static func create(name: String, calendar_mode: String, advance_mode: String, se
 	season.rules = save.rules
 	LeagueSeason.active = season
 	return season
+
+
+static func _off_countries(cup_countries: Array) -> Array:
+	var off: Array = []
+	if cup_countries.is_empty():
+		return off
+	for country in LeagueCup.countries():
+		if not cup_countries.has(country):
+			off.append(str(country))
+	return off
 
 
 static func known_competitions(wanted: Array) -> Array:
@@ -85,30 +94,6 @@ static func known_competitions(wanted: Array) -> Array:
 	if out.is_empty() and not known.is_empty():
 		out.append(str(known[0]))
 	return out
-
-
-static func selected_cup_countries(cups: bool, wanted: Array, actives: Array) -> Array:
-	if not cups:
-		return []
-	if wanted.is_empty():
-		return LeagueCup.countries_for(actives)
-	return LeagueCup.valid_countries(wanted, actives)
-
-
-static func _clock_to_first_competition(season: LeagueSeason) -> void:
-	if season == null or season.save == null or season.rules.get("advance_mode", "") == "every_day":
-		return
-	var first := ""
-	for fx in season.record.fixtures.all():
-		if str(fx.get("status", "")) != "pending":
-			continue
-		var kickoff := str(fx.get("kickoff", ""))
-		if kickoff != "" and (first == "" or kickoff < first):
-			first = kickoff
-	if first == "" or first >= season.save.current_date():
-		return
-	season.save.set_date(first)
-	season.save.set_matchday(season._matchday_of(first))
 
 
 static func open(slug: String) -> LeagueSeason:

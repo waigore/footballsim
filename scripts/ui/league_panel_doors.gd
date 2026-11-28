@@ -4,15 +4,14 @@ extends RefCounted
 
 static func nav(screen, pose: String) -> void:
 	screen.panel.close()
+	if LeagueCupDoors.nav(screen, pose):
+		return
 	if pose == "system":
 		LeagueSystemActions.open(screen)
 		return
 	if pose == "interest":
 		screen.interest_query = ""
 		LeagueDoors.go(screen, LeagueScreen.MODE_INTEREST)
-	elif pose == "cups":
-		LeagueCupActions.open(screen)
-		return
 	elif pose == "fixtures":
 		LeagueDoors.go(screen, LeagueScreen.MODE_HUB)
 	elif pose == "table":
