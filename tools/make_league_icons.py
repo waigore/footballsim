@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw
 SIZE = 96
 SS = 4  # supersampling factor
 OUT = Path("assets/ui/league")
-ICONS = ("fixtures", "table", "calendar", "interest", "stats", "system")
+ICONS = ("fixtures", "table", "calendar", "europe", "interest", "stats", "system")
 WHITE = (255, 255, 255, 255)
 CLEAR = (0, 0, 0, 0)
 
@@ -66,6 +66,25 @@ def _draw_calendar(d: ImageDraw.ImageDraw) -> None:
         for col in range(3):
             x, y = (32 + col * 16) * s, (52 + row * 16) * s
             d.rectangle([x - 3 * s, y - 3 * s, x + 3 * s, y + 3 * s], fill=WHITE)
+
+
+def _draw_europe(d: ImageDraw.ImageDraw) -> None:
+    """A globe: the ring, the equator and one meridian."""
+    import math
+
+    s = SS
+    cx = cy = 48 * s
+    d.ellipse([cx - 30 * s, cy - 30 * s, cx + 30 * s, cy + 30 * s], outline=WHITE, width=7 * s)
+    d.line([cx - 30 * s, cy * 1.0, cx + 30 * s, cy * 1.0], fill=WHITE, width=7 * s)
+    d.ellipse([cx - 13 * s, cy - 30 * s, cx + 13 * s, cy + 30 * s], outline=WHITE, width=6 * s)
+    d.arc([cx - 21 * s, cy - 30 * s, cx + 21 * s, cy + 30 * s], 0, 360, fill=WHITE,
+          width=int(2.5 * s))
+    d.line([cx - 30 * s * math.cos(math.radians(30)), cy - 15 * s,
+            cx + 30 * s * math.cos(math.radians(30)), cy - 15 * s], fill=WHITE,
+           width=int(3.5 * s))
+    d.line([cx - 30 * s * math.cos(math.radians(30)), cy + 15 * s,
+            cx + 30 * s * math.cos(math.radians(30)), cy + 15 * s], fill=WHITE,
+           width=int(3.5 * s))
 
 
 def _draw_interest(d: ImageDraw.ImageDraw) -> None:

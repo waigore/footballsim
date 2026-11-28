@@ -229,6 +229,15 @@ suites = [
   "test_form_guide.gd",
 ]
 
+# Europe's own destination (#437): the hub read models, the two sheets and the
+# doors between them, plus the UEFA season they read.
+[domains.europe]
+suites = [
+  "test_league_europe.gd",
+  "test_league_europe_ui.gd",
+  "test_uefa_season.gd",
+]
+
 # Encyclopedia screens: page data, the sheet itself and every door into it.
 [domains.wiki]
 suites = [
@@ -429,6 +438,17 @@ domain = "tactics"
 [[rules]]
 match = "scripts/sim/league_season.gd*"
 domain = "league"
+
+# Europe is its own destination (#437): the hub read models, the two sheets and
+# their doors. Narrowed here so a continental surface does not drag the whole
+# season domain into tier 1.
+[[rules]]
+match = "scripts/sim/league_europe*.gd*"
+domain = "europe"
+
+[[rules]]
+match = "scripts/ui/league_europe*.gd*"
+domain = "europe"
 
 # The planner's suggested watches read the table and flag fixtures.
 [[rules]]

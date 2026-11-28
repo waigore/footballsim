@@ -92,6 +92,12 @@ func wizard_layout(vp: Vector2, view: Dictionary) -> Array:
 				"rect": Rect2(24.0 + float(col) * w * 0.52, y + float(line) * pitch, w * 0.48, toggle_h),
 				"selected": chosen.has(cid)})
 		y += pitch * float(ceili(float(leagues.size()) / 2.0)) + 6.0
+	items.append({"id": "", "kind": "section", "label": "EUROPE",
+		"rect": Rect2(24.0, y, w, 16.0)})
+	y += 22.0
+	items.append({"id": "uefa", "kind": "switch", "label": "UEFA CLUB COMPETITIONS (2026/27)",
+		"rect": Rect2(24.0, y, w, toggle_h), "selected": bool(view.get("uefa", false))})
+	y += toggle_h + MODE_AFTER
 	items.append({"id": "mode:real", "kind": "choice", "label": "REAL FIXTURES",
 		"rect": Rect2(24.0, y, w * 0.48, toggle_h), "selected": str(view.get("calendar_mode", "")) == "real"})
 	items.append({"id": "mode:generated", "kind": "choice", "label": "GENERATED",
@@ -190,7 +196,7 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 		var rect: Rect2 = item["rect"]
 		var kind := str(item["kind"])
 		var id := str(item["id"])
-		if kind == "country":
+		if kind == "country" or kind == "section":
 
 			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 10.0), str(item["label"]),
 				10, UiChrome.C_GOLD, bold)
@@ -212,7 +218,7 @@ func draw_wizard_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Arra
 				value if value != "" else SAVE_NAME, 15,
 				UiChrome.C_TEXT if value != "" else UiChrome.C_DIM, bold)
 			LeagueFieldFocus.caret(c, rect, value, bold, 15, live)
-		elif kind == "choice":
+		elif kind == "choice" or kind == "switch":
 			var chosen := bool(item["selected"])
 			UiChrome.panel(c, cache, rect,
 				UiChrome.C_GOLD.darkened(0.1) if chosen else UiChrome.C_PANEL, 6,

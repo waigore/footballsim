@@ -8,6 +8,7 @@ static func pose_names() -> Dictionary:
 		LeagueScreen.MODE_CALENDAR: "calendar", LeagueScreen.MODE_INTEREST: "interest",
 		LeagueScreen.MODE_STATS: "stats", LeagueScreen.MODE_SYSTEM: "system",
 		LeagueScreen.MODE_REPORT: "fixtures", LeagueScreen.MODE_PODIUM: "stats",
+		LeagueScreen.MODE_EUROPE: "europe", LeagueScreen.MODE_EUROPE_STAGE: "europe",
 	}
 
 
@@ -24,6 +25,8 @@ static func sheets() -> Dictionary:
 		LeagueScreen.MODE_SYSTEM: ["system", "layout", "draw_body", "draw_chrome"],
 		LeagueScreen.MODE_STATS: ["stats", "layout", "draw_body", "draw_chrome"],
 		LeagueScreen.MODE_INTEREST: ["interest", "layout", "draw_body", "draw_chrome"],
+		LeagueScreen.MODE_EUROPE: ["europe", "layout", "draw_hub_body", "draw_hub_chrome"],
+		LeagueScreen.MODE_EUROPE_STAGE: ["europe_stage", "layout", "draw_body", "draw_chrome"],
 	}
 
 
@@ -87,6 +90,27 @@ static func build(screen) -> Dictionary:
 
 
 			"focus": str(screen.focus.kind), "touch": bool(screen.touch)}
+	if mode == LeagueScreen.MODE_EUROPE:
+		var hub: Dictionary = LeagueEurope.hub(season.save if season != null else null)
+		hub["touch"] = bool(screen.touch)
+		hub["name"] = state.get("name", "")
+		return hub
+	if mode == LeagueScreen.MODE_EUROPE_STAGE:
+		var comp := str(screen.europe_comp)
+		var card: Dictionary = {}
+		if season != null and comp != "":
+			card = LeagueEurope.card(season.save, comp)
+		var stage_view := {"card": card, "on": not card.is_empty(),
+			"touch": bool(screen.touch), "rounds": [], "round": "", "table": [], "ties": []}
+		if not card.is_empty():
+			stage_view["rounds"] = LeagueEuropeTies.rounds(comp)
+			var round_id: String = LeagueEuropeActions.round_of(screen)
+			stage_view["round"] = round_id
+			if round_id == LeagueUefa.LEAGUE_STAGE:
+				stage_view["table"] = LeagueEurope.table(comp)
+			else:
+				stage_view["ties"] = LeagueEuropeTies.ties(comp, round_id)
+		return stage_view
 	if mode == LeagueScreen.MODE_TABLE:
 		var tab := str(screen.book.table.league_tab)
 		var comps: Array = state.get("competitions", [])

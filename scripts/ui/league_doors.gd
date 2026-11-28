@@ -102,6 +102,8 @@ static func press(screen, id: String) -> void:
 		return
 	if LeagueReportActions.press(screen, id):
 		return
+	if LeagueEuropeActions.press(screen, id):
+		return
 	if id.begins_with("match:"):
 		screen.show_report(id.substr(6))
 	elif id.begins_with("goal:"):
@@ -120,6 +122,9 @@ static func press(screen, id: String) -> void:
 		screen.refresh()
 	elif id.begins_with("wleague:"):
 		LeagueWizardActions.toggle_league(screen, id.substr(8))
+	elif id == "uefa":
+		screen.wizard["uefa"] = not bool(screen.wizard.get("uefa", false))
+		screen.refresh()
 	elif id.begins_with("mode:"):
 		screen.wizard["calendar_mode"] = id.substr(5)
 		screen.refresh()
@@ -242,7 +247,8 @@ static func create(screen) -> void:
 		comps = ["PL"]
 	var name := LeagueStartSheet.save_name(str(screen.wizard.get("name", "")))
 	var created: LeagueSeason = LeagueSeason.create(name,
-		str(screen.wizard["calendar_mode"]), str(screen.wizard["advance_mode"]), 0, comps)
+		str(screen.wizard["calendar_mode"]), str(screen.wizard["advance_mode"]), 0, comps,
+		false, bool(screen.wizard.get("uefa", false)))
 	if created == null:
 		screen.wizard["error"] = "The season could not be created."
 		screen.refresh()

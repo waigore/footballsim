@@ -114,12 +114,19 @@ static func header(c: CanvasItem, vp: Vector2, fonts: Dictionary, title: String,
 
 
 static func draw_league_head(c: CanvasItem, rect: Rect2, competition_id: String,
-		matchday: int, fonts: Dictionary) -> void:
+		matchday: int, fonts: Dictionary, stage: String = "") -> void:
 	var name: String = PLRepository.shared().competition_name(competition_id)
 	var text := "%s  ·  GW %d" % [name, matchday]
+	var width_template := "%s  ·  GW 00" % name
+	if stage != "":
+		text = "%s  ·  %s" % [name, LeagueEurope.round_short(stage)]
+		width_template = text
+	elif PLRepository.shared().competition_kind(competition_id) != "league":
+		text = name
+		width_template = name
 	UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
 		text, 10, UiChrome.C_GOLD, fonts["bold"])
-	var width := UiChrome.text_width(fonts["bold"], "%s  ·  GW 00" % name, 10)
+	var width := UiChrome.text_width(fonts["bold"], width_template, 10)
 	c.draw_rect(Rect2(rect.position.x + width + 10.0, rect.position.y + 8.0,
 		maxf(rect.size.x - width - 10.0, 0.0), 1.0), Color(1, 1, 1, 0.10))
 

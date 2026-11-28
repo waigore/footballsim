@@ -26,6 +26,7 @@ Shipped (wiki domains playable; DRs accepted):
 | Phone tap ≥44 dp; match `SKIP` to whistle | DR-20261128-02 / 03 / 05 |
 | Club country ids + player UUIDs; watched assist row | DR-20261128-16 / 19 |
 | Domestic cups and supercups | DR-20261128-17; `league_cup_*.gd`; [#455](https://github.com/waigore/footballsim/issues/455)–[#459](https://github.com/waigore/footballsim/issues/459) |
+| UEFA path and the Europe hub | DR-20261128-15; `league_uefa_*.gd`, `league_europe.gd`; [#433](https://github.com/waigore/footballsim/issues/433)–[#437](https://github.com/waigore/footballsim/issues/437) |
 
 ## Remaining gaps (impact order)
 
@@ -41,7 +42,7 @@ Shipped (wiki domains playable; DRs accepted):
 
 | Item | Why |
 |------|-----|
-| UEFA club competitions (UCL/UEL/UECL) | Rules accepted ([DR-20261128-15](https://github.com/waigore/footballsim/wiki/dr-20261128-15); [#434](https://github.com/waigore/footballsim/issues/434)); Italy now ships ([#420](https://github.com/waigore/footballsim/issues/420)), so [#433](https://github.com/waigore/footballsim/issues/433) can start |
+| UEFA club competitions (UCL/UEL/UECL) | Path, league phase, knockouts and the Europe hub live ([#436](https://github.com/waigore/footballsim/issues/436)–[#437](https://github.com/waigore/footballsim/issues/437)); the draw ceremony, UEFA `WATCH`, calendar chips and encyclopedia hubs are still ahead |
 | Club-manager career; player tactics | Product non-goal; Match playable-slice Out |
 | Transfers, finances, training, second season, mid-season refresh | Season Out of scope (v1); DR-20261124-01 |
 | VAR; weather; referee outcome bias | Match playable-slice Out |

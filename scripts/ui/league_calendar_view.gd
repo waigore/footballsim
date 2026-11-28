@@ -96,7 +96,7 @@ func layout(vp: Vector2, view: Dictionary) -> Array:
 			last_comp = comp
 			if _has_many_comps(view):
 				items.append({"id": "", "kind": "league_head", "competition": comp,
-					"matchday": int(fx.get("matchday", 1)),
+					"matchday": int(fx.get("matchday", 1)), "stage": str(fx.get("stage", "")),
 					"rect": Rect2(24.0, y, vp.x - 48.0, 16.0)})
 				y += 18.0
 		var h: float = maxf(22.0, LeagueBlock.height(fx, true))
@@ -117,6 +117,22 @@ static func _has_many_comps(view: Dictionary) -> bool:
 	return seen.size() > 1
 
 
+static func is_uefa_night(view: Dictionary) -> bool:
+	var fixtures: Array = view.get("day_fixtures", [])
+	if fixtures.is_empty():
+		return false
+	for fx in fixtures:
+		if not LeagueEurope.is_continental(str((fx as Dictionary).get("competition_id", ""))):
+			return false
+	return true
+
+
+static func uefa_night_rect(vp: Vector2, touch: bool) -> Rect2:
+	var doors: Array = month_door_rects(vp, touch)
+	var right: float = (doors[0] as Rect2).position.x - 12.0
+	return Rect2(right - 96.0, HEADER + 28.0, 96.0, 14.0)
+
+
 func _paint_band(c: CanvasItem, body: Callable) -> void:
 	body.call(c)
 
@@ -133,6 +149,10 @@ func draw_chrome(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary
 		var rect: Rect2 = legend["rect"]
 		UiChrome.text(c, Vector2(rect.position.x, rect.end.y), str(legend["text"]),
 			LEGEND_SIZE, UiChrome.C_DIM, fonts["bold"])
+	if is_uefa_night(view):
+		var night: Rect2 = uefa_night_rect(vp, bool(view.get("touch", false)))
+		UiChrome.text_r(c, night.end.x, night.end.y, "UEFA NIGHT", 10, UiChrome.C_GOLD,
+			fonts["bold"])
 
 func draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array, view: Dictionary) -> void:
 	_paint_band(c, _draw_body.bind(vp, fonts, items, view))
@@ -155,9 +175,8 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, items: Array,
 		if kind == "cell":
 			_draw_cell(c, rect, item, fonts)
 		elif kind == "league_head":
-			var name: String = PLRepository.shared().competition_name(str(item.get("competition", "")))
-			UiChrome.text(c, Vector2(rect.position.x, rect.position.y + 12.0),
-				"%s  ·  GW %d" % [name, int(item.get("matchday", 1))], 9, UiChrome.C_GOLD, bold)
+			LeagueExtra.draw_league_head(c, rect, str(item.get("competition", "")),
+				int(item.get("matchday", 1)), fonts, str(item.get("stage", "")))
 		elif kind == "fixture":
 
 

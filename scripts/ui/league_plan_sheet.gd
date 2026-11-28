@@ -25,7 +25,8 @@ static func layout(plan: Array, interest: Dictionary, left: float, right: float,
 			last_comp = comp
 			items.append({"id": "", "kind": "league_head",
 				"rect": Rect2(left, y, right - left, 18.0),
-				"competition": comp, "matchday": int(fx.get("matchday", 1))})
+				"competition": comp, "matchday": int(fx.get("matchday", 1)),
+				"stage": str(fx.get("stage", ""))})
 			y += 18.0 + gap
 
 
@@ -58,7 +59,7 @@ func draw(c: CanvasItem, items: Array, fonts: Dictionary) -> void:
 		var kind := str(item["kind"])
 		if kind == "league_head":
 			LeagueExtra.draw_league_head(c, rect, str(item.get("competition", "")),
-				int(item.get("matchday", 1)), fonts)
+				int(item.get("matchday", 1)), fonts, str(item.get("stage", "")))
 		elif kind == "row":
 			LeaguePlanRows.paint_fixture(c, rect, item["fixture"], fonts, cache, names,
 				item["home_ink"], item["away_ink"])

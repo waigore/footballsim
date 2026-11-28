@@ -50,6 +50,9 @@ func frame_height(view: Dictionary) -> float:
 		h += 12.0
 	if not (summary.get("relegation", {}) as Dictionary).is_empty():
 		h += 8.0 + 16.0
+	var europe: Array = summary.get("uefa", [])
+	if not europe.is_empty():
+		h += 30.0 + 16.0 * float(europe.size()) + 8.0
 	return h + 8.0
 
 
@@ -152,6 +155,25 @@ func _draw_body(c: CanvasItem, vp: Vector2, fonts: Dictionary, view: Dictionary)
 	if not tie.is_empty():
 		UiChrome.text(c, Vector2(24.0, y + 8.0), "RELEGATION  %s" % str(tie.get("text", "")),
 			10, UiChrome.C_GOLD, bold)
+		y += 16.0
+	_paint_europe(c, vp, summary, y, bold, med)
+
+
+func _paint_europe(c: CanvasItem, vp: Vector2, summary: Dictionary, y: float, bold: Font,
+		med: Font) -> void:
+	var europe: Array = summary.get("uefa", [])
+	if europe.is_empty():
+		return
+	UiChrome.text(c, Vector2(24.0, y + 12.0), "CONTINENTAL HONOURS", 10, UiChrome.C_GOLD, bold)
+	y += 18.0
+	for row in europe:
+		var honour: Dictionary = row
+		UiChrome.text(c, Vector2(24.0, y + 12.0), str(honour.get("short", "")).to_upper(), 9,
+			UiChrome.C_DIM, bold)
+		UiChrome.text(c, Vector2(180.0, y + 12.0), str(honour.get("winner_name", "")), 11,
+			UiChrome.C_TEXT, bold)
+		UiChrome.text_r(c, vp.x - 24.0, y + 12.0, str(honour.get("score_line", "")), 10,
+			UiChrome.C_SOFT, med)
 		y += 16.0
 
 

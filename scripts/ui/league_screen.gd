@@ -24,6 +24,8 @@ const MODE_SYSTEM := "system"
 
 const MODE_STATS := "stats"
 const MODE_INTEREST := "interest"
+const MODE_EUROPE := "europe"
+const MODE_EUROPE_STAGE := "europe_stage"
 
 
 var ui_scale := 1.0
@@ -35,7 +37,7 @@ var holding := false
 var mode := MODE_WIZARD
 var season: LeagueSeason = null
 var wizard := {"name": "", "calendar_mode": "generated", "advance_mode": "fixture_days",
-	"competitions": ["PL"], "error": ""}
+	"competitions": ["PL"], "uefa": false, "error": ""}
 var saves: Array = []
 
 var delete := LeagueDelete.new()
@@ -63,6 +65,11 @@ var system := LeagueSystemSheet.new()
 
 var sheet_stats := LeagueStatsSheet.new()
 var sheet_interest := LeagueInterestSheet.new()
+var sheet_europe := LeagueEuropeSheet.new()
+var sheet_europe_stage := LeagueEuropeStage.new()
+
+var europe_comp := ""
+var europe_round := ""
 
 var interest_query := ""
 
