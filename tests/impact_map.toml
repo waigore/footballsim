@@ -283,9 +283,12 @@ suites = [
   "test_market_ffp.gd",
   "test_market_finance.gd",
   "test_market_deals.gd",
+  "test_market_registration.gd",
   "test_market_windows.gd",
   "test_league_save.gd",
   "test_season_rollover.gd",
+  "test_league_table_order.gd",
+  "test_strongest_xi.gd",
 ]
 
 # Player encyclopedia page only: attributes, contracts, TRANSFER. Kept off the
@@ -924,6 +927,13 @@ domain = "pitch_queries"
 [[rules]]
 match = "scripts/data/league_save*.gd*"
 domain = "save"
+
+# The FFP deduction reads the table at recompute (#449). Nailed to the FFp
+# domain with the rollover and table-order suites, before the broad league rule,
+# so this one hook does not pull the whole league domain past the 5 min cap.
+[[rules]]
+match = "scripts/data/league_standings.gd*"
+domain = "market_ffp"
 
 [[rules]]
 match = "scripts/data/league_*.gd*"
