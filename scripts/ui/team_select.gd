@@ -6,12 +6,12 @@ signal cancelled()
 
 signal browse(page: String, id: String)
 
-static var C_PANEL: Color = UiTheme.color(&"panel")
-static var C_PANEL_LIGHT: Color = UiTheme.color(&"panel_light")
-static var C_BORDER: Color = UiTheme.color(&"border")
-static var C_TEXT: Color = UiTheme.color(&"text")
-static var C_DIM: Color = UiTheme.color(&"dim")
-static var C_GOLD: Color = UiTheme.color(&"gold")
+const C_PANEL := UiChrome.C_PANEL
+const C_PANEL_LIGHT := UiChrome.C_PANEL_LIGHT
+const C_BORDER := UiChrome.C_BORDER
+const C_TEXT := UiChrome.C_TEXT
+const C_DIM := UiChrome.C_DIM
+const C_GOLD := UiChrome.C_GOLD
 
 var ids: Array = []
 
@@ -43,9 +43,9 @@ var style_cache := {}
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	f_bold = UiTheme.bold()
-	f_med = UiTheme.medium()
-	f_body = UiTheme.body()
+	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
+	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
+	f_body = load("res://fonts/Inter-Regular.ttf")
 	ids = TeamData.team_ids()
 	ids.sort()
 

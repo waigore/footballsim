@@ -17,7 +17,7 @@ func test_every_palette_key_lives_in_the_theme() -> void:
 			"colour %s did not read back from the Theme" % key)
 
 
-func test_the_chrome_modules_read_the_theme() -> void:
+func test_the_generated_palette_matches_the_theme() -> void:
 	assert_eq(UiChrome.C_BG, UiTheme.color(&"bg"), "UiChrome kept its own background")
 	assert_eq(UiChrome.C_PANEL, UiTheme.color(&"panel"), "UiChrome kept its own panel")
 	assert_eq(UiChrome.C_PANEL_LIGHT, UiTheme.color(&"panel_light"), "UiChrome kept a second panel")

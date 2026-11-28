@@ -2,7 +2,7 @@ class_name HudChrome
 extends RefCounted
 
 
-static var BORDER: Color = UiTheme.color(&"border")
+const BORDER := UiChrome.C_BORDER
 
 
 var buttons: Array = []
@@ -20,9 +20,8 @@ func _style(fill: Color, radius: int, border: Color, width: int) -> StyleBoxFlat
 	_panel_cache[key] = sb
 	return sb
 
-func panel(c: CanvasItem, fill: Color, r: Rect2, radius: int = 10, border: Color = Color(-1, -1, -1, -1)) -> void:
-	var edge: Color = BORDER if border.a < 0.0 else border
-	c.draw_style_box(_style(fill, radius, edge, 1), r)
+func panel(c: CanvasItem, fill: Color, r: Rect2, radius: int = 10, border: Color = BORDER) -> void:
+	c.draw_style_box(_style(fill, radius, border, 1), r)
 
 func text(c: CanvasItem, pos: Vector2, s: String, size: int, color: Color, font: Font, outline: int = 0, outline_col: Color = Color(0, 0, 0, 0.5)) -> void:
 	if outline > 0:

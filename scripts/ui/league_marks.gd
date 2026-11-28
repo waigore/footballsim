@@ -32,7 +32,7 @@ static func icon(c: CanvasItem, kind: String, at: Vector2, own: bool = false) ->
 
 
 static func line(c: CanvasItem, at: Vector2, e: Dictionary, fonts: Dictionary,
-		max_w: float, ink: Color) -> void:
+		max_w: float, ink: Color = UiChrome.C_TEXT) -> void:
 	var kind := str(e.get("kind", ""))
 	icon(c, kind, at, LeagueRoundup.is_own_goal(e))
 	var med: Font = fonts["med"]

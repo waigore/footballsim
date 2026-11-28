@@ -2,18 +2,16 @@ class_name UiChrome
 extends RefCounted
 
 
-static var C_BG: Color = UiTheme.color(&"bg")
-static var C_PANEL: Color = UiTheme.color(&"panel")
-static var C_PANEL_LIGHT: Color = UiTheme.color(&"panel_light")
-static var C_BORDER: Color = UiTheme.color(&"border")
-static var C_TEXT: Color = UiTheme.color(&"text")
-static var C_DIM: Color = UiTheme.color(&"dim")
-
-static var C_SOFT: Color = UiTheme.color(&"soft")
-static var C_GOLD: Color = UiTheme.color(&"gold")
-static var C_LIVE: Color = UiTheme.color(&"live")
-
-static var C_DANGER: Color = UiTheme.color(&"danger")
+const C_BG := Color(0.012, 0.02, 0.026)
+const C_PANEL := Color(0.035, 0.055, 0.07, 0.96)
+const C_PANEL_LIGHT := Color(0.075, 0.105, 0.125, 0.96)
+const C_BORDER := Color(1.0, 1.0, 1.0, 0.085)
+const C_TEXT := Color(0.92, 0.95, 0.96)
+const C_DIM := Color(0.55, 0.64, 0.69)
+const C_SOFT := Color(0.66, 0.73, 0.77)
+const C_GOLD := Color(0.96, 0.78, 0.3)
+const C_LIVE := Color(0.62, 0.88, 0.66)
+const C_DANGER := Color(0.78, 0.26, 0.22)
 
 
 const PRODUCT := "FOOTBALL"
@@ -75,20 +73,19 @@ static func fonts() -> Dictionary:
 static func theme() -> Theme:
 	return UiTheme.theme()
 
-static func style(cache: Dictionary, fill: Color, radius: int = 10, border: Color = Color(-1, -1, -1, -1), width: int = 1) -> StyleBoxFlat:
-	var edge: Color = border if border.a >= 0.0 else C_BORDER
-	var key := "%s|%d|%s|%d" % [fill.to_html(true), radius, edge.to_html(true), width]
+static func style(cache: Dictionary, fill: Color, radius: int = 10, border: Color = C_BORDER, width: int = 1) -> StyleBoxFlat:
+	var key := "%s|%d|%s|%d" % [fill.to_html(true), radius, border.to_html(true), width]
 	if cache.has(key):
 		return cache[key]
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = fill
 	sb.set_corner_radius_all(radius)
-	sb.border_color = edge
+	sb.border_color = border
 	sb.set_border_width_all(width)
 	cache[key] = sb
 	return sb
 
-static func panel(c: CanvasItem, cache: Dictionary, r: Rect2, fill: Color, radius: int = 10, border: Color = Color(-1, -1, -1, -1), width: int = 1) -> void:
+static func panel(c: CanvasItem, cache: Dictionary, r: Rect2, fill: Color, radius: int = 10, border: Color = C_BORDER, width: int = 1) -> void:
 	c.draw_style_box(style(cache, fill, radius, border, width), r)
 
 static func text(c: CanvasItem, pos: Vector2, s: String, size: int, color: Color = C_TEXT, font: Font = null, outline: int = 0, outline_col: Color = Color(0, 0, 0, 0.5)) -> void:

@@ -28,8 +28,8 @@ var f_med: Font
 # gd-tools: no cover start
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	f_bold = UiTheme.bold()
-	f_med = UiTheme.medium()
+	f_bold = load("res://fonts/BarlowCondensed-SemiBold.ttf")
+	f_med = load("res://fonts/BarlowCondensed-Medium.ttf")
 	resized.connect(queue_redraw)
 
 # gd-tools: no cover end

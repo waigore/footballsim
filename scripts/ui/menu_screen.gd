@@ -15,7 +15,7 @@ const STILL_COUNT := 5
 const SLOT := 11.0
 const FADE := 1.8
 
-static var FOOT: Color = UiTheme.color(&"soft")
+const FOOT := UiChrome.C_SOFT
 
 
 const TITLE_AIR := 9.0
