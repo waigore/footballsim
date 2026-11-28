@@ -24,6 +24,9 @@ static func run() -> void:
 	create_two_table_index()
 	LeagueRules.migrate(owner)
 	LeagueSaveSchema.add_column("club", "reserve_of", "TEXT NOT NULL DEFAULT ''")
+	LeagueSaveSchema.add_column("player", "homegrown_club_id", "TEXT NOT NULL DEFAULT ''")
+	PLDatabase.execute(
+		"UPDATE player SET homegrown_club_id = club_id WHERE homegrown_club_id = '';")
 
 
 static func ensure(save: LeagueSave) -> void:

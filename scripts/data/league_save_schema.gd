@@ -135,6 +135,15 @@ const TABLES := [
 	+ "reason TEXT NOT NULL DEFAULT '', deal_id TEXT NOT NULL DEFAULT '', "
 	+ "season_index INTEGER NOT NULL DEFAULT 0, "
 	+ "PRIMARY KEY (player_id, competition_id));",
+	"CREATE TABLE IF NOT EXISTS player_loan (id TEXT PRIMARY KEY, "
+	+ "player_id TEXT NOT NULL, parent_club_id TEXT NOT NULL, "
+	+ "loanee_club_id TEXT NOT NULL, season_index INTEGER NOT NULL DEFAULT 0, "
+	+ "start_date TEXT NOT NULL DEFAULT '', end_date TEXT NOT NULL DEFAULT '', "
+	+ "wage_parent INTEGER NOT NULL DEFAULT 0, wage_loanee INTEGER NOT NULL DEFAULT 0, "
+	+ "fee INTEGER NOT NULL DEFAULT 0, option_kind TEXT NOT NULL DEFAULT 'none', "
+	+ "buy_fee INTEGER NOT NULL DEFAULT 0, trigger_kind TEXT NOT NULL DEFAULT '', "
+	+ "trigger_value TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'active', "
+	+ "deal_id TEXT NOT NULL DEFAULT '', returned_on TEXT NOT NULL DEFAULT '');",
 ]
 
 const INDEXES := [
@@ -149,6 +158,9 @@ const INDEXES := [
 	"CREATE INDEX IF NOT EXISTS deal_player_idx ON deal (player_id, state);",
 	"CREATE INDEX IF NOT EXISTS deal_event_deal_idx ON deal_event (deal_id);",
 	"CREATE INDEX IF NOT EXISTS player_registration_club_idx ON player_registration (club_id, state);",
+	"CREATE INDEX IF NOT EXISTS player_loan_player_idx ON player_loan (player_id, status);",
+	"CREATE INDEX IF NOT EXISTS player_loan_parent_idx ON player_loan (parent_club_id, season_index);",
+	"CREATE INDEX IF NOT EXISTS player_loan_loanee_idx ON player_loan (loanee_club_id, season_index);",
 ]
 
 

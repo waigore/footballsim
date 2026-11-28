@@ -10,6 +10,7 @@ static func advance(season: LeagueSeason, from_date: String, to_date: String) ->
 		return false
 	walk(season, from_date, to_date)
 	post_months(season, from_date, to_date)
+	MarketLoans.review(season, to_date)
 	season.market_date = to_date
 	season.market_ticks += 1
 	return true
